@@ -1,0 +1,214 @@
+/* A keret: oldalsáv, fejléc, mobil navigáció. */
+
+.keret {
+  display: grid;
+  grid-template-columns: var(--oldalsav) 1fr;
+  height: 100%;
+}
+
+/* --- oldalsáv --------------------------------------------------------------- */
+
+.oldalsav {
+  background: var(--sotet);
+  color: var(--sotet-szoveg);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--sotet-keret);
+}
+
+.oldalsav-fej {
+  padding: var(--t5) var(--t4) var(--t4);
+  border-bottom: 1px solid var(--sotet-keret);
+}
+.oldalsav-fej .nev {
+  font-size: var(--m-md);
+  font-weight: var(--vastag-fej);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.oldalsav-fej .alnev {
+  font-size: var(--m-xs);
+  color: var(--sotet-halk);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+.menu { padding: var(--t3) var(--t2); flex: 1; overflow-y: auto; }
+
+.menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--t3);
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--sotet-halk);
+  text-align: left;
+  padding: 10px var(--t3);
+  border-radius: var(--r);
+  font-size: var(--m-sm);
+  font-weight: var(--vastag-kozep);
+  transition: background var(--atmenet), color var(--atmenet);
+}
+.menu button:hover { background: var(--sotet-2); color: var(--sotet-szoveg); }
+.menu button[aria-current='page'] { background: var(--sotet-2); color: #fff; }
+.menu button[aria-current='page'] .pont { background: var(--zold-vilagos); }
+.menu button:disabled { opacity: .4; cursor: default; }
+.menu button:disabled:hover { background: transparent; color: var(--sotet-halk); }
+
+.menu .pont {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--sotet-keret); flex: none;
+}
+
+.menu-cim {
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #5c655e;
+  padding: var(--t4) var(--t3) var(--t2);
+}
+
+.oldalsav-lab {
+  padding: var(--t3) var(--t4) var(--t4);
+  border-top: 1px solid var(--sotet-keret);
+  font-size: var(--m-xs);
+  color: var(--sotet-halk);
+  display: flex;
+  flex-direction: column;
+  gap: var(--t2);
+}
+.oldalsav-lab .ki {
+  background: none; border: none; color: var(--sotet-halk);
+  padding: 0; text-align: left; text-decoration: underline; font-size: var(--m-xs);
+}
+.oldalsav-lab .ki:hover { color: var(--sotet-szoveg); }
+
+.demo-jelzo {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #3a2f12; color: #e5b95c;
+  border: 1px solid #5a4a1e;
+  border-radius: var(--r-sm);
+  padding: 4px 8px;
+  font-size: 10px; font-weight: var(--vastag-eros);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+
+/* --- fő terület ------------------------------------------------------------- */
+
+.fo { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+.fejlec {
+  height: var(--fejlec);
+  flex: none;
+  background: var(--lap);
+  border-bottom: 1px solid var(--keret);
+  display: flex;
+  align-items: center;
+  gap: var(--t4);
+  padding: 0 var(--t5);
+}
+
+.napvalto { display: flex; align-items: center; gap: var(--t2); }
+.napvalto .nyil {
+  width: 32px; height: 32px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-sm);
+}
+.napvalto .cim {
+  font-size: var(--m-md);
+  font-weight: var(--vastag-eros);
+  min-width: 250px;
+}
+.napvalto .cim .ma {
+  color: var(--zold);
+  font-size: var(--m-xs);
+  font-weight: var(--vastag-fej);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-left: var(--t2);
+}
+
+.fejlec-tolto { flex: 1; }
+
+.tartalom { flex: 1; overflow-y: auto; padding: var(--t5); }
+
+/* --- mobil ------------------------------------------------------------------ */
+
+.mobil-fejlec, .fab, .fiok, .fiok-hatter { display: none; }
+
+@media (max-width: 900px) {
+  .keret { grid-template-columns: 1fr; }
+  .oldalsav { display: none; }
+
+  .mobil-fejlec {
+    display: flex;
+    align-items: center;
+    gap: var(--t3);
+    height: var(--mobil-fejlec);
+    flex: none;
+    background: var(--sotet);
+    color: var(--sotet-szoveg);
+    padding: 0 var(--t3);
+    padding-top: env(safe-area-inset-top);
+    height: calc(var(--mobil-fejlec) + env(safe-area-inset-top));
+  }
+  .mobil-fejlec .hamburger {
+    width: 38px; height: 38px; flex: none;
+    display: inline-flex; flex-direction: column; justify-content: center; gap: 4px;
+    border: none; background: transparent; padding: 0 9px;
+    border-radius: var(--r-sm);
+  }
+  .mobil-fejlec .hamburger span {
+    display: block; height: 2px; background: var(--sotet-szoveg); border-radius: 2px;
+  }
+  .mobil-fejlec .nap {
+    flex: 1; min-width: 0;
+    font-size: var(--m-sm); font-weight: var(--vastag-eros);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .mobil-fejlec .lep {
+    width: 34px; height: 34px; flex: none;
+    border: 1px solid var(--sotet-keret); background: var(--sotet-2);
+    color: var(--sotet-szoveg); border-radius: var(--r-sm);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  .fejlec { display: none; }
+  .tartalom { padding: var(--t3); padding-bottom: 96px; }
+
+  .fab {
+    display: inline-flex;
+    position: fixed;
+    right: var(--t4);
+    bottom: calc(var(--t4) + env(safe-area-inset-bottom));
+    width: 58px; height: 58px;
+    border-radius: 50%;
+    background: var(--zold);
+    color: #fff;
+    border: none;
+    align-items: center; justify-content: center;
+    font-size: 30px; line-height: 1; font-weight: 300;
+    box-shadow: 0 6px 20px rgba(31, 122, 77, .42);
+    z-index: 40;
+  }
+  .fab:active { background: var(--zold-sotet); }
+
+  .fiok-hatter {
+    display: block;
+    border: none; padding: 0; margin: 0;
+    position: fixed; inset: 0;
+    background: rgba(20, 24, 26, .5);
+    z-index: 50;
+  }
+  .fiok {
+    display: flex; flex-direction: column;
+    position: fixed; inset: 0 auto 0 0;
+    width: min(290px, 84vw);
+    background: var(--sotet);
+    color: var(--sotet-szoveg);
+    z-index: 51;
+    padding-top: env(safe-area-inset-top);
+  }
+}

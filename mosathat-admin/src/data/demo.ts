@@ -1,0 +1,210 @@
+import { PGlite } from '@electric-sql/pglite'
+
+import m1 from '../../supabase/migrations/0001_schema.sql?raw'
+import m2 from '../../supabase/migrations/0002_seed.sql?raw'
+import m3 from '../../supabase/migrations/0003_booking_engine.sql?raw'
+import m4 from '../../supabase/migrations/0004_demo.sql?raw'
+import m5 from '../../supabase/migrations/0005_admin_api.sql?raw'
+
+import type {
+  BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity,
+  LatestStart, NewBookingInput, PlateLookup, StandingCar, WorkWindow,
+} from '../lib/types'
+import type { Catalog, DataSource, SessionUser } from './source'
+import { calcArgs, num, numOrNull, toCalcResult } from './source'
+
+// ---------------------------------------------------------------------------
+//  Demó mód — valódi PostgreSQL a böngészőben
+//
+//  A PGlite egy WASM-ra fordított PostgreSQL. Ugyanaz az öt migráció fut le
+//  benne, mint majd a Supabase-en: ugyanaz a calc_service(), ugyanazok a
+//  nézetek, ugyanaz a create_booking(). Nem utánzat, hanem ugyanaz a
+//  motor — így nem fordulhat elő, hogy a demó mást mutat, mint az éles.
+//
+//  Amit pótolni kell: a Supabase `auth` sémáját. Ott ez adott, itt három
+//  sornyi csonk. A jogosultságellenőrzés (RLS) emiatt demóban nem szűr —
+//  egy felhasználó van, és az mindent lát.
+//
+//  Az adat a memóriában él: lap újratöltésekor minden visszaáll a kiinduló
+//  állapotra. Bemutatáshoz ez előny, nem hátrány.
+// ---------------------------------------------------------------------------
+
+const DEMO_STAFF_ID = '00000000-0000-4000-8000-000000000001'
+
+const AUTH_STUB = `
+create schema if not exists auth;
+create table if not exists auth.users (id uuid primary key, email text);
+create or replace function auth.uid() returns uuid
+  language sql stable as $$ select current_setting('app.uid', true)::uuid $$;
+create or replace function auth.role() returns text
+  language sql stable as $$ select 'authenticated'::text $$;
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated; end if;
+end $$;
+`
+
+export class DemoSource implements DataSource {
+  readonly label = 'Demó adatbázis'
+  readonly isDemo = true
+  private db: PGlite | null = null
+  private user: SessionUser | null = null
+
+  private get pg(): PGlite {
+    if (!this.db) throw new Error('Az adatbázis még nem indult el.')
+    return this.db
+  }
+
+  async init(): Promise<void> {
+    if (this.db) return
+    const db = await PGlite.create()
+    await db.exec(AUTH_STUB)
+    for (const sql of [m1, m2, m3, m4, m5]) await db.exec(sql)
+
+    // Egy dolgozó, hogy a created_by és a done_by ne legyen üres.
+    await db.query(
+      `insert into auth.users (id, email) values ($1, 'demo@mosathat.hu') on conflict do nothing`,
+      [DEMO_STAFF_ID],
+    )
+    await db.query(
+      `insert into public.staff (id, full_name, role) values ($1, 'Demó felhasználó', 'SUPERADMIN')
+       on conflict (id) do nothing`,
+      [DEMO_STAFF_ID],
+    )
+    await db.exec(`select set_config('app.uid', '${DEMO_STAFF_ID}', false)`)
+    this.db = db
+  }
+
+  private async rows<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+    const r = await this.pg.query<T>(sql, params)
+    return r.rows
+  }
+
+  // --- belépés --------------------------------------------------------------
+  // Demóban nincs jelszó. A képernyő azért van meg, mert élesben lesz.
+
+  async signIn(): Promise<SessionUser> {
+    this.user = { id: DEMO_STAFF_ID, name: 'Demó felhasználó', role: 'SUPERADMIN', email: 'demo@mosathat.hu' }
+    return this.user
+  }
+
+  async signOut(): Promise<void> {
+    this.user = null
+  }
+
+  async currentUser(): Promise<SessionUser | null> {
+    return this.user
+  }
+
+  // --- katalógus ------------------------------------------------------------
+
+  async getCatalog(): Promise<Catalog> {
+    const [packages, pp, fs, extras, surcharges] = await Promise.all([
+      this.rows<any>(`select * from packages where active order by sort_order`),
+      this.rows<any>(`select * from package_pricing`),
+      this.rows<any>(`select * from full_service_pricing`),
+      this.rows<any>(`select * from extras where active order by sort_order`),
+      this.rows<any>(`select * from surcharges where active order by sort_order`),
+    ])
+    return {
+      packages,
+      packagePricing: pp,
+      fullServicePricing: fs,
+      extras,
+      surcharges: surcharges.map((s) => ({
+        ...s,
+        default_value: num(s.default_value),
+        max_value: numOrNull(s.max_value),
+      })),
+    }
+  }
+
+  // --- nap ------------------------------------------------------------------
+
+  async getDay(date: string): Promise<DayBooking[]> {
+    return this.rows<DayBooking>(
+      `select * from v_day_bookings
+        where service_date = $1::date
+        order by coalesce(start_at, drop_off_at) nulls last, plate_raw`,
+      [date],
+    )
+  }
+
+  async getBooking(id: string): Promise<DayBooking | null> {
+    const [r] = await this.rows<DayBooking>(`select * from v_day_bookings where id = $1::uuid`, [id])
+    return r ?? null
+  }
+
+  async getCapacity(date: string): Promise<DayCapacity> {
+    const [r] = await this.rows<any>(`select * from day_capacity($1::date)`, [date])
+    return {
+      parallel_slots: num(r?.parallel_slots),
+      open_minutes: num(r?.open_minutes),
+      capacity_minutes: num(r?.capacity_minutes),
+      booked_minutes: num(r?.booked_minutes),
+      free_minutes: num(r?.free_minutes),
+      load_pct: num(r?.load_pct),
+    }
+  }
+
+  async getWorkWindows(date: string): Promise<WorkWindow[]> {
+    return this.rows<WorkWindow>(`select * from work_windows($1::date)`, [date])
+  }
+
+  async getLatestStart(date: string, minutes: number): Promise<LatestStart[]> {
+    return this.rows<LatestStart>(`select * from latest_start($1::date, $2::integer)`, [date, minutes])
+  }
+
+  async getStandingCars(): Promise<StandingCar[]> {
+    const r = await this.rows<any>(`select * from v_standing_cars order by deadline_at nulls last`)
+    return r.map((x) => ({ ...x, days_in: num(x.days_in), days_left: num(x.days_left) }))
+  }
+
+  // --- foglalás -------------------------------------------------------------
+
+  async lookupPlate(plate: string): Promise<PlateLookup | null> {
+    const [r] = await this.rows<{ r: PlateLookup | null }>(`select lookup_plate($1) as r`, [plate])
+    return r?.r ?? null
+  }
+
+  async calcService(input: CalcInput): Promise<CalcResult> {
+    const a = calcArgs(input)
+    const [row] = await this.rows<any>(
+      `select * from calc_service($1::uuid, $2::vehicle_category, $3::booking_scope,
+                                  $4::boolean, $5::jsonb, $6::numeric, $7::integer)`,
+      [a.p_package_id, a.p_category, a.p_scope, a.p_full_service,
+       JSON.stringify(a.p_extras), a.p_surcharge_pct, a.p_surcharge_fix],
+    )
+    return toCalcResult(row)
+  }
+
+  async createBooking(input: NewBookingInput): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select create_booking($1::jsonb) as id`, [
+      JSON.stringify(input),
+    ])
+    return r.id
+  }
+
+  async setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void> {
+    await this.pg.query(`select set_booking_status($1::uuid, $2::booking_status, $3)`, [
+      bookingId, status, note ?? null,
+    ])
+  }
+
+  async setFinalPrice(bookingId: string, price: number, reason?: string): Promise<void> {
+    await this.pg.query(`select set_final_price($1::uuid, $2::integer, $3)`, [
+      bookingId, price, reason ?? null,
+    ])
+  }
+
+  async getTasks(bookingId: string): Promise<BookingTask[]> {
+    return this.rows<BookingTask>(
+      `select * from booking_tasks where booking_id = $1::uuid order by sort_order, name`,
+      [bookingId],
+    )
+  }
+
+  async toggleTask(taskId: string, done: boolean): Promise<void> {
+    await this.pg.query(`select toggle_task($1::uuid, $2::boolean)`, [taskId, done])
+  }
+}

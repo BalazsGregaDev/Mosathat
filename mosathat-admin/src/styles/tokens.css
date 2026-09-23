@@ -1,0 +1,96 @@
+/* ===========================================================================
+   MOSATHAT ADMIN — DESIGN TOKENEK
+
+   Ez az a fájl, amit ki kell cserélni, ha a koncepció megváltozik.
+
+   A többi CSS-ben nincs egyetlen konkrét szín, méret vagy betűtípus sem:
+   mind ezekre a változókra hivatkozik. Ha holnap kiderül, hogy mégis a
+   "Mélygarázs" arculat kell a "Lakk" helyett, ez az egy fájl íródik át,
+   a komponensekhez nem kell hozzányúlni.
+
+   A jelenlegi készlet szándékosan visszafogott: fehér–fekete–zöld, ahogy
+   megbeszéltük. Ez most munkaeszköz-kinézet, nem arculat.
+   =========================================================================== */
+
+:root {
+  /* --- alapszínek --------------------------------------------------------- */
+  --hatter:        #f4f5f3;   /* a lap háttere */
+  --lap:           #ffffff;   /* kártyák, panelek */
+  --lap-2:         #fafbf9;   /* halvány sáv: táblázat páros sor, fejléc */
+  --keret:         #e2e5df;
+  --keret-eros:    #cdd2c8;
+
+  --szoveg:        #171a17;
+  --szoveg-halk:   #6b736a;
+  --szoveg-halvany:#98a094;
+
+  /* --- sötét felületek (oldalsáv) ---------------------------------------- */
+  --sotet:         #14181a;
+  --sotet-2:       #1d2326;
+  --sotet-keret:   #2b3337;
+  --sotet-szoveg:  #e8eae6;
+  --sotet-halk:    #8d968f;
+
+  /* --- kiemelés ----------------------------------------------------------- */
+  --zold:          #1f7a4d;
+  --zold-vilagos:  #2f9c63;
+  --zold-halvany:  #e7f3ec;
+  --zold-sotet:    #17593a;
+
+  /* --- állapotszínek ------------------------------------------------------ */
+  --v-varjuk:      #9aa39c;   /* CONFIRMED  — még nem jött meg */
+  --v-erkezett:    #c9821f;   /* ARRIVED    — itt van, nem kezdtük el */
+  --v-dolgozunk:   var(--zold);
+  --v-kesz:        #2f6fb0;   /* READY      — mehet érte */
+  --v-lezart:      #9aa39c;
+  --v-baj:         #b3402f;   /* lemondás, no-show, határidő csúszás */
+
+  /* --- tipográfia --------------------------------------------------------- */
+  --betu: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+  --betu-szam: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --m-xs:   11px;
+  --m-sm:   13px;
+  --m-alap: 14px;
+  --m-md:   16px;
+  --m-lg:   20px;
+  --m-xl:   26px;
+  --m-xxl:  34px;
+
+  --vastag-normal: 400;
+  --vastag-kozep:  500;
+  --vastag-eros:   600;
+  --vastag-fej:    700;
+
+  /* --- térköz ------------------------------------------------------------- */
+  --t1: 4px;
+  --t2: 8px;
+  --t3: 12px;
+  --t4: 16px;
+  --t5: 24px;
+  --t6: 32px;
+  --t7: 48px;
+
+  /* --- forma -------------------------------------------------------------- */
+  --r-sm: 4px;
+  --r:    8px;
+  --r-lg: 14px;
+  --r-kor: 999px;
+
+  --arnyek-sm: 0 1px 2px rgba(20, 24, 26, .06);
+  --arnyek:    0 2px 8px rgba(20, 24, 26, .08);
+  --arnyek-lg: 0 12px 40px rgba(20, 24, 26, .22);
+
+  /* --- méretek ------------------------------------------------------------ */
+  --oldalsav:   232px;
+  --fejlec:     60px;
+  --mobil-fejlec: 56px;
+
+  --atmenet: 140ms ease;
+}
+
+/* A rendszer sötét témája most nem kerül be: a műhelyben világos képernyőn
+   dolgoznak, és a fél-kész sötét téma rosszabb, mint a semmi. Ha kell,
+   ide jön egy @media (prefers-color-scheme: dark) blokk, és a fenti
+   változók kapnak másik értéket — a komponensekhez akkor sem kell nyúlni. */

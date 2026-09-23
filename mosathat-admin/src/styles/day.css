@@ -1,0 +1,224 @@
+/* A napi nézet: órasávok, foglaláskártyák, kapacitás, nálunk álló autók. */
+
+.nap-racs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--t5);
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .nap-racs { grid-template-columns: 1fr; }
+}
+
+/* --- kapacitássáv ----------------------------------------------------------- */
+
+.kapacitas {
+  background: var(--lap);
+  border: 1px solid var(--keret);
+  border-radius: var(--r-lg);
+  padding: var(--t4);
+}
+
+.kapacitas-fej {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--t3); margin-bottom: var(--t3);
+}
+.kapacitas-fej .ertek {
+  font-size: var(--m-xxl); font-weight: var(--vastag-fej); line-height: 1;
+}
+.kapacitas-fej .ertek small {
+  font-size: var(--m-sm); font-weight: var(--vastag-kozep); color: var(--szoveg-halk);
+  margin-left: 4px;
+}
+
+.savtart {
+  height: 10px; border-radius: var(--r-kor);
+  background: var(--keret); overflow: hidden; display: flex;
+}
+.savtart .betelt { background: var(--zold); transition: width 260ms ease; }
+.savtart[data-tele='true'] .betelt { background: var(--v-erkezett); }
+.savtart[data-tele='tulcsordul'] .betelt { background: var(--v-baj); }
+
+.kapacitas-lab {
+  display: flex; justify-content: space-between; gap: var(--t3);
+  margin-top: var(--t2); font-size: var(--m-xs); color: var(--szoveg-halk);
+}
+
+/* --- óralista --------------------------------------------------------------- */
+
+.oralista {
+  background: var(--lap);
+  border: 1px solid var(--keret);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.ora-sor {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  border-bottom: 1px solid var(--keret);
+  min-height: 54px;
+}
+.ora-sor:last-child { border-bottom: none; }
+
+.ora-sor .ora-cimke {
+  padding: var(--t3) var(--t2) var(--t3) var(--t4);
+  font-family: var(--betu-szam);
+  font-size: var(--m-xs);
+  font-weight: var(--vastag-eros);
+  color: var(--szoveg-halvany);
+  border-right: 1px solid var(--keret);
+  background: var(--lap-2);
+}
+
+.ora-sor .ora-tartalom {
+  padding: var(--t2) var(--t3);
+  display: flex; flex-direction: column; gap: var(--t2);
+  min-width: 0;
+}
+
+/* ebédszünet: nem egy kártya, hanem egy áthúzott sáv */
+.ora-sor[data-szunet='true'] .ora-tartalom {
+  background: repeating-linear-gradient(
+    -45deg, var(--lap-2), var(--lap-2) 7px, #eef0eb 7px, #eef0eb 14px);
+  align-items: center; justify-content: center;
+}
+.szunet-felirat {
+  font-size: var(--m-xs); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--szoveg-halvany); font-weight: var(--vastag-eros);
+}
+
+/* --- foglaláskártya --------------------------------------------------------- */
+
+.kartya {
+  display: block;
+  width: 100%;
+  text-align: left;
+  position: relative;
+  background: var(--lap);
+  border: 1px solid var(--keret);
+  border-left: 3px solid var(--v-varjuk);
+  border-radius: var(--r);
+  padding: var(--t3) var(--t3) var(--t3) var(--t4);
+  transition: border-color var(--atmenet), box-shadow var(--atmenet);
+}
+.kartya:hover { box-shadow: var(--arnyek); border-color: var(--keret-eros); }
+
+.kartya[data-allapot='ARRIVED']     { border-left-color: var(--v-erkezett); }
+.kartya[data-allapot='IN_PROGRESS'] { border-left-color: var(--v-dolgozunk); background: #f6fbf8; }
+.kartya[data-allapot='READY']       { border-left-color: var(--v-kesz); }
+.kartya[data-allapot='COMPLETED']   { border-left-color: var(--v-lezart); opacity: .62; }
+.kartya[data-allapot='NO_SHOW'],
+.kartya[data-allapot='CANCELLED_BY_CUSTOMER'],
+.kartya[data-allapot='CANCELLED_BY_SHOP'] { border-left-color: var(--v-baj); opacity: .55; }
+
+.kartya-felso {
+  display: flex; align-items: center; gap: var(--t2);
+  flex-wrap: wrap; margin-bottom: 3px;
+}
+.kartya .ido {
+  font-family: var(--betu-szam);
+  font-size: var(--m-sm); font-weight: var(--vastag-fej);
+}
+.kartya .rendszam {
+  font-family: var(--betu-szam);
+  font-size: var(--m-sm); font-weight: var(--vastag-eros);
+  letter-spacing: .06em;
+  background: var(--lap-2);
+  border: 1px solid var(--keret);
+  border-radius: var(--r-sm);
+  padding: 1px 6px;
+}
+.kartya .auto { font-size: var(--m-sm); font-weight: var(--vastag-kozep); }
+.kartya .tolto { flex: 1; }
+
+.kartya-also {
+  display: flex; align-items: center; gap: var(--t3);
+  flex-wrap: wrap; font-size: var(--m-xs); color: var(--szoveg-halk);
+}
+.kartya-also .csomag { font-weight: var(--vastag-eros); color: var(--szoveg); }
+.kartya-also .ar { font-family: var(--betu-szam); }
+
+.allapot-pill { background: var(--lap-2); color: var(--szoveg-halk); border: 1px solid var(--keret); }
+.allapot-pill[data-a='ARRIVED']     { background: #fdf4e6; color: #8a5a10; border-color: #f0dcb8; }
+.allapot-pill[data-a='IN_PROGRESS'] { background: var(--zold-halvany); color: var(--zold-sotet); border-color: #c3e2d1; }
+.allapot-pill[data-a='READY']       { background: #eaf2fa; color: #1f5285; border-color: #cbdeef; }
+.allapot-pill[data-a='NO_SHOW'],
+.allapot-pill[data-a='CANCELLED_BY_CUSTOMER'],
+.allapot-pill[data-a='CANCELLED_BY_SHOP'] { background: #fdf1ef; color: var(--v-baj); border-color: #f2d3cd; }
+
+.lista-jelzo {
+  font-family: var(--betu-szam); font-size: var(--m-xs);
+  color: var(--szoveg-halk);
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.lista-jelzo .csik {
+  width: 34px; height: 4px; border-radius: var(--r-kor);
+  background: var(--keret); overflow: hidden;
+}
+.lista-jelzo .csik i { display: block; height: 100%; background: var(--zold); }
+
+/* --- jobb oszlop ------------------------------------------------------------ */
+
+.oszlop { display: flex; flex-direction: column; gap: var(--t4); }
+
+.panel {
+  background: var(--lap);
+  border: 1px solid var(--keret);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.panel > h3 {
+  font-size: var(--m-xs); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  padding: var(--t3) var(--t4);
+  border-bottom: 1px solid var(--keret);
+  background: var(--lap-2);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--t2);
+}
+.panel-torzs { padding: var(--t3) var(--t4) var(--t4); }
+
+.adatsor {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--t3); padding: 7px 0;
+  border-bottom: 1px dashed var(--keret);
+  font-size: var(--m-sm);
+}
+.adatsor:last-child { border-bottom: none; }
+.adatsor .ertek { font-family: var(--betu-szam); font-weight: var(--vastag-eros); }
+
+/* nálunk álló autók */
+.allo {
+  display: flex; align-items: center; gap: var(--t3);
+  padding: var(--t3) var(--t4);
+  border-bottom: 1px solid var(--keret);
+  width: 100%; text-align: left; background: none; border-left: none;
+  border-right: none; border-top: none;
+}
+.allo:last-child { border-bottom: none; }
+.allo:hover { background: var(--lap-2); }
+.allo .rendszam {
+  font-family: var(--betu-szam); font-size: var(--m-xs); font-weight: var(--vastag-eros);
+  letter-spacing: .05em;
+}
+.allo .hatra {
+  margin-left: auto; font-size: var(--m-xs); font-weight: var(--vastag-eros);
+  padding: 2px 8px; border-radius: var(--r-kor);
+  background: var(--lap-2); color: var(--szoveg-halk); border: 1px solid var(--keret);
+  white-space: nowrap;
+}
+.allo[data-surgos='true'] .hatra { background: #fdf1ef; color: var(--v-baj); border-color: #f2d3cd; }
+
+/* --- figyelmeztetések -------------------------------------------------------- */
+
+.figyelem { display: flex; flex-direction: column; }
+.figyelem li {
+  list-style: none;
+  display: flex; gap: var(--t2); align-items: flex-start;
+  font-size: var(--m-sm); padding: 7px 0;
+  border-bottom: 1px dashed var(--keret);
+}
+.figyelem li:last-child { border-bottom: none; }
+.figyelem li::before { content: '•'; color: var(--v-erkezett); font-weight: 700; line-height: 1.4; }
+.figyelem li[data-sulyos='true']::before { color: var(--v-baj); }

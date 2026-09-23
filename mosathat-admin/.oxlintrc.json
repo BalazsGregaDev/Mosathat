@@ -1,0 +1,47 @@
+{
+  // Oxlint beállítás. A JSON itt megjegyzéseket is elfogad.
+  //
+  // Az alapértelmezés szándékosan szűk: csak az a szabálykészlet fut,
+  // ami valódi hibát jelez. Ha mindent bekapcsolunk, a kimenet 90%-a
+  // zaj lesz, és pár hét múlva senki nem nézi meg.
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+
+  "plugins": ["react", "typescript", "oxc", "jsx-a11y"],
+
+  "categories": {
+    // correctness = ami majdnem biztosan hiba. Ez megállítja a buildet.
+    "correctness": "error",
+    // suspicious = ami gyanús, de lehet szándékos. Csak figyelmeztet.
+    "suspicious": "warn"
+  },
+
+  "rules": {
+    // A Vite az automatikus JSX-fordítót használja (React 17 óta ez az
+    // alapértelmezés), ezért NEM kell `import React` minden fájl tetejére.
+    // Ez a szabály a régi fordítóhoz való.
+    "react/react-in-jsx-scope": "off",
+
+    // A main.tsx-ben a CSS-fájlokat értékadás nélkül importáljuk —
+    // Vite-ban pontosan így kell. Nem hiba.
+    "import/no-unassigned-import": "off",
+
+    // Mikro-optimalizálás: a .map()-ben a spread helyett Object.assign
+    // gyorsabb. Pár tucat soros listáknál mérhetetlen, viszont a kód
+    // olvashatatlanabb lesz tőle. Nem éri meg.
+    "oxc/no-map-spread": "off",
+
+    // Valódi figyelmeztetés, de a jelenlegi helyeken szándékos: az űrlap
+    // kiürítése nyitáskor, és a számított ár törlése, amikor nincs mit
+    // számolni. Maradjon látható figyelmeztetésként, de ne állítsa meg
+    // a buildet.
+    "react/set-state-in-effect": "warn",
+
+    // Jogos javaslat: a role="dialog" helyett a natív <dialog> elem
+    // jobb lenne — fókuszcsapdát és Esc-kezelést ingyen ad. Ez viszont
+    // valódi átalakítás (showModal, ::backdrop), és külön menetben
+    // érdemes megcsinálni. Addig figyelmeztetés, hogy ne felejtsük el.
+    "jsx-a11y/prefer-tag-over-role": "warn"
+  },
+
+  "ignorePatterns": ["dist", "node_modules", "supabase"]
+}
