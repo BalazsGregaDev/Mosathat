@@ -2,14 +2,14 @@ import { PGlite } from '@electric-sql/pglite'
 
 // A migrációk ugyanabban a sorrendben, ahogy a Supabase is futtatja őket
 // (a fájlnév időbélyege adja a sorrendet).
-import m1 from '../../supabase/migrations/20260919090000_schema.sql?raw'
-import m2 from '../../supabase/migrations/20260919091000_torzsadatok.sql?raw'
-import m3 from '../../supabase/migrations/20260923100000_booking_engine.sql?raw'
-import m4 from '../../supabase/migrations/20260923110000_admin_api.sql?raw'
+import m1 from '../../../supabase/migrations/20260919090000_schema.sql?raw'
+import m2 from '../../../supabase/migrations/20260919091000_torzsadatok.sql?raw'
+import m3 from '../../../supabase/migrations/20260923100000_booking_engine.sql?raw'
+import m4 from '../../../supabase/migrations/20260923110000_admin_api.sql?raw'
 
 // A próbaadat NEM migráció, és nincs a migrations mappában: különben a
 // GitHub-integráció felvinné az éles adatbázisba is. Csak ide töltjük be.
-import demoAdatok from '../../supabase/demo/demo_adatok.sql?raw'
+import demoAdatok from '../../../supabase/demo/demo_adatok.sql?raw'
 
 import type {
   BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity,

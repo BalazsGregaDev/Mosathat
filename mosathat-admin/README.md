@@ -54,16 +54,22 @@ kerül, amit csak a demó kér be. (Fő bundle: ~180 KB. PGlite: ~13 MB.)
 
 ## Az adatbázis
 
+A `supabase/` mappa a **repó gyökerében** van, nem az admin appon belül —
+mert az adatbázis közös: ugyanezt fogja használni a publikus weboldal is.
+
 ```
-supabase/
-  config.toml                       a CLI és a GitHub-integráció beállításai
-  migrations/
+Mosathat/                           <- .git, a repó gyökere
+  supabase/
+    config.toml                     a CLI és a GitHub-integráció beállításai
+    migrations/
     20260919090000_schema.sql       táblák, enumok, RLS
     20260919091000_torzsadatok.sql  a valódi árak, csomagok, extrák, nyitvatartás
     20260923100000_booking_engine.sql  calc_service, munkalista, kapacitás, nézetek
-    20260923110000_admin_api.sql    lookup_plate, create_booking, státusz, pipálás
-  demo/
-    demo_adatok.sql                 PRÓBAADAT — soha nem megy élesbe
+    20260923110000_admin_api.sql  lookup_plate, create_booking, státusz, pipálás
+    demo/
+      demo_adatok.sql               PRÓBAADAT — soha nem megy élesbe
+  mosathat-admin/                   ez az alkalmazás
+  mosathat-web/                     később: a publikus oldal
 ```
 
 A fájlnév elején lévő időbélyeg adja a futtatási sorrendet. Ezt a formátumot
@@ -81,11 +87,18 @@ Két út van, és mindkettő ugyanazokat a fájlokat futtatja.
 
 **1. GitHub-integráció** (ha a projekt létrehozásakor rákapcsoltad a repóra)
 
-A `main` ágra pusholt változások automatikusan kimennek. Feltétel: a
-`supabase/` mappa a **repó gyökerében** legyen. Ha a repó gyökere a
-`mosathat-admin`, akkor rendben vagy.
+A `main` ágra pusholt változások automatikusan kimennek.
+
+A Supabase felületén (Project Settings → Integrations → GitHub) a
+**Working directory** mező mondja meg, hol keresse a `supabase/` mappát a
+repó gyökeréhez képest. Mivel az a gyökérben van, ide `.` kerül (ez az
+alapértelmezés).
 
 **2. Supabase CLI** (kézzel, teljes kontrollal)
+
+A parancsokat a `mosathat-admin` mappából futtatod. A `--workdir ..`
+kapcsoló mondja meg a CLI-nek, hogy a `supabase/` mappa eggyel feljebb
+van — ez már bele van építve a scriptekbe.
 
 ```bash
 npx supabase login          # egyszer, böngészőben bejelentkezel
@@ -106,7 +119,7 @@ az adott nevű migráció lefutott-e már — a tartalmát nem ellenőrzi újra.
 Változtatáshoz mindig új migráció készül:
 
 ```bash
-npx supabase migration new mit_csinal
+npx supabase migration new mit_csinal --workdir ..
 ```
 
 Ez létrehoz egy üres, időbélyegzett fájlt, amibe az `alter table` vagy a
@@ -143,6 +156,11 @@ src/
   state/              React állapot (katalógus, nap, foglalási űrlap)
   features/           képernyők
 ```
+
+Egy apróság, ami emiatt a szerkezet miatt kell: a `vite.config.ts`-ben a
+`server.fs.allow: ['..']` beállítás engedi, hogy a dev szerver a
+projektmappán kívülről — a gyökér `supabase/` mappájából — olvassa be a
+migrációkat a demó módhoz.
 
 A `tokens.css` a lényeg: a komponensekben nincs egyetlen `#` színkód sem.
 Ha holnap kiderül, hogy mégis másik arculat kell, az az egy fájl íródik

@@ -1,9 +1,0 @@
-node_modules
-dist
-.env
-.DS_Store
-*.tsbuildinfo
-
-# Supabase CLI munkafájlok — ezek gépenként különböznek, nem a repóba valók
-supabase/.temp
-supabase/.branches

@@ -10,10 +10,10 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "db:link": "supabase link",
-    "db:push": "supabase db push",
-    "db:status": "supabase migration list",
-    "db:types": "supabase gen types typescript --linked > src/lib/database.types.ts"
+    "db:link": "supabase link --workdir ..",
+    "db:push": "supabase db push --workdir ..",
+    "db:status": "supabase migration list --workdir ..",
+    "db:types": "supabase gen types typescript --linked --workdir .. > src/lib/database.types.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.17",

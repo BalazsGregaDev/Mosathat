@@ -1,0 +1,13 @@
+# A repó gyökere: Mosathat/
+# Ezek a minták mélységtől függetlenül illeszkednek, tehát a
+# mosathat-admin/node_modules is beletartozik.
+
+node_modules
+dist
+.env
+.DS_Store
+*.tsbuildinfo
+
+# Supabase CLI munkafájlok — gépenként különböznek
+supabase/.temp
+supabase/.branches

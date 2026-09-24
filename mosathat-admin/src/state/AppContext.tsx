@@ -24,6 +24,38 @@ interface AppValue {
 
 const Ctx = createContext<AppValue | null>(null)
 
+// ---------------------------------------------------------------------------
+//  Az adatforrás CSAK EGYSZER jöhet létre.
+//
+//  React fejlesztői módban (StrictMode) minden effekt kétszer fut le — ez
+//  szándékos, így derülnek ki a rosszul megírt effektek. Itt viszont ez azt
+//  jelentené, hogy KÉT PostgreSQL indul el a böngészőben, és mindkettő
+//  ugyanazt a WASM fájlt próbálja betölteni. Ilyenkor az egyik elhasal
+//  ezzel: "Cannot compile WebAssembly.Module from an already read Response",
+//  és az alkalmazás beragad az "Adatbázis indítása…" feliratnál.
+//
+//  A megoldás: az indítást egyetlen ígéretben (Promise) tároljuk modulszinten.
+//  A második hívás ugyanazt az ígéretet kapja vissza, új adatbázis nem indul.
+//  Élesben ez nem fordulna elő, de a fejlesztés közbeni véletlenszerű
+//  beragadás pont olyan hiba, amit senki nem tud megismételni.
+// ---------------------------------------------------------------------------
+
+let indulas: Promise<DataSource> | null = null
+
+function adatforras(): Promise<DataSource> {
+  if (!indulas) {
+    indulas = (async () => {
+      const ds = await createDataSource()
+      await ds.init()
+      return ds
+    })().catch((e) => {
+      indulas = null // hiba esetén legyen újrapróbálható
+      throw e
+    })
+  }
+  return indulas
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<DataSource | null>(null)
   const [user, setUser] = useState<SessionUser | null>(null)
@@ -35,8 +67,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let el = true
     ;(async () => {
       try {
-        const ds = await createDataSource()
-        await ds.init()
+        const ds = await adatforras()
         if (!el) return
         const u = await ds.currentUser()
         if (!el) return
