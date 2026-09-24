@@ -1,0 +1,14 @@
+Supabase database password 
+9hsZq4SOJeGQOkEe
+
+Mosathat projekt id Supabase
+hpyyvhrpauckamezexzj
+
+Mosathat publishable api key Supabase
+sb_publishable_5HplwMHAt_Iiw3gxIG2jmA_03sGciJJ
+
+Mosathat secret key Supabase
+sb_secret_BGmOoALUVdeqULudJC5wQA_GLhueqpS
+
+Mosathat service role secret Supabase
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhweXl2aHJwYXVja2FtZXpleHpqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDE4OTg3MSwiZXhwIjoyMTA1NzY1ODcxfQ.QRQPAi9VNLTWKbIcN6ctdo7B9mrjVEcvzVbkwwWZBZw
