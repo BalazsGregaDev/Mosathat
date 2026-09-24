@@ -55,17 +55,62 @@ kerül, amit csak a demó kér be. (Fő bundle: ~180 KB. PGlite: ~13 MB.)
 ## Az adatbázis
 
 ```
-supabase/migrations/
-  0001_schema.sql         táblák, enumok, RLS
-  0002_seed.sql           a valódi árak, csomagok, extrák, nyitvatartás
-  0003_booking_engine.sql calc_service, munkalista, kapacitás, nézetek
-  0004_demo.sql           próbaadat (a végén ott a törlőparancs)
-  0005_admin_api.sql      lookup_plate, create_booking, státusz, pipálás
+supabase/
+  config.toml                       a CLI és a GitHub-integráció beállításai
+  migrations/
+    20260919090000_schema.sql       táblák, enumok, RLS
+    20260919091000_torzsadatok.sql  a valódi árak, csomagok, extrák, nyitvatartás
+    20260923100000_booking_engine.sql  calc_service, munkalista, kapacitás, nézetek
+    20260923110000_admin_api.sql    lookup_plate, create_booking, státusz, pipálás
+  demo/
+    demo_adatok.sql                 PRÓBAADAT — soha nem megy élesbe
 ```
 
-Supabase-en sorrendben kell lefuttatni őket az SQL Editorban. Éles
-indulásnál a `0004` kihagyható, vagy a végén lévő törlőparanccsal
-takarítható.
+A fájlnév elején lévő időbélyeg adja a futtatási sorrendet. Ezt a formátumot
+várja a Supabase CLI, és a Supabase egy `supabase_migrations.schema_migrations`
+nevű táblában jegyzi, melyik migráció futott már le — ezért egy migrációt
+kétszer lefuttatni nem lehet, és nem is kell figyelni rá.
+
+**A próbaadat szándékosan nincs a `migrations` mappában.** Ha ott lenne, a
+GitHub-integráció felvinné az éles adatbázisba is, és a valódi naptárban ott
+ülne Kovács Péter BMW-je. Így viszont csak a böngészős demó módba töltődik be.
+
+### Migrációk kitelepítése
+
+Két út van, és mindkettő ugyanazokat a fájlokat futtatja.
+
+**1. GitHub-integráció** (ha a projekt létrehozásakor rákapcsoltad a repóra)
+
+A `main` ágra pusholt változások automatikusan kimennek. Feltétel: a
+`supabase/` mappa a **repó gyökerében** legyen. Ha a repó gyökere a
+`mosathat-admin`, akkor rendben vagy.
+
+**2. Supabase CLI** (kézzel, teljes kontrollal)
+
+```bash
+npx supabase login          # egyszer, böngészőben bejelentkezel
+npm run db:link             # kiválasztod a projektet a listából
+npm run db:status           # mi futott le már, mi hiányzik
+npm run db:push             # a hiányzók lefuttatása
+```
+
+Több autókozmetikánál ugyanez megy projektenként: `db:link` a másikra, majd
+`db:push`. Ezért kell, hogy minden séma-változás fájlként létezzen.
+
+### Egy szabály, amit nem szabad megszegni
+
+**Egy már kipusholt migrációt soha ne írj át.** A Supabase csak azt nézi, hogy
+az adott nevű migráció lefutott-e már — a tartalmát nem ellenőrzi újra. Ha
+átírod, a te gépeden más lesz a séma, mint élesben, és ez csendben történik.
+
+Változtatáshoz mindig új migráció készül:
+
+```bash
+npx supabase migration new mit_csinal
+```
+
+Ez létrehoz egy üres, időbélyegzett fájlt, amibe az `alter table` vagy a
+`create or replace function` kerül.
 
 ### Miért van a logika az adatbázisban?
 

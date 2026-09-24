@@ -1,10 +1,15 @@
 import { PGlite } from '@electric-sql/pglite'
 
-import m1 from '../../supabase/migrations/0001_schema.sql?raw'
-import m2 from '../../supabase/migrations/0002_seed.sql?raw'
-import m3 from '../../supabase/migrations/0003_booking_engine.sql?raw'
-import m4 from '../../supabase/migrations/0004_demo.sql?raw'
-import m5 from '../../supabase/migrations/0005_admin_api.sql?raw'
+// A migrációk ugyanabban a sorrendben, ahogy a Supabase is futtatja őket
+// (a fájlnév időbélyege adja a sorrendet).
+import m1 from '../../supabase/migrations/20260919090000_schema.sql?raw'
+import m2 from '../../supabase/migrations/20260919091000_torzsadatok.sql?raw'
+import m3 from '../../supabase/migrations/20260923100000_booking_engine.sql?raw'
+import m4 from '../../supabase/migrations/20260923110000_admin_api.sql?raw'
+
+// A próbaadat NEM migráció, és nincs a migrations mappában: különben a
+// GitHub-integráció felvinné az éles adatbázisba is. Csak ide töltjük be.
+import demoAdatok from '../../supabase/demo/demo_adatok.sql?raw'
 
 import type {
   BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity,
@@ -59,7 +64,7 @@ export class DemoSource implements DataSource {
     if (this.db) return
     const db = await PGlite.create()
     await db.exec(AUTH_STUB)
-    for (const sql of [m1, m2, m3, m4, m5]) await db.exec(sql)
+    for (const sql of [m1, m2, m3, m4, demoAdatok]) await db.exec(sql)
 
     // Egy dolgozó, hogy a created_by és a done_by ne legyen üres.
     await db.query(

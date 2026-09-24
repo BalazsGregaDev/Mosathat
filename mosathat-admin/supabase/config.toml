@@ -1,0 +1,41 @@
+# Supabase CLI beállítás.
+#
+# Ezt a fájlt a `supabase init` hozza létre. Két dologra kell:
+#   - a CLI innen tudja, hogy ez egy Supabase projekt mappája
+#   - a GitHub-integráció innen olvassa a beállításokat telepítéskor
+#
+# A helyi fejlesztéshez (`supabase start`) Docker kellene. Nekünk nem kell:
+# a demó mód a böngészőben futtatja a Postgres-t, ugyanezekkel a
+# migrációkkal. A CLI-t csak a migrációk KITELEPÍTÉSÉRE használjuk.
+
+project_id = "mosathat-admin"
+
+[db]
+# A Supabase felhőben futó verzióhoz igazítva. Ha a projekted újabb
+# Postgres-t kapott, ezt írd át — a `supabase link` szól, ha eltér.
+major_version = 15
+
+[db.migrations]
+# A migrációk innen jönnek, időbélyeg szerinti sorrendben.
+# FONTOS: a próbaadat NINCS itt. Az a supabase/demo/ mappában van,
+# és csak a böngészős demó módba töltődik be. Élesbe soha.
+schema_paths = []
+
+[api]
+enabled = true
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+# Élesben ezt a saját domainre kell állítani.
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+[auth.email]
+enable_signup = false        # dolgozót csak a superadmin vehet fel
+enable_confirmations = false
