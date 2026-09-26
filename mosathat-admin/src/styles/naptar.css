@@ -266,3 +266,31 @@
   .nezetvalto-sav .nezetvalto { margin-left: 0; width: 100%; max-width: 320px; }
   .nezetvalto-sav .nezetvalto button { flex: 1 1 0; padding: 8px 0; }
 }
+
+/* --- árlista gombok a fejlécben ----------------------------------------------
+   Nem a nézetváltó része: a Nap/Hét/Hónap azt mondja meg, MIT látsz, ez pedig
+   egy segédablakot nyit. Ezért külön csoport, kis réssel elválasztva. */
+
+.arlista-gombok { display: flex; gap: var(--t2); margin-left: var(--t3); }
+.arlista-gombok button {
+  border: 1px solid var(--keret-eros);
+  background: var(--lap);
+  border-radius: var(--r);
+  padding: 7px 14px;
+  font-size: var(--m-sm);
+  font-weight: var(--vastag-kozep);
+  color: var(--szoveg-halk);
+  white-space: nowrap;
+}
+.arlista-gombok button:hover { background: var(--lap-2); color: var(--szoveg); }
+.arlista-gombok button.aktiv {
+  background: var(--zold-halvany);
+  border-color: var(--zold);
+  color: var(--zold-sotet);
+}
+
+@media (max-width: 760px) {
+  .nezetvalto-sav { flex-wrap: wrap; gap: var(--t2); }
+  .arlista-gombok { margin-left: 0; width: 100%; max-width: 320px; }
+  .arlista-gombok button { flex: 1 1 0; padding: 7px 4px; font-size: var(--m-xs); }
+}

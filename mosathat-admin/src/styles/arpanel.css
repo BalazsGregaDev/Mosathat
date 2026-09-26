@@ -1,0 +1,115 @@
+/* A lebegő árlista.
+
+   Szándékosan NEM modális: nincs mögötte fedő réteg, ami letiltaná a többit.
+   Ez a különbség a lényege — a foglalás közben kell látni, nem helyette. */
+
+.arpanel {
+  position: fixed;
+  z-index: 70;                 /* a foglalási ablak (60) FÖLÖTT */
+  display: flex;
+  flex-direction: column;
+  background: var(--lap);
+  border: 1px solid var(--keret-eros);
+  border-radius: var(--r-lg);
+  box-shadow: var(--arnyek-lg);
+  overflow: hidden;
+  min-width: 320px;
+  min-height: 220px;
+}
+
+/* --- fejléc: ez a fogantyú --------------------------------------------------- */
+
+.arpanel-fej {
+  display: flex; align-items: center; gap: var(--t3);
+  padding: var(--t2) var(--t3);
+  background: var(--sotet);
+  color: var(--sotet-szoveg);
+  cursor: grab;
+  user-select: none;
+  flex: 0 0 auto;
+}
+.arpanel-fej:active { cursor: grabbing; }
+.arpanel-fej strong { font-size: var(--m-sm); letter-spacing: .02em; }
+
+/* Két rövid vonal: a fogantyú jele. Enélkül nem derül ki, hogy mozgatható. */
+.arpanel-fej .fogo {
+  width: 12px; height: 12px;
+  background-image:
+    linear-gradient(currentColor, currentColor),
+    linear-gradient(currentColor, currentColor);
+  background-size: 12px 1.5px;
+  background-position: 0 4px, 0 8px;
+  background-repeat: no-repeat;
+  opacity: .5;
+  flex: 0 0 auto;
+}
+
+.arpanel-fej .fulek { margin-left: auto; gap: 4px; }
+.arpanel-fej .fulek button {
+  background: transparent;
+  border-color: var(--sotet-keret);
+  color: var(--sotet-halk);
+  padding: 5px 10px;
+  font-size: var(--m-xs);
+}
+.arpanel-fej .fulek button:hover { background: var(--sotet-2); color: var(--sotet-szoveg); }
+.arpanel-fej .fulek button.aktiv { background: var(--lap); border-color: var(--lap); color: var(--szoveg); }
+
+.arpanel-fej .bezar {
+  background: none; border: none;
+  color: var(--sotet-halk);
+  font-size: 20px; line-height: 1;
+  padding: 0 4px;
+  flex: 0 0 auto;
+}
+.arpanel-fej .bezar:hover { color: #fff; }
+
+/* --- törzs ------------------------------------------------------------------- */
+
+.arpanel-torzs {
+  flex: 1 1 auto;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--t3);
+  background: var(--hatter);
+}
+.arpanel-torzs .panel { box-shadow: none; }
+.arpanel-torzs .panelek-szeles { margin-bottom: var(--t3); }
+
+/* Szűk ablakban a táblázat is összébb húzódik — enélkül minden méretnél
+   vízszintesen kellene görgetni, ami pont a gyors megnézést lehetetlenítené el. */
+.arlista.tomor { min-width: 420px; }
+.arlista.tomor th, .arlista.tomor td { padding: 5px 8px; }
+.arlista.tomor .ar { font-size: var(--m-sm); }
+.arpanel-torzs .lista { min-width: 460px; }
+.arpanel-torzs .lista thead th,
+.arpanel-torzs .lista tbody td,
+.arpanel-torzs .lista tbody th { padding: var(--t2) var(--t3); }
+
+/* --- méretező sarok ----------------------------------------------------------- */
+
+.arpanel-meret {
+  position: absolute; right: 0; bottom: 0;
+  width: 18px; height: 18px;
+  cursor: nwse-resize;
+  background-image:
+    linear-gradient(135deg, transparent 0 40%, var(--keret-eros) 40% 50%, transparent 50% 65%,
+                    var(--keret-eros) 65% 75%, transparent 75%);
+}
+
+/* --- telefon ------------------------------------------------------------------
+   Mozgatni és méretezni ujjal nincs értelme, és a lebegő ablak úgyis eltakarná
+   az egész képernyőt. Ott alulról feljövő lap: fix helyen, a képernyő alsó
+   kétharmadán, ugyanúgy csak az X-szel zárható. */
+@media (max-width: 760px) {
+  .arpanel {
+    left: 0 !important; right: 0;
+    top: auto !important; bottom: 0;
+    width: auto !important; height: 68vh !important;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    border-bottom: none;
+  }
+  .arpanel-fej { cursor: default; }
+  .arpanel-fej .fogo { display: none; }
+  .arpanel-meret { display: none; }
+}

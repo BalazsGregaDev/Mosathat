@@ -19,6 +19,7 @@ import SettingsPage from '../settings/SettingsPage'
 import ServicesView from '../services/ServicesView'
 import PartnersView from '../partners/PartnersView'
 import UsersPage from '../users/UsersPage'
+import ArlistaPanel, { PANEL_ALAP, type PanelAllapot } from '../services/ArlistaPanel'
 
 // Az oldalak. Ami még nincs megépítve, az szürke és nem kattintható — nem
 // azért, hogy szép legyen a lista, hanem hogy látszódjon a terv, és ne
@@ -63,6 +64,11 @@ export default function AppShell() {
   // Nap, hét vagy hónap. A nyilak ehhez igazodnak: napi nézetben egy napot,
   // hetiben egy hetet, haviban egy hónapot lépnek. Ugyanaz a gomb, más lépés.
   const [nezet, setNezet] = useState<'nap' | 'het' | 'honap'>('nap')
+
+  // A lebegő árlista. A hely és a méret itt él, nem a panelben: így ugyanoda
+  // és ugyanakkorán nyílik vissza, ahogy legutóbb beállította.
+  const [arlista, setArlista] = useState<'csomagok' | 'extrak' | null>(null)
+  const [arPanel, setArPanel] = useState<PanelAllapot>(PANEL_ALAP)
   const [ujNyitva, setUjNyitva] = useState(false)
   const [reszletId, setReszletId] = useState<string | null>(null)
   const [szerkesztId, setSzerkesztId] = useState<string | null>(null)
@@ -165,6 +171,18 @@ export default function AppShell() {
     </div>
   )
 
+  // Ugyanaz a gomb nyitja és csukja: telefonálás közben az egér amúgy is ott
+  // van, és így nem kell az X-hez visszamenni.
+  const arlistaGombok = (
+    <div className="arlista-gombok">
+      {([['csomagok', 'Csomagok'], ['extrak', 'Egyéb szolgáltatások']] as const).map(([id, c]) => (
+        <button key={id} className={arlista === id ? 'aktiv' : ''}
+                aria-pressed={arlista === id}
+                onClick={() => setArlista(arlista === id ? null : id)}>{c}</button>
+      ))}
+    </div>
+  )
+
   return (
     <div className="keret">
       <aside className="oldalsav">{menuTartalom}</aside>
@@ -189,6 +207,7 @@ export default function AppShell() {
               </div>
 
               {nezetValto}
+              {arlistaGombok}
 
               <div className="fejlec-tolto" />
               <button className="btn btn-fo" onClick={() => setUjNyitva(true)}>+ Új időpont</button>
@@ -227,7 +246,9 @@ export default function AppShell() {
         {/* A mobil fejlécbe már nem fér be a nézetváltó a hamburger, a
             nyilak és a dátum mellé. Külön sávot kap alatta — ez látszik is,
             nem kell megkeresni a menüben. */}
-        {napiFejlec && <div className="nezetvalto-sav">{nezetValto}</div>}
+        {napiFejlec && (
+          <div className="nezetvalto-sav">{nezetValto}{arlistaGombok}</div>
+        )}
 
         <main className="tartalom">
           {oldal === 'attekintes' && (
@@ -283,6 +304,18 @@ export default function AppShell() {
           bookingId={szerkesztId}
           onBezar={() => setSzerkesztId(null)}
           onKesz={() => { setSzerkesztId(null); refresh() }}
+        />
+      )}
+
+      {/* A foglalási ablak FÖLÖTT lebeg, és nem modális: a mellé kattintás
+          nem zárja be, csak az X. Így írás közben végig látszik. */}
+      {arlista && (
+        <ArlistaPanel
+          ful={arlista}
+          onFul={setArlista}
+          onBezar={() => setArlista(null)}
+          allapot={arPanel}
+          onAllapot={setArPanel}
         />
       )}
 
