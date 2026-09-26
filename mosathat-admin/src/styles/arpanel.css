@@ -113,3 +113,66 @@
   .arpanel-fej .fogo { display: none; }
   .arpanel-meret { display: none; }
 }
+
+/* --- a gombok a foglalási ablakok fejlécében ---------------------------------
+   Ott a hely szűkebb, és az ablak fejléce világos háttéren áll: kisebb,
+   visszafogottabb változat kell, ami nem viszi el a figyelmet a rendszámról. */
+
+.lap-fej .arlista-gombok.rovid { margin-left: auto; margin-right: var(--t2); }
+.lap-fej .arlista-gombok.rovid button {
+  padding: 5px 11px;
+  font-size: var(--m-xs);
+}
+
+/* --- osztott elrendezés -------------------------------------------------------
+   Ha van megnyitott foglalás és nyitva az árlista, egyik sem takarja a másikat:
+   a foglalás a bal, az árlista a jobb oldalt kapja. Fix helyen, mert itt a
+   húzogatás csak elrontaná — a lényeg pont az, hogy egyszerre lássuk a kettőt. */
+
+.arpanel.osztott {
+  left: calc(50% + 6px);
+  right: 12px;
+  top: 72px;
+  bottom: 12px;
+  width: auto;
+  height: auto;
+}
+.arpanel.osztott .arpanel-fej { cursor: default; }
+
+/* A foglalási ablak balra húzódik. A fedő réteg ilyenkor nem középre igazít,
+   hanem a bal félre — a jobb fél az árlistáé. */
+.fedo.osztott {
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 72px 12px 12px;
+}
+.fedo.osztott .lap,
+.fedo.osztott .lap-szeles {
+  width: calc(50% - 18px);
+  max-width: none;
+  max-height: none;
+  height: 100%;
+}
+
+/* Két szűkebb hasábban a kétoszlopos űrlapsorok már nem férnek el kényelmesen. */
+@media (max-width: 1280px) {
+  .fedo.osztott .sor-3 { grid-template-columns: 1fr 1fr; }
+}
+
+/* Keskeny képernyőn nincs értelme kettéosztani: ott az árlista marad alul
+   feljövő lap, a foglalás pedig a szokásos helyén. */
+@media (max-width: 1024px) {
+  .arpanel.osztott {
+    left: 0; right: 0; top: auto; bottom: 0;
+    height: 60vh; width: auto;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+  }
+  .fedo.osztott {
+    justify-content: center; align-items: flex-start;
+    padding: var(--t4) var(--t4) 62vh;
+  }
+  .fedo.osztott .lap,
+  .fedo.osztott .lap-szeles {
+    width: min(620px, 100%); height: auto; max-height: 100%;
+  }
+}

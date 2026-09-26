@@ -37,12 +37,18 @@ export default function BookingForm({
   bookingId,
   onBezar,
   onKesz,
+  arlistaGombok,
+  osztott,
 }: {
   nap: string
   /** Ha meg van adva, szerkesztés. Ha nincs, új foglalás. */
   bookingId?: string | null
   onBezar: () => void
   onKesz: () => void
+  /** Az árlistát nyitó gombok. A héj adja át, mert ő tartja az állapotot. */
+  arlistaGombok?: React.ReactNode
+  /** Nyitva az árlista: ilyenkor ez az ablak a bal oldalra húzódik. */
+  osztott?: boolean
 }) {
   const { data } = useApp()
   const katalogus = useCatalog()
@@ -134,12 +140,16 @@ export default function BookingForm({
   }
 
   return (
-    <div className="fedo" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onBezar()}>
+    <div className={`fedo${osztott ? ' osztott' : ''}`} role="presentation"
+         onMouseDown={(e) => e.target === e.currentTarget && onBezar()}>
       <div className="lap lap-szeles" role="dialog" aria-modal="true"
            aria-label={szerkesztes ? 'Időpont módosítása' : 'Új időpont'}>
         <div className="lap-fej">
           <h2>{szerkesztes ? 'Időpont módosítása' : 'Új időpont'}</h2>
           <span className="halk" style={{ fontSize: 'var(--m-sm)' }}>{napRovidCim(f.date)}</span>
+          {/* Az árlista innen is nyitható: amíg ez az ablak nyitva van, a
+              mögötte lévő fejléc nem kattintható. */}
+          {arlistaGombok}
           <button className="bezar" onClick={onBezar} aria-label="Bezárás">×</button>
         </div>
 

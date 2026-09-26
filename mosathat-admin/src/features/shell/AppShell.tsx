@@ -20,6 +20,7 @@ import ServicesView from '../services/ServicesView'
 import PartnersView from '../partners/PartnersView'
 import UsersPage from '../users/UsersPage'
 import ArlistaPanel, { PANEL_ALAP, type PanelAllapot } from '../services/ArlistaPanel'
+import ArlistaGombok, { type ArlistaFul } from '../services/ArlistaGombok'
 
 // Az oldalak. Ami még nincs megépítve, az szürke és nem kattintható — nem
 // azért, hogy szép legyen a lista, hanem hogy látszódjon a terv, és ne
@@ -67,7 +68,7 @@ export default function AppShell() {
 
   // A lebegő árlista. A hely és a méret itt él, nem a panelben: így ugyanoda
   // és ugyanakkorán nyílik vissza, ahogy legutóbb beállította.
-  const [arlista, setArlista] = useState<'csomagok' | 'extrak' | null>(null)
+  const [arlista, setArlista] = useState<ArlistaFul | null>(null)
   const [arPanel, setArPanel] = useState<PanelAllapot>(PANEL_ALAP)
   const [ujNyitva, setUjNyitva] = useState(false)
   const [reszletId, setReszletId] = useState<string | null>(null)
@@ -171,17 +172,15 @@ export default function AppShell() {
     </div>
   )
 
-  // Ugyanaz a gomb nyitja és csukja: telefonálás közben az egér amúgy is ott
-  // van, és így nem kell az X-hez visszamenni.
-  const arlistaGombok = (
-    <div className="arlista-gombok">
-      {([['csomagok', 'Csomagok'], ['extrak', 'Egyéb szolgáltatások']] as const).map(([id, c]) => (
-        <button key={id} className={arlista === id ? 'aktiv' : ''}
-                aria-pressed={arlista === id}
-                onClick={() => setArlista(arlista === id ? null : id)}>{c}</button>
-      ))}
-    </div>
-  )
+  // Ha van megnyitott foglalás ÉS nyitva az árlista, osztott elrendezés jön:
+  // a foglalás balra, az árlista jobbra. Így nem kell húzogatni ahhoz, hogy
+  // mindkettő látszódjon.
+  const foglalasNyitva = Boolean(ujNyitva || szerkesztId || reszletId)
+  const osztott = foglalasNyitva && arlista !== null
+
+  const arlistaGombok = <ArlistaGombok ertek={arlista} onValt={setArlista} />
+  // A foglalási ablakok fejlécében szűkebb a hely, ott rövidebb felirattal.
+  const arlistaGombokRovid = <ArlistaGombok ertek={arlista} onValt={setArlista} rovid />
 
   return (
     <div className="keret">
@@ -294,7 +293,8 @@ export default function AppShell() {
       )}
 
       {ujNyitva && (
-        <BookingForm nap={nap} onBezar={() => setUjNyitva(false)} onKesz={ujFoglalasKesz} />
+        <BookingForm nap={nap} onBezar={() => setUjNyitva(false)} onKesz={ujFoglalasKesz}
+                     arlistaGombok={arlistaGombokRovid} osztott={osztott} />
       )}
 
       {/* Szerkesztés: ugyanaz az űrlap, csak kap egy azonosítót. */}
@@ -304,6 +304,8 @@ export default function AppShell() {
           bookingId={szerkesztId}
           onBezar={() => setSzerkesztId(null)}
           onKesz={() => { setSzerkesztId(null); refresh() }}
+          arlistaGombok={arlistaGombokRovid}
+          osztott={osztott}
         />
       )}
 
@@ -316,6 +318,7 @@ export default function AppShell() {
           onBezar={() => setArlista(null)}
           allapot={arPanel}
           onAllapot={setArPanel}
+          osztott={osztott}
         />
       )}
 
@@ -324,6 +327,8 @@ export default function AppShell() {
           bookingId={reszletId}
           onBezar={() => setReszletId(null)}
           onSzerkeszt={() => { setSzerkesztId(reszletId); setReszletId(null) }}
+          arlistaGombok={arlistaGombokRovid}
+          osztott={osztott}
         />
       )}
     </div>

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import type { Catalog } from '../../data'
 import { CsomagArak, ExtraLista } from './Arlista'
+import type { ArlistaFul } from './ArlistaGombok'
 
 // ---------------------------------------------------------------------------
 //  Lebegő árlista
@@ -19,11 +20,16 @@ import { CsomagArak, ExtraLista } from './Arlista'
 //      figyelné, egy billentyű két dolgot csukna be
 //    – a foglalási ablak FÖLÖTT lebeg, így írás közben is látszik
 //
-//  Mozgatható és méretezhető, mert nem tudhatjuk, a képernyő melyik részén
-//  van útban. A helyét és a méretét a hívó tárolja, így ugyanoda és ugyanakkora
-//  méretben nyílik vissza, ahogy legutóbb beállította.
+//  Két elrendezése van:
 //
-//  Telefonon mindez értelmetlen: ott alulról feljövő lapként áll, fix helyen.
+//  SZABADON — ha nincs megnyitott foglalás. Jobb oldalt nyílik, mozgatható és
+//  méretezhető. A mozgatás a KÉPERNYŐN BELÜL marad: a széleken megakad.
+//  Enélkül elő tudott fordulni, hogy a fejlécével együtt kicsúszott a
+//  látható területről, és nem volt mivel bezárni.
+//
+//  OSZTOTT — ha van megnyitott foglalás. Ilyenkor nincs helye a találgatásnak:
+//  a foglalás a bal, az árlista a jobb oldalra kerül, fixen. Így egyik sem
+//  takarja a másikat, és nem kell húzogatni ahhoz, hogy mindkettőt lásd.
 // ---------------------------------------------------------------------------
 
 export interface PanelAllapot {
@@ -33,35 +39,65 @@ export interface PanelAllapot {
   h: number
 }
 
-export const PANEL_ALAP: PanelAllapot = { x: 0, y: 0, w: 560, h: 520 }
+/** A w és h a kiinduló méret; az x és y nullája azt jelenti: „még nem tette el". */
+export const PANEL_ALAP: PanelAllapot = { x: 0, y: 0, w: 560, h: 560 }
 
 const MIN_W = 320
 const MIN_H = 220
+const SZEL = 12          // ennyit hagyunk a képernyő széleinél
+const FELUL = 72         // a fejléc alatt nyílik, nem rá
 
-export default function ArlistaPanel({ ful, onFul, onBezar, allapot, onAllapot }: {
-  ful: 'csomagok' | 'extrak'
-  onFul: (f: 'csomagok' | 'extrak') => void
+/**
+ * Bevágás a látható területre. Egyetlen helyen dől el, mit jelent az, hogy
+ * „bent van": a méret sem nőhet ki, és a pozíció sem csúszhat ki.
+ *
+ * Előbb a méretet szorítjuk le, aztán a pozíciót — fordítva egy nagy panelnél
+ * a pozíció mindig nullára ugrana.
+ */
+function bevag(a: PanelAllapot): PanelAllapot {
+  const maxW = Math.max(MIN_W, window.innerWidth - 2 * SZEL)
+  const maxH = Math.max(MIN_H, window.innerHeight - 2 * SZEL)
+  const w = Math.min(Math.max(a.w, MIN_W), maxW)
+  const h = Math.min(Math.max(a.h, MIN_H), maxH)
+  return {
+    w,
+    h,
+    x: Math.min(Math.max(a.x, SZEL), window.innerWidth - w - SZEL),
+    y: Math.min(Math.max(a.y, SZEL), window.innerHeight - h - SZEL),
+  }
+}
+
+/** Kiinduló hely: jobb oldalt, a fejléc alatt. */
+function jobbOldalt(w: number, h: number): PanelAllapot {
+  return bevag({ w, h, x: window.innerWidth - w - SZEL, y: FELUL })
+}
+
+export default function ArlistaPanel({ ful, onFul, onBezar, allapot, onAllapot, osztott }: {
+  ful: ArlistaFul
+  onFul: (f: ArlistaFul) => void
   onBezar: () => void
   allapot: PanelAllapot
   onAllapot: (a: PanelAllapot) => void
+  /** Van megnyitott foglalás: ilyenkor fix helye van a jobb oldalon. */
+  osztott?: boolean
 }) {
   const { data, catalog } = useApp()
   const [k, setK] = useState<Catalog | null>(catalog)
   const [q, setQ] = useState('')
-  const panel = useRef<HTMLDivElement>(null)
 
   useEffect(() => { data.getCatalog().then(setK) }, [data])
 
-  // Első megnyitáskor a jobb felső sarok környékére tesszük — ott a legkisebb
-  // az esély, hogy pont a foglalási űrlapot takarja el.
+  // Ha még nincs eltett hely, vagy a mentett hely időközben kilógna (kisebb
+  // lett az ablak), akkor visszatesszük a jobb oldalra.
   useEffect(() => {
-    if (allapot.x !== 0 || allapot.y !== 0) return
-    onAllapot({
-      ...allapot,
-      x: Math.max(16, window.innerWidth - allapot.w - 32),
-      y: 96,
-    })
-  }, [allapot, onAllapot])
+    if (osztott) return
+    const j = allapot.x === 0 && allapot.y === 0
+      ? jobbOldalt(allapot.w, allapot.h)
+      : bevag(allapot)
+    if (j.x !== allapot.x || j.y !== allapot.y || j.w !== allapot.w || j.h !== allapot.h) {
+      onAllapot(j)
+    }
+  }, [allapot, onAllapot, osztott])
 
   /**
    * Húzás és méretezés ugyanazzal a mintával: pointer capture. Enélkül a
@@ -69,7 +105,7 @@ export default function ArlistaPanel({ ful, onFul, onBezar, allapot, onAllapot }
    * gyorsan rántod odébb.
    */
   const fogas = useCallback((mod: 'mozgat' | 'meretez') => (e: React.PointerEvent) => {
-    if (e.button !== 0) return
+    if (osztott || e.button !== 0) return
     e.preventDefault()
     const el = e.currentTarget as HTMLElement
     el.setPointerCapture(e.pointerId)
@@ -81,22 +117,11 @@ export default function ArlistaPanel({ ful, onFul, onBezar, allapot, onAllapot }
     const mozog = (ev: PointerEvent) => {
       const dx = ev.clientX - kezdX
       const dy = ev.clientY - kezdY
-
-      if (mod === 'mozgat') {
-        // Nem engedjük kicsúszni a képernyőről: a fejlécnek mindig maradnia
-        // kell annyi, amibe bele lehet kapaszkodni.
-        onAllapot({
-          ...kezd,
-          x: Math.min(Math.max(-kezd.w + 120, kezd.x + dx), window.innerWidth - 120),
-          y: Math.min(Math.max(0, kezd.y + dy), window.innerHeight - 48),
-        })
-      } else {
-        onAllapot({
-          ...kezd,
-          w: Math.max(MIN_W, Math.min(kezd.w + dx, window.innerWidth - 24)),
-          h: Math.max(MIN_H, Math.min(kezd.h + dy, window.innerHeight - 24)),
-        })
-      }
+      // A bevágás mindkét módra ugyanaz: a panel egésze a képernyőn belül
+      // marad. A széleken egyszerűen megáll.
+      onAllapot(bevag(mod === 'mozgat'
+        ? { ...kezd, x: kezd.x + dx, y: kezd.y + dy }
+        : { ...kezd, w: kezd.w + dx, h: kezd.h + dy }))
     }
 
     const vege = () => {
@@ -109,31 +134,32 @@ export default function ArlistaPanel({ ful, onFul, onBezar, allapot, onAllapot }
     el.addEventListener('pointermove', mozog)
     el.addEventListener('pointerup', vege)
     el.addEventListener('pointercancel', vege)
-  }, [allapot, onAllapot])
+  }, [allapot, onAllapot, osztott])
 
-  // Ablakméret-változáskor visszahúzzuk a képbe, ha kilógna.
+  // Ablakméret-változáskor visszahúzzuk a képbe. Enélkül egy kisebbre húzott
+  // böngészőablakban a panel kint ragadna, bezárhatatlanul.
   useEffect(() => {
-    const f = () => {
-      const x = Math.min(allapot.x, window.innerWidth - 120)
-      const y = Math.min(allapot.y, window.innerHeight - 48)
-      if (x !== allapot.x || y !== allapot.y) onAllapot({ ...allapot, x, y })
-    }
+    if (osztott) return
+    const f = () => onAllapot(bevag(allapot))
     window.addEventListener('resize', f)
     return () => window.removeEventListener('resize', f)
-  }, [allapot, onAllapot])
+  }, [allapot, onAllapot, osztott])
+
+  const stilus = osztott
+    ? undefined
+    : { left: allapot.x, top: allapot.y, width: allapot.w, height: allapot.h }
 
   return (
     <div
-      ref={panel}
-      className="arpanel"
+      className={`arpanel${osztott ? ' osztott' : ''}`}
       role="dialog"
       aria-label="Árlista"
-      style={{ left: allapot.x, top: allapot.y, width: allapot.w, height: allapot.h }}
+      style={stilus}
     >
       {/* A fejléc a fogantyú. A gombok nem: azokon a pointerdown nem indít
           húzást, különben a fülváltás közben elmozdulna az ablak. */}
       <div className="arpanel-fej" onPointerDown={fogas('mozgat')}>
-        <span className="fogo" aria-hidden="true" />
+        {!osztott && <span className="fogo" aria-hidden="true" />}
         <strong>Árlista</strong>
 
         <div className="fulek" onPointerDown={(e) => e.stopPropagation()}>
@@ -157,8 +183,10 @@ export default function ArlistaPanel({ ful, onFul, onBezar, allapot, onAllapot }
         )}
       </div>
 
-      <div className="arpanel-meret" onPointerDown={fogas('meretez')}
-           aria-hidden="true" title="Húzd a méretezéshez" />
+      {!osztott && (
+        <div className="arpanel-meret" onPointerDown={fogas('meretez')}
+             aria-hidden="true" title="Húzd a méretezéshez" />
+      )}
     </div>
   )
 }

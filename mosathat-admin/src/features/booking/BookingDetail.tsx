@@ -4,7 +4,7 @@ import { useApp } from '../../state/AppContext'
 import { useMentetlen } from '../../state/useMentetlen'
 import { ft, idosav, idotartam, ora } from '../../lib/format'
 import {
-  CATEGORY_LABEL, NEXT_STATUS, SCOPE_LABEL, STATUS_LABEL, TYPE_LABEL,
+  CATEGORY_LABEL, NEXT_STATUS, SCOPE_LABEL, TYPE_LABEL,
   type BookingExtraRow, type BookingScope, type BookingTask, type BookingType,
   type DayBooking, type ServiceArea, type VehicleCategory,
 } from '../../lib/types'
@@ -60,11 +60,17 @@ export default function BookingDetail({
   bookingId,
   onBezar,
   onSzerkeszt,
+  arlistaGombok,
+  osztott,
 }: {
   bookingId: string
   onBezar: () => void
   /** Átvált a szerkesztő űrlapra — ugyanarra, amivel a foglalás készült. */
   onSzerkeszt: () => void
+  /** Az árlistát nyitó gombok. A héj adja át, mert ő tartja az állapotot. */
+  arlistaGombok?: React.ReactNode
+  /** Nyitva az árlista: ilyenkor ez az ablak a bal oldalra húzódik. */
+  osztott?: boolean
 }) {
   const { data, catalog, refresh } = useApp()
   const [b, setB] = useState<DayBooking | null>(null)
@@ -270,7 +276,8 @@ export default function BookingDetail({
   const keszLista = lista.filter((t) => t.done).length
 
   return (
-    <div className="fedo" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && bezar()}>
+    <div className={`fedo${osztott ? ' osztott' : ''}`} role="presentation"
+         onMouseDown={(e) => e.target === e.currentTarget && bezar()}>
       <div className="lap" role="dialog" aria-modal="true" aria-label="Munkalap">
         {tolt || !b ? (
           <div className="lap-torzs">
@@ -289,9 +296,11 @@ export default function BookingDetail({
                     ` · ${[b.brand, b.model].filter(Boolean).join(' ')}`}
                 </div>
               </div>
-              <span className="cimke-pill allapot-pill" data-a={b.status} style={{ marginLeft: 12 }}>
-                {STATUS_LABEL[b.status]}
-              </span>
+              {/* Itt korábban az állapotjelző címke állt. Kikerült: az állapot
+                  látszik a napi kártyán, a lábléc gombja pedig megmondja, mi a
+                  következő lépés. Helyette az kerül ide, ami telefon közben
+                  kell — az árlista. */}
+              {arlistaGombok}
               <button className="bezar" onClick={bezar} aria-label="Bezárás">
                 ×
               </button>
