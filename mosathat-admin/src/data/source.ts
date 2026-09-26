@@ -66,6 +66,12 @@ export interface DataSource {
   updateBooking(bookingId: string, input: NewBookingInput): Promise<void>
   /** Amivel a szerkesztő űrlap fel tudja tölteni magát. */
   getBookingFormData(bookingId: string): Promise<BookingFormData | null>
+  /**
+   * Egyetlen adat átírása a munkalapon. A többi mező érintetlen marad, de az
+   * ár, az idő és a munkalista újraszámolódik — ugyanazon az úton, mint a
+   * teljes szerkesztésnél.
+   */
+  patchBooking(bookingId: string, patch: Record<string, unknown>): Promise<void>
   setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void>
   setFinalPrice(bookingId: string, price: number, reason?: string): Promise<void>
 
@@ -84,6 +90,8 @@ export interface DataSource {
   // --- ügyfelek és járművek ---
   listCustomers(q?: string): Promise<CustomerSummary[]>
   listVehicles(q?: string): Promise<VehicleSummary[]>
+  saveCustomer(patch: Record<string, unknown>): Promise<void>
+  saveVehicle(patch: Record<string, unknown>): Promise<void>
 
   // --- áttekintés ---
   getDashboard(date: string): Promise<DashboardSummary>

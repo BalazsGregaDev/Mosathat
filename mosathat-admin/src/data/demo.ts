@@ -67,8 +67,14 @@ export const DEMO_BELEPOK = [
 
 const AUTH_STUB = `
 create schema if not exists auth;
+-- Az oszloptípusok SZÁNDÉKOSAN ugyanazok, mint élesben a Supabase-nél.
+-- Az email ott character varying(255), nem text — és pont ez a különbség
+-- buktatott meg egy függvényt, ami demóban hibátlanul futott. Ha a csonk
+-- pontos, az ilyen eltérés itt derül ki, nem a működő rendszerben.
 create table if not exists auth.users (
-  id uuid primary key, email text, last_sign_in_at timestamptz);
+  id              uuid primary key,
+  email           character varying(255),
+  last_sign_in_at timestamptz);
 create or replace function auth.uid() returns uuid
   language sql stable as $$ select nullif(current_setting('app.uid', true), '')::uuid $$;
 create or replace function auth.role() returns text
@@ -332,6 +338,19 @@ export class DemoSource implements DataSource {
   }
 
   // --- ügyfelek és járművek ---------------------------------------------------
+
+  async patchBooking(bookingId: string, patch: Record<string, unknown>): Promise<void> {
+    await this.rows(`select patch_booking($1::uuid, $2::jsonb)`,
+      [bookingId, JSON.stringify(patch)])
+  }
+
+  async saveCustomer(patch: Record<string, unknown>): Promise<void> {
+    await this.rows(`select save_customer($1::jsonb)`, [JSON.stringify(patch)])
+  }
+
+  async saveVehicle(patch: Record<string, unknown>): Promise<void> {
+    await this.rows(`select save_vehicle($1::jsonb)`, [JSON.stringify(patch)])
+  }
 
   async listCustomers(q = ''): Promise<CustomerSummary[]> {
     return this.rows<CustomerSummary>(`select * from list_customers($1, 200)`, [q])

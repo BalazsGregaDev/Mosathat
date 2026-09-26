@@ -351,3 +351,76 @@
 
 /* A szerepkör-választó a táblázatban: ne terüljön szét az oszlopban. */
 .lista select.beviteli { width: auto; min-width: 150px; padding: 6px 10px; font-size: var(--m-sm); }
+
+/* ===========================================================================
+   Helyben szerkeszthető adat
+   =========================================================================== */
+
+/* Az érték gomb, de nem néz ki gombnak — amíg rá nem viszed az egeret.
+   Egy adatlapon húsz doboz keret zajos lenne; a szerkeszthetőséget a
+   hover és a kurzor mutatja meg, nem egy állandó keret. */
+.szerk-ertek {
+  background: none;
+  border: 1px dashed transparent;
+  border-radius: var(--r-sm);
+  padding: 2px 6px;
+  margin: -2px -6px;
+  text-align: right;
+  font: inherit;
+  color: inherit;
+  cursor: text;
+  max-width: 100%;
+}
+.szerk-ertek:hover {
+  border-color: var(--keret-eros);
+  background: var(--lap-2);
+}
+.szerk-ertek:focus-visible {
+  outline: none;
+  border-color: var(--zold);
+  background: var(--zold-halvany);
+}
+.szerk-ertek.ures { color: var(--szoveg-halvany); font-style: italic; }
+
+.adatsor.szerk-nyitva { align-items: flex-start; }
+.adatsor.szerk-nyitva .ertek {
+  display: flex; flex-direction: column; gap: var(--t2); align-items: stretch;
+  width: 100%; max-width: 320px;
+}
+.adatsor.szerk-nyitva .beviteli { font-size: var(--m-alap); padding: 7px 10px; }
+.adatsor.szerk-nyitva .btn { align-self: flex-end; }
+
+.szerk-hiba {
+  color: var(--v-baj); font-size: var(--m-xs); line-height: 1.4;
+  text-align: left;
+}
+
+/* Hívás link a telefonszám mellett. Mobilon ez a leggyakoribb művelet:
+   a szám látszik, de egy kattintással hívható is. */
+.hivas {
+  margin-left: var(--t2);
+  font-size: var(--m-xs);
+  color: var(--zold);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+.hivas:hover { color: var(--zold-sotet); }
+
+.valaszto-vonal-vekony {
+  border-top: 1px solid var(--keret);
+  margin: var(--t3) 0;
+}
+
+.alkartya {
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+  padding: var(--t3);
+  margin-bottom: var(--t2);
+  background: var(--lap-2);
+}
+
+/* Az érték oszlopa kapja a maradék helyet, különben a gomb a saját
+   tartalmára zsugorodik, és a „Nagy Anita" két sorba törik. */
+.adatsor.szerk-sor { align-items: baseline; }
+.adatsor.szerk-sor .szerk-cimke { flex: 0 0 auto; white-space: nowrap; }
+.adatsor.szerk-sor .ertek { flex: 1 1 auto; min-width: 0; text-align: right; }

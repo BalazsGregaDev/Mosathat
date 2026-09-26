@@ -77,11 +77,21 @@ export const ACTIVE_STATUSES: BookingStatus[] = [
 ]
 
 // Melyik gomb jelenik meg egy adott állapotban, és mire vált.
+/**
+ * A folyamat három lépés: megérkezett → kész van → átvette.
+ *
+ * A „kezdjük" lépés kikerült. A gyakorlatban vagy elfelejtették megnyomni,
+ * vagy utólag nyomták meg — vagyis nem mondott igazat arról, amit mért. A
+ * munka kezdete így az érkezés ideje lesz; ezt az adatbázis állítja be.
+ *
+ * Az IN_PROGRESS státusz megmarad, mert régi foglalásokon rajta van, és
+ * azoknak is kell egy következő lépés.
+ */
 export const NEXT_STATUS: Partial<Record<BookingStatus, { to: BookingStatus; label: string }>> = {
   CONFIRMED: { to: 'ARRIVED', label: 'Megérkezett' },
-  ARRIVED: { to: 'IN_PROGRESS', label: 'Kezdjük' },
+  ARRIVED: { to: 'READY', label: 'Kész van' },
   IN_PROGRESS: { to: 'READY', label: 'Kész van' },
-  READY: { to: 'COMPLETED', label: 'Átvette, lezár' },
+  READY: { to: 'COMPLETED', label: 'Átvette' },
 }
 
 // --- sorok ------------------------------------------------------------------

@@ -249,6 +249,22 @@ export class SupabaseSource implements DataSource {
 
   // --- ügyfelek és járművek ---------------------------------------------------
 
+  async patchBooking(bookingId: string, patch: Record<string, unknown>): Promise<void> {
+    const { error } = await this.sb.rpc('patch_booking',
+      { p_booking_id: bookingId, p_patch: patch })
+    if (error) fail('Módosítás', error)
+  }
+
+  async saveCustomer(patch: Record<string, unknown>): Promise<void> {
+    const { error } = await this.sb.rpc('save_customer', { p: patch })
+    if (error) fail('Ügyfél mentése', error)
+  }
+
+  async saveVehicle(patch: Record<string, unknown>): Promise<void> {
+    const { error } = await this.sb.rpc('save_vehicle', { p: patch })
+    if (error) fail('Jármű mentése', error)
+  }
+
   async listCustomers(q = ''): Promise<CustomerSummary[]> {
     const { data, error } = await this.sb.rpc('list_customers', { p_q: q, p_limit: 200 })
     if (error) fail('Ügyfelek', error)

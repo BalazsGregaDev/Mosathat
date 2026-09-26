@@ -5,8 +5,21 @@ import { useMentetlen } from '../../state/useMentetlen'
 import { ft, idosav, idotartam, ora } from '../../lib/format'
 import {
   CATEGORY_LABEL, NEXT_STATUS, SCOPE_LABEL, STATUS_LABEL, TYPE_LABEL,
-  type BookingExtraRow, type BookingTask, type DayBooking, type ServiceArea,
+  type BookingExtraRow, type BookingScope, type BookingTask, type BookingType,
+  type DayBooking, type ServiceArea, type VehicleCategory,
 } from '../../lib/types'
+import Szerkesztheto, { type Valaszthato } from '../common/Szerkesztheto'
+
+// A legördülők tartalma. A feliratok ugyanabból a szótárból jönnek, mint
+// mindenhol máshol — így nem lehet két különböző neve ugyanannak.
+const KATEGORIAK: Valaszthato[] = (['SZEMELYAUTO', 'SUV', 'KISBUSZ'] as VehicleCategory[])
+  .map((v) => ({ ertek: v, cimke: CATEGORY_LABEL[v] }))
+
+const TERJEDELMEK: Valaszthato[] = (['TELJES', 'KULSO', 'BELSO'] as BookingScope[])
+  .map((v) => ({ ertek: v, cimke: SCOPE_LABEL[v] }))
+
+const TIPUSOK: Valaszthato[] = (['VAROS', 'LEADOS', 'TOBBNAPOS', 'HOZOMVISZEM'] as BookingType[])
+  .map((v) => ({ ertek: v, cimke: TYPE_LABEL[v] }))
 
 // ---------------------------------------------------------------------------
 //  A munkalap.
@@ -53,7 +66,7 @@ export default function BookingDetail({
   /** Átvált a szerkesztő űrlapra — ugyanarra, amivel a foglalás készült. */
   onSzerkeszt: () => void
 }) {
-  const { data, refresh } = useApp()
+  const { data, catalog, refresh } = useApp()
   const [b, setB] = useState<DayBooking | null>(null)
   const [lista, setLista] = useState<BookingTask[]>([])
   const [mennyisegek, setMennyisegek] = useState<BookingExtraRow[]>([])
@@ -234,6 +247,25 @@ export default function BookingDetail({
     }
   }
 
+  // --- helyben szerkesztés ------------------------------------------------------
+  //
+  // Egy mező átírása. Az adatbázis a többi adatot változatlanul hagyja, de az
+  // árat, az időt és a munkalistát újraszámolja — ugyanazon az úton, mint a
+  // teljes szerkesztésnél. Két külön út előbb-utóbb eltérne egymástól.
+  const mezoMent = useCallback(async (patch: Record<string, unknown>) => {
+    await data.patchBooking(bookingId, patch)
+    valtozott.current = true
+    await betolt()
+  }, [data, bookingId, betolt])
+
+  // A csomagválasztó a katalógusból jön. Az üres sor nem hiba: van, aki csak
+  // egy kárpittisztítást kér, csomag nélkül.
+  const csomagValaszto = useMemo<Valaszthato[]>(() => [
+    { ertek: '', cimke: 'Csak extrák (nincs csomag)' },
+    ...(catalog?.packages ?? []).filter((p) => p.active)
+      .map((p) => ({ ertek: p.id, cimke: p.name })),
+  ], [catalog])
+
   const kovetkezo = b ? NEXT_STATUS[b.status] : undefined
   const keszLista = lista.filter((t) => t.done).length
 
@@ -277,37 +309,104 @@ export default function BookingDetail({
                 </div>
               )}
 
-              {/* ---------- alapadatok ---------- */}
+              {/* ---------- alapadatok, helyben szerkesztve ----------
+                  Minden adatra rá lehet kattintani és át lehet írni, egészen
+                  a lezárásig. Telefon közben ez a különbség nyolc kattintás
+                  és egy között: „a férjem jön érte, őt ezen a számon éred el". */}
               <div className="szakasz">
-                <div className="adatsor">
-                  <span>Telefon</span>
-                  <span className="ertek">
-                    <a href={`tel:${b.customer_phone}`} style={{ color: 'inherit' }}>
-                      {b.customer_phone}
-                    </a>
-                  </span>
-                </div>
-                <div className="adatsor">
-                  <span>Mit kér</span>
-                  <span className="ertek" style={{ fontFamily: 'var(--betu)' }}>
-                    {b.package_name ?? 'Csak extrák'}
-                    {b.full_service && ' + Full Service'}
-                    {b.scope !== 'TELJES' && ` · ${SCOPE_LABEL[b.scope]}`}
-                    {' · '}
-                    {CATEGORY_LABEL[b.category]}
-                  </span>
-                </div>
-                <div className="adatsor">
-                  <span>{TYPE_LABEL[b.booking_type]}</span>
-                  <span className="ertek">
-                    {b.booking_type === 'VAROS'
-                      ? idosav(b.start_at, b.planned_duration_minutes)
-                      : `${ora(b.drop_off_at)}${b.pick_up_at ? ` – ${ora(b.pick_up_at)}` : ''}`}
-                    {b.planned_duration_minutes > 0 && (
-                      <span className="halk"> · {idotartam(b.planned_duration_minutes)}</span>
-                    )}
-                  </span>
-                </div>
+                {!lezart && (
+                  <div className="fej">
+                    Adatok
+                    <span className="jobbra halvany">kattints rá az átíráshoz</span>
+                  </div>
+                )}
+
+                <Szerkesztheto
+                  cimke="Név" ertek={b.customer_name} zarolt={lezart}
+                  onMent={(v) => mezoMent({ customer_name: v })} />
+
+                <Szerkesztheto
+                  cimke="Telefon" ertek={b.customer_phone} tipus="telefon" zarolt={lezart}
+                  onMent={(v) => mezoMent({ customer_phone: v })}
+                  utotag={b.customer_phone && (
+                    <a href={`tel:${b.customer_phone}`} className="hivas"
+                       title="Hívás">Hívás</a>
+                  )} />
+
+                <Szerkesztheto
+                  cimke="Rendszám" ertek={b.plate_raw} tipus="rendszam" zarolt={lezart}
+                  onMent={(v) => mezoMent({ plate_raw: v })} />
+
+                <Szerkesztheto
+                  cimke="Autó" ertek={[b.brand, b.model].filter(Boolean).join(' ')}
+                  zarolt={lezart} ures="nincs megadva"
+                  onMent={(v) => {
+                    const [marka, ...tobbi] = v.split(' ')
+                    return mezoMent({ brand: marka ?? '', model: tobbi.join(' ') })
+                  }} />
+
+                <Szerkesztheto
+                  cimke="Méret" ertek={b.category} zarolt={lezart}
+                  valaszthato={KATEGORIAK}
+                  onMent={(v) => mezoMent({ category: v })} />
+
+                <Szerkesztheto
+                  cimke="Csomag"
+                  ertek={b.package_id ?? ''} zarolt={lezart} ures="Csak extrák"
+                  valaszthato={csomagValaszto}
+                  onMent={(v) => mezoMent({ package_id: v || null })} />
+
+                <Szerkesztheto
+                  cimke="Terjedelem" ertek={b.scope} zarolt={lezart}
+                  valaszthato={TERJEDELMEK}
+                  onMent={(v) => mezoMent({ scope: v })} />
+
+                <Szerkesztheto
+                  cimke="Típus" ertek={b.booking_type} zarolt={lezart}
+                  valaszthato={TIPUSOK}
+                  onMent={(v) => mezoMent({ booking_type: v })} />
+
+                <Szerkesztheto
+                  cimke="Nap" ertek={b.service_date.slice(0, 10)} tipus="datum" zarolt={lezart}
+                  onMent={(v) => mezoMent({ service_date: v })} />
+
+                {b.booking_type === 'VAROS' ? (
+                  <Szerkesztheto
+                    cimke="Kezdés" ertek={ora(b.start_at)} tipus="ido" zarolt={lezart}
+                    onMent={(v) => mezoMent({ start_time: v })}
+                    utotag={b.planned_duration_minutes > 0 && (
+                      <span className="halk">
+                        {' '}· {idosav(b.start_at, b.planned_duration_minutes).split('–')[1]?.trim()}
+                        -ig, {idotartam(b.planned_duration_minutes)}
+                      </span>
+                    )} />
+                ) : (
+                  <>
+                    <Szerkesztheto
+                      cimke="Hozza" ertek={ora(b.drop_off_at)} tipus="ido" zarolt={lezart}
+                      onMent={(v) => mezoMent({ drop_off_time: v })} />
+                    <Szerkesztheto
+                      cimke="Viszi" ertek={ora(b.pick_up_at)} tipus="ido" zarolt={lezart}
+                      ures="nincs megbeszélve"
+                      onMent={(v) => mezoMent({ pick_up_time: v })}
+                      utotag={b.planned_duration_minutes > 0 && (
+                        <span className="halk"> · {idotartam(b.planned_duration_minutes)} munka</span>
+                      )} />
+                  </>
+                )}
+
+                {b.booking_type === 'TOBBNAPOS' && (
+                  <>
+                    <Szerkesztheto
+                      cimke="Határidő napja" ertek={b.deadline_at?.slice(0, 10)}
+                      tipus="datum" zarolt={lezart}
+                      onMent={(v) => mezoMent({ deadline_date: v })} />
+                    <Szerkesztheto
+                      cimke="Határidő órája" ertek={ora(b.deadline_at)}
+                      tipus="ido" zarolt={lezart}
+                      onMent={(v) => mezoMent({ deadline_time: v })} />
+                  </>
+                )}
               </div>
 
               {/* ---------- 1. MEGJEGYZÉS ---------- */}
