@@ -1,9 +1,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import type {
-  BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity,
-  BookingFormData, LatestStart, NewBookingInput, PlateLookup, SearchHit, ServiceArea,
-  StandingCar, WorkWindow,
+  BookingStatus, BookingTask, CalcInput, CalcResult, DashboardSummary, DayBooking, DayCapacity,
+  DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
+  ContractInput, ContractRow, Extra, LatestStart,
+  NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
+  ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
 } from '../lib/types'
 import type { Catalog, DataSource, SessionUser } from './source'
 import { calcArgs, num, numOrNull, toCalcResult } from './source'
@@ -28,8 +30,14 @@ export class SupabaseSource implements DataSource {
   readonly label = 'Supabase'
   readonly isDemo = false
   private sb: SupabaseClient
+  // Új felhasználó felvételéhez kell egy második, eldobható kliens — lásd
+  // a createStaff() magyarázatát.
+  private readonly url: string
+  private readonly anonKey: string
 
   constructor(url: string, anonKey: string) {
+    this.url = url
+    this.anonKey = anonKey
     this.sb = createClient(url, anonKey, {
       auth: { persistSession: true, autoRefreshToken: true },
     })
@@ -203,6 +211,237 @@ export class SupabaseSource implements DataSource {
       p_booking_id: bookingId, p_price: price, p_reason: reason ?? null,
     })
     if (error) fail('Végleges ár', error)
+  }
+
+
+  // --- szolgáltatások szerkesztése -------------------------------------------
+
+  async updateExtra(id: string, patch: Partial<Extra>): Promise<void> {
+    const { error } = await this.sb.from('extras').update(patch).eq('id', id)
+    if (error) fail('Szolgáltatás mentése', error)
+  }
+
+  async updatePackagePrice(
+    packageId: string, category: VehicleCategory, scope: BookingScope,
+    patch: { price_huf?: number | null; duration_minutes?: number | null },
+  ): Promise<void> {
+    const { error } = await this.sb
+      .from('package_pricing')
+      .upsert({ package_id: packageId, category, scope, ...patch },
+              { onConflict: 'package_id,category,scope' })
+    if (error) fail('Ár mentése', error)
+  }
+
+  async updateFullServicePrice(
+    packageId: string, category: VehicleCategory,
+    patch: { price_huf?: number | null; extra_work_minutes?: number | null },
+  ): Promise<void> {
+    const { error } = await this.sb
+      .from('full_service_pricing')
+      .upsert({ package_id: packageId, category, ...patch }, { onConflict: 'package_id,category' })
+    if (error) fail('Full Service ár mentése', error)
+  }
+
+  async updatePackage(id: string, patch: { name?: string; description?: string | null }): Promise<void> {
+    const { error } = await this.sb.from('packages').update(patch).eq('id', id)
+    if (error) fail('Csomag mentése', error)
+  }
+
+  // --- ügyfelek és járművek ---------------------------------------------------
+
+  async listCustomers(q = ''): Promise<CustomerSummary[]> {
+    const { data, error } = await this.sb.rpc('list_customers', { p_q: q, p_limit: 200 })
+    if (error) fail('Ügyfelek', error)
+    return (data ?? []) as CustomerSummary[]
+  }
+
+  async listVehicles(q = ''): Promise<VehicleSummary[]> {
+    const { data, error } = await this.sb.rpc('list_vehicles', { p_q: q, p_limit: 200 })
+    if (error) fail('Járművek', error)
+    return (data ?? []) as VehicleSummary[]
+  }
+
+  // --- áttekintés -------------------------------------------------------------
+
+  async getDashboard(date: string): Promise<DashboardSummary> {
+    const { data, error } = await this.sb.rpc('dashboard_summary', { p_day: date })
+    if (error) fail('Áttekintés', error)
+    return data as DashboardSummary
+  }
+
+  async getWeekCapacity(date: string): Promise<WeekDay[]> {
+    const { data, error } = await this.sb.rpc('week_capacity', { p_from: date })
+    if (error) fail('Heti kapacitás', error)
+    return ((data ?? []) as Record<string, unknown>[])
+      .map((x) => ({
+        nap: String(x.nap),
+        hetfotol: num(x.hetfotol),
+        parallel_slots: num(x.parallel_slots),
+        capacity_minutes: num(x.capacity_minutes),
+        booked_minutes: num(x.booked_minutes),
+        free_minutes: num(x.free_minutes),
+        load_pct: numOrNull(x.load_pct),
+      }))
+      .sort((a, b) => a.hetfotol - b.hetfotol)
+  }
+
+  // --- beállítások ------------------------------------------------------------
+
+  async getOpening(): Promise<OpeningDay[]> {
+    const { data, error } = await this.sb.from('v_opening').select('*').order('weekday')
+    if (error) fail('Nyitvatartás', error)
+    return (data ?? []) as OpeningDay[]
+  }
+
+  async saveDayHours(day: OpeningDay): Promise<void> {
+    const { error } = await this.sb.rpc('save_day_hours', { p: day })
+    if (error) fail('Nyitvatartás mentése', error)
+  }
+
+  async getShopSettings(): Promise<ShopSettings> {
+    const { data, error } = await this.sb.from('shop_settings').select('*').single()
+    if (error) fail('Beállítások', error)
+    return data as ShopSettings
+  }
+
+  async saveShopSettings(s: ShopSettings): Promise<void> {
+    const { error } = await this.sb.rpc('save_shop_settings', { p: s })
+    if (error) fail('Beállítások mentése', error)
+  }
+
+  async listDayOverrides(from: string): Promise<DayOverride[]> {
+    const { data, error } = await this.sb.from('day_overrides').select('*')
+      .gte('day', from).order('day')
+    if (error) fail('Kivételnapok', error)
+    return (data ?? []) as DayOverride[]
+  }
+
+  async saveDayOverride(o: DayOverride): Promise<void> {
+    const { error } = await this.sb.rpc('save_day_override', { p: o })
+    if (error) fail('Kivételnap mentése', error)
+  }
+
+  async deleteDayOverride(day: string): Promise<void> {
+    const { error } = await this.sb.rpc('delete_day_override', { p_day: day })
+    if (error) fail('Kivételnap törlése', error)
+  }
+
+  // --- felhasználók -----------------------------------------------------------
+
+  async listStaff(): Promise<StaffRow[]> {
+    const { data, error } = await this.sb.rpc('list_staff')
+    if (error) fail('Felhasználók', error)
+    return (data ?? []) as StaffRow[]
+  }
+
+  /**
+   * Új felhasználó két lépésben.
+   *
+   * Supabase-en belépőt létrehozni csak a service role kulccsal lehet, azt
+   * pedig soha nem szabad a böngészőbe tenni — aki megnyitja a fejlesztői
+   * eszközöket, mindenhez hozzáférne. Marad a rendes regisztráció.
+   *
+   * Csakhogy a signUp() bejelentkeztetné az ÚJ felhasználót, és a tulaj
+   * kiesne a saját munkamenetéből. Ezért a regisztráció egy külön, eldobható
+   * klienssel megy, ami nem ment el semmit (persistSession: false). A bent
+   * ülő felhasználó munkamenetéhez ez hozzá sem ér.
+   *
+   * A szerepkör közben NEM utazik a böngészőn át: azt az előbb felvett
+   * meghívó sor hordozza az adatbázisban.
+   */
+  async createStaff(input: NewStaffInput): Promise<void> {
+    const email = input.email.trim().toLowerCase()
+
+    const { error: meghivoHiba } = await this.sb.rpc('invite_staff', {
+      p: { email, full_name: input.full_name, role: input.role },
+    })
+    if (meghivoHiba) fail('Meghívó', meghivoHiba)
+
+    const eldobhato = createClient(this.url, this.anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    })
+    const { error } = await eldobhato.auth.signUp({ email, password: input.password })
+
+    if (error) {
+      // A meghívó maradjon meg: így a képernyőn látszik, hogy elkezdődött a
+      // felvétel, és nem tűnik el nyomtalanul egy félresikerült regisztráció.
+      fail('Fiók létrehozása', error)
+    }
+  }
+
+  async updateStaff(
+    id: string,
+    patch: { full_name?: string; role?: StaffRole; active?: boolean },
+  ): Promise<void> {
+    const { error } = await this.sb.rpc('set_staff', { p: { id, ...patch } })
+    if (error) fail('Felhasználó módosítása', error)
+  }
+
+  async deleteInvite(email: string): Promise<void> {
+    const { error } = await this.sb.rpc('delete_invite', { p_email: email })
+    if (error) fail('Meghívó törlése', error)
+  }
+
+  // --- bérletek és szerződések -----------------------------------------------
+
+  async listPasses(): Promise<PassBalanceRow[]> {
+    const { data, error } = await this.sb.from('v_pass_balance').select('*')
+      .order('customer_name').order('pass_name')
+    if (error) fail('Bérletek', error)
+    return (data ?? []) as PassBalanceRow[]
+  }
+
+  async createPass(input: NewPassInput): Promise<string> {
+    const { data, error } = await this.sb.rpc('create_pass', { p: input })
+    if (error) fail('Bérlet létrehozása', error)
+    return data as string
+  }
+
+  async deactivatePass(passId: string): Promise<void> {
+    const { error } = await this.sb.rpc('deactivate_pass', { p_pass_id: passId })
+    if (error) fail('Bérlet kivezetése', error)
+  }
+
+  async listContracts(): Promise<ContractRow[]> {
+    const { data, error } = await this.sb.from('v_contracts').select('*').order('company_name')
+    if (error) fail('Szerződések', error)
+    return (data ?? []) as ContractRow[]
+  }
+
+  async saveContract(input: ContractInput): Promise<string> {
+    const { data, error } = await this.sb.rpc('save_contract', { p: input })
+    if (error) fail('Szerződés mentése', error)
+    return data as string
+  }
+
+  async getBookingExtras(bookingId: string): Promise<BookingExtraRow[]> {
+    const { data, error } = await this.sb
+      .from('v_booking_extras').select('*').eq('booking_id', bookingId).order('name')
+    if (error) fail('Tételek', error)
+    return (data ?? []).map((x: any) => ({ ...x, quantity: num(x.quantity) })) as BookingExtraRow[]
+  }
+
+  async setBookingExtraQty(itemId: string, qty: number): Promise<void> {
+    const { error } = await this.sb.rpc('set_booking_extra_qty', { p_item_id: itemId, p_qty: qty })
+    if (error) fail('Mennyiség mentése', error)
+  }
+
+  subscribe(onValtozas: () => void): () => void {
+    // Két táblát figyelünk: a foglalásokat és a munkalistát. Ez a kettő
+    // változik menet közben — az egyik a pultnál, a másik a mosóállásban.
+    //
+    // A változás tartalmát szándékosan nem használjuk fel: csak jelezzük,
+    // hogy újra kell tölteni. Így nem kell a kliensben újraépíteni azt,
+    // amit az adatbázis nézetei már összeraknak.
+    const csatorna = this.sb
+      .channel('mosathat-elo')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, onValtozas)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_tasks' }, onValtozas)
+      .subscribe()
+
+    return () => {
+      void this.sb.removeChannel(csatorna)
+    }
   }
 
   async getTasks(bookingId: string): Promise<BookingTask[]> {

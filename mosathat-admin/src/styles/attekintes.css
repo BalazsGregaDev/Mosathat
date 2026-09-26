@@ -1,0 +1,353 @@
+/* Áttekintés és Beállítások. */
+
+/* A két felső panel egymás mellett: bal oldalon a mai nap, jobbra ami
+   közbeszólhat. Ez az a két dolog, amit reggel meg kell nézni. */
+.attekintes {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--t4);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .attekintes { grid-template-columns: 1fr; }
+}
+
+/* --- a nagy szám ------------------------------------------------------------ */
+
+.hos { padding-bottom: var(--t4); border-bottom: 1px solid var(--keret); }
+
+.hos-cimke {
+  font-size: var(--m-xs); font-weight: var(--vastag-eros);
+  letter-spacing: .06em; text-transform: uppercase;
+  color: var(--szoveg-halk);
+}
+
+/* Szándékosan NEM tabular-nums: ekkora méretben a nulla szélességére
+   igazított számjegyek szétesnek. Az igazítás a táblázatok dolga. */
+.hos-szam {
+  font-family: var(--betu);
+  font-size: var(--m-hos);
+  font-weight: var(--vastag-eros);
+  line-height: 1.05;
+  letter-spacing: -.02em;
+  margin: 2px 0 var(--t1);
+}
+
+.hos-alatt { font-size: var(--m-sm); color: var(--szoveg-halk); }
+
+/* --- támogató csempék ------------------------------------------------------- */
+
+.csempek {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: var(--t3); padding: var(--t4) 0;
+}
+.csempe-cimke {
+  font-size: var(--m-xs); color: var(--szoveg-halk); margin-bottom: 2px;
+}
+.csempe-ertek {
+  font-size: var(--m-lg); font-weight: var(--vastag-eros);
+}
+
+.het-osszeg {
+  border-top: 1px solid var(--keret);
+  padding-top: var(--t3);
+  font-size: var(--m-sm); color: var(--szoveg-halk);
+}
+.het-osszeg strong { color: var(--szoveg); font-weight: var(--vastag-eros); }
+
+/* --- figyelmeztetések ------------------------------------------------------- */
+
+.gondok { list-style: none; display: flex; flex-direction: column; gap: var(--t3); }
+
+.gondok li {
+  display: grid;
+  grid-template-columns: 16px auto 1fr;
+  gap: var(--t2);
+  align-items: baseline;
+  font-size: var(--m-sm);
+}
+
+/* A súly nem csak színnel látszik: van jele és szöveges címkéje is. */
+.gondok .jel {
+  font-weight: var(--vastag-fej);
+  text-align: center;
+  color: var(--szoveg-halvany);
+}
+.gondok li[data-suly='3'] .jel { color: var(--v-baj); }
+.gondok li[data-suly='2'] .jel { color: var(--v-erkezett); }
+
+.gondok .cimke {
+  font-size: var(--m-xs); text-transform: uppercase; letter-spacing: .06em;
+  font-weight: var(--vastag-eros); color: var(--szoveg-halk);
+  white-space: nowrap;
+}
+.gondok .szoveg { color: var(--szoveg); }
+
+/* --- heti kapacitás -------------------------------------------------------- */
+
+.meterek { display: flex; flex-direction: column; gap: var(--t2); }
+
+.meter-sor {
+  position: relative;
+  display: grid;
+  grid-template-columns: 120px 1fr 58px;
+  gap: var(--t3);
+  align-items: center;
+  /* Elég magas ahhoz, hogy telefonon is el lehessen találni. */
+  min-height: 40px;
+}
+
+.meter-nap {
+  display: flex; flex-direction: column; gap: 1px;
+  text-align: left;
+  color: var(--szoveg);
+  background: none; border: none; padding: 2px 0;
+  border-radius: var(--r-sm);
+  line-height: 1.25;
+}
+.meter-nap .nev { font-size: var(--m-sm); font-weight: var(--vastag-kozep); }
+.meter-nap .datum { font-size: var(--m-xs); color: var(--szoveg-halk); }
+.meter-nap:hover .nev { color: var(--zold); text-decoration: underline; }
+.meter-sor[data-allapot='zarva'] .meter-nap .nev { color: var(--szoveg-halvany); }
+
+/* A mai nap: nem szín, hanem egy jelölés a sor elején — a színek a
+   terhelést jelentik, azt nem szabad felülírni. */
+.meter-sor[data-ma] .meter-nap .nev { font-weight: var(--vastag-fej); }
+.meter-sor[data-ma] .meter-nap .datum::after {
+  content: ' · ma'; color: var(--zold); font-weight: var(--vastag-eros);
+}
+
+/* A sáv 14px vastag — jóval a 24px-es felső határ alatt, mert hét sorból
+   áll a blokk, és ott a vékony sáv olvashatóbb. */
+.meter-sav {
+  height: 14px;
+  border-radius: var(--r-sm);
+  background: var(--tr-jo-halk);
+  overflow: hidden;
+}
+.meter-toltes {
+  height: 100%;
+  background: var(--tr-jo);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  transition: width var(--atmenet);
+}
+
+.meter-sor[data-allapot='szoros'] .meter-sav     { background: var(--tr-szoros-halk); }
+.meter-sor[data-allapot='szoros'] .meter-toltes  { background: var(--tr-szoros); }
+.meter-sor[data-allapot='tele']   .meter-sav     { background: var(--tr-tele-halk); }
+.meter-sor[data-allapot='tele']   .meter-toltes  { background: var(--tr-tele); }
+
+/* Zárva: a sáv üres és halvány, nem hamis nulla százalék. */
+.meter-sor[data-allapot='zarva'] .meter-sav {
+  background: repeating-linear-gradient(
+    135deg, var(--lap-2) 0 5px, var(--hatter) 5px 10px);
+}
+
+.meter-ertek {
+  font-family: var(--betu-szam); font-variant-numeric: tabular-nums;
+  font-size: var(--m-sm); text-align: right; color: var(--szoveg-halk);
+}
+.meter-sor[data-allapot='tele'] .meter-ertek { color: var(--szoveg); font-weight: var(--vastag-eros); }
+
+.meter-sugo {
+  position: absolute; z-index: 5;
+  left: 132px; bottom: calc(100% - 4px);
+  max-width: 340px;
+  background: var(--sotet); color: var(--sotet-szoveg);
+  border-radius: var(--r); padding: var(--t2) var(--t3);
+  font-size: var(--m-xs); line-height: 1.5;
+  box-shadow: var(--arnyek);
+  pointer-events: none;
+}
+.meter-sugo strong { color: #fff; }
+
+/* --- rangsor (leggyakoribb csomagok) ---------------------------------------- */
+
+.rangsor { display: flex; flex-direction: column; gap: 2px; }
+
+.rangsor-sor {
+  display: grid; grid-template-columns: 180px 1fr 42px;
+  gap: var(--t3); align-items: center;
+  /* A 2px-es rés a sávok között a lap színéből jön, nem keretből. */
+  padding: 2px 0;
+}
+.rangsor-nev { font-size: var(--m-sm); }
+.rangsor-sav { height: 18px; }
+
+/* Egy sorozat, egy szín. A hosszúság mutatja a mennyiséget — ha a szín is
+   azt mutatná, ugyanazt kódolnánk kétszer. */
+.rud {
+  height: 100%;
+  background: var(--zold);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  min-width: 3px;
+}
+.rangsor-szam {
+  font-family: var(--betu-szam); font-variant-numeric: tabular-nums;
+  font-size: var(--m-sm); font-weight: var(--vastag-eros); text-align: right;
+}
+
+@media (max-width: 640px) {
+  .meter-sor  { grid-template-columns: 94px 1fr 48px; gap: var(--t2); }
+  .meter-sugo { left: 0; max-width: none; right: 0; }
+  .rangsor-sor { grid-template-columns: 130px 1fr 36px; }
+  .csempek { grid-template-columns: repeat(3, 1fr); gap: var(--t2); }
+  .hos-szam { font-size: 44px; }
+}
+
+/* ===========================================================================
+   Beállítások
+   =========================================================================== */
+
+/* A címke lehet <span> is, ha a .mezo maga egy <label> — így nem kell
+   minden mezőnek kitalált id-t adni, és a kattintás mégis a mezőre visz. */
+.mezo > span:first-child {
+  font-size: var(--m-xs);
+  font-weight: var(--vastag-eros);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--szoveg-halk);
+}
+.mezo small { font-size: var(--m-xs); color: var(--szoveg-halk); line-height: 1.5; }
+.mezo + .mezo { margin-top: var(--t4); }
+
+.mezo-sor {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--t3);
+  margin-bottom: var(--t4);
+}
+.mezo-sor .mezo + .mezo { margin-top: 0; }
+
+.sor { display: flex; gap: var(--t2); align-items: center; }
+
+.urlap-lab {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: var(--t3);
+  margin-top: var(--t4); padding-top: var(--t4);
+  border-top: 1px solid var(--keret);
+  font-size: var(--m-sm);
+}
+
+.beall-tabla { width: 100%; border-collapse: collapse; min-width: 900px; }
+.beall-tabla th, .beall-tabla td { padding: 6px 8px; text-align: left; }
+.beall-tabla thead th {
+  font-size: var(--m-xs); text-transform: uppercase; letter-spacing: .06em;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  border-bottom: 1px solid var(--keret);
+}
+.beall-tabla tbody tr { border-bottom: 1px solid var(--keret); }
+.beall-tabla tbody tr:last-child { border-bottom: none; }
+.beall-tabla tbody th { font-size: var(--m-sm); font-weight: var(--vastag-kozep); white-space: nowrap; }
+.beall-tabla tr[data-zarva] tbody th,
+.beall-tabla tr[data-zarva] th { color: var(--szoveg-halvany); }
+
+/* Az időmezők keskenyebbek: nyolc számjegy sosem lesz bennük. */
+.beviteli.ido { width: auto; min-width: 92px; padding: 6px 8px; font-size: var(--m-sm); }
+.beall-tabla .beviteli { padding: 6px 8px; font-size: var(--m-sm); }
+.beall-tabla input[type='checkbox'] { width: 18px; height: 18px; accent-color: var(--zold); }
+
+.szunetek { display: flex; flex-direction: column; gap: var(--t1); align-items: flex-start; }
+.szunet { display: flex; gap: var(--t1); align-items: center; flex-wrap: wrap; }
+.szunet-nev { width: 104px; }
+
+.zarva-cella {
+  color: var(--szoveg-halvany);
+  font-size: var(--m-sm);
+  font-style: italic;
+}
+
+.cimke-pill[data-b='baj'] { background: #fdf1ef; color: var(--v-baj); }
+.cimke-pill:not([data-b]) { background: var(--lap-2); color: var(--szoveg-halk); }
+
+/* ===========================================================================
+   Felhasználók és szerepkörök
+   =========================================================================== */
+
+.cimke-pill[data-r='SUPERADMIN']  { background: #eae7f6; color: #4a3f8f; }
+.cimke-pill[data-r='TULAJDONOS']  { background: var(--zold-halvany); color: var(--zold-sotet); }
+.cimke-pill[data-r='STAFF']       { background: var(--lap-2); color: var(--szoveg-halk); }
+.cimke-pill[data-r='aktiv']       { background: var(--zold-halvany); color: var(--zold-sotet); }
+.cimke-pill[data-r='tiltott']     { background: #f3f4f2; color: var(--szoveg-halvany); }
+.cimke-pill[data-r='figyelem']    { background: var(--tr-szoros-halk); color: #7a4e0d; margin-left: var(--t2); }
+.cimke-pill[data-r='hozomviszem'] { background: #eaf2fa; color: #1f5285; margin-left: var(--t2); }
+
+.lista tr[data-inaktiv] th,
+.lista tr[data-inaktiv] td { opacity: .55; }
+
+.sor-hiba {
+  color: var(--v-baj); font-size: var(--m-xs); font-weight: 400;
+  margin-top: var(--t1);
+}
+
+/* A szerepkör választása: nem legördülő lista, mert a három közötti
+   különbséget el kell olvasni, nem kitalálni a nevükből. */
+.szerep-valaszto { display: flex; flex-direction: column; gap: var(--t2); }
+.szerep-valaszto button {
+  display: flex; flex-direction: column; gap: 2px;
+  text-align: left;
+  border: 1px solid var(--keret-eros);
+  background: var(--lap);
+  border-radius: var(--r);
+  padding: var(--t3);
+}
+.szerep-valaszto button strong { font-size: var(--m-alap); font-weight: var(--vastag-eros); }
+.szerep-valaszto button span { font-size: var(--m-xs); color: var(--szoveg-halk); line-height: 1.5; }
+.szerep-valaszto button:hover { border-color: var(--keret-eros); background: var(--lap-2); }
+.szerep-valaszto button.aktiv {
+  border-color: var(--zold); background: var(--zold-halvany);
+}
+.szerep-valaszto button.aktiv span { color: var(--zold-sotet); }
+
+.szerepek { display: flex; flex-direction: column; gap: var(--t3); }
+.szerepek > div { display: grid; grid-template-columns: 130px 1fr; gap: var(--t3); align-items: baseline; }
+.szerepek dd { font-size: var(--m-sm); color: var(--szoveg-halk); }
+
+/* Az oldalsáv láblécében a szerepkör a név alatt. */
+.oldalsav-lab .szerep {
+  font-size: var(--m-xs);
+  color: var(--sotet-halk);
+  margin-top: 1px;
+}
+
+/* --- demó belépők ----------------------------------------------------------- */
+
+.demo-belepok { display: flex; flex-direction: column; gap: var(--t2); }
+.demo-belepok .cimke { margin-bottom: 2px; }
+.demo-belepok button {
+  display: flex; align-items: baseline; gap: var(--t2);
+  border: 1px solid var(--keret-eros);
+  background: var(--lap);
+  border-radius: var(--r);
+  padding: 8px var(--t3);
+  font-size: var(--m-sm);
+}
+.demo-belepok button span { color: var(--szoveg-halk); font-size: var(--m-xs); }
+.demo-belepok button.aktiv { border-color: var(--zold); background: var(--zold-halvany); }
+
+/* ===========================================================================
+   Alkalmazotti nézetek — árlista, cégkártya
+   =========================================================================== */
+
+.arlista { width: 100%; border-collapse: collapse; min-width: 560px; }
+.arlista th, .arlista td { padding: var(--t2) var(--t3); text-align: left; }
+.arlista thead th {
+  font-size: var(--m-xs); text-transform: uppercase; letter-spacing: .06em;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  border-bottom: 1px solid var(--keret);
+}
+.arlista tbody tr { border-bottom: 1px solid var(--keret); }
+.arlista tbody tr:last-child { border-bottom: none; }
+.arlista tbody th { font-size: var(--m-sm); font-weight: var(--vastag-kozep); white-space: nowrap; }
+.arlista .ar {
+  font-family: var(--betu-szam); font-variant-numeric: tabular-nums;
+  font-weight: var(--vastag-eros);
+}
+.arlista .ido { font-size: var(--m-xs); color: var(--szoveg-halk); }
+
+.ceg-kartya { padding: var(--t3) 0; border-bottom: 1px solid var(--keret); }
+.ceg-kartya:last-child { border-bottom: none; }
+.ceg-fej { display: flex; align-items: center; gap: var(--t2); margin-bottom: var(--t2); }
+
+/* A szerepkör-választó a táblázatban: ne terüljön szét az oszlopban. */
+.lista select.beviteli { width: auto; min-width: 150px; padding: 6px 10px; font-size: var(--m-sm); }

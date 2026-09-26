@@ -305,3 +305,19 @@
   letter-spacing: .06em; text-transform: uppercase; color: var(--zold-sotet);
 }
 .elozmeny-nyito .nyil { margin-left: auto; font-size: var(--m-md); line-height: 1; }
+
+/* A Kívül csoportban nincs számláló, ezért a csomagnév tolja jobbra a gombot. */
+.munkacsoport-fej .csomagnev { margin-right: auto; }
+
+/* --- mennyiséges tételek a munkalapon ---------------------------------------- */
+
+.mennyisegsor {
+  display: flex; align-items: center; gap: var(--t3);
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--keret);
+}
+.mennyisegsor:last-child { border-bottom: none; }
+.mennyisegsor .nev { flex: 1; min-width: 0; font-size: var(--m-sm); }
+.mennyisegsor input { width: 78px; text-align: center; padding: 6px; }
+.mennyisegsor .egyseg { font-size: var(--m-xs); color: var(--szoveg-halk); width: 42px; }
+.mennyisegsor .ar { font-weight: var(--vastag-eros); min-width: 78px; text-align: right; }

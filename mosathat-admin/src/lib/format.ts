@@ -104,3 +104,19 @@ export function percIdo(percek: number): string {
   const m = percek % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
+
+/**
+ * A Postgres time típusa "09:00:00" alakban érkezik, az <input type="time">
+ * viszont "09:00"-at akar. Ha nem vágjuk le a másodperceket, a mező üresen
+ * marad, és a mentés kinullázza a nyitvatartást.
+ */
+export function idoMezo(t: string | null | undefined): string {
+  return t ? t.slice(0, 5) : ''
+}
+
+/** 480 → "8 ó", 510 → "8,5 ó". A kapacitássávok mellé, nem a kártyára. */
+export function oraSzam(percek: number | null | undefined): string {
+  if (percek === null || percek === undefined) return '—'
+  const o = percek / 60
+  return `${(Math.round(o * 10) / 10).toLocaleString('hu-HU')} ó`
+}

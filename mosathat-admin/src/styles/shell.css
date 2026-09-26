@@ -132,7 +132,12 @@
 
 .fejlec-tolto { flex: 1; }
 
-.tartalom { flex: 1; overflow-y: auto; padding: var(--t5); }
+.tartalom {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;      /* a tartalom se tudjon oldalra csúszni */
+  padding: var(--t5);
+}
 
 /* --- mobil ------------------------------------------------------------------ */
 

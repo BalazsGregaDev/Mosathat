@@ -1,8 +1,14 @@
 import { useState } from 'react'
 import { useApp } from '../../state/AppContext'
+import { DEMO_BELEPOK } from '../../data/demo'
+import { ROLE_LABEL } from '../../lib/types'
 
 // A demó mód jelszó nélkül lép be. A képernyő azért van meg most is, mert
 // élesben ez lesz az első dolog, amit a dolgozó lát reggel.
+//
+// Demóban a három szerepkör közül lehet választani. Nem játék: a három
+// belépő ugyanaz a három szerepkör, ami élesben lesz, és az adatbázis is
+// annak látja, aki belép — vagyis tényleg az látszik, mit tud egy alkalmazott.
 
 export default function LoginScreen() {
   const { data, signIn } = useApp()
@@ -97,11 +103,24 @@ export default function LoginScreen() {
         </button>
 
         {data.isDemo && (
-          <p className="halk" style={{ fontSize: 'var(--m-xs)', textAlign: 'center' }}>
-            Demó mód: az adatbázis a böngészőben fut, próbaadatokkal.
-            <br />
-            Az itt felvitt foglalások a lap újratöltésekor eltűnnek.
-          </p>
+          <>
+            <div className="demo-belepok">
+              <div className="cimke">Kiként lépsz be</div>
+              {DEMO_BELEPOK.map((b) => (
+                <button key={b.email} type="button"
+                        className={email === b.email ? 'aktiv' : ''}
+                        onClick={() => setEmail(b.email)}>
+                  <strong>{ROLE_LABEL[b.role]}</strong>
+                  <span>{b.name}</span>
+                </button>
+              ))}
+            </div>
+            <p className="halk" style={{ fontSize: 'var(--m-xs)', textAlign: 'center' }}>
+              Demó mód: az adatbázis a böngészőben fut, próbaadatokkal.
+              <br />
+              Az itt felvitt foglalások a lap újratöltésekor eltűnnek.
+            </p>
+          </>
         )}
       </form>
     </div>

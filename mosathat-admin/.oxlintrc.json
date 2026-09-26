@@ -36,6 +36,14 @@
     // a buildet.
     "react/set-state-in-effect": "warn",
 
+    // A szabály nem lát bele egyedi komponensekbe: a táblázatcellában lévő
+    // <SzamMezo> saját aria-label-t ad az inputjának, de a statikus elemző
+    // csak egy "üres" <td>-t lát. A td és a th kivétele ezért nem a szabály
+    // kikapcsolása, hanem a vakfoltjának kezelése.
+    "jsx-a11y/control-has-associated-label": ["error", {
+      "ignoreElements": ["audio", "canvas", "embed", "input", "textarea", "tr", "td", "th", "video"]
+    }],
+
     // Jogos javaslat: a role="dialog" helyett a natív <dialog> elem
     // jobb lenne — fókuszcsapdát és Esc-kezelést ingyen ad. Ez viszont
     // valódi átalakítás (showModal, ::backdrop), és külön menetben

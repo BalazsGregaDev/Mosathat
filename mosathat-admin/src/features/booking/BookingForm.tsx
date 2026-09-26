@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { useApp, useCatalog } from '../../state/AppContext'
 import { useBookingForm } from '../../state/useBookingForm'
+import { useMentetlen } from '../../state/useMentetlen'
 import { ft, idotartam, napRovidCim } from '../../lib/format'
 import {
   CATEGORY_LABEL, SCOPE_LABEL, type BookingScope, type BookingType,
@@ -49,6 +50,10 @@ export default function BookingForm({
     f, set, calc, menthetE, ment, mentes, hiba, tolt, szerkesztes,
     talalatok, keres, valasztott, talalatValaszt, ezcKeri,
   } = useBookingForm(true, nap, bookingId)
+
+  // Ha bármit beírtak, egy véletlen oldalfrissítés (mobilon a lehúzás)
+  // ne vigye el szó nélkül.
+  useMentetlen(Boolean(f.name || f.plate || f.phone || f.companyName || f.packageId))
 
   const [sav, setSav] = useState<LatestStart[]>([])
   const [extrakNyitva, setExtrakNyitva] = useState(false)

@@ -45,6 +45,19 @@
   --v-lezart:      #9aa39c;
   --v-baj:         #b3402f;   /* lemondás, no-show, határidő csúszás */
 
+  /* --- terhelés: kitöltés és sávháttér -------------------------------------
+     A kapacitássávnál a kitöltés a terhelést mutatja, a sáv háttere pedig
+     UGYANANNAK a színnek a világos változata. Szürke háttéren csak a
+     kitöltött rész olvasható; így a sáv egésze hordozza az állapotot.
+     A három szín ellenőrzött: a szomszédos párok színvakság mellett is
+     elválnak, és mindegyik megvan 3:1 kontraszttal a fehér lapon. */
+  --tr-jo:         var(--zold);
+  --tr-jo-halk:    #dfeee6;
+  --tr-szoros:     #c9821f;
+  --tr-szoros-halk:#faeedb;
+  --tr-tele:       #b3402f;
+  --tr-tele-halk:  #f7e2de;
+
   /* --- tipográfia --------------------------------------------------------- */
   --betu: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
           "Helvetica Neue", Arial, sans-serif;
@@ -57,6 +70,9 @@
   --m-lg:   20px;
   --m-xl:   26px;
   --m-xxl:  34px;
+  /* A képernyő egyetlen nagy száma. Ha kettő lenne ilyen, egyik sem lenne
+     nagy — ezért csak az áttekintés mai bevétele használja. */
+  --m-hos:  52px;
 
   --vastag-normal: 400;
   --vastag-kozep:  500;

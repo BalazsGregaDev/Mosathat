@@ -1,7 +1,10 @@
 import type {
-  BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity, ServiceArea,
-  Extra, FullServicePrice, LatestStart, NewBookingInput, Package, PackagePrice,
-  BookingFormData, PlateLookup, SearchHit, StandingCar, Surcharge, WorkWindow,
+  BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary, BookingStatus, BookingTask, CalcInput, CalcResult,
+  ContractInput, ContractRow, DashboardSummary, DayBooking, DayCapacity, DayOverride,
+  Extra, FullServicePrice,
+  LatestStart, NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
+  PlateLookup, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
+  WeekDay, WorkWindow,
 } from '../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -28,7 +31,7 @@ export interface Catalog {
 export interface SessionUser {
   id: string
   name: string
-  role: 'SUPERADMIN' | 'STAFF'
+  role: StaffRole
   email: string | null
 }
 
@@ -65,6 +68,65 @@ export interface DataSource {
   getBookingFormData(bookingId: string): Promise<BookingFormData | null>
   setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void>
   setFinalPrice(bookingId: string, price: number, reason?: string): Promise<void>
+
+  // --- szolgáltatások szerkesztése ---
+  updateExtra(id: string, patch: Partial<Extra>): Promise<void>
+  updatePackagePrice(
+    packageId: string, category: VehicleCategory, scope: BookingScope,
+    patch: { price_huf?: number | null; duration_minutes?: number | null },
+  ): Promise<void>
+  updateFullServicePrice(
+    packageId: string, category: VehicleCategory,
+    patch: { price_huf?: number | null; extra_work_minutes?: number | null },
+  ): Promise<void>
+  updatePackage(id: string, patch: { name?: string; description?: string | null }): Promise<void>
+
+  // --- ügyfelek és járművek ---
+  listCustomers(q?: string): Promise<CustomerSummary[]>
+  listVehicles(q?: string): Promise<VehicleSummary[]>
+
+  // --- áttekintés ---
+  getDashboard(date: string): Promise<DashboardSummary>
+  getWeekCapacity(date: string): Promise<WeekDay[]>
+
+  // --- beállítások ---
+  getOpening(): Promise<OpeningDay[]>
+  saveDayHours(day: OpeningDay): Promise<void>
+  getShopSettings(): Promise<ShopSettings>
+  saveShopSettings(s: ShopSettings): Promise<void>
+  /** Kivételnapok a mai naptól: ünnep, szabadság, ledolgozós szombat. */
+  listDayOverrides(from: string): Promise<DayOverride[]>
+  saveDayOverride(o: DayOverride): Promise<void>
+  deleteDayOverride(day: string): Promise<void>
+
+  // --- felhasználók ---
+  listStaff(): Promise<StaffRow[]>
+  /**
+   * Új felhasználó. A szerepkör NEM a böngészőből megy át: előbb meghívó
+   * készül az adatbázisban (azt csak teljes jogú felhasználó írhatja), és a
+   * regisztrációkor a trigger ABBÓL veszi a szerepkört.
+   */
+  createStaff(input: NewStaffInput): Promise<void>
+  updateStaff(id: string, patch: { full_name?: string; role?: StaffRole; active?: boolean }): Promise<void>
+  deleteInvite(email: string): Promise<void>
+
+  // --- bérletek és szerződések ---
+  listPasses(): Promise<PassBalanceRow[]>
+  createPass(input: NewPassInput): Promise<string>
+  deactivatePass(passId: string): Promise<void>
+  listContracts(): Promise<ContractRow[]>
+  saveContract(input: ContractInput): Promise<string>
+
+  /**
+   * Élő frissítés: szól, ha bárki más módosít egy foglalást vagy munkalistát.
+   * A visszaadott függvény leiratkozik. Demóban nincs mit figyelni — egy
+   * felhasználó van —, ott üres függvényt ad vissza.
+   */
+  subscribe(onValtozas: () => void): () => void
+
+  /** Mennyiséges tételek (liter, ülés, ajtó) — a munkalistán állíthatók. */
+  getBookingExtras(bookingId: string): Promise<BookingExtraRow[]>
+  setBookingExtraQty(itemId: string, qty: number): Promise<void>
 
   getTasks(bookingId: string): Promise<BookingTask[]>
   toggleTask(taskId: string, done: boolean): Promise<void>

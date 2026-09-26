@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
+import { useMentetlen } from '../../state/useMentetlen'
 import { ft, idosav, idotartam, ora } from '../../lib/format'
 import {
   CATEGORY_LABEL, NEXT_STATUS, SCOPE_LABEL, STATUS_LABEL, TYPE_LABEL,
-  type BookingTask, type DayBooking, type ServiceArea,
+  type BookingExtraRow, type BookingTask, type DayBooking, type ServiceArea,
 } from '../../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -55,6 +56,7 @@ export default function BookingDetail({
   const { data, refresh } = useApp()
   const [b, setB] = useState<DayBooking | null>(null)
   const [lista, setLista] = useState<BookingTask[]>([])
+  const [mennyisegek, setMennyisegek] = useState<BookingExtraRow[]>([])
   const [tolt, setTolt] = useState(true)
   const [hiba, setHiba] = useState<string | null>(null)
 
@@ -71,11 +73,19 @@ export default function BookingDetail({
   // nem minden pipa után.
   const valtozott = useRef(false)
 
+  // A meg nem mentett megjegyzés a leggyakoribb elveszíthető adat.
+  useMentetlen(!megjMentve)
+
   const betolt = useCallback(async () => {
     try {
-      const [f, t] = await Promise.all([data.getBooking(bookingId), data.getTasks(bookingId)])
+      const [f, t, m] = await Promise.all([
+        data.getBooking(bookingId),
+        data.getTasks(bookingId),
+        data.getBookingExtras(bookingId),
+      ])
       setB(f)
       setLista(t)
+      setMennyisegek(m)
       setVegleges(f?.final_price_huf ? String(f.final_price_huf) : '')
       setMegjegyzes(f?.notes ?? '')
       setMegjMentve(true)
@@ -346,11 +356,13 @@ export default function BookingDetail({
                       <div className="munkacsoport-fej">
                         <span className="cim">{cs.cim}</span>
                         {mind > 0 && !cs.reszletezve && b.package_name && (
-                          <span className="halk" style={{ fontSize: 'var(--m-sm)' }}>
+                          <span className="halk csomagnev" style={{ fontSize: 'var(--m-sm)' }}>
                             {b.package_name}
                           </span>
                         )}
-                        {mind > 0 && (
+                        {/* Csak ott van értelme a számlálónak, ahol tételek is
+                            látszanak. A Kívülnél egy gomb van — a 4/8 csak zaj. */}
+                        {mind > 0 && cs.reszletezve && (
                           <span className="szam halk">
                             {kesz}/{mind}
                           </span>
@@ -409,6 +421,47 @@ export default function BookingDetail({
 
                 {lista.length === 0 && <div className="ures">Ehhez a foglaláshoz nincs munkalista.</div>}
               </div>
+
+              {/* ---------- MENNYISÉGEK ---------- */}
+              {/* Az ablakmosó folyadék litereit és a kárpittisztítás ülésszámát
+                  itt adják meg, nem foglaláskor: akkor még nem tudják. */}
+              {mennyisegek.length > 0 && (
+                <div className="szakasz">
+                  <div className="fej">Mennyiségek</div>
+                  {mennyisegek.map((m) => (
+                    <div className="mennyisegsor" key={m.item_id}>
+                      <span className="nev">{m.name}</span>
+                      <input
+                        className="beviteli szam"
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        step={m.price_unit === 'LITER' ? 0.5 : 1}
+                        disabled={lezart}
+                        aria-label={`${m.name} mennyisége`}
+                        defaultValue={m.quantity}
+                        onBlur={async (e) => {
+                          const uj = Number(e.target.value)
+                          if (!Number.isFinite(uj) || uj === m.quantity) return
+                          try {
+                            await data.setBookingExtraQty(m.item_id, uj)
+                            valtozott.current = true
+                            await betolt()
+                          } catch (err) {
+                            setHiba(err instanceof Error ? err.message : String(err))
+                          }
+                        }}
+                      />
+                      <span className="egyseg">
+                        {m.price_unit === 'LITER' ? 'liter'
+                          : m.price_unit === 'ULES' ? 'ülés'
+                          : m.price_unit === 'AJTO' ? 'ajtó' : 'db'}
+                      </span>
+                      <span className="ar szam">{ft(m.price_huf)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* ---------- 3. ÁR ---------- */}
               {/* A felár ide került, nem a foglaláshoz: telefonos foglaláskor

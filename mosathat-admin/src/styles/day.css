@@ -130,15 +130,30 @@
   border-radius: var(--r-sm);
   padding: 1px 6px;
 }
-.kartya .auto { font-size: var(--m-sm); font-weight: var(--vastag-kozep); }
 .kartya .tolto { flex: 1; }
+
+/* 2. sor: kinek — a név viszi a hierarchiát */
+.kartya-kozep {
+  font-size: var(--m-sm);
+  font-weight: var(--vastag-kozep);
+  margin-bottom: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 .kartya-also {
   display: flex; align-items: center; gap: var(--t3);
   flex-wrap: wrap; font-size: var(--m-xs); color: var(--szoveg-halk);
 }
 .kartya-also .csomag { font-weight: var(--vastag-eros); color: var(--szoveg); }
-.kartya-also .ar { font-family: var(--betu-szam); }
+.kartya-also .tolto { flex: 1; }
+
+/* Az ár kiemelten: ez az, amit a tulaj a leggyakrabban keres a listán. */
+.kartya-also .ar-kiemelt {
+  font-family: var(--betu-szam);
+  font-size: var(--m-md);
+  font-weight: var(--vastag-fej);
+  color: var(--szoveg);
+}
 
 .allapot-pill { background: var(--lap-2); color: var(--szoveg-halk); border: 1px solid var(--keret); }
 .allapot-pill[data-a='ARRIVED']     { background: #fdf4e6; color: #8a5a10; border-color: #f0dcb8; }

@@ -5,7 +5,7 @@
 // valami, itt is át kell írni — ezért van mindegyik mellett a forrás.
 // ---------------------------------------------------------------------------
 
-export type StaffRole = 'SUPERADMIN' | 'STAFF'
+export type StaffRole = 'SUPERADMIN' | 'TULAJDONOS' | 'STAFF'
 export type CustomerType = 'MAGAN' | 'CEG'
 export type VehicleCategory = 'SZEMELYAUTO' | 'SUV' | 'KISBUSZ'
 export type ServiceArea = 'KULSO' | 'BELSO'
@@ -180,6 +180,8 @@ export interface DayBooking {
   start_at: string | null
   drop_off_at: string | null
   pick_up_at: string | null
+  deadline_at: string | null
+  arrived_at: string | null
   scope: BookingScope
   full_service: boolean
   planned_duration_minutes: number
@@ -194,6 +196,7 @@ export interface DayBooking {
   customer_phone: string
   customer_type: CustomerType
   company_name: string | null
+  billing_kind: BillingKind
 
   vehicle_id: string
   plate_raw: string
@@ -203,6 +206,7 @@ export interface DayBooking {
   category: VehicleCategory
   seats: number | null
 
+  package_id: string | null
   package_code: string | null
   package_name: string | null
 
@@ -371,4 +375,233 @@ export interface NewBookingInput extends CalcInput {
   deadline_date: string | null // TOBBNAPOS-nál kötelező
   source: BookingSource
   notes: string | null
+}
+
+// ---------------------------------------------------------------------------
+//  Bérletek és szerződések
+// ---------------------------------------------------------------------------
+
+export type BillingKind = 'NORMAL' | 'BERLETES' | 'SZERZODESES'
+export type ValidityKind = 'DATUM' | 'EV' | 'NAP'
+export type ContractTier = 'NORMAL' | 'PREMIUM'
+export type ContractSize = 'NORMAL' | 'NAGY'
+
+export const BILLING_LABEL: Record<BillingKind, string> = {
+  NORMAL: 'Listaáras',
+  BERLETES: 'Bérletes',
+  SZERZODESES: 'Szerződéses',
+}
+
+export const TIER_LABEL: Record<ContractTier, string> = {
+  NORMAL: 'Normál csomag',
+  PREMIUM: 'Prémium csomag',
+}
+
+export const SIZE_LABEL: Record<ContractSize, string> = {
+  NORMAL: 'Normál méret',
+  NAGY: 'Nagy méret',
+}
+
+/** Egy sor a v_pass_balance nézetből: bérlet + egy tétele. */
+export interface PassBalanceRow {
+  pass_id: string
+  customer_id: string
+  customer_name: string
+  pass_name: string
+  price_huf: number
+  valid_from: string
+  valid_until: string
+  active: boolean
+  lejart: boolean
+  napok_hatra: number
+  pass_item_id: string
+  package_id: string | null
+  package_code: string | null
+  package_name: string | null
+  category: VehicleCategory | null
+  qty_total: number
+  qty_used: number
+  qty_left: number
+}
+
+export interface NewPassInput {
+  customer_id: string
+  name: string
+  price_huf: number
+  valid_from?: string
+  validity_kind: ValidityKind
+  validity_value: string
+  notes?: string | null
+  items: { package_id: string | null; category: VehicleCategory | null; qty_total: number }[]
+}
+
+export interface ContractRow {
+  id: string
+  customer_id: string
+  customer_name: string
+  company_name: string | null
+  tax_number: string | null
+  pickup_delivery: boolean
+  valid_from: string
+  valid_until: string | null
+  active: boolean
+  notes: string | null
+  prices: { tier: ContractTier; size: ContractSize; price_huf: number }[]
+}
+
+export interface ContractInput {
+  id?: string | null
+  customer_id: string
+  tax_number: string | null
+  pickup_delivery: boolean
+  valid_until: string | null
+  notes: string | null
+  prices: { tier: ContractTier; size: ContractSize; price_huf: number }[]
+}
+
+/** Egy mennyiséges tétel a foglaláson — a munkalistán szerkeszthető. */
+export interface BookingExtraRow {
+  booking_id: string
+  item_id: string
+  extra_id: string
+  name: string
+  quantity: number
+  price_huf: number
+  price_unit: MeasureUnit
+  duration_unit: MeasureUnit
+}
+
+// --- Ügyfelek képernyő --------------------------------------------------------
+
+export interface CustomerSummary {
+  id: string
+  name: string
+  phone: string
+  email: string | null
+  company_name: string | null
+  type: CustomerType
+  billing_kind: BillingKind
+  notes: string | null
+  internal_notes: string | null
+  jarmuvek: number
+  latogatas: number
+  osszesen: number
+  utolso: string | null
+  atlag: number | null
+  atlag_napok: number | null
+  kedvenc_csomag: string | null
+}
+
+export interface VehicleSummary {
+  id: string
+  plate_raw: string
+  brand: string | null
+  model: string | null
+  category: VehicleCategory
+  seats: number | null
+  notes: string | null
+  customer_id: string
+  customer_name: string
+  customer_phone: string
+  company_name: string | null
+  billing_kind: BillingKind
+  latogatas: number
+  utolso: string | null
+  utolso_csomag: string | null
+}
+
+// --- Áttekintés ---------------------------------------------------------------
+
+export interface DashboardSummary {
+  nap: string
+  ma: { db: number; kesz: number; percek: number; bevetel: number }
+  het: { db: number; bevetel: number }
+  nepszeru: { nev: string; db: number }[]
+  gondok: { cimke: string; szoveg: string; suly: number }[]
+}
+
+export interface WeekDay {
+  nap: string
+  hetfotol: number
+  parallel_slots: number
+  capacity_minutes: number
+  booked_minutes: number
+  free_minutes: number
+  /** Null, ha a nap zárva van — nullával nem lehet osztani. */
+  load_pct: number | null
+}
+
+// --- Beállítások --------------------------------------------------------------
+
+export interface BreakWindow {
+  id?: string
+  starts: string
+  ends: string
+  label: string
+}
+
+/** Egy hétköznap három időrétege: nyitvatartás, munkaidő, szünetek. */
+export interface OpeningDay {
+  weekday: number
+  nev: string
+  opens: string | null
+  closes: string | null
+  business_closed: boolean
+  starts: string | null
+  ends: string | null
+  work_closed: boolean
+  breaks: BreakWindow[]
+}
+
+export interface ShopSettings {
+  drop_off_from: string
+  default_parallel_slots: number
+  default_travel_minutes: number
+  pass_validity_kind: ValidityKind
+  pass_validity_value: string
+}
+
+export interface DayOverride {
+  day: string
+  closed: boolean
+  opens: string | null
+  closes: string | null
+  work_starts: string | null
+  work_ends: string | null
+  parallel_slots: number | null
+  note: string | null
+}
+
+// --- Felhasználók -------------------------------------------------------------
+
+export const ROLE_LABEL: Record<StaffRole, string> = {
+  SUPERADMIN: 'Fejlesztő',
+  TULAJDONOS: 'Tulajdonos',
+  STAFF: 'Alkalmazott',
+}
+
+export const ROLE_LEIRAS: Record<StaffRole, string> = {
+  SUPERADMIN: 'Mindenhez hozzáfér. Ide kerülnek később a fejlesztést segítő funkciók.',
+  TULAJDONOS: 'Az alkalmazáson belül mindenhez hozzáfér, és alkalmazottat vehet fel.',
+  STAFF: 'A napi munkához mindent tud. Az áttekintéshez és a beállításokhoz nem fér hozzá.',
+}
+
+export interface StaffRow {
+  /** Null, amíg a meghívott dolgozó nem regisztrált. */
+  id: string | null
+  full_name: string
+  role: StaffRole
+  active: boolean
+  email: string | null
+  belepett_mar: boolean
+  /** Igaz, ha még csak meghívó van, fiók nincs. */
+  meghivo: boolean
+  created_at: string
+}
+
+export interface NewStaffInput {
+  full_name: string
+  email: string
+  password: string
+  role: StaffRole
 }

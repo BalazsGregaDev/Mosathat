@@ -1,0 +1,165 @@
+/* Belső oldalak: Szolgáltatások, Cégek és bérletesek. */
+
+.oldal { max-width: 1100px; }
+
+.oldal-fej {
+  display: flex; align-items: center; gap: var(--t4);
+  flex-wrap: wrap; margin-bottom: var(--t4);
+}
+.oldal-fej h2 { font-size: var(--m-xl); }
+
+.fulek { display: flex; gap: var(--t2); margin-left: auto; }
+.fulek button {
+  display: inline-flex; align-items: center; gap: var(--t2);
+  border: 1px solid var(--keret-eros);
+  background: var(--lap);
+  border-radius: var(--r);
+  padding: 8px 14px;
+  font-size: var(--m-sm); font-weight: var(--vastag-kozep);
+}
+.fulek button:hover { background: var(--lap-2); }
+.fulek button.aktiv { background: var(--sotet); border-color: var(--sotet); color: #fff; }
+.fulek .jelzo {
+  font-family: var(--betu-szam); font-size: var(--m-xs); font-weight: var(--vastag-eros);
+  background: var(--v-erkezett); color: #fff;
+  border-radius: var(--r-kor); padding: 1px 7px;
+}
+.fulek button.aktiv .jelzo { background: var(--zold-vilagos); }
+
+.panelek {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--t4);
+  align-items: start;
+}
+
+/* A csomagok ártáblája hét oszlop széles (három terjedelem × ár és perc).
+   Hasábokra törve levágná a végét, ezért itt egy panel = egy sor. */
+.panelek-szeles { grid-template-columns: 1fr; }
+
+/* Kis képernyőn a táblázat vízszintesen görgethető — így sem vágódik le,
+   és nem is zsugorodik olvashatatlanra. */
+.tablagorgo { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.panel[data-lejart='true'] { opacity: .6; }
+
+/* --- ártáblák --------------------------------------------------------------- */
+
+.artabla { width: 100%; border-collapse: collapse; min-width: 560px; }
+.artabla.keskeny { min-width: 0; }
+.artabla th, .artabla td { padding: 5px 6px; text-align: left; }
+.artabla thead th {
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  border-bottom: 1px solid var(--keret);
+}
+.artabla .alfejlec th { font-size: 9px; padding-top: 0; }
+.artabla tbody th {
+  font-size: var(--m-sm); font-weight: var(--vastag-kozep);
+  white-space: nowrap; padding-right: var(--t3);
+}
+.artabla tbody tr { border-bottom: 1px dashed var(--keret); }
+.artabla tbody tr:last-child { border-bottom: none; }
+.artabla tr[data-hianyzik='true'] th { color: var(--szoveg-halvany); }
+
+/* --- szerkeszthető szám ------------------------------------------------------ */
+
+.szammezo { display: inline-flex; align-items: center; gap: 5px; }
+.szammezo input {
+  width: 84px; padding: 5px 7px; text-align: right;
+  font-size: var(--m-sm);
+}
+.szammezo .suffix { font-size: var(--m-xs); color: var(--szoveg-halk); white-space: nowrap; }
+
+/* A hiányzó érték nem üres mező, hanem szemet szúró keret. */
+.szammezo[data-hianyzik='true'] input {
+  border-color: var(--v-erkezett);
+  background: #fdf7ea;
+}
+.szammezo[data-allapot='megy'] input { opacity: .6; }
+.szammezo[data-allapot='kesz'] input { border-color: var(--zold); background: var(--zold-halvany); }
+.szammezo[data-allapot='hiba'] input { border-color: var(--v-baj); background: #fdf1ef; }
+
+.fsrész { margin-top: var(--t4); padding-top: var(--t3); border-top: 1px solid var(--keret); }
+
+/* --- extralista -------------------------------------------------------------- */
+
+.extralista { display: flex; flex-direction: column; }
+
+.extrasor { border-bottom: 1px solid var(--keret); }
+.extrasor:last-child { border-bottom: none; }
+.extrasor[data-aktiv='false'] { opacity: .5; }
+
+.extrasor .fo {
+  display: flex; align-items: center; gap: var(--t3);
+  padding: var(--t2) var(--t4);
+}
+.extrasor .nev {
+  flex: 1; min-width: 0; text-align: left;
+  border: none; background: none; padding: 0;
+  font-size: var(--m-sm); font-weight: var(--vastag-kozep);
+  display: flex; align-items: center; gap: var(--t2);
+}
+.extrasor .nev .nyil { color: var(--szoveg-halvany); font-size: var(--m-md); }
+.extrasor .nev:hover { color: var(--zold); }
+
+.extrasor .reszletek {
+  padding: 0 var(--t4) var(--t4);
+  display: flex; flex-direction: column; gap: var(--t3);
+  background: var(--lap-2);
+}
+
+/* --- bérlet tételsor --------------------------------------------------------- */
+
+.berlettetel {
+  display: grid;
+  grid-template-columns: 1fr 1fr 80px auto;
+  gap: var(--t2);
+  align-items: center;
+}
+.berlettetel .darab { text-align: center; }
+
+@media (max-width: 700px) {
+  .berlettetel { grid-template-columns: 1fr 1fr; }
+  .fulek { margin-left: 0; width: 100%; }
+  .fulek button { flex: 1; justify-content: center; }
+  .panelek { grid-template-columns: 1fr; }
+}
+
+/* --- egyszerű lista tábla (járművek) ----------------------------------------- */
+
+.lista { width: 100%; border-collapse: collapse; min-width: 640px; }
+.lista thead th {
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  text-align: left; padding: var(--t3) var(--t4);
+  border-bottom: 1px solid var(--keret); background: var(--lap-2);
+}
+.lista tbody td {
+  padding: var(--t3) var(--t4);
+  border-bottom: 1px solid var(--keret);
+  font-size: var(--m-sm);
+  vertical-align: top;
+}
+/* A sor eleji fejléccella (`th scope="row"`) alapból középre igazít — az
+   tördelt névoszlopban zavaró. Ugyanaz a doboz, mint a többi cella. */
+.lista tbody th {
+  padding: var(--t3) var(--t4);
+  border-bottom: 1px solid var(--keret);
+  font-size: var(--m-sm);
+  text-align: left;
+  vertical-align: top;
+}
+.lista tbody tr:last-child td,
+.lista tbody tr:last-child th { border-bottom: none; }
+.lista tbody tr:hover { background: var(--lap-2); }
+.lista .rendszam {
+  font-family: var(--betu-szam); font-weight: var(--vastag-eros);
+  letter-spacing: .05em;
+  background: var(--lap-2); border: 1px solid var(--keret);
+  border-radius: var(--r-sm); padding: 1px 6px; white-space: nowrap;
+}
+
+/* elszámolási mód jelölése */
+.cimke-pill.billing { margin-left: var(--t2); }
+.cimke-pill.billing[data-b='BERLETES']    { background: var(--zold-halvany); color: var(--zold-sotet); }
+.cimke-pill.billing[data-b='SZERZODESES'] { background: #eaf2fa; color: #1f5285; }

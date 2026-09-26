@@ -4,6 +4,17 @@
 
 html, body, #root { height: 100%; }
 
+/* Mobilon az oldal ne mozduljon el oldalra.
+   A "semmibe tekerés" oldalirányban visszaugrott az eredeti állapotba —
+   ezt az overscroll-behavior-x szünteti meg. A függőleges irányt
+   szándékosan NEM korlátozzuk: a lap tetején a lehúzásos frissítésnek
+   működnie kell. */
+html, body {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  max-width: 100%;
+}
+
 body {
   margin: 0;
   background: var(--hatter);
@@ -147,6 +158,14 @@ textarea.beviteli { resize: vertical; min-height: 64px; font-size: var(--m-alap)
 }
 
 .szam { font-family: var(--betu-szam); font-variant-numeric: tabular-nums; }
+
+/* Csak felolvasónak: ami látványban a szín vagy a sáv hossza, azt itt szóban
+   is elmondjuk. A `display: none` nem jó, mert azt a felolvasó sem látja. */
+.csak-felolvaso {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
 
 .halk { color: var(--szoveg-halk); }
 .halvany { color: var(--szoveg-halvany); }

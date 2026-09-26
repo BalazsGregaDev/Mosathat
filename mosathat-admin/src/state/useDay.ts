@@ -23,7 +23,7 @@ const URES: DayData = {
 }
 
 export function useDay(datum: string): DayData {
-  const { data, revision, user } = useApp()
+  const { data, revision, user, refresh } = useApp()
   const [state, setState] = useState<DayData>(URES)
 
   useEffect(() => {
@@ -53,6 +53,14 @@ export function useDay(datum: string): DayData {
       el = false
     }
   }, [data, datum, revision, user])
+
+  // Élő frissítés: ha a másik gépen módosítanak valamit, itt is látszik.
+  // Nem a teljes napot kérdezzük vissza minden eseményre — a refresh()
+  // számlálót növeljük, és a fenti effekt tölt újra.
+  useEffect(() => {
+    if (!user) return
+    return data.subscribe(() => refresh())
+  }, [data, user, refresh])
 
   return state
 }

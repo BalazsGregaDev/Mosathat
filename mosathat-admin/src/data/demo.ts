@@ -20,9 +20,11 @@ const MIGRACIOK = import.meta.glob('../../../supabase/migrations/*.sql', {
 import demoAdatok from '../../../supabase/demo/demo_adatok.sql?raw'
 
 import type {
-  BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity,
-  BookingFormData, LatestStart, NewBookingInput, PlateLookup, SearchHit, ServiceArea,
-  StandingCar, WorkWindow,
+  BookingStatus, BookingTask, CalcInput, CalcResult, DashboardSummary, DayBooking, DayCapacity,
+  DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
+  ContractInput, ContractRow, Extra, LatestStart,
+  NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
+  ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
 } from '../lib/types'
 import type { Catalog, DataSource, SessionUser } from './source'
 import { calcArgs, num, numOrNull, toCalcResult } from './source'
@@ -35,9 +37,17 @@ import { calcArgs, num, numOrNull, toCalcResult } from './source'
 //  nézetek, ugyanaz a create_booking(). Nem utánzat, hanem ugyanaz a
 //  motor — így nem fordulhat elő, hogy a demó mást mutat, mint az éles.
 //
-//  Amit pótolni kell: a Supabase `auth` sémáját. Ott ez adott, itt három
-//  sornyi csonk. A jogosultságellenőrzés (RLS) emiatt demóban nem szűr —
-//  egy felhasználó van, és az mindent lát.
+//  Amit pótolni kell: a Supabase `auth` sémáját. Ott ez adott, itt néhány
+//  sornyi csonk.
+//
+//  A jogosultság demóban másképp működik, és ezt érdemes tudni: a PGlite a
+//  táblák tulajdonosaként fut, a Postgres pedig a tulajdonosra alapból nem
+//  alkalmazza az RLS-t. Vagyis a SZABÁLYOK itt nem szűrnek. Ami viszont
+//  működik, az a triggeres és a függvényekbe írt ellenőrzés — ezért látszik
+//  demóban is pontosan, mit tud egy alkalmazott és mit nem.
+//
+//  Három belépő van, hogy ez ki is próbálható legyen. Élesben ez nem így
+//  lesz: ott a Supabase Auth ad belépőt, és az RLS is él.
 //
 //  Az adat a memóriában él: lap újratöltésekor minden visszaáll a kiinduló
 //  állapotra. Bemutatáshoz ez előny, nem hátrány.
@@ -45,11 +55,22 @@ import { calcArgs, num, numOrNull, toCalcResult } from './source'
 
 const DEMO_STAFF_ID = '00000000-0000-4000-8000-000000000001'
 
+/** A demó három belépője. Az e-mail dönti el, ki lép be. */
+export const DEMO_BELEPOK = [
+  { id: DEMO_STAFF_ID,
+    email: 'demo@mosathat.hu',        name: 'Fejlesztő',   role: 'SUPERADMIN' as const },
+  { id: '00000000-0000-4000-8000-000000000002',
+    email: 'tulaj@mosathat.hu',       name: 'Tulaj Tamás', role: 'TULAJDONOS' as const },
+  { id: '00000000-0000-4000-8000-000000000003',
+    email: 'alkalmazott@mosathat.hu', name: 'Kis János',   role: 'STAFF' as const },
+]
+
 const AUTH_STUB = `
 create schema if not exists auth;
-create table if not exists auth.users (id uuid primary key, email text);
+create table if not exists auth.users (
+  id uuid primary key, email text, last_sign_in_at timestamptz);
 create or replace function auth.uid() returns uuid
-  language sql stable as $$ select current_setting('app.uid', true)::uuid $$;
+  language sql stable as $$ select nullif(current_setting('app.uid', true), '')::uuid $$;
 create or replace function auth.role() returns text
   language sql stable as $$ select 'authenticated'::text $$;
 do $$ begin
@@ -78,16 +99,17 @@ export class DemoSource implements DataSource {
     for (const utvonal of sorrendben) await db.exec(MIGRACIOK[utvonal])
     await db.exec(demoAdatok)
 
-    // Egy dolgozó, hogy a created_by és a done_by ne legyen üres.
-    await db.query(
-      `insert into auth.users (id, email) values ($1, 'demo@mosathat.hu') on conflict do nothing`,
-      [DEMO_STAFF_ID],
-    )
-    await db.query(
-      `insert into public.staff (id, full_name, role) values ($1, 'Demó felhasználó', 'SUPERADMIN')
-       on conflict (id) do nothing`,
-      [DEMO_STAFF_ID],
-    )
+    // A három belépő. Nem csak azért, hogy a created_by ne legyen üres:
+    // így ki lehet próbálni, mit lát egy alkalmazott és mit a tulaj.
+    for (const b of DEMO_BELEPOK) {
+      await db.query(
+        `insert into auth.users (id, email, last_sign_in_at)
+         values ($1, $2, now()) on conflict do nothing`, [b.id, b.email])
+      await db.query(
+        `insert into public.staff (id, full_name, role)
+         values ($1, $2, $3::staff_role) on conflict (id) do nothing`,
+        [b.id, b.name, b.role])
+    }
     await db.exec(`select set_config('app.uid', '${DEMO_STAFF_ID}', false)`)
     this.db = db
   }
@@ -120,9 +142,16 @@ export class DemoSource implements DataSource {
   // --- belépés --------------------------------------------------------------
   // Demóban nincs jelszó. A képernyő azért van meg, mert élesben lesz.
 
-  async signIn(): Promise<SessionUser> {
-    this.user = { id: DEMO_STAFF_ID, name: 'Demó felhasználó', role: 'SUPERADMIN', email: 'demo@mosathat.hu' }
-    return this.user
+  async signIn(email: string): Promise<SessionUser> {
+    const b = DEMO_BELEPOK.find((x) => x.email === email.trim().toLowerCase())
+      ?? DEMO_BELEPOK[0]
+
+    // Ettől kezdve az adatbázis is őt látja bejelentkezettnek: a jogosultsági
+    // ellenőrzések ugyanúgy futnak, mint élesben.
+    await this.pg.exec(`select set_config('app.uid', '${b.id}', false)`)
+    const u: SessionUser = { id: b.id, name: b.name, role: b.role, email: b.email }
+    this.user = u
+    return u
   }
 
   async signOut(): Promise<void> {
@@ -248,6 +277,198 @@ export class DemoSource implements DataSource {
     await this.pg.query(`select set_final_price($1::uuid, $2::integer, $3)`, [
       bookingId, price, reason ?? null,
     ])
+  }
+
+
+  // --- szolgáltatások szerkesztése -------------------------------------------
+
+  async updateExtra(id: string, patch: Partial<Extra>): Promise<void> {
+    await this.pg.query(
+      `update extras set name = coalesce($2, name),
+                         description = $3,
+                         price_huf = $4,
+                         work_minutes = $5,
+                         rest_minutes = coalesce($6, rest_minutes),
+                         active = coalesce($7, active),
+                         updated_at = now()
+        where id = $1::uuid`,
+      [id, patch.name ?? null, patch.description ?? null, patch.price_huf ?? null,
+       patch.work_minutes ?? null, patch.rest_minutes ?? null, patch.active ?? null],
+    )
+  }
+
+  async updatePackagePrice(
+    packageId: string, category: VehicleCategory, scope: BookingScope,
+    patch: { price_huf?: number | null; duration_minutes?: number | null },
+  ): Promise<void> {
+    await this.pg.query(
+      `insert into package_pricing (package_id, category, scope, price_huf, duration_minutes)
+       values ($1::uuid, $2::vehicle_category, $3::booking_scope, $4, $5)
+       on conflict (package_id, category, scope) do update
+         set price_huf = excluded.price_huf, duration_minutes = excluded.duration_minutes`,
+      [packageId, category, scope, patch.price_huf ?? null, patch.duration_minutes ?? null],
+    )
+  }
+
+  async updateFullServicePrice(
+    packageId: string, category: VehicleCategory,
+    patch: { price_huf?: number | null; extra_work_minutes?: number | null },
+  ): Promise<void> {
+    await this.pg.query(
+      `insert into full_service_pricing (package_id, category, price_huf, extra_work_minutes)
+       values ($1::uuid, $2::vehicle_category, $3, coalesce($4, 45))
+       on conflict (package_id, category) do update
+         set price_huf = excluded.price_huf, extra_work_minutes = excluded.extra_work_minutes`,
+      [packageId, category, patch.price_huf ?? null, patch.extra_work_minutes ?? null],
+    )
+  }
+
+  async updatePackage(id: string, patch: { name?: string; description?: string | null }): Promise<void> {
+    await this.pg.query(
+      `update packages set name = coalesce($2, name), description = $3, updated_at = now()
+        where id = $1::uuid`,
+      [id, patch.name ?? null, patch.description ?? null],
+    )
+  }
+
+  // --- ügyfelek és járművek ---------------------------------------------------
+
+  async listCustomers(q = ''): Promise<CustomerSummary[]> {
+    return this.rows<CustomerSummary>(`select * from list_customers($1, 200)`, [q])
+  }
+
+  async listVehicles(q = ''): Promise<VehicleSummary[]> {
+    return this.rows<VehicleSummary>(`select * from list_vehicles($1, 200)`, [q])
+  }
+
+  // --- áttekintés -------------------------------------------------------------
+
+  async getDashboard(date: string): Promise<DashboardSummary> {
+    const [r] = await this.rows<{ d: DashboardSummary }>(
+      `select dashboard_summary($1::date) as d`, [date])
+    return r.d
+  }
+
+  async getWeekCapacity(date: string): Promise<WeekDay[]> {
+    const r = await this.rows<Record<string, unknown>>(
+      `select * from week_capacity($1::date) order by hetfotol`, [date])
+    return r.map((x) => ({
+      nap: String(x.nap),
+      hetfotol: num(x.hetfotol),
+      parallel_slots: num(x.parallel_slots),
+      capacity_minutes: num(x.capacity_minutes),
+      booked_minutes: num(x.booked_minutes),
+      free_minutes: num(x.free_minutes),
+      load_pct: numOrNull(x.load_pct),
+    }))
+  }
+
+  // --- beállítások ------------------------------------------------------------
+
+  async getOpening(): Promise<OpeningDay[]> {
+    return this.rows<OpeningDay>(`select * from v_opening order by weekday`)
+  }
+
+  async saveDayHours(day: OpeningDay): Promise<void> {
+    await this.rows(`select save_day_hours($1::jsonb)`, [JSON.stringify(day)])
+  }
+
+  async getShopSettings(): Promise<ShopSettings> {
+    const [r] = await this.rows<Record<string, unknown>>(`select * from shop_settings`)
+    return {
+      drop_off_from: String(r.drop_off_from),
+      default_parallel_slots: num(r.default_parallel_slots),
+      default_travel_minutes: num(r.default_travel_minutes),
+      pass_validity_kind: r.pass_validity_kind as ShopSettings['pass_validity_kind'],
+      pass_validity_value: String(r.pass_validity_value),
+    }
+  }
+
+  async saveShopSettings(s: ShopSettings): Promise<void> {
+    await this.rows(`select save_shop_settings($1::jsonb)`, [JSON.stringify(s)])
+  }
+
+  async listDayOverrides(from: string): Promise<DayOverride[]> {
+    return this.rows<DayOverride>(
+      `select * from day_overrides where day >= $1::date order by day`, [from])
+  }
+
+  async saveDayOverride(o: DayOverride): Promise<void> {
+    await this.rows(`select save_day_override($1::jsonb)`, [JSON.stringify(o)])
+  }
+
+  async deleteDayOverride(day: string): Promise<void> {
+    await this.rows(`select delete_day_override($1::date)`, [day])
+  }
+
+  // --- felhasználók -----------------------------------------------------------
+
+  async listStaff(): Promise<StaffRow[]> {
+    return this.rows<StaffRow>(`select * from list_staff()`)
+  }
+
+  async createStaff(input: NewStaffInput): Promise<void> {
+    // Demóban nincs Supabase Auth, ezért a "regisztrációt" itt mi játsszuk el:
+    // meghívó, majd egy auth.users sor. A trigger onnantól ugyanaz.
+    await this.rows(`select invite_staff($1::jsonb)`, [JSON.stringify({
+      email: input.email, full_name: input.full_name, role: input.role,
+    })])
+    await this.rows(
+      `insert into auth.users (id, email) values (gen_random_uuid(), $1)`,
+      [input.email.trim().toLowerCase()])
+  }
+
+  async updateStaff(
+    id: string,
+    patch: { full_name?: string; role?: StaffRole; active?: boolean },
+  ): Promise<void> {
+    await this.rows(`select set_staff($1::jsonb)`, [JSON.stringify({ id, ...patch })])
+  }
+
+  async deleteInvite(email: string): Promise<void> {
+    await this.rows(`select delete_invite($1)`, [email])
+  }
+
+  // --- bérletek és szerződések -----------------------------------------------
+
+  async listPasses(): Promise<PassBalanceRow[]> {
+    return this.rows<PassBalanceRow>(
+      `select * from v_pass_balance order by customer_name, pass_name, package_code nulls first`)
+  }
+
+  async createPass(input: NewPassInput): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select create_pass($1::jsonb) as id`,
+      [JSON.stringify(input)])
+    return r.id
+  }
+
+  async deactivatePass(passId: string): Promise<void> {
+    await this.pg.query(`select deactivate_pass($1::uuid)`, [passId])
+  }
+
+  async listContracts(): Promise<ContractRow[]> {
+    return this.rows<ContractRow>(`select * from v_contracts order by company_name, customer_name`)
+  }
+
+  async saveContract(input: ContractInput): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select save_contract($1::jsonb) as id`,
+      [JSON.stringify(input)])
+    return r.id
+  }
+
+  async getBookingExtras(bookingId: string): Promise<BookingExtraRow[]> {
+    const r = await this.rows<any>(
+      `select * from v_booking_extras where booking_id = $1::uuid order by name`, [bookingId])
+    return r.map((x) => ({ ...x, quantity: num(x.quantity) }))
+  }
+
+  async setBookingExtraQty(itemId: string, qty: number): Promise<void> {
+    await this.pg.query(`select set_booking_extra_qty($1::uuid, $2::numeric)`, [itemId, qty])
+  }
+
+  subscribe(): () => void {
+    // A böngészőben futó adatbázist rajtad kívül senki nem írja.
+    return () => {}
   }
 
   async getTasks(bookingId: string): Promise<BookingTask[]> {
