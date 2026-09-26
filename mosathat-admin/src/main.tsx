@@ -8,6 +8,7 @@ import './styles/day.css'
 import './styles/modal.css'
 import './styles/oldal.css'
 import './styles/attekintes.css'
+import './styles/naptar.css'
 
 import { AppProvider } from './state/AppContext'
 import App from './App'

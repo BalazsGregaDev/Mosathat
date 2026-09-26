@@ -22,8 +22,40 @@ import { calcArgs, num, numOrNull, toCalcResult } from './source'
 //  van a kiszállított JavaScriptben.
 // ---------------------------------------------------------------------------
 
+/**
+ * A Supabase angol hibaüzenetei közül az, amelyikkel a műhelyben tényleg
+ * találkozni fognak. Nem fordítás: az kell, hogy MIT KELL TENNI.
+ *
+ * Az "email rate limit exceeded" a leggyakoribb. A Supabase beépített
+ * levélküldője óránként KÉT levelet enged ki, és csak a projekt tagjainak
+ * kézbesít — vagyis dolgozók felvételére eleve alkalmatlan. A megoldás nem a
+ * várakozás, hanem az, hogy vagy kikapcsolod az e-mailes megerősítést, vagy
+ * beállítasz saját levélküldőt.
+ */
+function emberiHiba(uzenet: string): string {
+  const m = uzenet.toLowerCase()
+
+  if (m.includes('rate limit')) {
+    return 'a Supabase óránként csak két levelet enged ki a beépített '
+      + 'levélküldőjével, és ezt most elértük. Kapcsold ki az e-mailes '
+      + 'megerősítést (Authentication → Sign In / Providers → Email → '
+      + '"Confirm email"), vagy állíts be saját levélküldőt. Utána azonnal '
+      + 'megy a felvétel, nem kell várni.'
+  }
+  if (m.includes('already registered') || m.includes('already been registered')) {
+    return 'ezzel az e-mail címmel már van fiók a Supabase-ben.'
+  }
+  if (m.includes('password') && m.includes('6')) {
+    return 'a jelszó túl rövid, legalább hat karakter kell.'
+  }
+  if (m.includes('invalid email')) {
+    return 'az e-mail cím formátuma nem jó.'
+  }
+  return uzenet
+}
+
 function fail(op: string, error: { message: string } | null): never {
-  throw new Error(`${op}: ${error?.message ?? 'ismeretlen hiba'}`)
+  throw new Error(`${op}: ${emberiHiba(error?.message ?? 'ismeretlen hiba')}`)
 }
 
 export class SupabaseSource implements DataSource {
@@ -116,6 +148,19 @@ export class SupabaseSource implements DataSource {
       .order('start_at', { nullsFirst: false })
       .order('drop_off_at', { nullsFirst: false })
     if (error) fail('Napi foglalások', error)
+    return (data ?? []) as DayBooking[]
+  }
+
+  async getRange(from: string, to: string): Promise<DayBooking[]> {
+    const { data, error } = await this.sb
+      .from('v_day_bookings')
+      .select('*')
+      .gte('service_date', from)
+      .lte('service_date', to)
+      .order('service_date')
+      .order('start_at', { nullsFirst: false })
+      .order('drop_off_at', { nullsFirst: false })
+    if (error) fail('Foglalások', error)
     return (data ?? []) as DayBooking[]
   }
 
@@ -365,13 +410,18 @@ export class SupabaseSource implements DataSource {
    * A szerepkör közben NEM utazik a böngészőn át: azt az előbb felvett
    * meghívó sor hordozza az adatbázisban.
    */
-  async createStaff(input: NewStaffInput): Promise<void> {
+  async createStaff(input: NewStaffInput): Promise<string | null> {
     const email = input.email.trim().toLowerCase()
 
-    const { error: meghivoHiba } = await this.sb.rpc('invite_staff', {
+    const { data, error: meghivoHiba } = await this.sb.rpc('invite_staff', {
       p: { email, full_name: input.full_name, role: input.role },
     })
     if (meghivoHiba) fail('Meghívó', meghivoHiba)
+
+    // Ha már volt fiók ezzel a címmel, az adatbázis összekapcsolta a
+    // szerepkörrel. Nincs mit regisztrálni, és a jelszava is a régi marad.
+    const v = data as { mod?: string; uzenet?: string } | null
+    if (v?.mod === 'osszekapcsolva') return v.uzenet ?? null
 
     const eldobhato = createClient(this.url, this.anonKey, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
@@ -381,8 +431,9 @@ export class SupabaseSource implements DataSource {
     if (error) {
       // A meghívó maradjon meg: így a képernyőn látszik, hogy elkezdődött a
       // felvétel, és nem tűnik el nyomtalanul egy félresikerült regisztráció.
-      fail('Fiók létrehozása', error)
+      throw new Error(`Fiók létrehozása: ${emberiHiba(error.message)}`)
     }
+    return null
   }
 
   async updateStaff(

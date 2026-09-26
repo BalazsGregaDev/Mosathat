@@ -50,6 +50,12 @@ export interface DataSource {
   getCatalog(): Promise<Catalog>
 
   getDay(date: string): Promise<DayBooking[]>
+  /**
+   * Foglalások egy időszakra, a heti és a havi nézethez. Ugyanaz a nézet,
+   * mint a napinál — nem külön lekérdezés, hogy ne lehessen két különböző
+   * válasz ugyanarra a napra.
+   */
+  getRange(from: string, to: string): Promise<DayBooking[]>
   getBooking(id: string): Promise<DayBooking | null>
   getCapacity(date: string): Promise<DayCapacity>
   getWorkWindows(date: string): Promise<WorkWindow[]>
@@ -113,8 +119,12 @@ export interface DataSource {
    * Új felhasználó. A szerepkör NEM a böngészőből megy át: előbb meghívó
    * készül az adatbázisban (azt csak teljes jogú felhasználó írhatja), és a
    * regisztrációkor a trigger ABBÓL veszi a szerepkört.
+   *
+   * Ha a címhez már tartozott fiók, az kapja meg a szerepkört — ilyenkor a
+   * visszaadott szöveg mondja meg, hogy ez történt, mert a jelszava a régi
+   * marad. Egyébként null.
    */
-  createStaff(input: NewStaffInput): Promise<void>
+  createStaff(input: NewStaffInput): Promise<string | null>
   updateStaff(id: string, patch: { full_name?: string; role?: StaffRole; active?: boolean }): Promise<void>
   deleteInvite(email: string): Promise<void>
 

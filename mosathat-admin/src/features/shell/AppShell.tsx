@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { maE, maStr, napCim, napLep, napRovidCim } from '../../lib/format'
+import {
+  hetCim, honapCim, honapElseje, honapPlusz, maE, maStr, napCim, napLep,
+  napPlusz, napRovidCim,
+} from '../../lib/format'
 import { ROLE_LABEL } from '../../lib/types'
 import DayView from '../day/DayView'
+import WeekView from '../day/WeekView'
+import MonthView from '../day/MonthView'
 import BookingForm from '../booking/BookingForm'
 import BookingDetail from '../booking/BookingDetail'
 import ServicesPage from '../services/ServicesPage'
@@ -55,6 +60,9 @@ export default function AppShell() {
 
   const [oldal, setOldal] = useState<Oldal>(teljesJogu ? 'attekintes' : 'nap')
   const [nap, setNap] = useState(maStr())
+  // Nap, hét vagy hónap. A nyilak ehhez igazodnak: napi nézetben egy napot,
+  // hetiben egy hetet, haviban egy hónapot lépnek. Ugyanaz a gomb, más lépés.
+  const [nezet, setNezet] = useState<'nap' | 'het' | 'honap'>('nap')
   const [ujNyitva, setUjNyitva] = useState(false)
   const [reszletId, setReszletId] = useState<string | null>(null)
   const [szerkesztId, setSzerkesztId] = useState<string | null>(null)
@@ -125,6 +133,38 @@ export default function AppShell() {
 
   const napiFejlec = oldal === 'nap'
 
+  function lep(irany: -1 | 1) {
+    if (nezet === 'nap') setNap(napLep(nap, irany))
+    else if (nezet === 'het') setNap(napPlusz(nap, irany * 7))
+    else setNap(honapPlusz(honapElseje(nap), irany))
+  }
+
+  const fejlecCim = nezet === 'nap' ? napCim(nap)
+    : nezet === 'het' ? hetCim(nap)
+    : honapCim(nap)
+
+  const rovidCim = nezet === 'nap' ? (maE(nap) ? 'Ma' : napRovidCim(nap))
+    : nezet === 'het' ? hetCim(nap)
+    : honapCim(nap)
+
+  /** Egy napra ugorva mindig a napi nézet a hasznos: ott van a munkalap. */
+  function napraUgrik(d: string) {
+    setNap(d)
+    setNezet('nap')
+  }
+
+  // Egy definíció, két helyen: az asztali fejlécben és a mobil fejléc alatt.
+  // Ha kétszer lenne leírva, előbb-utóbb az egyik helyen maradna ki egy nézet.
+  const nezetValto = (
+    <div className="nezetvalto">
+      {([['nap', 'Nap'], ['het', 'Hét'], ['honap', 'Hónap']] as const).map(([id, c]) => (
+        <button key={id} className={nezet === id ? 'aktiv' : ''}
+                aria-pressed={nezet === id}
+                onClick={() => setNezet(id)}>{c}</button>
+      ))}
+    </div>
+  )
+
   return (
     <div className="keret">
       <aside className="oldalsav">{menuTartalom}</aside>
@@ -135,18 +175,21 @@ export default function AppShell() {
           {napiFejlec ? (
             <>
               <div className="napvalto">
-                <button className="btn btn-csendes nyil" onClick={() => setNap(napLep(nap, -1))}
-                        aria-label="Előző nap">‹</button>
+                <button className="btn btn-csendes nyil" onClick={() => lep(-1)}
+                        aria-label="Vissza">‹</button>
                 <div className="cim">
-                  {napCim(nap)}
-                  {maE(nap) && <span className="ma">Ma</span>}
+                  {fejlecCim}
+                  {nezet === 'nap' && maE(nap) && <span className="ma">Ma</span>}
                 </div>
-                <button className="btn btn-csendes nyil" onClick={() => setNap(napLep(nap, 1))}
-                        aria-label="Következő nap">›</button>
+                <button className="btn btn-csendes nyil" onClick={() => lep(1)}
+                        aria-label="Előre">›</button>
                 {!maE(nap) && (
                   <button className="btn btn-kicsi" onClick={() => setNap(maStr())}>Mára</button>
                 )}
               </div>
+
+              {nezetValto}
+
               <div className="fejlec-tolto" />
               <button className="btn btn-fo" onClick={() => setUjNyitva(true)}>+ Új időpont</button>
             </>
@@ -167,17 +210,24 @@ export default function AppShell() {
           </button>
           {napiFejlec ? (
             <>
-              <button className="lep" onClick={() => setNap(napLep(nap, -1))} aria-label="Előző nap">‹</button>
+              <button className="lep" onClick={() => lep(-1)} aria-label="Vissza">‹</button>
               <div className="nap">
-                {maE(nap) ? 'Ma' : napRovidCim(nap)}
-                <span style={{ opacity: 0.6, fontWeight: 400 }}> · {napRovidCim(nap)}</span>
+                {rovidCim}
+                {nezet === 'nap' && (
+                  <span style={{ opacity: 0.6, fontWeight: 400 }}> · {napRovidCim(nap)}</span>
+                )}
               </div>
-              <button className="lep" onClick={() => setNap(napLep(nap, 1))} aria-label="Következő nap">›</button>
+              <button className="lep" onClick={() => lep(1)} aria-label="Előre">›</button>
             </>
           ) : (
             <div className="nap">{menu.find((m) => m.id === oldal)?.cimke}</div>
           )}
         </header>
+
+        {/* A mobil fejlécbe már nem fér be a nézetváltó a hamburger, a
+            nyilak és a dátum mellé. Külön sávot kap alatta — ez látszik is,
+            nem kell megkeresni a menüben. */}
+        {napiFejlec && <div className="nezetvalto-sav">{nezetValto}</div>}
 
         <main className="tartalom">
           {oldal === 'attekintes' && (
@@ -188,7 +238,16 @@ export default function AppShell() {
               onNapra={(d) => { setNap(d.slice(0, 10)); setOldal('nap') }}
             />
           )}
-          {oldal === 'nap' && <DayView nap={nap} onMegnyit={setReszletId} />}
+          {oldal === 'nap' && nezet === 'nap' && (
+            <DayView nap={nap} onMegnyit={setReszletId} />
+          )}
+          {oldal === 'nap' && nezet === 'het' && (
+            <WeekView nap={nap} onMegnyit={setReszletId} onNapra={napraUgrik} />
+          )}
+          {oldal === 'nap' && nezet === 'honap' && (
+            <MonthView nap={nap} onNapra={napraUgrik}
+                       onHetre={(d) => { setNap(d); setNezet('het') }} />
+          )}
 
           {/* Az alkalmazott ugyanezt az adatot látja, de nem szerkesztőben:
               árlista és bérletlista. Nem ugyanaz a képernyő letiltva. */}

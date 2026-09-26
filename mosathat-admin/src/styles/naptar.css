@@ -1,0 +1,268 @@
+/* Heti és havi nézet. */
+
+/* --- nézetváltó a fejlécben -------------------------------------------------- */
+
+.nezetvalto {
+  display: flex;
+  margin-left: var(--t4);
+  border: 1px solid var(--keret-eros);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.nezetvalto button {
+  background: var(--lap);
+  border: none;
+  border-right: 1px solid var(--keret);
+  padding: 7px 14px;
+  font-size: var(--m-sm);
+  font-weight: var(--vastag-kozep);
+  color: var(--szoveg-halk);
+}
+.nezetvalto button:last-child { border-right: none; }
+.nezetvalto button:hover { background: var(--lap-2); color: var(--szoveg); }
+.nezetvalto button.aktiv { background: var(--sotet); color: #fff; }
+
+/* --- a kis kártya, közös a hetiben és a haviban ------------------------------ */
+
+/* Az állapotot egy bal oldali csík hordozza, ugyanúgy, mint a napi nézet nagy
+   kártyáján. Ugyanaz a jelentés ugyanaz a jel legyen — két helyen kétféle
+   jelölés két nyelvet jelentene ugyanarra. */
+.minikartya {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--lap);
+  border: 1px solid var(--keret);
+  border-left: 3px solid var(--v-varjuk);
+  border-radius: var(--r-sm);
+  padding: 5px 8px;
+  line-height: 1.3;
+}
+.minikartya:hover {
+  border-color: var(--keret-eros);
+  border-left-color: var(--v-varjuk);
+  background: var(--lap-2);
+}
+.minikartya .azon {
+  display: block;
+  font-size: var(--m-sm);
+  font-weight: var(--vastag-eros);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.minikartya .azon.rendszam {
+  font-family: var(--betu-szam);
+  letter-spacing: .04em;
+}
+.minikartya .ido {
+  display: block;
+  font-family: var(--betu-szam);
+  font-size: var(--m-xs);
+  color: var(--szoveg-halk);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.minikartya[data-a='ARRIVED']     { border-left-color: var(--v-erkezett); }
+.minikartya[data-a='IN_PROGRESS'] { border-left-color: var(--v-dolgozunk); }
+.minikartya[data-a='READY']       { border-left-color: var(--v-kesz); }
+.minikartya[data-a='COMPLETED']   { border-left-color: var(--v-lezart); opacity: .7; }
+.minikartya[data-a='NO_SHOW'],
+.minikartya[data-a='CANCELLED_BY_CUSTOMER'],
+.minikartya[data-a='CANCELLED_BY_SHOP'] {
+  border-left-color: var(--v-baj);
+  opacity: .6;
+  text-decoration: line-through;
+}
+
+/* Havi nézetben egy sor: idő és rendszám egymás mellett, mert öt tételnek
+   kell elférnie egy cellában. */
+.minikartya.egysoros {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 2px 6px;
+  border-width: 1px 1px 1px 3px;
+}
+.minikartya.egysoros .azon { font-size: var(--m-xs); flex: 1 1 auto; min-width: 0; }
+.minikartya.egysoros .ido {
+  font-size: 10px;
+  flex: 0 0 auto;
+  order: -1;                      /* az idő elöl: az alapján fut végig a szem */
+}
+
+/* Havi naptárban a sorok nem gombok: az egész cella visz a napra. Ettől
+   nem kell másképp KINÉZNIÜK — a különbség az, hogy nincs saját hover. */
+.minikartya.statikus { cursor: inherit; }
+.honapnap:hover .minikartya.statikus { border-color: var(--keret-eros); }
+
+/* „+3 további" — nem eltűnt adat, hanem egy kattintás a napi nézetig. */
+.tovabb {
+  display: block; width: 100%;
+  background: none; border: 1px dashed var(--keret-eros);
+  border-radius: var(--r-sm);
+  padding: 4px 8px;
+  font-size: var(--m-xs);
+  color: var(--szoveg-halk);
+}
+.tovabb:hover { background: var(--lap-2); color: var(--szoveg); }
+
+/* --- heti nézet -------------------------------------------------------------- */
+
+.hetracs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--t3);
+  align-items: start;
+}
+
+.naposzlop {
+  background: var(--lap);
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.naposzlop[data-ma] { border-color: var(--zold); box-shadow: 0 0 0 1px var(--zold); }
+
+.oszlopfej {
+  display: flex; align-items: baseline; gap: 6px;
+  width: 100%;
+  background: var(--lap-2);
+  border: none; border-bottom: 1px solid var(--keret);
+  padding: var(--t2) var(--t3);
+  text-align: left;
+}
+.oszlopfej:hover { background: var(--zold-halvany); }
+.oszlopfej .nev { font-size: var(--m-sm); font-weight: var(--vastag-eros); }
+.oszlopfej .datum { font-size: var(--m-xs); color: var(--szoveg-halk); }
+.oszlopfej .db {
+  margin-left: auto;
+  font-family: var(--betu-szam); font-size: var(--m-xs);
+  font-weight: var(--vastag-eros);
+  color: var(--szoveg-halk);
+}
+.naposzlop[data-ma] .oszlopfej .nev { color: var(--zold-sotet); }
+
+.oszloptorzs {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: var(--t2);
+}
+.uresnap { text-align: center; color: var(--szoveg-halvany); padding: var(--t3) 0; }
+
+.hetvegesor {
+  display: flex; align-items: center; gap: var(--t2);
+  margin-top: var(--t4);
+  padding-top: var(--t3);
+  border-top: 1px solid var(--keret);
+  flex-wrap: wrap;
+}
+.hetvegesor .cimke {
+  font-size: var(--m-xs); text-transform: uppercase; letter-spacing: .06em;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+}
+
+/* --- havi naptár --------------------------------------------------------------
+   Nyolc oszlop: elöl a hétszám, utána a hét hét napja. A hétszám nem dísz —
+   onnan egy kattintással át lehet váltani annak a hétnek a nézetére. */
+
+.honapfej,
+.honapsor {
+  display: grid;
+  grid-template-columns: 46px repeat(7, minmax(0, 1fr));
+  gap: var(--t2);
+}
+.honapfej { margin-bottom: 6px; }
+.honapfej > div {
+  font-size: var(--m-xs); text-transform: uppercase; letter-spacing: .06em;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  padding-left: 4px;
+}
+.honapfej .hetoszlop-fej { text-align: center; padding-left: 0; }
+
+.honapracs { display: flex; flex-direction: column; gap: var(--t2); }
+
+.hetszam {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px;
+  background: var(--lap-2);
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+  color: var(--szoveg-halk);
+  padding: 4px 0;
+}
+.hetszam:hover { background: var(--zold-halvany); border-color: var(--zold); color: var(--zold-sotet); }
+.hetszam .szam {
+  font-family: var(--betu-szam); font-size: var(--m-sm);
+  font-weight: var(--vastag-eros);
+}
+.hetszam .szo { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
+
+/* A CELLA a gomb: egy kattintás, egy jelentés — betölti azt a napot.
+   A benne lévő sorok nem külön gombok, hanem a nap előnézete. */
+.honapnap {
+  display: flex; flex-direction: column; gap: 3px; align-items: stretch;
+  background: var(--lap);
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+  padding: 5px;
+  min-width: 0;
+  min-height: 96px;
+  text-align: left;
+}
+.honapnap:hover { border-color: var(--keret-eros); background: var(--lap-2); }
+
+/* A szomszéd hónap napjai halványak, de élnek: rájuk lehet kattintani, és a
+   foglalásaik is látszanak. Ha csak dísz lenne, elég lenne üresen hagyni —
+   de szeptember 30-án ugyanúgy dolgozunk, mint október 1-jén. */
+.honapnap[data-kivul] { background: var(--hatter); }
+.honapnap[data-kivul] .napszam { color: var(--szoveg-halvany); }
+.honapnap[data-kivul] .minikartya { opacity: .55; }
+.honapnap[data-kivul]:hover .minikartya { opacity: 1; }
+
+.honapnap[data-ma] { border-color: var(--zold); box-shadow: 0 0 0 1px var(--zold); }
+
+.napszam {
+  display: flex; align-items: baseline; gap: 5px;
+  padding: 1px 3px;
+  font-family: var(--betu-szam);
+  font-size: var(--m-sm);
+  font-weight: var(--vastag-eros);
+  color: var(--szoveg);
+}
+.napszam .db {
+  margin-left: auto;
+  font-size: 10px; font-weight: var(--vastag-normal);
+  color: var(--szoveg-halk);
+}
+.honapnap[data-ma] .napszam { color: var(--zold-sotet); }
+
+/* --- mobil --------------------------------------------------------------------
+   Öt-hét oszlop telefonon olvashatatlan lenne. A heti nézet ilyenkor egymás
+   alatti napokra esik szét, a havi naptár pedig vízszintesen görgethető, mert
+   ott a rács maga az információ — egy hasábba tördelve nem naptár többé. */
+@media (max-width: 900px) {
+  .hetracs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .hetracs { grid-template-columns: 1fr; }
+  .honapnezet { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .honapfej, .honapsor { min-width: 660px; }
+}
+
+@media (max-width: 760px) {
+  .nezetvalto { margin-left: var(--t2); }
+  .nezetvalto button { padding: 6px 10px; }
+}
+
+/* A mobil nézetváltó sávja. Asztali méreten a fejlécben van a helye, ott ez
+   a sáv felesleges lenne. */
+.nezetvalto-sav { display: none; }
+
+@media (max-width: 760px) {
+  .nezetvalto-sav {
+    display: flex;
+    justify-content: center;
+    padding: var(--t2) var(--t3);
+    background: var(--lap);
+    border-bottom: 1px solid var(--keret);
+    position: sticky; top: var(--mobil-fejlec); z-index: 5;
+  }
+  .nezetvalto-sav .nezetvalto { margin-left: 0; width: 100%; max-width: 320px; }
+  .nezetvalto-sav .nezetvalto button { flex: 1 1 0; padding: 8px 0; }
+}

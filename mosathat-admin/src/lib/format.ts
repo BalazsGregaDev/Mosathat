@@ -120,3 +120,89 @@ export function oraSzam(percek: number | null | undefined): string {
   const o = percek / 60
   return `${(Math.round(o * 10) / 10).toLocaleString('hu-HU')} ó`
 }
+
+// --- heti és havi nézet -------------------------------------------------------
+
+/**
+ * A hét hétfője. A getDay() vasárnapra 0-t ad, ami a magyar naptárban a hét
+ * VÉGE — ezt kell visszaforgatni, különben minden vasárnap egy héttel arrébb
+ * csúszna.
+ */
+export function hetHetfoje(datum: string): string {
+  const d = new Date(`${datum}T12:00:00Z`)
+  const nap = d.getUTCDay()            // 0 = vasárnap
+  d.setUTCDate(d.getUTCDate() - (nap === 0 ? 6 : nap - 1))
+  return d.toISOString().slice(0, 10)
+}
+
+/** Napok hozzáadása egy dátumhoz, hónap- és évfordulóval együtt. */
+export function napPlusz(datum: string, n: number): string {
+  const d = new Date(`${datum}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+/** A hónap első napja. */
+export function honapElseje(datum: string): string {
+  return `${datum.slice(0, 7)}-01`
+}
+
+/** Hónapok hozzáadása. A napot mindig 1-re állítja, így nincs 31-e gond. */
+export function honapPlusz(datum: string, n: number): string {
+  const [ev, ho] = datum.split('-').map(Number)
+  const d = new Date(Date.UTC(ev, ho - 1 + n, 1, 12))
+  return d.toISOString().slice(0, 10)
+}
+
+const honapNev = new Intl.DateTimeFormat('hu-HU', {
+  year: 'numeric', month: 'long', timeZone: TZ,
+})
+
+/** "2026. szeptember" */
+export function honapCim(datum: string): string {
+  return honapNev.format(new Date(`${datum}T12:00:00Z`))
+}
+
+/**
+ * "szept. 21. – 27." — ha hónapot vált, mindkét oldalon kiírja a hónapot.
+ *
+ * Bármelyik napot megkapja a hétből, a hétfőt magától számolja ki. Enélkül
+ * szombaton megnyitva a fejléc a KÖVETKEZŐ hetet írta, miközben a rács az
+ * aktuálisat mutatta — ugyanabból a dátumból két különböző hét.
+ */
+export function hetCim(datum: string): string {
+  const hetfo = hetHetfoje(datum)
+  const vasarnap = napPlusz(hetfo, 6)
+  const a = napRovidCim(hetfo)
+  const b = napRovidCim(vasarnap)
+  // Azonos hónapon belül a második hónapnevet elhagyjuk: "szept. 21. – 27."
+  if (hetfo.slice(0, 7) === vasarnap.slice(0, 7)) {
+    return `${a} – ${b.replace(/^\S+\s/, '')}`
+  }
+  return `${a} – ${b}`
+}
+
+/** Melyik hónaphoz tartozik: a naptárban a szomszéd hónap napjai halványak. */
+export function azonosHonap(a: string, b: string): boolean {
+  return a.slice(0, 7) === b.slice(0, 7)
+}
+
+/**
+ * ISO hétszám. Nem egyszerű osztás: a szabály szerint egy hét ahhoz az évhez
+ * tartozik, amelyikbe a CSÜTÖRTÖKJE esik. Ezért december 29. lehet a
+ * következő év 1. hete, január 1. pedig az előző év 52. vagy 53. hete.
+ *
+ * Ellenőrizve: 2026-01-01 → 1., 2026-09-21 → 39., 2026-12-28 → 53.,
+ * 2024-12-30 → 1. hét.
+ */
+export function hetSzam(datum: string): number {
+  const d = new Date(`${datum}T12:00:00Z`)
+  const nap = (d.getUTCDay() + 6) % 7          // 0 = hétfő
+  d.setUTCDate(d.getUTCDate() - nap + 3)       // az adott hét csütörtökje
+
+  const csutortok = new Date(Date.UTC(d.getUTCFullYear(), 0, 4, 12))
+  const n2 = (csutortok.getUTCDay() + 6) % 7
+  csutortok.setUTCDate(csutortok.getUTCDate() - n2 + 3)
+
+  return 1 + Math.round((d.getTime() - csutortok.getTime()) / (7 * 86_400_000))
+}

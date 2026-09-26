@@ -25,6 +25,7 @@ export default function UsersPage() {
   const [sorok, setSorok] = useState<StaffRow[] | null>(null)
   const [hiba, setHiba] = useState<string | null>(null)
   const [ujNyitva, setUjNyitva] = useState(false)
+  const [uzenet, setUzenet] = useState<string | null>(null)
 
   const betolt = useCallback(() => {
     data.listStaff()
@@ -58,6 +59,16 @@ export default function UsersPage() {
           + Új felhasználó
         </button>
       </div>
+
+      {/* Nem hibaüzenet, hanem az, ami a szokásostól eltért — ezt el kell
+          olvasni, mert a jelszó máshogy működik ilyenkor. */}
+      {uzenet && (
+        <div className="figyelmeztet" style={{ marginBottom: 'var(--t4)' }}>
+          <span>{uzenet}</span>
+          <button className="btn btn-csendes btn-kicsi" style={{ marginLeft: 'auto' }}
+                  onClick={() => setUzenet(null)}>Rendben</button>
+        </div>
+      )}
 
       <div className="panel panelek-szeles">
         <h3>Hozzáférések</h3>
@@ -135,7 +146,7 @@ export default function UsersPage() {
         <UjFelhasznalo
           fejleszto={fejleszto}
           onBezar={() => setUjNyitva(false)}
-          onKesz={() => { setUjNyitva(false); betolt() }}
+          onKesz={(u) => { setUjNyitva(false); setUzenet(u); betolt() }}
         />
       )}
     </div>
@@ -223,7 +234,7 @@ const URES: NewStaffInput = { full_name: '', email: '', password: '', role: 'STA
 function UjFelhasznalo({ fejleszto, onBezar, onKesz }: {
   fejleszto: boolean
   onBezar: () => void
-  onKesz: () => void
+  onKesz: (uzenet: string | null) => void
 }) {
   const { data } = useApp()
   const [f, setF] = useState<NewStaffInput>(URES)
@@ -237,8 +248,7 @@ function UjFelhasznalo({ fejleszto, onBezar, onKesz }: {
   async function ment() {
     setMegy(true)
     try {
-      await data.createStaff(f)
-      onKesz()
+      onKesz(await data.createStaff(f))
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
       setMegy(false)
@@ -279,6 +289,18 @@ function UjFelhasznalo({ fejleszto, onBezar, onKesz }: {
               Ez a mező szándékosan látszik: úgyis le kell írnod valahova.
             </small>
           </label>
+
+          {/* Ez a legvalószínűbb elakadás, ezért itt áll, nem a hibaüzenetben.
+              A Supabase beépített levélküldője óránként két levelet enged ki,
+              és csak a projekt tagjainak kézbesít — dolgozók felvételére eleve
+              alkalmatlan. */}
+          <p className="halk" style={{ fontSize: 'var(--m-xs)', lineHeight: 1.5 }}>
+            Ha „email rate limit exceeded" hibát kapsz: a Supabase beépített
+            levélküldője óránként két levelet enged ki. Kapcsold ki az e-mailes
+            megerősítést (Authentication → Sign In / Providers → Email →
+            „Confirm email"), vagy állíts be saját levélküldőt. Fiókok törlése
+            nem oldja fel, mert a korlát a kiküldött levelekre vonatkozik.
+          </p>
 
           <div className="mezo">
             <span className="cimke">Szerepkör</span>

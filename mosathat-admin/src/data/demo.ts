@@ -202,6 +202,15 @@ export class DemoSource implements DataSource {
     )
   }
 
+  async getRange(from: string, to: string): Promise<DayBooking[]> {
+    return this.rows<DayBooking>(
+      `select * from v_day_bookings
+        where service_date between $1::date and $2::date
+        order by service_date, coalesce(start_at, drop_off_at) nulls last, plate_raw`,
+      [from, to],
+    )
+  }
+
   async getBooking(id: string): Promise<DayBooking | null> {
     const [r] = await this.rows<DayBooking>(`select * from v_day_bookings where id = $1::uuid`, [id])
     return r ?? null
@@ -426,15 +435,19 @@ export class DemoSource implements DataSource {
     return this.rows<StaffRow>(`select * from list_staff()`)
   }
 
-  async createStaff(input: NewStaffInput): Promise<void> {
+  async createStaff(input: NewStaffInput): Promise<string | null> {
     // Demóban nincs Supabase Auth, ezért a "regisztrációt" itt mi játsszuk el:
     // meghívó, majd egy auth.users sor. A trigger onnantól ugyanaz.
-    await this.rows(`select invite_staff($1::jsonb)`, [JSON.stringify({
-      email: input.email, full_name: input.full_name, role: input.role,
-    })])
+    const [r] = await this.rows<{ v: { mod?: string; uzenet?: string } }>(
+      `select invite_staff($1::jsonb) as v`, [JSON.stringify({
+        email: input.email, full_name: input.full_name, role: input.role,
+      })])
+    if (r?.v?.mod === 'osszekapcsolva') return r.v.uzenet ?? null
+
     await this.rows(
       `insert into auth.users (id, email) values (gen_random_uuid(), $1)`,
       [input.email.trim().toLowerCase()])
+    return null
   }
 
   async updateStaff(
