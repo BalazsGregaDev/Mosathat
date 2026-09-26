@@ -209,7 +209,16 @@
   color: var(--szoveg-halk);
 }
 .mezo small { font-size: var(--m-xs); color: var(--szoveg-halk); line-height: 1.5; }
-.mezo + .mezo { margin-top: var(--t4); }
+
+/* Egymás ALATTI mezők közti térköz.
+   A gyerek-kiválasztó (>) itt nem részletkérdés: enélkül a szabály minden
+   egymás melletti mezőre is ráült, és a rácsban a második oszlopot 16
+   pixellel lejjebb lökte. Az új időpont űrlapján ezért állt a Telefonszám
+   a Név alatt, a Típus a Márka alatt, a Leadás a Nap alatt — ugyanabban a
+   sorban, mégis elcsúszva.
+   Így csak azokra vonatkozik, amik tényleg egymás alatt következnek. */
+.panel-torzs > .mezo + .mezo,
+.lap-torzs > .mezo + .mezo { margin-top: var(--t4); }
 
 .mezo-sor {
   display: grid;
@@ -217,7 +226,6 @@
   gap: var(--t3);
   margin-bottom: var(--t4);
 }
-.mezo-sor .mezo + .mezo { margin-top: 0; }
 
 .sor { display: flex; gap: var(--t2); align-items: center; }
 
