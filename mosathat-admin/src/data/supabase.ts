@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import type {
   BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity,
-  LatestStart, NewBookingInput, PlateLookup, StandingCar, WorkWindow,
+  LatestStart, NewBookingInput, PlateLookup, ServiceArea, StandingCar, WorkWindow,
 } from '../lib/types'
 import type { Catalog, DataSource, SessionUser } from './source'
 import { calcArgs, num, numOrNull, toCalcResult } from './source'
@@ -200,5 +200,20 @@ export class SupabaseSource implements DataSource {
   async toggleTask(taskId: string, done: boolean): Promise<void> {
     const { error } = await this.sb.rpc('toggle_task', { p_task_id: taskId, p_done: done })
     if (error) fail('Munkalista pipálás', error)
+  }
+
+  async toggleTaskGroup(bookingId: string, area: ServiceArea, done: boolean): Promise<number> {
+    const { data, error } = await this.sb.rpc('toggle_task_group', {
+      p_booking_id: bookingId, p_area: area, p_done: done,
+    })
+    if (error) fail('Csoportos pipálás', error)
+    return num(data)
+  }
+
+  async setNotes(bookingId: string, notes: string): Promise<void> {
+    const { error } = await this.sb.rpc('set_booking_notes', {
+      p_booking_id: bookingId, p_notes: notes,
+    })
+    if (error) fail('Megjegyzés mentése', error)
   }
 }

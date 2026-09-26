@@ -1,11 +1,19 @@
 import { PGlite } from '@electric-sql/pglite'
 
-// A migrációk ugyanabban a sorrendben, ahogy a Supabase is futtatja őket
-// (a fájlnév időbélyege adja a sorrendet).
-import m1 from '../../../supabase/migrations/20260919090000_schema.sql?raw'
-import m2 from '../../../supabase/migrations/20260919091000_torzsadatok.sql?raw'
-import m3 from '../../../supabase/migrations/20260923100000_booking_engine.sql?raw'
-import m4 from '../../../supabase/migrations/20260923110000_admin_api.sql?raw'
+// A migrációk MINDEGYIKE, automatikusan.
+//
+// Korábban egyesével voltak felsorolva, és amikor új migráció született, a
+// demó mód csendben a régi sémán futott tovább — a hiba pedig csak jóval
+// később derült ki. Az import.meta.glob a mappa teljes tartalmát behúzza,
+// így nincs mit elfelejteni.
+//
+// A kulcs a fájl útvonala, ezért a névsorrend = az időbélyeg sorrendje =
+// a futtatási sorrend. Pontosan az, amit a Supabase CLI is csinál.
+const MIGRACIOK = import.meta.glob('../../../supabase/migrations/*.sql', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>
 
 // A próbaadat NEM migráció, és nincs a migrations mappában: különben a
 // GitHub-integráció felvinné az éles adatbázisba is. Csak ide töltjük be.
@@ -13,7 +21,7 @@ import demoAdatok from '../../../supabase/demo/demo_adatok.sql?raw'
 
 import type {
   BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity,
-  LatestStart, NewBookingInput, PlateLookup, StandingCar, WorkWindow,
+  LatestStart, NewBookingInput, PlateLookup, ServiceArea, StandingCar, WorkWindow,
 } from '../lib/types'
 import type { Catalog, DataSource, SessionUser } from './source'
 import { calcArgs, num, numOrNull, toCalcResult } from './source'
@@ -21,7 +29,7 @@ import { calcArgs, num, numOrNull, toCalcResult } from './source'
 // ---------------------------------------------------------------------------
 //  Demó mód — valódi PostgreSQL a böngészőben
 //
-//  A PGlite egy WASM-ra fordított PostgreSQL. Ugyanaz az öt migráció fut le
+//  A PGlite egy WASM-ra fordított PostgreSQL. Ugyanazok a migrációk futnak le
 //  benne, mint majd a Supabase-en: ugyanaz a calc_service(), ugyanazok a
 //  nézetek, ugyanaz a create_booking(). Nem utánzat, hanem ugyanaz a
 //  motor — így nem fordulhat elő, hogy a demó mást mutat, mint az éles.
@@ -64,7 +72,10 @@ export class DemoSource implements DataSource {
     if (this.db) return
     const db = await PGlite.create()
     await db.exec(AUTH_STUB)
-    for (const sql of [m1, m2, m3, m4, demoAdatok]) await db.exec(sql)
+
+    const sorrendben = Object.keys(MIGRACIOK).sort()
+    for (const utvonal of sorrendben) await db.exec(MIGRACIOK[utvonal])
+    await db.exec(demoAdatok)
 
     // Egy dolgozó, hogy a created_by és a done_by ne legyen üres.
     await db.query(
@@ -211,5 +222,17 @@ export class DemoSource implements DataSource {
 
   async toggleTask(taskId: string, done: boolean): Promise<void> {
     await this.pg.query(`select toggle_task($1::uuid, $2::boolean)`, [taskId, done])
+  }
+
+  async toggleTaskGroup(bookingId: string, area: ServiceArea, done: boolean): Promise<number> {
+    const [r] = await this.rows<{ n: number }>(
+      `select toggle_task_group($1::uuid, $2::service_area, $3::boolean) as n`,
+      [bookingId, area, done],
+    )
+    return num(r?.n)
+  }
+
+  async setNotes(bookingId: string, notes: string): Promise<void> {
+    await this.pg.query(`select set_booking_notes($1::uuid, $2)`, [bookingId, notes])
   }
 }

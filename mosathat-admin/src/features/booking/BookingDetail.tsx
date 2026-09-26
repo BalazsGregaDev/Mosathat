@@ -1,20 +1,37 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { ft, idosav, idotartam, ora } from '../../lib/format'
 import {
   CATEGORY_LABEL, NEXT_STATUS, SCOPE_LABEL, STATUS_LABEL, TYPE_LABEL,
-  type BookingTask, type DayBooking,
+  type BookingTask, type DayBooking, type ServiceArea,
 } from '../../lib/types'
 
 // ---------------------------------------------------------------------------
-//  Egy foglalás megnyitva.
+//  A munkalap.
 //
-//  Ez az a képernyő, ami a mosóállásban nyitva van: egy gomb az állapotra,
-//  alatta a munkalista. A pipálás időbélyeget ír — ebből derül ki utólag,
-//  meddig tartott a munka, és hogy nyitvatartási időn kívül készült-e.
-//  Külön "indítom / leállítom" gomb nélkül.
+//  Ez az a képernyő, ami a mosóállásban nyitva van, gyakran vizes kézzel.
+//  Ezért három szabály vezette a felépítését:
+//
+//  1. Ami a csomag része, azt nem kell egyenként pipálni. Egy Elitnél 14
+//     lépés van — ezeket egyesével kipipálni időpazarlás. Ami KÜLÖN volt
+//     kérve, az az érdekes: azt külön kell nyugtázni.
+//
+//  2. A pipálás nem tölti újra az oldalt. Azonnal átbillen, a mentés a
+//     háttérben megy. Ha hiba van, visszabillen és szól.
+//
+//  3. Amíg az ügyfél nem érkezett meg, a lista nincs nyitva. Lezárás után
+//     pedig végleg zárva van — ezt nem itt, hanem az adatbázisban is
+//     biztosítja egy trigger.
 // ---------------------------------------------------------------------------
+
+interface Csoport {
+  kulcs: 'KULSO' | 'BELSO' | 'EGYEB'
+  cim: string
+  area: ServiceArea | null
+  csomag: BookingTask[]
+  extra: BookingTask[]
+}
 
 export default function BookingDetail({
   bookingId,
@@ -27,8 +44,20 @@ export default function BookingDetail({
   const [b, setB] = useState<DayBooking | null>(null)
   const [lista, setLista] = useState<BookingTask[]>([])
   const [tolt, setTolt] = useState(true)
-  const [vegleges, setVegleges] = useState('')
   const [hiba, setHiba] = useState<string | null>(null)
+
+  // ár
+  const [vegleges, setVegleges] = useState('')
+  const [pct, setPct] = useState(0)
+  const [fix, setFix] = useState(0)
+
+  // megjegyzés
+  const [megjegyzes, setMegjegyzes] = useState('')
+  const [megjMentve, setMegjMentve] = useState(true)
+
+  // Ha bármi változott, a napi nézetet frissíteni kell — de csak bezáráskor,
+  // nem minden pipa után.
+  const valtozott = useRef(false)
 
   const betolt = useCallback(async () => {
     try {
@@ -36,6 +65,8 @@ export default function BookingDetail({
       setB(f)
       setLista(t)
       setVegleges(f?.final_price_huf ? String(f.final_price_huf) : '')
+      setMegjegyzes(f?.notes ?? '')
+      setMegjMentve(true)
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
     } finally {
@@ -47,43 +78,133 @@ export default function BookingDetail({
     void betolt()
   }, [betolt])
 
+  const bezar = useCallback(() => {
+    if (valtozott.current) refresh()
+    onBezar()
+  }, [onBezar, refresh])
+
   useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && onBezar()
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && bezar()
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
-  }, [onBezar])
+  }, [bezar])
+
+  // --- állapotból adódó zárolás ----------------------------------------------
+
+  const lezart = b?.status === 'COMPLETED'
+  const megerkezett = b ? ['ARRIVED', 'IN_PROGRESS', 'READY'].includes(b.status) : false
+  const listaNyitva = megerkezett && !lezart
+
+  // --- a lista csoportosítva --------------------------------------------------
+
+  const csoportok = useMemo<Csoport[]>(() => {
+    const ki = (a: ServiceArea | null) => lista.filter((t) => t.area === a)
+    const mk = (kulcs: Csoport['kulcs'], cim: string, area: ServiceArea | null): Csoport => {
+      const sorok = ki(area).sort((x, y) => x.sort_order - y.sort_order)
+      return {
+        kulcs, cim, area,
+        csomag: sorok.filter((t) => t.source === 'PACKAGE'),
+        extra: sorok.filter((t) => t.source === 'EXTRA'),
+      }
+    }
+    return [
+      mk('KULSO', 'Kívül', 'KULSO'),
+      mk('BELSO', 'Belül', 'BELSO'),
+      mk('EGYEB', 'Csomagon kívül', null),
+    ].filter((cs) => cs.csomag.length + cs.extra.length > 0)
+  }, [lista])
+
+  // --- pipálás ----------------------------------------------------------------
 
   async function pipal(t: BookingTask) {
-    // Azonnal átbillentjük a felületen, hogy ne kelljen várni a válaszra —
-    // a mosóállásban vizes kézzel nem szórakozik senki a késleltetéssel.
-    setLista((l) => l.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))
+    if (!listaNyitva) return
+    const uj = !t.done
+    // Azonnal átbillentjük. Nincs újratöltés: a mosóállásban a késleltetés
+    // azt jelentené, hogy kétszer nyomják meg.
+    setLista((l) => l.map((x) => (x.id === t.id ? { ...x, done: uj, done_at: uj ? new Date().toISOString() : null } : x)))
+    valtozott.current = true
     try {
-      await data.toggleTask(t.id, !t.done)
-      await betolt()
-      refresh()
+      await data.toggleTask(t.id, uj)
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+      setLista((l) => l.map((x) => (x.id === t.id ? { ...x, done: !uj } : x))) // vissza
+    }
+  }
+
+  async function csoportPipal(cs: Csoport, done: boolean) {
+    if (!listaNyitva || cs.area === null) return
+    const erintett = new Set(cs.csomag.map((t) => t.id))
+    const most = new Date().toISOString()
+    setLista((l) =>
+      l.map((x) => (erintett.has(x.id) ? { ...x, done, done_at: done ? most : null } : x)),
+    )
+    valtozott.current = true
+    try {
+      await data.toggleTaskGroup(bookingId, cs.area, done)
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
       await betolt()
     }
   }
+
+  // --- állapotváltás -----------------------------------------------------------
 
   async function allapot(cel: Parameters<typeof data.setStatus>[1]) {
+    // A lezárás visszafordíthatatlan: a munkalap véglegessé válik.
+    if (cel === 'COMPLETED') {
+      const ok = window.confirm(
+        'Biztos lezárom? Minden adat helyes?\n\n' +
+          'Lezárás után a munkalista és az ár nem módosítható.',
+      )
+      if (!ok) return
+    }
     try {
       await data.setStatus(bookingId, cel)
+      valtozott.current = true
       await betolt()
-      refresh()
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
     }
   }
 
+  // --- ár ----------------------------------------------------------------------
+
+  // Amit a rendszer javasol: a becsült ár, a most megadott felárakkal.
+  const javasolt = useMemo(() => {
+    if (!b) return 0
+    const alap = b.estimated_price_huf
+    return Math.round(alap * (1 + pct / 100)) + fix
+  }, [b, pct, fix])
+
   async function arMent() {
-    const n = Number(vegleges)
-    if (!Number.isFinite(n) || n < 0) return
+    if (!b || lezart) return
+    // ÜRES mező nem nulla forintot jelent, hanem azt, hogy marad a javasolt ár.
+    const beirt = vegleges.trim()
+    const ar = beirt === '' ? javasolt : Number(beirt)
+    if (!Number.isFinite(ar) || ar < 0) return
+
+    const indok = [
+      pct ? `erősen szennyezett +${pct}%` : null,
+      fix ? `fix felár ${ft(fix)}` : null,
+    ].filter(Boolean).join(', ')
+
     try {
-      await data.setFinalPrice(bookingId, n)
+      await data.setFinalPrice(bookingId, ar, indok || undefined)
+      valtozott.current = true
       await betolt()
-      refresh()
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  // --- megjegyzés ---------------------------------------------------------------
+
+  async function megjMent() {
+    if (lezart) return
+    try {
+      await data.setNotes(bookingId, megjegyzes)
+      setMegjMentve(true)
+      valtozott.current = true
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
     }
@@ -93,8 +214,8 @@ export default function BookingDetail({
   const keszLista = lista.filter((t) => t.done).length
 
   return (
-    <div className="fedo" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onBezar()}>
-      <div className="lap" role="dialog" aria-modal="true" aria-label="Foglalás">
+    <div className="fedo" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && bezar()}>
+      <div className="lap" role="dialog" aria-modal="true" aria-label="Munkalap">
         {tolt || !b ? (
           <div className="lap-torzs">
             <div className="betolt">{hiba ? <span className="hibauzenet">{hiba}</span> : 'Betöltés…'}</div>
@@ -107,13 +228,15 @@ export default function BookingDetail({
                   {b.plate_raw}
                 </h2>
                 <div className="halk" style={{ fontSize: 'var(--m-sm)' }}>
-                  {[b.brand, b.model].filter(Boolean).join(' ')} · {CATEGORY_LABEL[b.category]}
+                  {b.customer_name}
+                  {[b.brand, b.model].filter(Boolean).length > 0 &&
+                    ` · ${[b.brand, b.model].filter(Boolean).join(' ')}`}
                 </div>
               </div>
               <span className="cimke-pill allapot-pill" data-a={b.status} style={{ marginLeft: 12 }}>
                 {STATUS_LABEL[b.status]}
               </span>
-              <button className="bezar" onClick={onBezar} aria-label="Bezárás">
+              <button className="bezar" onClick={bezar} aria-label="Bezárás">
                 ×
               </button>
             </div>
@@ -121,15 +244,17 @@ export default function BookingDetail({
             <div className="lap-torzs">
               {hiba && <div className="hibauzenet">{hiba}</div>}
 
-              {/* --- alapadatok --- */}
-              <div className="szakasz">
-                <div className="adatsor">
-                  <span>Ügyfél</span>
-                  <span className="ertek" style={{ fontFamily: 'var(--betu)' }}>
-                    {b.customer_name}
-                    {b.company_name && ` · ${b.company_name}`}
+              {lezart && (
+                <div className="figyelmeztet">
+                  <span>
+                    <strong>Lezárva.</strong> Ez a munkalap végleges — a lista és az ár
+                    nem módosítható. Ha javítani kell, előbb vissza kell nyitni.
                   </span>
                 </div>
+              )}
+
+              {/* ---------- alapadatok ---------- */}
+              <div className="szakasz">
                 <div className="adatsor">
                   <span>Telefon</span>
                   <span className="ertek">
@@ -144,6 +269,8 @@ export default function BookingDetail({
                     {b.package_name ?? 'Csak extrák'}
                     {b.full_service && ' + Full Service'}
                     {b.scope !== 'TELJES' && ` · ${SCOPE_LABEL[b.scope]}`}
+                    {' · '}
+                    {CATEGORY_LABEL[b.category]}
                   </span>
                 </div>
                 <div className="adatsor">
@@ -152,32 +279,34 @@ export default function BookingDetail({
                     {b.booking_type === 'VAROS'
                       ? idosav(b.start_at, b.planned_duration_minutes)
                       : `${ora(b.drop_off_at)}${b.pick_up_at ? ` – ${ora(b.pick_up_at)}` : ''}`}
-                  </span>
-                </div>
-                <div className="adatsor">
-                  <span>Tervezett munkaidő</span>
-                  <span className="ertek">
-                    {b.planned_duration_minutes > 0 ? (
-                      idotartam(b.planned_duration_minutes)
-                    ) : (
-                      <span style={{ color: 'var(--v-erkezett)' }}>nincs megadva</span>
-                    )}
-                    {b.rest_minutes > 0 && (
-                      <span className="halk"> + {idotartam(b.rest_minutes)} száradás</span>
+                    {b.planned_duration_minutes > 0 && (
+                      <span className="halk"> · {idotartam(b.planned_duration_minutes)}</span>
                     )}
                   </span>
                 </div>
-                {b.notes && (
-                  <div className="adatsor">
-                    <span>Megjegyzés</span>
-                    <span className="ertek" style={{ fontFamily: 'var(--betu)', fontWeight: 400 }}>
-                      {b.notes}
-                    </span>
-                  </div>
-                )}
               </div>
 
-              {/* --- munkalista --- */}
+              {/* ---------- 1. MEGJEGYZÉS ---------- */}
+              {/* Menet közben derül ki a legtöbb fontos dolog, ezért van elöl. */}
+              <div className="szakasz">
+                <div className="fej">
+                  Megjegyzés
+                  {!megjMentve && <span className="jobbra halvany">nincs mentve</span>}
+                </div>
+                <textarea
+                  className="beviteli"
+                  value={megjegyzes}
+                  disabled={lezart}
+                  onChange={(e) => {
+                    setMegjegyzes(e.target.value)
+                    setMegjMentve(false)
+                  }}
+                  onBlur={() => !megjMentve && void megjMent()}
+                  placeholder="Amit tudni kell róla — kulcs helye, korábbi sérülés, különleges kérés"
+                />
+              </div>
+
+              {/* ---------- 2. MUNKALISTA ---------- */}
               <div className="szakasz">
                 <div className="fej">
                   Munkalista
@@ -185,26 +314,125 @@ export default function BookingDetail({
                     {keszLista}/{lista.length}
                   </span>
                 </div>
-                <div className="munkalista">
-                  {lista.map((t) => (
-                    <label className="munka" key={t.id} data-kesz={t.done}>
-                      <input type="checkbox" checked={t.done} onChange={() => void pipal(t)} />
-                      <span className="nev">{t.name}</span>
-                      {t.done_at && <span className="terulet szam">{ora(t.done_at)}</span>}
-                      <span className="terulet">{t.area === 'KULSO' ? 'kívül' : t.area === 'BELSO' ? 'belül' : ''}</span>
-                    </label>
-                  ))}
-                  {lista.length === 0 && <div className="ures">Ehhez a foglaláshoz nincs munkalista.</div>}
-                </div>
+
+                {!megerkezett && !lezart && (
+                  <div className="figyelmeztet">
+                    <span>
+                      Az ügyfél még nem érkezett meg, ezért a lista zárolva van.
+                      Nyomd meg lent a <strong>Megérkezett</strong> gombot.
+                    </span>
+                  </div>
+                )}
+
+                {csoportok.map((cs) => {
+                  const mind = cs.csomag.length
+                  const kesz = cs.csomag.filter((t) => t.done).length
+                  const teljes = mind > 0 && kesz === mind
+                  return (
+                    <div className="munkacsoport" key={cs.kulcs}>
+                      <div className="munkacsoport-fej">
+                        <span className="cim">{cs.cim}</span>
+                        {mind > 0 && (
+                          <span className="szam halk">
+                            {kesz}/{mind}
+                          </span>
+                        )}
+                        {mind > 0 && cs.area && (
+                          <button
+                            type="button"
+                            className={`btn btn-kicsi ${teljes ? '' : 'btn-fo'}`}
+                            disabled={!listaNyitva}
+                            onClick={() => void csoportPipal(cs, !teljes)}
+                          >
+                            {teljes ? 'Visszavon' : `${cs.cim} kész`}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* a csomag lépései — tájékoztatásul, egyenként is pipálhatók */}
+                      <div className="munkalista">
+                        {cs.csomag.map((t) => (
+                          <label className="munka" key={t.id} data-kesz={t.done}>
+                            <input
+                              type="checkbox"
+                              checked={t.done}
+                              disabled={!listaNyitva}
+                              onChange={() => void pipal(t)}
+                            />
+                            <span className="nev">{t.name}</span>
+                            {t.done_at && <span className="terulet szam">{ora(t.done_at)}</span>}
+                          </label>
+                        ))}
+                      </div>
+
+                      {/* a külön kért szolgáltatások — ezeket sosem pipálja a csoportgomb */}
+                      {cs.extra.length > 0 && (
+                        <>
+                          <div className="munkacsoport-alcim">Külön kért</div>
+                          <div className="munkalista">
+                            {cs.extra.map((t) => (
+                              <label className="munka munka-extra" key={t.id} data-kesz={t.done}>
+                                <input
+                                  type="checkbox"
+                                  checked={t.done}
+                                  disabled={!listaNyitva}
+                                  onChange={() => void pipal(t)}
+                                />
+                                <span className="nev">{t.name}</span>
+                                {t.done_at && <span className="terulet szam">{ora(t.done_at)}</span>}
+                              </label>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {lista.length === 0 && <div className="ures">Ehhez a foglaláshoz nincs munkalista.</div>}
               </div>
 
-              {/* --- ár --- */}
+              {/* ---------- 3. ÁR ---------- */}
+              {/* A felár ide került, nem a foglaláshoz: telefonos foglaláskor
+                  még nem látjuk az autót. Itt már készen áll. */}
               <div className="szakasz">
                 <div className="fej">Ár</div>
+
                 <div className="adatsor">
                   <span>Becsült (foglaláskor)</span>
                   <span className="ertek">{ft(b.estimated_price_huf)}</span>
                 </div>
+
+                <div className="sor-2">
+                  <div className="mezo">
+                    <label htmlFor="pct">Erősen szennyezett (%)</label>
+                    <input
+                      id="pct"
+                      className="beviteli szam"
+                      type="number"
+                      min={0}
+                      max={50}
+                      step={5}
+                      disabled={lezart}
+                      value={pct}
+                      onChange={(e) => setPct(Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="mezo">
+                    <label htmlFor="fix">Fix felár (Ft)</label>
+                    <input
+                      id="fix"
+                      className="beviteli szam"
+                      type="number"
+                      min={0}
+                      step={500}
+                      disabled={lezart}
+                      value={fix}
+                      onChange={(e) => setFix(Number(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+
                 <div className="sor-2" style={{ alignItems: 'end' }}>
                   <div className="mezo">
                     <label htmlFor="veg">Végleges ár</label>
@@ -213,18 +441,25 @@ export default function BookingDetail({
                       className="beviteli szam"
                       type="number"
                       step={500}
+                      disabled={lezart}
                       value={vegleges}
                       onChange={(e) => setVegleges(e.target.value)}
-                      placeholder={String(b.estimated_price_huf)}
+                      placeholder={String(javasolt)}
                     />
                   </div>
-                  <button className="btn" onClick={() => void arMent()} style={{ height: 43 }}>
+                  <button
+                    className="btn"
+                    disabled={lezart}
+                    onClick={() => void arMent()}
+                    style={{ height: 43 }}
+                  >
                     Ár rögzítése
                   </button>
                 </div>
+
                 <p className="halk" style={{ fontSize: 'var(--m-xs)' }}>
-                  A becsült és a végleges közti eltérés a leghasznosabb adat a rendszerben:
-                  ebből derül ki, hol becsül rosszul.
+                  Üresen hagyva a javasolt ár kerül be: <strong>{ft(javasolt)}</strong>.
+                  Nullát csak akkor rögzít, ha tényleg nullát írsz be.
                 </p>
               </div>
             </div>
@@ -232,9 +467,7 @@ export default function BookingDetail({
             <div className="lap-lab">
               <div className="osszeg">
                 <span className="ertek">{ft(b.final_price_huf ?? b.estimated_price_huf)}</span>
-                <span className="alatta">
-                  {b.final_price_huf ? 'végleges' : 'becsült'}
-                </span>
+                <span className="alatta">{b.final_price_huf ? 'végleges' : 'becsült'}</span>
               </div>
               <div className="gombok">
                 {b.status === 'CONFIRMED' && (
@@ -242,16 +475,19 @@ export default function BookingDetail({
                     Nem jött el
                   </button>
                 )}
+                {lezart && (
+                  <button className="btn" onClick={() => void allapot('READY')}>
+                    Visszanyit
+                  </button>
+                )}
                 {kovetkezo && (
                   <button className="btn btn-fo" onClick={() => void allapot(kovetkezo.to)}>
                     {kovetkezo.label}
                   </button>
                 )}
-                {!kovetkezo && (
-                  <button className="btn" onClick={onBezar}>
-                    Bezárás
-                  </button>
-                )}
+                <button className="btn" onClick={bezar}>
+                  Bezárás
+                </button>
               </div>
             </div>
           </>

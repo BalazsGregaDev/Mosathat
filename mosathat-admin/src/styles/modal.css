@@ -201,3 +201,42 @@
   }
   .lap-lab .gombok .btn { padding: 11px 16px; }
 }
+
+/* --- munkalista csoportok (Kívül / Belül / Csomagon kívül) -------------------- */
+
+.munkacsoport {
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: var(--t2);
+}
+
+.munkacsoport-fej {
+  display: flex; align-items: center; gap: var(--t3);
+  padding: var(--t2) var(--t3);
+  background: var(--lap-2);
+  border-bottom: 1px solid var(--keret);
+}
+.munkacsoport-fej .cim {
+  font-size: var(--m-xs); font-weight: var(--vastag-eros);
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.munkacsoport-fej .szam { margin-right: auto; font-size: var(--m-xs); }
+
+.munkacsoport .munkalista { padding: var(--t2); }
+
+.munkacsoport-alcim {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--v-erkezett); font-weight: var(--vastag-eros);
+  padding: var(--t2) var(--t3) 0;
+  border-top: 1px dashed var(--keret);
+  margin-top: var(--t2);
+}
+
+/* A külön kért szolgáltatás szemet szúr: ezt tényleg nyugtázni kell. */
+.munka-extra { background: #fdf7ea; }
+.munka-extra:hover { background: #faf0d8; }
+
+.munka input:disabled { opacity: .4; cursor: not-allowed; }
+.munka:has(input:disabled) { cursor: default; }
+.munka:has(input:disabled):hover { background: transparent; }

@@ -42,10 +42,30 @@ export default function DayView({
   const { bookings, capacity, windows, standing, loading, error } = useDay(nap)
 
   // --- órasávok felépítése --------------------------------------------------
+  //
+  //  Fontos szabály: foglalást SOHA nem rejtünk el. Ha a nap hivatalosan
+  //  zárva van (vasárnap, ünnep), de mégis van rá foglalás — mert a
+  //  kereskedős autón hétvégén is dolgozunk —, akkor a sávokat a foglalások
+  //  óráiból építjük. Egy nem látszó foglalás rosszabb, mint egy csúnya nap.
   const sorok = useMemo(() => {
-    if (windows.length === 0) return []
-    const elso = Math.min(...windows.map((w) => oraSzam(w.starts)))
-    const utolso = Math.max(...windows.map((w) => oraSzam(w.ends)))
+    const orak = bookings.map(oraja).filter((h): h is number => h !== null)
+
+    if (windows.length === 0) {
+      if (orak.length === 0) return []
+      const e = Math.min(...orak)
+      const u = Math.max(...orak) + 1
+      const ki: { ora: number; szunet: boolean; elemek: DayBooking[] }[] = []
+      for (let h = e; h < u; h++) ki.push({ ora: h, szunet: false, elemek: [] })
+      for (const b of bookings) {
+        const h = oraja(b)
+        const cel = ki.find((s) => s.ora === h) ?? ki[0]
+        if (cel) cel.elemek.push(b)
+      }
+      return ki
+    }
+
+    const elso = Math.min(...windows.map((w) => oraSzam(w.starts)), ...(orak.length ? orak : [99]))
+    const utolso = Math.max(...windows.map((w) => oraSzam(w.ends)), ...(orak.length ? orak.map((h) => h + 1) : [0]))
     const szunetben = (h: number) => !windows.some((w: WorkWindow) => h >= oraSzam(w.starts) && h < oraSzam(w.ends))
 
     const ki: { ora: number; szunet: boolean; elemek: DayBooking[] }[] = []
@@ -147,10 +167,19 @@ export default function DayView({
   return (
     <div className="nap-racs">
       <div>
+        {windows.length === 0 && bookings.length > 0 && (
+          <div className="figyelmeztet" style={{ marginBottom: 'var(--t3)' }}>
+            <span>
+              <strong>Ez a nap hivatalosan zárva van</strong>, de {bookings.length} foglalás
+              van rá. A kapacitás ezért nulla — a foglalások alatt viszont ott vannak.
+            </span>
+          </div>
+        )}
+
         {sorok.length === 0 ? (
           <div className="panel">
             <div className="ures">
-              Ezen a napon zárva vagyunk.
+              Ezen a napon zárva vagyunk, és nincs foglalás.
               <br />
               <span className="halvany">
                 Ha mégis dolgoztok, a Beállítások → Kivételnapok alatt lehet nyitva tenni.

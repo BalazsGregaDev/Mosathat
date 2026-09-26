@@ -1,5 +1,5 @@
 import type {
-  BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity,
+  BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity, ServiceArea,
   Extra, FullServicePrice, LatestStart, NewBookingInput, Package, PackagePrice,
   PlateLookup, StandingCar, Surcharge, WorkWindow,
 } from '../lib/types'
@@ -62,6 +62,9 @@ export interface DataSource {
 
   getTasks(bookingId: string): Promise<BookingTask[]>
   toggleTask(taskId: string, done: boolean): Promise<void>
+  /** A csomaghoz tartozó kívüli vagy belüli lépések egyben. Az extrákat nem érinti. */
+  toggleTaskGroup(bookingId: string, area: ServiceArea, done: boolean): Promise<number>
+  setNotes(bookingId: string, notes: string): Promise<void>
 }
 
 // --- közös segédek ----------------------------------------------------------

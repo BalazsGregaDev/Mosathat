@@ -250,6 +250,8 @@ export interface LatestStart extends WorkWindow {
   fits: boolean
 }
 
+export type TaskSource = 'PACKAGE' | 'EXTRA'
+
 export interface BookingTask {
   id: string
   booking_id: string
@@ -258,6 +260,8 @@ export interface BookingTask {
   sort_order: number
   done: boolean
   done_at: string | null
+  /** PACKAGE: a csomag része, csoportosan pipálható. EXTRA: külön kérték. */
+  source: TaskSource
 }
 
 // A calc_service() visszatérése.
