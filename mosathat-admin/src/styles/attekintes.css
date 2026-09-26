@@ -432,3 +432,139 @@
 .adatsor.szerk-sor { align-items: baseline; }
 .adatsor.szerk-sor .szerk-cimke { flex: 0 0 auto; white-space: nowrap; }
 .adatsor.szerk-sor .ertek { flex: 1 1 auto; min-width: 0; text-align: right; }
+
+/* ---------------------------------------------------------------------------
+   Választható értékek gombsorként
+   ---------------------------------------------------------------------------
+   Ahol eddig legördülő lista volt. Egy legördülő három művelet: nyit,
+   választ, zár — és közben eltakarja azt, amit épp olvasunk. Itt minden
+   lehetőség egyszerre látszik, a választás egy kattintás.
+
+   A sorok jobbra záródnak, hogy a szemnek ugyanott legyen az értékek
+   oszlopa, mint a beírt adatoknál. */
+.adatsor.valaszto-sor { align-items: flex-start; }
+.ertek-gombok {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end;
+}
+.ertek-gombok button {
+  border: 1px solid var(--keret-eros);
+  background: var(--lap);
+  color: var(--szoveg-halk);
+  border-radius: var(--r-sm);
+  padding: 5px 11px;
+  font: inherit;
+  font-size: var(--m-sm);
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background var(--atmenet), border-color var(--atmenet), color var(--atmenet);
+}
+.ertek-gombok button:hover:not(:disabled) {
+  border-color: var(--zold); color: var(--szoveg);
+}
+/* A kiválasztott nem csak színnel válik el: vastagabb is, és a kerete
+   teljes. Így akkor is látszik, ha valaki nem különbözteti meg a zöldet. */
+.ertek-gombok button.aktiv {
+  border-color: var(--zold);
+  background: var(--zold-halvany);
+  color: var(--zold-sotet);
+  font-weight: var(--vastag-eros);
+}
+.ertek-gombok button:disabled { opacity: .55; cursor: default; }
+
+/* ---------------------------------------------------------------------------
+   Egyéb szolgáltatás a foglaláson
+   --------------------------------------------------------------------------- */
+
+.adatsor.extra-sor { align-items: flex-start; }
+.adatsor.extra-sor .ertek {
+  display: flex; align-items: flex-start; justify-content: flex-end;
+  gap: var(--t2); flex-wrap: wrap;
+}
+
+.extra-cimkek {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end;
+  min-width: 0;
+}
+.extra-cimke {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--zold);
+  background: var(--zold-halvany);
+  color: var(--zold-sotet);
+  border-radius: var(--r-sm);
+  padding: 4px 9px;
+  font: inherit;
+  font-size: var(--m-sm);
+  line-height: 1.2;
+  text-align: left;
+}
+button.extra-cimke { cursor: pointer; }
+button.extra-cimke:hover:not(:disabled) {
+  background: var(--lap); border-color: var(--v-baj); color: var(--v-baj);
+}
+.extra-cimke .le { font-size: var(--m-xs); opacity: .7; }
+button.extra-cimke:disabled { opacity: .55; cursor: default; }
+
+.extra-hozzaad { flex: 0 0 auto; }
+
+/* Nem görgethető: minden egyéb szolgáltatás egyszerre látszik. Ami nem
+   látszik, azt nem is ajánlja fel az ember telefon közben. Három oszlop —
+   ennél többnél a nevek törnének. */
+.extra-valaszto {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  /* A sorok magasságát a leghosszabb név adja. A tételek a sor tetejéhez
+     igazodnak, különben a rövid nevek a hosszúak mellett a levegőben
+     lógnának, és a pipák nem egy vonalban állnának. */
+  align-items: start;
+  gap: 4px var(--t3);
+  margin: var(--t2) 0 var(--t3);
+  padding: var(--t3);
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+  background: var(--lap-2);
+}
+.extra-tetel {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  /* A név és az ár egymás alatt: a nevek hosszúak, egy sorban az ár
+     elvenné a helyet és minden második név három sorba törne. */
+  gap: 0 9px;
+  align-items: start;
+  padding: 7px 8px;
+  border-radius: var(--r-sm);
+  font-size: var(--m-sm);
+  line-height: 1.35;
+  cursor: pointer;
+  min-width: 0;
+}
+.extra-tetel:hover { background: var(--lap); }
+/* Nagyobb pipa: a mosóállásban vizes kézzel használják. */
+.extra-tetel input {
+  grid-row: 1 / span 2;
+  width: 16px; height: 16px;
+  margin: 1px 0 0; cursor: pointer;
+  accent-color: var(--zold);
+}
+.extra-tetel .nev { min-width: 0; }
+.extra-tetel .ar {
+  font-size: var(--m-xs); color: var(--szoveg-halk);
+  font-variant-numeric: tabular-nums;
+}
+/* Nincs megadva ár: a foglaláshoz nulla forintot adna hozzá. Nem rejtjük
+   el — a Szolgáltatásoknál ezt pótolni kell. */
+.extra-tetel .ar.nincs-ar { color: var(--v-baj); }
+.extra-tetel[data-kert='true'] { background: var(--zold-halvany); }
+.extra-tetel[data-kert='true'] .nev { font-weight: var(--vastag-eros); color: var(--zold-sotet); }
+.extra-valaszto .ures { grid-column: 1 / -1; }
+
+/* Az osztott elrendezésben (foglalás balra, árlista jobbra) a foglalás fele
+   olyan széles. Három oszlop ott már nem fér el olvashatóan. */
+.fedo.osztott .extra-valaszto { grid-template-columns: repeat(2, 1fr); }
+
+@media (max-width: 720px) {
+  .extra-valaszto { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .extra-valaszto { grid-template-columns: 1fr; }
+  .ertek-gombok, .extra-cimkek { justify-content: flex-start; }
+}

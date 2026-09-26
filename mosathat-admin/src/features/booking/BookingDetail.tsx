@@ -264,20 +264,85 @@ export default function BookingDetail({
     await betolt()
   }, [data, bookingId, betolt])
 
-  // A csomagválasztó a katalógusból jön. Az üres sor nem hiba: van, aki csak
-  // egy kárpittisztítást kér, csomag nélkül.
-  const csomagValaszto = useMemo<Valaszthato[]>(() => [
-    { ertek: '', cimke: 'Csak extrák (nincs csomag)' },
-    ...(catalog?.packages ?? []).filter((p) => p.active)
+  // A csomagválasztó a katalógusból jön. Nincs „csomag nélkül" lehetőség: a
+  // Start a legkisebb munka, ez alatt nincs semmi. Ha valaki csak egy
+  // kárpittisztítást kér, az is Start mellé kerül külön kért szolgáltatásként.
+  const csomagValaszto = useMemo<Valaszthato[]>(
+    () => (catalog?.packages ?? []).filter((p) => p.active)
       .map((p) => ({ ertek: p.id, cimke: p.name })),
-  ], [catalog])
+    [catalog],
+  )
+
+  // --- külön kért szolgáltatások -------------------------------------------------
+  //
+  // Menet közben derül ki a legtöbb: „nézd meg a kárpitot is". Ezért itt is
+  // fel lehet venni, nem csak a foglalási űrlapon.
+  //
+  // A mennyiségek megmaradnak: ha valaki három liter ablakmosót kért, egy új
+  // tétel felvétele nem írja vissza egyre. Ezért a mostani listából építjük a
+  // csomagot, nem üres lapról.
+  const [extraNyitva, setExtraNyitva] = useState(false)
+  const [extraMegy, setExtraMegy] = useState(false)
+
+  const kertExtrak = useMemo(
+    () => new Set(mennyisegek.map((m) => m.extra_id)),
+    [mennyisegek],
+  )
+
+  // Amiből van mit beírni: liter, ülés, ajtó. Az alkalmi árazásúaknál a
+  // mennyiség mindig egy, ott a beviteli mező csak zavarna.
+  const merhetok = useMemo(
+    () => mennyisegek.filter((m) => m.price_unit !== 'ALKALOM'),
+    [mennyisegek],
+  )
+
+  const valaszthatoExtrak = useMemo(
+    () => (catalog?.extras ?? []).filter((e) => e.active)
+      .sort((a, z) => a.sort_order - z.sort_order || a.name.localeCompare(z.name, 'hu')),
+    [catalog],
+  )
+
+  async function extraBillent(extraId: string) {
+    if (lezart || extraMegy) return
+    const most = mennyisegek.map((m) => ({ extra_id: m.extra_id, quantity: m.quantity }))
+    const uj = kertExtrak.has(extraId)
+      ? most.filter((x) => x.extra_id !== extraId)
+      : [...most, { extra_id: extraId, quantity: 1 }]
+    setExtraMegy(true)
+    try {
+      await mezoMent({ extras: uj })
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+    } finally {
+      setExtraMegy(false)
+    }
+  }
 
   const kovetkezo = b ? NEXT_STATUS[b.status] : undefined
   const keszLista = lista.filter((t) => t.done).length
 
   return (
+    // A háttérre kattintás bezárja az ablakot — de ha épp beírnak valamit,
+    // az első kattintás csak a beírást zárja le. Kiléptetjük a mezőből,
+    // amitől lefut a mentése; az ablak marad. A második kattintás zár be.
+    //
+    // Így ugyanaz a mozdulat ugyanazt jelenti mindenhol: a telefonszámnál,
+    // a megjegyzésnél és a mennyiségeknél is. Enélkül a menet közben beírt
+    // „jobb első sárvédőn karc" egy félrekattintással eltűnne.
+    //
+    // mousedown, nem click: különben a kifelé húzott jelölés (a szövegen
+    // belül kezdem, az ablakon kívül engedem el) bezárná az ablakot.
     <div className={`fedo${osztott ? ' osztott' : ''}`} role="presentation"
-         onMouseDown={(e) => e.target === e.currentTarget && bezar()}>
+         onMouseDown={(e) => {
+           if (e.target !== e.currentTarget) return
+           const f = document.activeElement
+           if ((f instanceof HTMLInputElement || f instanceof HTMLTextAreaElement)
+               && e.currentTarget.contains(f)) {
+             f.blur()
+             return
+           }
+           bezar()
+         }}>
       <div className="lap" role="dialog" aria-modal="true" aria-label="Munkalap">
         {tolt || !b ? (
           <div className="lap-torzs">
@@ -356,23 +421,84 @@ export default function BookingDetail({
 
                 <Szerkesztheto
                   cimke="Méret" ertek={b.category} zarolt={lezart}
-                  valaszthato={KATEGORIAK}
+                  valaszthato={KATEGORIAK} gombok
                   onMent={(v) => mezoMent({ category: v })} />
 
                 <Szerkesztheto
                   cimke="Csomag"
-                  ertek={b.package_id ?? ''} zarolt={lezart} ures="Csak extrák"
-                  valaszthato={csomagValaszto}
+                  ertek={b.package_id ?? ''} zarolt={lezart} ures="nincs kiválasztva"
+                  valaszthato={csomagValaszto} gombok
                   onMent={(v) => mezoMent({ package_id: v || null })} />
+
+                {/* ---------- egyéb szolgáltatás ----------
+                    A csomag alatt, mert a beszélgetés is így megy: először a
+                    csomag, aztán „és még nézzétek meg a kárpitot".
+                    A lista nem görgethető: ami nem látszik, arról nem is jut
+                    eszébe az embernek, hogy felajánlja. */}
+                <div className="adatsor szerk-sor extra-sor">
+                  <span className="szerk-cimke">Egyéb szolgáltatás</span>
+                  <span className="ertek">
+                    <div className="extra-cimkek">
+                      {mennyisegek.length === 0 && (
+                        <span className="halvany">nincs</span>
+                      )}
+                      {mennyisegek.map((m) => (
+                        lezart ? (
+                          <span className="extra-cimke" key={m.item_id}>{m.name}</span>
+                        ) : (
+                          <button type="button" className="extra-cimke" key={m.item_id}
+                                  disabled={extraMegy}
+                                  title="Kattints a levételhez"
+                                  onClick={() => void extraBillent(m.extra_id)}>
+                            {m.name}<span className="le">×</span>
+                          </button>
+                        )
+                      ))}
+                    </div>
+                    {!lezart && (
+                      <button type="button" className="btn btn-kicsi extra-hozzaad"
+                              aria-expanded={extraNyitva}
+                              onClick={() => setExtraNyitva((v) => !v)}>
+                        {extraNyitva ? 'Kész' : 'Hozzáadás'}
+                      </button>
+                    )}
+                  </span>
+                </div>
+
+                {extraNyitva && !lezart && (
+                  <div className="extra-valaszto">
+                    {valaszthatoExtrak.map((e) => (
+                      <label className="extra-tetel" key={e.id}
+                             data-kert={kertExtrak.has(e.id)}>
+                        <input type="checkbox"
+                               checked={kertExtrak.has(e.id)}
+                               disabled={extraMegy}
+                               onChange={() => void extraBillent(e.id)} />
+                        <span className="nev">{e.name}</span>
+                        {/* Aminek nincs ára, az nulla forintot ad a foglaláshoz.
+                            Ezt ki kell mondani: telefon közben a „—" jelenthetné
+                            azt is, hogy ingyen van. */}
+                        <span className={`ar szam${
+                          !e.requires_quote && !e.price_huf ? ' nincs-ar' : ''}`}>
+                          {e.requires_quote ? 'egyedi'
+                            : e.price_huf ? ft(e.price_huf) : 'nincs ár'}
+                        </span>
+                      </label>
+                    ))}
+                    {valaszthatoExtrak.length === 0 && (
+                      <div className="ures">Nincs felvett egyéb szolgáltatás.</div>
+                    )}
+                  </div>
+                )}
 
                 <Szerkesztheto
                   cimke="Terjedelem" ertek={b.scope} zarolt={lezart}
-                  valaszthato={TERJEDELMEK}
+                  valaszthato={TERJEDELMEK} gombok
                   onMent={(v) => mezoMent({ scope: v })} />
 
                 <Szerkesztheto
                   cimke="Típus" ertek={b.booking_type} zarolt={lezart}
-                  valaszthato={TIPUSOK}
+                  valaszthato={TIPUSOK} gombok
                   onMent={(v) => mezoMent({ booking_type: v })} />
 
                 <Szerkesztheto
@@ -532,11 +658,13 @@ export default function BookingDetail({
 
               {/* ---------- MENNYISÉGEK ---------- */}
               {/* Az ablakmosó folyadék litereit és a kárpittisztítás ülésszámát
-                  itt adják meg, nem foglaláskor: akkor még nem tudják. */}
-              {mennyisegek.length > 0 && (
+                  itt adják meg, nem foglaláskor: akkor még nem tudják.
+                  Csak a mérhető tételek: az alkalmi árazásúaknál (polírozás,
+                  kátrány) nincs mit beírni, ott az „1 db" csak zaj lenne. */}
+              {merhetok.length > 0 && (
                 <div className="szakasz">
                   <div className="fej">Mennyiségek</div>
-                  {mennyisegek.map((m) => (
+                  {merhetok.map((m) => (
                     <div className="mennyisegsor" key={m.item_id}>
                       <span className="nev">{m.name}</span>
                       <input
