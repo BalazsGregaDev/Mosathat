@@ -129,9 +129,12 @@
    a foglalás a bal, az árlista a jobb oldalt kapja. Fix helyen, mert itt a
    húzogatás csak elrontaná — a lényeg pont az, hogy egyszerre lássuk a kettőt. */
 
+/* Az arányok: 10% margó kétoldalt, 5% hézag a kettő közt, marad 37,5–37,5%.
+   A fél-fél képernyő túl sok volt — két teleírt ablak egymás mellett
+   fárasztó, és a mögötte lévő naptárból sem látszott semmi. */
 .arpanel.osztott {
-  left: calc(50% + 6px);
-  right: 12px;
+  left: 52.5%;                  /* 10% margó + 37,5% ablak + 5% hézag */
+  right: 10%;
   top: 72px;
   bottom: 12px;
   width: auto;
@@ -140,23 +143,30 @@
 .arpanel.osztott .arpanel-fej { cursor: default; }
 
 /* A foglalási ablak balra húzódik. A fedő réteg ilyenkor nem középre igazít,
-   hanem a bal félre — a jobb fél az árlistáé. */
+   hanem a bal félre — a jobb fél az árlistáé.
+
+   Az oldalsó kitöltés nulla, a margót a .lap adja: így a 10% és a 37,5% a
+   teljes képernyőre értendő, nem egy már megvágott sávra. */
 .fedo.osztott {
   justify-content: flex-start;
   align-items: stretch;
-  padding: 72px 12px 12px;
+  padding: 72px 0 12px;
 }
 .fedo.osztott .lap,
 .fedo.osztott .lap-szeles {
-  width: calc(50% - 18px);
+  margin-left: 10%;
+  width: 37.5%;
   max-width: none;
   max-height: none;
   height: 100%;
 }
 
-/* Két szűkebb hasábban a kétoszlopos űrlapsorok már nem férnek el kényelmesen. */
-@media (max-width: 1280px) {
-  .fedo.osztott .sor-3 { grid-template-columns: 1fr 1fr; }
+/* Szűkebb hasábban a háromoszlopos űrlapsor már nem fér el kényelmesen —
+   osztott nézetben az ablak mindig keskeny, ezért itt mindig kettő. */
+.fedo.osztott .sor-3 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1200px) {
+  .fedo.osztott .sor-2,
+  .fedo.osztott .sor-3 { grid-template-columns: 1fr; }
 }
 
 /* Keskeny képernyőn nincs értelme kettéosztani: ott az árlista marad alul
@@ -173,6 +183,7 @@
   }
   .fedo.osztott .lap,
   .fedo.osztott .lap-szeles {
+    margin-left: 0;
     width: min(620px, 100%); height: auto; max-height: 100%;
   }
 }
