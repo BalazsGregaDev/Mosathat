@@ -4,5 +4,6 @@ import AppShell from './features/shell/AppShell'
 
 export default function App() {
   const { user } = useApp()
+  //asd
   return user ? <AppShell /> : <LoginScreen />
 }
