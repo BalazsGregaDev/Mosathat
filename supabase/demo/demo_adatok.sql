@@ -256,6 +256,186 @@ end $$;
 
 
 -- =============================================================================
+--  A DEMÓ SZOMBATJA
+-- =============================================================================
+--  Az éles törzsadatban szombat zárva van, és ez így helyes. A próbaadat
+--  viszont a MAI napra teszi a foglalásokat, bármilyen nap is van — ha pedig
+--  a mai nap zárva van, az Áttekintés egy olyan hetet mutat, amiben nulla
+--  munka van, közben négy autó bent áll. Nem hibás a szoftver: a próbaadat
+--  világa lenne önmagával ellentmondásban.
+--
+--  Ezért a demóban szombat nyitva van, vasárnap viszont marad zárva — így a
+--  hét hét napjából hat konzisztens, és közben megmarad egy valóban zárt nap,
+--  amin látszik, hogy a felület a zárt napot is helyesen kezeli.
+--
+--  Ez a blokk SZÁNDÉKOSAN nincs a migrációk között: élesbe nem megy ki.
+-- =============================================================================
+insert into public.business_hours (weekday, opens, closes, closed)
+values (6, '08:00', '14:00', false)
+on conflict (weekday) do update
+  set opens = excluded.opens, closes = excluded.closes, closed = excluded.closed;
+
+insert into public.working_hours (weekday, starts, ends, closed)
+values (6, '07:30', '14:00', false)
+on conflict (weekday) do update
+  set starts = excluded.starts, ends = excluded.ends, closed = excluded.closed;
+
+
+-- =============================================================================
+--  EGY EGÉSZ HÉT FORGALMA
+-- =============================================================================
+--  Az Áttekintés heti kapacitássávjai csak akkor mondanak bármit, ha van mit
+--  mutatniuk. Ez a blokk a MOSTANI hét hétfő–péntekjét tölti fel úgy, hogy
+--  legyen benne bőven szabad nap, egy szoros nap és egy majdnem tele nap —
+--  vagyis mind a három terhelési állapot látszódjon.
+--
+--  A státusz a naptól függ: ami elmúlt, az lezárt; ami ma van, az folyamatban;
+--  ami jön, az visszaigazolt. Így a hét bármelyik napján nyitod meg, koherens.
+-- =============================================================================
+do $$
+declare
+  r        record;
+  v_nap    date;
+  v_h      date := date_trunc('week', current_date)::date;   -- hétfő
+  v_cust   uuid;
+  v_veh    uuid;
+  v_ar     record;
+  v_stat   booking_status;
+begin
+  for r in
+    select * from (values
+      -- hétfő: ráérős nap
+      (1, 'ELIT',    'SZEMELYAUTO', 'LMN-204', 'Audi',       'A4',        'Tóth Gergő'),
+      (1, 'PREMIUM', 'SUV',         'RPX-618', 'Kia',        'Sportage',  'Barna Réka'),
+      (1, 'PREMIUM', 'SZEMELYAUTO', 'HFE-330', 'Opel',       'Astra',     'Décsi Márk'),
+      (1, 'START',   'SZEMELYAUTO', 'KTU-905', 'Suzuki',     'Swift',     'Faragó Nóra'),
+      -- kedd: szoros
+      (2, 'ELIT',    'KISBUSZ',     'VBN-712', 'Ford',       'Transit',   'Szalai Bence'),
+      (2, 'ELIT',    'SUV',         'DJW-441', 'Volvo',      'XC60',      'Holló Eszter'),
+      (2, 'PREMIUM', 'KISBUSZ',     'MZC-158', 'Renault',    'Trafic',    'Vass Tibor'),
+      (2, 'PREMIUM', 'SUV',         'GYT-863', 'Mazda',      'CX-5',      'Kelemen Júlia'),
+      (2, 'ELIT',    'SZEMELYAUTO', 'SOB-027', 'Skoda',      'Superb',    'Baranyi Ádám'),
+      (2, 'START',   'SZEMELYAUTO', 'PFL-596', 'Dacia',      'Sandero',   'Illés Kata'),
+      -- szerda: majdnem tele
+      (3, 'ELIT',    'KISBUSZ',     'WNA-334', 'Mercedes',   'Vito',      'Rácz Levente'),
+      (3, 'ELIT',    'KISBUSZ',     'CZK-780', 'VW',         'Transporter', 'Molnár Dóra'),
+      (3, 'ELIT',    'SUV',         'TQE-215', 'BMW',        'X3',        'Bogdán Zsolt'),
+      (3, 'ELIT',    'SZEMELYAUTO', 'HRV-648', 'Lexus',      'IS',        'Csorba Anna'),
+      (3, 'PREMIUM', 'KISBUSZ',     'JMD-901', 'Fiat',       'Ducato',    'Sipos Balázs'),
+      (3, 'PREMIUM', 'SUV',         'YXL-473', 'Hyundai',    'Tucson',    'Végh Krisztina'),
+      (3, 'PREMIUM', 'SZEMELYAUTO', 'BUC-359', 'Toyota',     'Corolla',   'Fodor Máté'),
+      -- csütörtök: fele
+      (4, 'PREMIUM', 'SUV',         'NKP-186', 'Nissan',     'Qashqai',   'Szabó Villő'),
+      (4, 'PREMIUM', 'SZEMELYAUTO', 'GDT-742', 'Honda',      'Civic',     'Lantos Emese'),
+      (4, 'ELIT',    'SZEMELYAUTO', 'ZVE-508', 'Mercedes',   'C220',      'Pintér Attila'),
+      (4, 'START',   'SUV',         'AOR-267', 'Jeep',       'Renegade',  'Halász Gábor'),
+      (4, 'START',   'SZEMELYAUTO', 'EWB-930', 'Seat',       'Ibiza',     'Bognár Lilla'),
+      -- péntek: alig
+      (5, 'PREMIUM', 'SZEMELYAUTO', 'TSM-415', 'Peugeot',    '308',       'Kozma Dávid'),
+      (5, 'START',   'SUV',         'IUD-673', 'Dacia',      'Duster',    'Márkus Petra'),
+      (5, 'START',   'SZEMELYAUTO', 'QLN-829', 'Citroen',    'C3',        'Erdős Zoltán')
+    ) as t(dow, csomag, kat, rendszam, marka, modell, nev)
+  loop
+    v_nap := v_h + (r.dow - 1);
+
+    insert into public.customers (type, name, phone, internal_notes)
+    values ('MAGAN', r.nev,
+            '+36 ' || (20 + (r.dow * 7) % 60)::text || ' ' ||
+            lpad(((abs(hashtext(r.rendszam)) % 900) + 100)::text, 3, '0') || ' ' ||
+            lpad(((abs(hashtext(r.nev)) % 9000) + 1000)::text, 4, '0'),
+            'DEMO')
+    returning id into v_cust;
+
+    insert into public.vehicles (customer_id, plate_raw, brand, model, category, notes)
+    values (v_cust, r.rendszam, r.marka, r.modell, r.kat::vehicle_category, 'DEMO')
+    returning id into v_veh;
+
+    select * into v_ar
+      from public.calc_service(
+        (select id from public.packages where code = r.csomag),
+        r.kat::vehicle_category, 'TELJES', false, '[]'::jsonb, 0, 0);
+
+    v_stat := case
+      when v_nap <  current_date then 'COMPLETED'
+      when v_nap =  current_date then 'CONFIRMED'
+      else 'CONFIRMED' end::booking_status;
+
+    insert into public.bookings (
+      customer_id, vehicle_id, booking_type, status, source, service_date,
+      start_at, package_id, scope, planned_duration_minutes,
+      estimated_price_huf, final_price_huf,
+      actual_started_at, actual_finished_at, internal_notes)
+    values (
+      v_cust, v_veh, 'LEADOS', v_stat, 'ONLINE', v_nap,
+      (v_nap + time '08:00' + ((abs(hashtext(r.rendszam)) % 8) * interval '30 minutes'))
+        at time zone 'Europe/Budapest',
+      (select id from public.packages where code = r.csomag),
+      'TELJES', coalesce(v_ar.work_minutes, 0),
+      v_ar.price_huf,
+      case when v_stat = 'COMPLETED' then v_ar.price_huf end,
+      case when v_stat = 'COMPLETED'
+        then (v_nap + time '08:05') at time zone 'Europe/Budapest' end,
+      case when v_stat = 'COMPLETED'
+        then (v_nap + time '08:05' + coalesce(v_ar.work_minutes, 90) * interval '1 minute')
+             at time zone 'Europe/Budapest' end,
+      'DEMO');
+  end loop;
+end $$;
+
+
+-- =============================================================================
+--  EGY BÉRLET ÉS EGY SZERZŐDÉS
+-- =============================================================================
+--  Hogy a "Cégek és bérletesek" képernyő ne üresen nyíljon meg, és látszódjon,
+--  hogy néz ki egy vegyes bérlet (8 normál + 2 prémium alkalom, normál áron)
+--  meg egy fix ft/autó megállapodás.
+--
+--  A bérlet lejárata szándékosan három hét múlva van: így az Áttekintés alatt
+--  a "lejáró bérlet" figyelmeztetés is látszik, nem csak elméletben létezik.
+-- =============================================================================
+do $$
+declare
+  v_ugyfel  uuid;
+  v_ceg     uuid;
+  v_prem    uuid := (select id from public.packages where code = 'PREMIUM');
+  v_start   uuid := (select id from public.packages where code = 'START');
+begin
+  -- ---------- BÉRLET: magánügyfél, tíz alkalom ----------
+  select id into v_ugyfel from public.customers where name = 'Kovács Péter' limit 1;
+
+  perform public.create_pass(jsonb_build_object(
+    'customer_id',  v_ugyfel,
+    'name',         '10 alkalmas bérlet',
+    'price_huf',    128000,
+    'valid_from',  (current_date - 40)::text,
+    'valid_until', (current_date + 21)::text,
+    'notes',        'DEMO — 8 alkalom Start, 2 alkalom Premium, Start áron',
+    'items', jsonb_build_array(
+      jsonb_build_object('package_id', v_start, 'category', 'SZEMELYAUTO', 'qty_total', 8),
+      jsonb_build_object('package_id', v_prem,  'category', 'SZEMELYAUTO', 'qty_total', 2))));
+
+  update public.customers set billing_kind = 'BERLETES' where id = v_ugyfel;
+
+  -- ---------- SZERZŐDÉS: céges flotta, fix ft/autó ----------
+  select id into v_ceg from public.customers where name = 'Autó Trans Kft.' limit 1;
+
+  perform public.save_contract(jsonb_build_object(
+    'customer_id',     v_ceg,
+    'tax_number',      '12345678-2-41',
+    'pickup_delivery', true,
+    'valid_until',     (current_date + 300)::text,
+    'notes',           'DEMO — flottaszerződés, hozom-viszem szolgáltatással',
+    'prices', jsonb_build_array(
+      jsonb_build_object('tier', 'NORMAL',  'size', 'NORMAL', 'price_huf', 10500),
+      jsonb_build_object('tier', 'NORMAL',  'size', 'NAGY',   'price_huf', 13500),
+      jsonb_build_object('tier', 'PREMIUM', 'size', 'NORMAL', 'price_huf', 14500),
+      jsonb_build_object('tier', 'PREMIUM', 'size', 'NAGY',   'price_huf', 18000))));
+
+  update public.customers set billing_kind = 'SZERZODESES' where id = v_ceg;
+end $$;
+
+
+-- =============================================================================
 --  ELLENŐRZÉS
 -- =============================================================================
 select 'ügyfél' as mi, count(*) from public.customers

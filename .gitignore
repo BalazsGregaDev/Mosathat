@@ -11,4 +11,3 @@ dist
 # Supabase CLI munkafájlok — gépenként különböznek
 supabase/.temp
 supabase/.branches
-.mosathat_info.txt

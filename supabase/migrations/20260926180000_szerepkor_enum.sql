@@ -1,0 +1,22 @@
+-- =============================================================================
+--  20260926180000_szerepkor_enum.sql — az új szerepkör
+-- =============================================================================
+--  Ez a fájl SZÁNDÉKOSAN egyetlen utasítás.
+--
+--  A PostgreSQL nem engedi, hogy egy frissen felvett enum értéket ugyanabban
+--  a tranzakcióban használjuk is, amelyikben felvettük. Márpedig a következő
+--  migráció a 'TULAJDONOS' értéket szabályokban és adatban is használja.
+--  A Supabase CLI fájlonként külön tranzakciót nyit, ezért ha a felvétel külön
+--  fájlban van, mire a következő sorra kerül, az érték már véglegesített.
+--
+--  Három szerepkör lesz:
+--
+--    SUPERADMIN  – Fejlesztő. Mindenhez hozzáfér, és ide kerülnek később a
+--                  fejlesztést segítő funkciók. Ezért van külön a tulajtól.
+--    TULAJDONOS  – A műhely tulajdonosa. Az alkalmazáson belül mindenhez
+--                  hozzáfér, korlátozás nélkül, és alkalmazottat vehet fel.
+--    STAFF       – Alkalmazott. A napi munkához mindent tud, de az üzleti
+--                  számokhoz és a beállításokhoz nem fér hozzá.
+-- =============================================================================
+
+alter type staff_role add value if not exists 'TULAJDONOS' after 'SUPERADMIN';
