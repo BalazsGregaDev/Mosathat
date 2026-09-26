@@ -1,7 +1,7 @@
 import type {
   BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity, ServiceArea,
   Extra, FullServicePrice, LatestStart, NewBookingInput, Package, PackagePrice,
-  PlateLookup, StandingCar, Surcharge, WorkWindow,
+  BookingFormData, PlateLookup, SearchHit, StandingCar, Surcharge, WorkWindow,
 } from '../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -54,9 +54,15 @@ export interface DataSource {
   getStandingCars(): Promise<StandingCar[]>
 
   lookupPlate(plate: string): Promise<PlateLookup | null>
+  /** Rendszám, név és cégnév egyszerre — a legjobb néhány találat. */
+  searchCustomers(q: string, limit?: number): Promise<SearchHit[]>
   calcService(input: CalcInput): Promise<CalcResult>
 
   createBooking(input: NewBookingInput): Promise<string>
+  /** Meglévő foglalás módosítása. Ár, idő, tételek, munkalista újraszámolva. */
+  updateBooking(bookingId: string, input: NewBookingInput): Promise<void>
+  /** Amivel a szerkesztő űrlap fel tudja tölteni magát. */
+  getBookingFormData(bookingId: string): Promise<BookingFormData | null>
   setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void>
   setFinalPrice(bookingId: string, price: number, reason?: string): Promise<void>
 

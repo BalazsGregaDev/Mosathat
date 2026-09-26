@@ -285,11 +285,51 @@ export interface HistoryRow {
   price_huf: number
 }
 
+// Egy sor az azonnali keresés lebegő listájából.
+export interface SearchHit {
+  vehicle_id: string
+  plate_raw: string
+  brand: string | null
+  model: string | null
+  category: VehicleCategory
+  seats: number | null
+  customer_id: string
+  customer_name: string
+  customer_phone: string
+  customer_type: CustomerType
+  company_name: string | null
+  /** Az adott autó utolsó lezárt munkája — ebből lesz az "Ezt kéri" gomb. */
+  utolso_datum: string | null
+  utolso_csomag: string | null
+  utolso_ar: number | null
+}
+
 // Amit a rendszám beírására visszakapunk.
 export interface PlateLookup {
   vehicle: Vehicle
   customer: Customer
   history: HistoryRow[]
+}
+
+/** A booking_form_data() visszatérése — ezzel tölti fel magát a szerkesztő. */
+export interface BookingFormData {
+  booking: {
+    id: string
+    booking_type: BookingType
+    status: BookingStatus
+    service_date: string
+    start_at: string | null
+    drop_off_at: string | null
+    pick_up_at: string | null
+    deadline_at: string | null
+    package_id: string | null
+    scope: BookingScope
+    full_service: boolean
+    notes: string | null
+  }
+  customer: Customer
+  vehicle: Vehicle
+  extras: { extra_id: string; quantity: number | string }[]
 }
 
 // --- amit a modal összerak és elküld -----------------------------------------
@@ -310,6 +350,8 @@ export interface CalcInput {
 }
 
 export interface NewBookingInput extends CalcInput {
+  company_name: string | null
+  deadline_time: string | null
   // ügyfél: vagy meglévő, vagy új
   customer_id: string | null
   customer_name: string

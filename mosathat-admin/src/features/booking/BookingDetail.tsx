@@ -31,14 +31,26 @@ interface Csoport {
   area: ServiceArea | null
   csomag: BookingTask[]
   extra: BookingTask[]
+  /**
+   * Kell-e tételesen kilistázni a csomag lépéseit.
+   *
+   * Kívül nem: minden autón ugyanaz a nyolc lépés, extra nélkül nincs
+   * különbség köztük — egy gomb elég. Belül igen: ott a porszívózás és a
+   * kárpitápolás között valódi különbség van, és menet közben derül ki,
+   * meddig jutottak.
+   */
+  reszletezve: boolean
 }
 
 export default function BookingDetail({
   bookingId,
   onBezar,
+  onSzerkeszt,
 }: {
   bookingId: string
   onBezar: () => void
+  /** Átvált a szerkesztő űrlapra — ugyanarra, amivel a foglalás készült. */
+  onSzerkeszt: () => void
 }) {
   const { data, refresh } = useApp()
   const [b, setB] = useState<DayBooking | null>(null)
@@ -99,18 +111,20 @@ export default function BookingDetail({
 
   const csoportok = useMemo<Csoport[]>(() => {
     const ki = (a: ServiceArea | null) => lista.filter((t) => t.area === a)
-    const mk = (kulcs: Csoport['kulcs'], cim: string, area: ServiceArea | null): Csoport => {
+    const mk = (
+      kulcs: Csoport['kulcs'], cim: string, area: ServiceArea | null, reszletezve: boolean,
+    ): Csoport => {
       const sorok = ki(area).sort((x, y) => x.sort_order - y.sort_order)
       return {
-        kulcs, cim, area,
+        kulcs, cim, area, reszletezve,
         csomag: sorok.filter((t) => t.source === 'PACKAGE'),
         extra: sorok.filter((t) => t.source === 'EXTRA'),
       }
     }
     return [
-      mk('KULSO', 'Kívül', 'KULSO'),
-      mk('BELSO', 'Belül', 'BELSO'),
-      mk('EGYEB', 'Csomagon kívül', null),
+      mk('KULSO', 'Kívül', 'KULSO', false),
+      mk('BELSO', 'Belül', 'BELSO', true),
+      mk('EGYEB', 'Csomagon kívül', null, true),
     ].filter((cs) => cs.csomag.length + cs.extra.length > 0)
   }, [lista])
 
@@ -302,7 +316,6 @@ export default function BookingDetail({
                     setMegjMentve(false)
                   }}
                   onBlur={() => !megjMentve && void megjMent()}
-                  placeholder="Amit tudni kell róla — kulcs helye, korábbi sérülés, különleges kérés"
                 />
               </div>
 
@@ -332,6 +345,11 @@ export default function BookingDetail({
                     <div className="munkacsoport" key={cs.kulcs}>
                       <div className="munkacsoport-fej">
                         <span className="cim">{cs.cim}</span>
+                        {mind > 0 && !cs.reszletezve && b.package_name && (
+                          <span className="halk" style={{ fontSize: 'var(--m-sm)' }}>
+                            {b.package_name}
+                          </span>
+                        )}
                         {mind > 0 && (
                           <span className="szam halk">
                             {kesz}/{mind}
@@ -349,7 +367,8 @@ export default function BookingDetail({
                         )}
                       </div>
 
-                      {/* a csomag lépései — tájékoztatásul, egyenként is pipálhatók */}
+                      {/* a csomag lépései — csak ott, ahol a részletnek van értelme */}
+                      {cs.reszletezve && (
                       <div className="munkalista">
                         {cs.csomag.map((t) => (
                           <label className="munka" key={t.id} data-kesz={t.done}>
@@ -360,10 +379,10 @@ export default function BookingDetail({
                               onChange={() => void pipal(t)}
                             />
                             <span className="nev">{t.name}</span>
-                            {t.done_at && <span className="terulet szam">{ora(t.done_at)}</span>}
                           </label>
                         ))}
                       </div>
+                      )}
 
                       {/* a külön kért szolgáltatások — ezeket sosem pipálja a csoportgomb */}
                       {cs.extra.length > 0 && (
@@ -379,7 +398,6 @@ export default function BookingDetail({
                                   onChange={() => void pipal(t)}
                                 />
                                 <span className="nev">{t.name}</span>
-                                {t.done_at && <span className="terulet szam">{ora(t.done_at)}</span>}
                               </label>
                             ))}
                           </div>
@@ -470,6 +488,11 @@ export default function BookingDetail({
                 <span className="alatta">{b.final_price_huf ? 'végleges' : 'becsült'}</span>
               </div>
               <div className="gombok">
+                {!lezart && (
+                  <button className="btn" onClick={onSzerkeszt}>
+                    Szerkesztés
+                  </button>
+                )}
                 {b.status === 'CONFIRMED' && (
                   <button className="btn" onClick={() => void allapot('NO_SHOW')}>
                     Nem jött el

@@ -2,7 +2,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import type {
   BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity,
-  LatestStart, NewBookingInput, PlateLookup, ServiceArea, StandingCar, WorkWindow,
+  BookingFormData, LatestStart, NewBookingInput, PlateLookup, SearchHit, ServiceArea,
+  StandingCar, WorkWindow,
 } from '../lib/types'
 import type { Catalog, DataSource, SessionUser } from './source'
 import { calcArgs, num, numOrNull, toCalcResult } from './source'
@@ -161,6 +162,12 @@ export class SupabaseSource implements DataSource {
     return (data as PlateLookup | null) ?? null
   }
 
+  async searchCustomers(q: string, limit = 5): Promise<SearchHit[]> {
+    const { data, error } = await this.sb.rpc('search_customers', { p_q: q, p_limit: limit })
+    if (error) fail('Keresés', error)
+    return (data ?? []) as SearchHit[]
+  }
+
   async calcService(input: CalcInput): Promise<CalcResult> {
     const { data, error } = await this.sb.rpc('calc_service', calcArgs(input))
     if (error) fail('Árszámítás', error)
@@ -171,6 +178,17 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('create_booking', { p: input })
     if (error) fail('Foglalás mentése', error)
     return data as string
+  }
+
+  async updateBooking(bookingId: string, input: NewBookingInput): Promise<void> {
+    const { error } = await this.sb.rpc('update_booking', { p_booking_id: bookingId, p: input })
+    if (error) fail('Foglalás módosítása', error)
+  }
+
+  async getBookingFormData(bookingId: string): Promise<BookingFormData | null> {
+    const { data, error } = await this.sb.rpc('booking_form_data', { p_booking_id: bookingId })
+    if (error) fail('Foglalás betöltése', error)
+    return (data as BookingFormData | null) ?? null
   }
 
   async setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void> {

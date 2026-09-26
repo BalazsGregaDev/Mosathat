@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useApp } from '../../state/AppContext'
 import { maE, maStr, napCim, napLep, napRovidCim } from '../../lib/format'
 import DayView from '../day/DayView'
-import NewBookingModal from '../booking/NewBookingModal'
+import BookingForm from '../booking/BookingForm'
 import BookingDetail from '../booking/BookingDetail'
 
 // A menü. Ami még nincs megépítve, az szürke és nem kattintható — nem
@@ -31,6 +31,7 @@ export default function AppShell() {
   const [nap, setNap] = useState(maStr())
   const [ujNyitva, setUjNyitva] = useState(false)
   const [reszletId, setReszletId] = useState<string | null>(null)
+  const [szerkesztId, setSzerkesztId] = useState<string | null>(null)
   const [fiok, setFiok] = useState(false)
 
   // Escape zárja a fiókot; a lapokat a saját komponensük kezeli.
@@ -160,10 +161,26 @@ export default function AppShell() {
       )}
 
       {ujNyitva && (
-        <NewBookingModal nap={nap} onBezar={() => setUjNyitva(false)} onKesz={ujFoglalasKesz} />
+        <BookingForm nap={nap} onBezar={() => setUjNyitva(false)} onKesz={ujFoglalasKesz} />
       )}
 
-      {reszletId && <BookingDetail bookingId={reszletId} onBezar={() => setReszletId(null)} />}
+      {/* Szerkesztés: ugyanaz az űrlap, csak kap egy azonosítót. */}
+      {szerkesztId && (
+        <BookingForm
+          nap={nap}
+          bookingId={szerkesztId}
+          onBezar={() => setSzerkesztId(null)}
+          onKesz={() => { setSzerkesztId(null); refresh() }}
+        />
+      )}
+
+      {reszletId && (
+        <BookingDetail
+          bookingId={reszletId}
+          onBezar={() => setReszletId(null)}
+          onSzerkeszt={() => { setSzerkesztId(reszletId); setReszletId(null) }}
+        />
+      )}
     </div>
   )
 }

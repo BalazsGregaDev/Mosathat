@@ -240,3 +240,68 @@
 .munka input:disabled { opacity: .4; cursor: not-allowed; }
 .munka:has(input:disabled) { cursor: default; }
 .munka:has(input:disabled):hover { background: transparent; }
+
+/* --- azonnali kereső lebegő találatlistával ---------------------------------- */
+
+.kereso { position: relative; }
+
+.talalatlista {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+  background: var(--lap);
+  border: 1px solid var(--keret-eros);
+  border-radius: var(--r);
+  box-shadow: var(--arnyek);
+  z-index: 5;
+  overflow: hidden;
+}
+
+.talalatsor {
+  display: flex; align-items: center; gap: var(--t3);
+  width: 100%; text-align: left;
+  border: none; border-bottom: 1px solid var(--keret);
+  background: var(--lap);
+  padding: 9px var(--t3);
+  font-size: var(--m-sm);
+}
+.talalatsor:last-child { border-bottom: none; }
+.talalatsor:hover { background: var(--zold-halvany); }
+.talalatsor .rendszam {
+  font-family: var(--betu-szam); font-weight: var(--vastag-eros);
+  letter-spacing: .05em; flex: none;
+  background: var(--lap-2); border: 1px solid var(--keret);
+  border-radius: var(--r-sm); padding: 1px 6px;
+}
+.talalatsor .nev { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.talalatsor .auto { flex: none; font-size: var(--m-xs); }
+
+/* --- összecsukható szakasz (egyéb szolgáltatások, korábbi vásárlás) ---------- */
+
+.osszecsuk {
+  display: flex; align-items: center; gap: var(--t3);
+  width: 100%; text-align: left;
+  border: 1px solid var(--keret-eros);
+  background: var(--lap);
+  border-radius: var(--r);
+  padding: 11px var(--t3);
+}
+.osszecsuk:hover { background: var(--lap-2); }
+.osszecsuk .cim {
+  flex: 1;
+  font-size: var(--m-xs); font-weight: var(--vastag-eros);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--szoveg-halk);
+}
+.osszecsuk .db {
+  font-family: var(--betu-szam); font-size: var(--m-xs); font-weight: var(--vastag-eros);
+  background: var(--zold); color: #fff;
+  border-radius: var(--r-kor); padding: 1px 8px;
+}
+.osszecsuk .nyil { font-size: var(--m-lg); line-height: 1; color: var(--szoveg-halk); }
+
+.elozmeny-nyito {
+  display: flex; align-items: center; gap: var(--t2);
+  width: 100%; text-align: left;
+  border: none; background: transparent; padding: 0;
+  font-size: var(--m-xs); font-weight: var(--vastag-eros);
+  letter-spacing: .06em; text-transform: uppercase; color: var(--zold-sotet);
+}
+.elozmeny-nyito .nyil { margin-left: auto; font-size: var(--m-md); line-height: 1; }

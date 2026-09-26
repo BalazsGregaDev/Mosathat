@@ -21,7 +21,8 @@ import demoAdatok from '../../../supabase/demo/demo_adatok.sql?raw'
 
 import type {
   BookingStatus, BookingTask, CalcInput, CalcResult, DayBooking, DayCapacity,
-  LatestStart, NewBookingInput, PlateLookup, ServiceArea, StandingCar, WorkWindow,
+  BookingFormData, LatestStart, NewBookingInput, PlateLookup, SearchHit, ServiceArea,
+  StandingCar, WorkWindow,
 } from '../lib/types'
 import type { Catalog, DataSource, SessionUser } from './source'
 import { calcArgs, num, numOrNull, toCalcResult } from './source'
@@ -91,8 +92,28 @@ export class DemoSource implements DataSource {
     this.db = db
   }
 
+  // -------------------------------------------------------------------------
+  //  Dátumok: ugyanaz az alak, mint a Supabase-nél
+  //
+  //  A PGlite alapból JavaScript Date objektumot ad vissza a date és timestamp
+  //  oszlopokra, a Supabase viszont szöveget (JSON-on keresztül jön). Ha ezt
+  //  nem egyenlítjük ki, a felület demóban máshogy viselkedik, mint élesben —
+  //  és pont ez az a hiba, ami csak élesben derül ki.
+  //
+  //  Ezért a típusértelmezőt átállítjuk:
+  //    date         → "2026-09-26"            (ahogy a Supabase adja)
+  //    timestamptz  → "2026-09-26T06:00:00Z"  (ISO, ahogy a Supabase adja)
+  //
+  //  Az adapter dolga, hogy a különbség ne szivárogjon fel a React kódba.
+  // -------------------------------------------------------------------------
+  private static readonly PARSERS = {
+    1082: (v: string) => v, // date — a Postgres szöveges alakja már YYYY-MM-DD
+    1114: (v: string) => new Date(v + 'Z').toISOString(), // timestamp
+    1184: (v: string) => new Date(v).toISOString(), // timestamptz
+  }
+
   private async rows<T>(sql: string, params: unknown[] = []): Promise<T[]> {
-    const r = await this.pg.query<T>(sql, params)
+    const r = await this.pg.query<T>(sql, params, { parsers: DemoSource.PARSERS })
     return r.rows
   }
 
@@ -183,6 +204,10 @@ export class DemoSource implements DataSource {
     return r?.r ?? null
   }
 
+  async searchCustomers(q: string, limit = 5): Promise<SearchHit[]> {
+    return this.rows<SearchHit>(`select * from search_customers($1, $2::integer)`, [q, limit])
+  }
+
   async calcService(input: CalcInput): Promise<CalcResult> {
     const a = calcArgs(input)
     const [row] = await this.rows<any>(
@@ -199,6 +224,18 @@ export class DemoSource implements DataSource {
       JSON.stringify(input),
     ])
     return r.id
+  }
+
+  async updateBooking(bookingId: string, input: NewBookingInput): Promise<void> {
+    await this.pg.query(`select update_booking($1::uuid, $2::jsonb)`, [
+      bookingId, JSON.stringify(input),
+    ])
+  }
+
+  async getBookingFormData(bookingId: string): Promise<BookingFormData | null> {
+    const [r] = await this.rows<{ d: BookingFormData | null }>(
+      `select booking_form_data($1::uuid) as d`, [bookingId])
+    return r?.d ?? null
   }
 
   async setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void> {

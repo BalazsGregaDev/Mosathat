@@ -1,146 +1,226 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from './AppContext'
-import { maStr, rendszamNorm } from '../lib/format'
+import { maStr, percIdo } from '../lib/format'
 import type {
-  BookingScope, BookingType, CalcResult, HistoryRow, PlateLookup, VehicleCategory,
+  BookingScope, BookingType, CalcResult, SearchHit, VehicleCategory,
 } from '../lib/types'
 
 // ---------------------------------------------------------------------------
-//  Az "Új időpont" űrlap állapota.
+//  A foglalási űrlap állapota — felvitelhez ÉS szerkesztéshez.
 //
-//  Két dolgot csinál, amit érdemes külön kiemelni:
+//  Ugyanaz az űrlap szolgálja mindkettőt. Nem kényelmi döntés: ha két külön
+//  űrlap lenne, előbb-utóbb eltérnének, és a szerkesztésből kimaradna egy
+//  mező, amit a felvitelbe közben hozzáadtunk.
 //
-//  1. Rendszám-keresés gépelés közben. A telefonos foglalásnál ez az első
-//     kérdés; ha ismerjük az autót, a nevet és a telefonszámot nem kell
-//     újra elkérni.
+//  Három dolgot csinál, ami magyarázatot érdemel:
 //
-//  2. Élő ár és idő. Minden kattintás után újraszámol — de nem itt, hanem
-//     az adatbázisban, a calc_service()-szel. Ugyanazzal, ami majd a
-//     publikus árkalkulátort is kiszolgálja.
+//  1. AZONNALI KERESÉS. Már az első karaktertől keres — rendszámra, névre és
+//     cégnévre egyszerre. A telefonos foglalásnál ez a legfontosabb funkció:
+//     ha ismerjük az autót, a többi mező magától kitöltődik.
+//
+//  2. ÉLŐ ÁR ÉS IDŐ. Minden kattintás után újraszámol, de nem itt, hanem az
+//     adatbázisban, a calc_service()-szel. Ugyanazzal, ami majd a publikus
+//     árkalkulátort is kiszolgálja.
+//
+//  3. SEMMI NEM KÖTELEZŐ. Elég a rendszám VAGY a név VAGY a cég. A többi
+//     pótolható később — a foglalást fel kell tudni venni akkor is, ha az
+//     ügyfél épp az autópályán beszél és nem tudja a rendszámot.
 // ---------------------------------------------------------------------------
 
 export interface FormState {
-  category: VehicleCategory
-  plate: string
+  // ügyfél
+  keres: string // a kereső mező tartalma
   name: string
   phone: string
+  plate: string
+  companyName: string
+  // jármű
+  category: VehicleCategory
+  brand: string
+  model: string
+  seats: string
+  // szolgáltatás
   packageId: string | null
   scope: BookingScope
   fullService: boolean
-  extras: Record<string, number> // extra_id → mennyiség
-  surchargePct: number
-  surchargeFix: number
+  extras: Record<string, number>
+  // mikor
   bookingType: BookingType
   date: string
   startTime: string
   dropOffTime: string
   pickUpTime: string
   deadlineDate: string
-  brand: string
-  model: string
-  seats: string
+  deadlineTime: string
+  // egyéb
   notes: string
 }
 
 export const URES_URLAP: FormState = {
-  category: 'SZEMELYAUTO',
-  plate: '',
+  keres: '',
   name: '',
   phone: '',
+  plate: '',
+  companyName: '',
+  category: 'SZEMELYAUTO',
+  brand: '',
+  model: '',
+  seats: '',
   packageId: null,
   scope: 'TELJES',
   fullService: false,
   extras: {},
-  surchargePct: 0,
-  surchargeFix: 0,
-  bookingType: 'VAROS',
+  // "Itt hagyja" az alapértelmezett, mert ez a gyakoribb eset
+  bookingType: 'LEADOS',
   date: maStr(),
   startTime: '09:00',
   dropOffTime: '08:00',
   pickUpTime: '',
   deadlineDate: '',
-  brand: '',
-  model: '',
-  seats: '',
+  deadlineTime: '17:00',
   notes: '',
 }
 
-export function useBookingForm(nyitottE: boolean, kezdoNap: string) {
+/** "2026-09-26T06:00:00Z" → "08:00" budapesti időben, az űrlap mezőjéhez. */
+function isoOra(iso: string | null): string {
+  if (!iso) return ''
+  const f = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Budapest',
+  })
+  return f.format(new Date(iso))
+}
+
+function isoNap(iso: string | null): string {
+  if (!iso) return ''
+  const f = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/Budapest',
+  })
+  return f.format(new Date(iso))
+}
+
+export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: string | null) {
   const { data } = useApp()
   const [f, setF] = useState<FormState>({ ...URES_URLAP, date: kezdoNap })
-  const [talalat, setTalalat] = useState<PlateLookup | null>(null)
+  const [talalatok, setTalalatok] = useState<SearchHit[]>([])
+  const [valasztott, setValasztott] = useState<SearchHit | null>(null)
   const [keres, setKeres] = useState(false)
   const [calc, setCalc] = useState<CalcResult | null>(null)
   const [mentes, setMentes] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
+  const [tolt, setTolt] = useState(false)
 
-  // Nyitáskor tiszta lappal indulunk.
+  const szerkesztes = Boolean(bookingId)
+
+  // --- nyitáskor: tiszta lap vagy a meglévő foglalás betöltése --------------
+
   useEffect(() => {
-    if (nyitottE) {
+    if (!nyitottE) return
+    setHiba(null)
+    setTalalatok([])
+    setValasztott(null)
+
+    if (!bookingId) {
       setF({ ...URES_URLAP, date: kezdoNap })
-      setTalalat(null)
       setCalc(null)
-      setHiba(null)
+      return
     }
-  }, [nyitottE, kezdoNap])
+
+    setTolt(true)
+    data
+      .getBookingFormData(bookingId)
+      .then((d) => {
+        if (!d) return
+        const b = d.booking
+        setF({
+          keres: '',
+          name: d.customer.name === 'Névtelen' ? '' : d.customer.name,
+          phone: d.customer.phone === '—' ? '' : d.customer.phone,
+          plate: d.vehicle.plate_raw === '—' ? '' : d.vehicle.plate_raw,
+          companyName: d.customer.company_name ?? '',
+          category: d.vehicle.category,
+          brand: d.vehicle.brand ?? '',
+          model: d.vehicle.model ?? '',
+          seats: d.vehicle.seats ? String(d.vehicle.seats) : '',
+          packageId: b.package_id,
+          scope: b.scope,
+          fullService: b.full_service,
+          extras: Object.fromEntries(
+            d.extras.filter((e) => e.extra_id).map((e) => [e.extra_id, Number(e.quantity) || 1]),
+          ),
+          bookingType: b.booking_type,
+          date: b.service_date.slice(0, 10),
+          startTime: isoOra(b.start_at) || '09:00',
+          dropOffTime: isoOra(b.drop_off_at) || '08:00',
+          pickUpTime: isoOra(b.pick_up_at),
+          deadlineDate: isoNap(b.deadline_at),
+          deadlineTime: isoOra(b.deadline_at) || '17:00',
+          notes: b.notes ?? '',
+        })
+      })
+      .catch((e) => setHiba(e instanceof Error ? e.message : String(e)))
+      .finally(() => setTolt(false))
+  }, [nyitottE, kezdoNap, bookingId, data])
 
   const set = useCallback(<K extends keyof FormState>(k: K, v: FormState[K]) => {
     setF((p) => ({ ...p, [k]: v }))
   }, [])
 
-  // --- 1. rendszám-keresés --------------------------------------------------
-  // Csak akkor indul, ha legalább négy karakter van; 350 ms csend után.
+  // --- 1. azonnali keresés ---------------------------------------------------
+  // Az első karaktertől indul, 220 ms csend után. Szerkesztéskor nincs rá
+  // szükség: ott már tudjuk, kiről van szó.
 
   const idozito = useRef<number | undefined>(undefined)
 
   useEffect(() => {
-    const norm = rendszamNorm(f.plate)
+    if (szerkesztes) return
     window.clearTimeout(idozito.current)
-
-    if (norm.length < 4) {
-      setTalalat(null)
+    const q = f.keres.trim()
+    if (q.length < 1) {
+      setTalalatok([])
       return
     }
-
     idozito.current = window.setTimeout(async () => {
       setKeres(true)
       try {
-        const r = await data.lookupPlate(f.plate)
-        setTalalat(r)
-        if (r) {
-          // Amit tudunk róla, azt kitöltjük — de csak az üres mezőket,
-          // hogy ne írjuk felül, amit a felvevő közben már begépelt.
-          setF((p) => ({
-            ...p,
-            name: p.name || r.customer.name,
-            phone: p.phone || r.customer.phone,
-            category: r.vehicle.category,
-            brand: p.brand || r.vehicle.brand || '',
-            model: p.model || r.vehicle.model || '',
-            seats: p.seats || (r.vehicle.seats ? String(r.vehicle.seats) : ''),
-          }))
-        }
+        setTalalatok(await data.searchCustomers(q, 5))
       } catch {
-        setTalalat(null)
+        setTalalatok([])
       } finally {
         setKeres(false)
       }
-    }, 350)
-
+    }, 220)
     return () => window.clearTimeout(idozito.current)
-  }, [f.plate, data])
+  }, [f.keres, data, szerkesztes])
 
-  /** "Ezt kéri →" gomb a korábbi munkák sorában. */
-  const elozmenyAtvesz = useCallback((h: HistoryRow, packageIdByCode: Record<string, string>) => {
+  /** Találat kiválasztása: az ügyfél adatai betöltődnek, a szolgáltatás NEM. */
+  const talalatValaszt = useCallback((h: SearchHit) => {
+    setValasztott(h)
+    setTalalatok([])
     setF((p) => ({
       ...p,
-      packageId: h.package_code ? (packageIdByCode[h.package_code] ?? p.packageId) : p.packageId,
-      scope: h.scope,
-      fullService: h.full_service,
+      keres: '',
+      name: h.customer_name === 'Névtelen' ? '' : h.customer_name,
+      phone: h.customer_phone === '—' ? '' : h.customer_phone,
+      plate: h.plate_raw === '—' ? '' : h.plate_raw,
+      companyName: h.company_name ?? '',
+      category: h.category,
+      brand: h.brand ?? '',
+      model: h.model ?? '',
+      seats: h.seats ? String(h.seats) : '',
+      // A csomagot szándékosan nem írjuk felül: most mást is kérhet.
     }))
   }, [])
 
-  // --- 2. élő ár és idő -----------------------------------------------------
+  /** "Ezt kéri" — a korábbi munka csomagja átkerül az űrlapra. */
+  const ezcKeri = useCallback((packageIdByCode: Record<string, string>) => {
+    const kod = valasztott?.utolso_csomag
+    if (!kod) return
+    // Az utolso_csomag a csomag NEVE (Start / Premium / Elit), a kód nagybetűs.
+    const id = packageIdByCode[kod.toUpperCase()]
+    if (id) setF((p) => ({ ...p, packageId: id }))
+  }, [valasztott])
+
+  // --- 2. élő ár és idő ------------------------------------------------------
 
   const calcInput = useMemo(
     () => ({
@@ -151,10 +231,12 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string) {
       extras: Object.entries(f.extras)
         .filter(([, q]) => q > 0)
         .map(([extra_id, quantity]) => ({ extra_id, quantity })),
-      surcharge_pct: f.surchargePct,
-      surcharge_fix: f.surchargeFix,
+      // A felárak NEM itt vannak: telefonos foglaláskor még nem látjuk az
+      // autót. A munkalapon kerülnek be, amikor a kocsi már készen áll.
+      surcharge_pct: 0,
+      surcharge_fix: 0,
     }),
-    [f.packageId, f.category, f.scope, f.fullService, f.extras, f.surchargePct, f.surchargeFix],
+    [f.packageId, f.category, f.scope, f.fullService, f.extras],
   )
 
   useEffect(() => {
@@ -172,48 +254,60 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string) {
     }
   }, [calcInput, data])
 
-  // --- 3. mentés ------------------------------------------------------------
+  // --- 3. mentés -------------------------------------------------------------
 
-  const menthetE = useMemo(() => {
-    if (!f.plate.trim()) return false
-    if (!f.name.trim()) return false
-    if (!f.packageId && calcInput.extras.length === 0) return false
-    if (f.bookingType === 'VAROS' && !f.startTime) return false
-    if (f.bookingType === 'TOBBNAPOS' && !f.deadlineDate) return false
-    return true
-  }, [f, calcInput.extras.length])
+  // Semmi nem kötelező — elég, ha valamiről tudjuk, kiről van szó.
+  const menthetE = useMemo(
+    () => Boolean(f.plate.trim() || f.name.trim() || f.companyName.trim()),
+    [f.plate, f.name, f.companyName],
+  )
 
   const ment = useCallback(async (): Promise<string | null> => {
     setMentes(true)
     setHiba(null)
     try {
-      const id = await data.createBooking({
+      const input = {
         ...calcInput,
-        customer_id: talalat?.customer.id ?? null,
+        customer_id: valasztott?.customer_id ?? null,
         customer_name: f.name.trim(),
         customer_phone: f.phone.trim(),
-        vehicle_id: talalat?.vehicle.id ?? null,
+        company_name: f.companyName.trim() || null,
+        vehicle_id: valasztott?.vehicle_id ?? null,
         plate_raw: f.plate.trim(),
         brand: f.brand.trim() || null,
         model: f.model.trim() || null,
         seats: f.seats ? Number(f.seats) : null,
         booking_type: f.bookingType,
         service_date: f.date,
-        start_time: f.bookingType === 'VAROS' ? f.startTime : null,
-        drop_off_time: f.bookingType === 'VAROS' ? null : f.dropOffTime || null,
+        // Megvárja esetén kell kezdés; a mező sosem üres, mert van
+        // alapértelmezése — így a "semmi nem kötelező" nem ütközik az
+        // adatbázis szabályával.
+        start_time: f.bookingType === 'VAROS' ? f.startTime || '09:00' : null,
+        drop_off_time: f.bookingType === 'VAROS' ? null : f.dropOffTime || '08:00',
         pick_up_time: f.pickUpTime || null,
-        deadline_date: f.bookingType === 'TOBBNAPOS' ? f.deadlineDate : null,
-        source: 'TELEFON',
+        deadline_date:
+          f.bookingType === 'TOBBNAPOS' ? f.deadlineDate || f.date : null,
+        deadline_time: f.bookingType === 'TOBBNAPOS' ? f.deadlineTime || '17:00' : null,
+        source: 'TELEFON' as const,
         notes: f.notes.trim() || null,
-      })
-      return id
+      }
+
+      if (bookingId) {
+        await data.updateBooking(bookingId, input)
+        return bookingId
+      }
+      return await data.createBooking(input)
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
       return null
     } finally {
       setMentes(false)
     }
-  }, [data, f, calcInput, talalat])
+  }, [data, f, calcInput, valasztott, bookingId])
 
-  return { f, set, talalat, keres, calc, menthetE, ment, mentes, hiba, elozmenyAtvesz }
+  return {
+    f, set, calc, menthetE, ment, mentes, hiba, tolt, szerkesztes,
+    talalatok, keres, valasztott, talalatValaszt, ezcKeri,
+    percIdo, // a komponensnek is kell
+  }
 }
