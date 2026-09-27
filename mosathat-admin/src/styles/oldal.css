@@ -163,3 +163,65 @@
 .cimke-pill.billing { margin-left: var(--t2); }
 .cimke-pill.billing[data-b='BERLETES']    { background: var(--zold-halvany); color: var(--zold-sotet); }
 .cimke-pill.billing[data-b='SZERZODESES'] { background: #eaf2fa; color: #1f5285; }
+
+/* ===========================================================================
+   Mi van a csomagokban — összehasonlító táblázat
+   =========================================================================== */
+
+/* Csak képernyőolvasónak: a pipa mellé a szó is odakerül, de látni nem kell.
+   A pipa gyorsabban olvasható szemmel, a szó viszont felolvasható — és
+   kinyomtatva sem vész el, ha a jel nem jön át. */
+.csakolvaso {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tartalom-tabla { min-width: 520px; }
+
+/* A csomagoszlopok középre, a munkalépés neve balra: így a pipák egy
+   függőleges vonalban állnak, és egy pillantással látszik, hol van törés. */
+.tartalom-tabla thead th + th,
+.tartalom-tabla tbody td { text-align: center; }
+.tartalom-tabla tbody th[scope='row'] { width: 45%; }
+
+.tartalom-tabla .terulet-sor th {
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  background: var(--lap-2);
+  padding: var(--t2) var(--t4);
+  text-align: left;
+}
+
+.tartalom-tabla .van { color: var(--zold); font-weight: var(--vastag-eros); }
+.tartalom-tabla .nincs { color: var(--szoveg-halvany); }
+
+/* Ugyanaz a sor, de ebben a csomagban más a munka vagy az anyag. Nem pipa,
+   hanem a neve — mert pont ez a különbség, amit el kell mondani. */
+.tartalom-tabla .masik {
+  color: var(--zold-sotet);
+  font-weight: var(--vastag-eros);
+  font-size: var(--m-xs);
+  line-height: 1.3;
+}
+
+/* A csomag neve mellett: „| Start + Gyors viasz, Gumiápolás, …"
+   Szándékosan NEM flex: a keskeny lebegő ablakban a flex külön sorba dobta
+   a „|" jelet, és egymagában lógott a cím alatt. Sima szövegfolyamban a
+   jel a következő szóhoz tapad, és ott törik, ahol kell.
+   A felsorolás nem nagybetűs: ezek szolgáltatásnevek, nem rovatcímek —
+   nagybetűvel kiabálnak és nehezebben olvashatók. */
+.csomag-cim { display: block; }
+.csomag-tobblet {
+  font-size: var(--m-xs);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--szoveg-halk);
+  line-height: 1.5;
+}
+.csomag-tobblet .valaszto { color: var(--keret-eros); }

@@ -170,6 +170,34 @@ export interface Extra {
   active: boolean
 }
 
+/** Egy sor a csomag-összehasonlító táblázatból: egy csomag egy tétele.
+ *  A slot_id köti egy sorba a felülírt és a felülíró tételt — a „Falc
+ *  áttörlés" és a „Falc mélytisztítás" ugyanaz a sor, más csomagban. */
+export interface PackageMatrixRow {
+  package_id: string
+  package_code: string
+  package_name: string
+  package_sort: number
+  slot_id: string
+  /** A sor felirata: a felülírási lánc gyökerének a neve. */
+  slot_name: string
+  /** Ebben a csomagban ez a tétel neve. Eltérhet a slot_name-től. */
+  name: string
+  area: ServiceArea
+  sort_order: number
+}
+
+/** Amivel egy csomag több a közvetlen elődjénél. A Startra nincs sor. */
+export interface PackageExtraRow {
+  package_id: string
+  package_code: string
+  /** Az előd csomag neve — „a Start mindene, plusz…" */
+  parent_name: string
+  name: string
+  area: ServiceArea
+  sort_order: number
+}
+
 export interface Surcharge {
   id: string
   name: string

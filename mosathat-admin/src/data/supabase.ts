@@ -112,16 +112,19 @@ export class SupabaseSource implements DataSource {
   // --- katalógus ------------------------------------------------------------
 
   async getCatalog(): Promise<Catalog> {
-    const [pk, pp, fs, ex, su] = await Promise.all([
+    const [pk, pp, fs, ex, su, mx, tb] = await Promise.all([
       this.sb.from('packages').select('*').eq('active', true).order('sort_order'),
       this.sb.from('package_pricing').select('*'),
       this.sb.from('full_service_pricing').select('*'),
       this.sb.from('extras').select('*').eq('active', true).order('sort_order'),
       this.sb.from('surcharges').select('*').eq('active', true).order('sort_order'),
+      this.sb.from('v_package_matrix').select('*').order('area').order('sort_order').order('package_sort'),
+      this.sb.from('v_package_extra').select('*').order('area').order('sort_order'),
     ])
     for (const [name, r] of [
       ['Csomagok', pk], ['Árak', pp], ['Full Service árak', fs],
       ['Extrák', ex], ['Felárak', su],
+      ['Csomagtartalom', mx], ['Csomagkülönbségek', tb],
     ] as const) {
       if (r.error) fail(name, r.error)
     }
@@ -130,6 +133,8 @@ export class SupabaseSource implements DataSource {
       packagePricing: pp.data ?? [],
       fullServicePricing: fs.data ?? [],
       extras: ex.data ?? [],
+      packageItems: mx.data ?? [],
+      packageExtras: tb.data ?? [],
       surcharges: (su.data ?? []).map((s) => ({
         ...s,
         default_value: num(s.default_value),

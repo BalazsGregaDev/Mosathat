@@ -2,7 +2,7 @@ import type {
   BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary, BookingStatus, BookingTask, CalcInput, CalcResult,
   ContractInput, ContractRow, DashboardSummary, DayBooking, DayCapacity, DayOverride,
   Extra, FullServicePrice,
-  LatestStart, NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
+  LatestStart, NewBookingInput, PackageMatrixRow, PackageExtraRow, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
   PlateLookup, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow,
 } from '../lib/types'
@@ -26,6 +26,10 @@ export interface Catalog {
   fullServicePricing: FullServicePrice[]
   extras: Extra[]
   surcharges: Surcharge[]
+  /** Mi van az egyes csomagokban — az összehasonlító táblázat sorai. */
+  packageItems: PackageMatrixRow[]
+  /** Amivel minden csomag több az előzőnél — egy sor a neve mellé. */
+  packageExtras: PackageExtraRow[]
 }
 
 export interface SessionUser {

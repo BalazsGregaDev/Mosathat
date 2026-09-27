@@ -8,6 +8,7 @@ import {
   type PackagePrice, type VehicleCategory,
 } from '../../lib/types'
 import type { Catalog } from '../../data'
+import { CsomagTartalom, Tobblet } from './Arlista'
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
 const TERJEDELMEK: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
@@ -83,7 +84,7 @@ function SzamMezo({
 export default function ServicesPage() {
   const { data, catalog } = useApp()
   const [k, setK] = useState<Catalog | null>(catalog)
-  const [ful, setFul] = useState<'csomagok' | 'extrak'>('csomagok')
+  const [ful, setFul] = useState<'csomagok' | 'tartalom' | 'extrak'>('csomagok')
 
   const ujra = useCallback(async () => {
     setK(await data.getCatalog())
@@ -114,6 +115,9 @@ export default function ServicesPage() {
           <button className={ful === 'csomagok' ? 'aktiv' : ''} onClick={() => setFul('csomagok')}>
             Csomagok és árak
           </button>
+          <button className={ful === 'tartalom' ? 'aktiv' : ''} onClick={() => setFul('tartalom')}>
+            Mi van bennük?
+          </button>
           <button className={ful === 'extrak' ? 'aktiv' : ''} onClick={() => setFul('extrak')}>
             Egyéb szolgáltatások
             {hianyzoExtraAr > 0 && <span className="jelzo">{hianyzoExtraAr}</span>}
@@ -137,7 +141,13 @@ export default function ServicesPage() {
         <div className="panelek panelek-szeles">
           {k.packages.map((p) => (
             <div className="panel" key={p.id}>
-              <h3>{p.name}</h3>
+              {/* Ugyanaz az egysoros összefoglaló, mint az alkalmazotti
+                  nézetben és az árlista ablakban — ne kelljen két helyen
+                  fejben tartani, mi a különbség a csomagok között. */}
+              <h3 className="csomag-cim">
+                {p.name}
+                <Tobblet k={k} packageId={p.id} />
+              </h3>
               <div className="panel-torzs">
                 <p className="halk" style={{ fontSize: 'var(--m-sm)', marginBottom: 'var(--t3)' }}>
                   {p.description}
@@ -237,6 +247,12 @@ export default function ServicesPage() {
           ))}
         </div>
       )}
+
+      {/* A csomagok tartalma nem itt szerkeszthető: a munkalépéseket és az
+          öröklődést az adatbázis tartja (package_items), mert ugyanaz a lista
+          adja a munkalapot is. Itt megnézni lehet — ugyanazt, amit az
+          alkalmazott lát. */}
+      {ful === 'tartalom' && <CsomagTartalom k={k} />}
 
       {ful === 'extrak' && (
         <div className="panel">

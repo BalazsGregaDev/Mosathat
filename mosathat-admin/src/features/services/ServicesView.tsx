@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import type { Catalog } from '../../data'
-import { CsomagArak, ExtraLista } from './Arlista'
+import { CsomagArak, CsomagTartalom, ExtraLista } from './Arlista'
 
 // ---------------------------------------------------------------------------
 //  Szolgáltatások — alkalmazotti nézet
@@ -19,7 +19,7 @@ import { CsomagArak, ExtraLista } from './Arlista'
 export default function ServicesView() {
   const { data, catalog } = useApp()
   const [k, setK] = useState<Catalog | null>(catalog)
-  const [ful, setFul] = useState<'csomagok' | 'extrak'>('csomagok')
+  const [ful, setFul] = useState<'csomagok' | 'tartalom' | 'extrak'>('csomagok')
   const [q, setQ] = useState('')
 
   useEffect(() => { data.getCatalog().then(setK) }, [data])
@@ -34,13 +34,18 @@ export default function ServicesView() {
           <button className={ful === 'csomagok' ? 'aktiv' : ''} onClick={() => setFul('csomagok')}>
             Csomagok és árak
           </button>
+          <button className={ful === 'tartalom' ? 'aktiv' : ''} onClick={() => setFul('tartalom')}>
+            Mi van bennük?
+          </button>
           <button className={ful === 'extrak' ? 'aktiv' : ''} onClick={() => setFul('extrak')}>
             Egyéb szolgáltatások
           </button>
         </div>
       </div>
 
-      {ful === 'csomagok' ? <CsomagArak k={k} /> : <ExtraLista k={k} q={q} onQ={setQ} />}
+      {ful === 'csomagok' && <CsomagArak k={k} />}
+      {ful === 'tartalom' && <CsomagTartalom k={k} />}
+      {ful === 'extrak'   && <ExtraLista k={k} q={q} onQ={setQ} />}
     </div>
   )
 }

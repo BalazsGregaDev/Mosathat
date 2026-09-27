@@ -171,18 +171,22 @@ export class DemoSource implements DataSource {
   // --- katalógus ------------------------------------------------------------
 
   async getCatalog(): Promise<Catalog> {
-    const [packages, pp, fs, extras, surcharges] = await Promise.all([
+    const [packages, pp, fs, extras, surcharges, matrix, tobblet] = await Promise.all([
       this.rows<any>(`select * from packages where active order by sort_order`),
       this.rows<any>(`select * from package_pricing`),
       this.rows<any>(`select * from full_service_pricing`),
       this.rows<any>(`select * from extras where active order by sort_order`),
       this.rows<any>(`select * from surcharges where active order by sort_order`),
+      this.rows<any>(`select * from v_package_matrix order by area, sort_order, package_sort`),
+      this.rows<any>(`select * from v_package_extra order by area, sort_order`),
     ])
     return {
       packages,
       packagePricing: pp,
       fullServicePricing: fs,
       extras,
+      packageItems: matrix,
+      packageExtras: tobblet,
       surcharges: surcharges.map((s) => ({
         ...s,
         default_value: num(s.default_value),
