@@ -237,3 +237,42 @@
 .figyelem li:last-child { border-bottom: none; }
 .figyelem li::before { content: '•'; color: var(--v-erkezett); font-weight: 700; line-height: 1.4; }
 .figyelem li[data-sulyos='true']::before { color: var(--v-baj); }
+
+/* ---------------------------------------------------------------------------
+   A kártya megnyitó felülete és a gyorsgombok
+   ---------------------------------------------------------------------------
+   A kártya maga már nem gomb: benne van a következő lépés gombja, és gomb a
+   gombban érvénytelen. A felső rész viszont ugyanúgy kattintható — az nyitja
+   meg a munkalapot. */
+.kartya-nyit {
+  display: block; width: 100%;
+  border: none; background: none; padding: 0; margin: 0;
+  font: inherit; color: inherit; text-align: left;
+  cursor: pointer;
+}
+.kartya-nyit:focus-visible { outline: 2px solid var(--zold); outline-offset: 2px; }
+
+/* A gombok jobbra, a kártya alján. Balra tolva összefolynának a csomag
+   nevével; jobbra a szem a hüvelykujj útjában találja őket. */
+.kartya-muvelet {
+  display: flex; justify-content: flex-end; gap: var(--t2);
+  margin-top: var(--t3);
+  padding-top: var(--t2);
+  border-top: 1px dashed var(--keret);
+}
+
+.kartya-hiba {
+  margin-top: var(--t2);
+  font-size: var(--m-xs);
+  color: var(--v-baj);
+}
+
+/* A lezárt és a törölt kártya halványítva áll a listában. A gombjai ne
+   legyenek MÉG halványabbak: ott pont az a fontos, hogy vissza lehet vonni. */
+.kartya[data-allapot='CANCELLED_BY_CUSTOMER'] .kartya-muvelet,
+.kartya[data-allapot='CANCELLED_BY_SHOP'] .kartya-muvelet { opacity: 1; }
+
+@media (max-width: 560px) {
+  .kartya-muvelet { justify-content: stretch; }
+  .kartya-muvelet .btn { flex: 1; justify-content: center; }
+}

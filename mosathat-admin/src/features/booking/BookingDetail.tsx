@@ -215,9 +215,9 @@ export default function BookingDetail({
   async function lemond() {
     if (!b) return
     const ok = window.confirm(
-      `Biztos lemondod? ${b.plate_raw} · ${b.customer_name}\n\n`
-      + 'A foglalás megmarad lemondottként, az időpont pedig azonnal '
-      + 'felszabadul. Az ügyfél és az autó adata nem vész el.',
+      `Biztos törlöd? ${b.plate_raw} · ${b.customer_name}\n\n`
+      + 'A foglalás törölve marad, az időpont pedig azonnal felszabadul. '
+      + 'Az ügyfél és az autó adata nem vész el, és a törlés visszavonható.',
     )
     if (!ok) return
     await allapot('CANCELLED_BY_CUSTOMER')
@@ -823,7 +823,7 @@ export default function BookingDetail({
                 {lemondhato && (
                   <button className="btn btn-veszelyes"
                           onClick={() => void lemond()}>
-                    Lemondta
+                    Törlés
                   </button>
                 )}
                 {lemondott && (
