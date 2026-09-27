@@ -40,6 +40,112 @@ maradvány: töröld, és menj tovább.
 
 ---
 
+## Éles indulás: a próbaadatok törlése
+
+Amíg próbálgattátok a rendszert, felkerültek rá kitalált ügyfelek és
+időpontok. Éles indulás előtt ezt egyszer ki kell üríteni — utána már minden
+sor valódi.
+
+Supabase → **SQL Editor**, és ez az egész blokk egyben:
+
+```sql
+begin;
+
+-- Az áthelyezett foglalások egymásra mutatnak. A kapcsolatot előbb
+-- elengedjük, különben a törlés önmagába akad.
+update public.bookings set moved_to_booking_id = null;
+
+-- A foglalással megy a tételsora, a munkalistája, a többnapos foglaltsága
+-- és a felhasznált bérletalkalma is.
+delete from public.bookings;
+
+-- Az ügyféllel megy a járműve, a bérlete és a szerződéses ára is.
+delete from public.customers;
+
+-- A napló a próbaidőszak műveleteiről szól, annak sincs értelme tovább.
+delete from public.audit_log;
+
+commit;
+```
+
+**Ami megmarad:** a csomagok, az árak, az időtartamok, az egyéb
+szolgáltatások, a felárak, a nyitvatartás, a munkaidő, a szünetek, a
+beállítások, a kivételnapok és a felhasználók. Vagyis minden, amit
+beállítottál — csak az ügyfelek és a foglalások tűnnek el.
+
+**Ez nem visszavonható.** A `begin` / `commit` annyit véd, hogy ha a blokk
+közben elakad, semmi nem törlődik félig — de ha lefutott, lefutott. Ha
+bizonytalan vagy, előtte a Supabase → Database → Backups alatt nézd meg,
+van-e mentés.
+
+Utána ellenőrizd, hogy tényleg üres:
+
+```sql
+select
+  (select count(*) from public.customers) as ugyfel,
+  (select count(*) from public.bookings)  as foglalas,
+  (select count(*) from public.packages)  as csomag_megmaradt;
+```
+
+Az első kettő nulla, a harmadik 3. A parancs ki van próbálva feltöltött
+adatbázison:
+
+```bash
+node scripts/urites-teszt.mjs
+```
+
+---
+
+## Ha senki nem tud belépni
+
+A Felhasználók képernyőn minden sor végén van **Új jelszó** gomb: a tulaj adhat
+újat az alkalmazottnak, a fejlesztő bárkinek. A saját jelszavadat az oldalsávban,
+a neved alatt tudod átírni — ott a mostanit is meg kell adni.
+
+Egy esetre ez nem elég: amikor **senki nem tud belépni**. Ha a tulajdonosi és a
+fejlesztői jelszó is elveszett, nincs az a gomb, amit meg lehetne nyomni — ahhoz
+előbb be kellene lépni. Ilyenkor a Supabase-ből kell visszaállítani:
+
+1. Nyisd meg a Supabase projektet, bal oldalt **SQL Editor**.
+2. Futtasd le ezt, a saját e-mail címeddel és egy általad választott jelszóval:
+
+```sql
+select public.jelszo_visszaallitas('tulaj@mosathat.hu', 'ideiglenes123');
+```
+
+Visszaírja, kinek állította be, és figyelmeztet, ha az a hozzáférés ki van
+kapcsolva — mert akkor jó jelszóval sem fog belépni.
+
+A jelszó legyen legalább 8 karakter. Belépés után írd át magadnak az oldalsávból.
+
+**Ez a függvény a felületről szándékosan nem hívható.** Nincs rá jogosultsága
+sem az alkalmazottnak, sem a tulajnak: ha lenne, egy alkalmazott saját magának
+adhatna tulajdonosi jelszót, és ezzel az egész jogosultságrendszer egy gombbal
+megkerülhető volna. Csak onnan fut le, ahol az adatbázis gazdájaként dolgozol —
+a Supabase SQL Editorból, a saját fiókod mögül.
+
+Az ellenőrzése bármikor lefuttatható:
+
+```bash
+node scripts/veszjelszo-teszt.mjs
+```
+
+---
+
+## Migráció ellenőrzése feltöltés előtt
+
+Az `npm run db:push` az éles adatbázisra ír. Előtte egy paranccsal ki lehet
+próbálni az összes migrációt egy igazi PostgreSQL-en, helyben:
+
+```bash
+node scripts/migracio-teszt.mjs
+```
+
+Lefuttat mindent a nulláról, és kiírja, mi van a csomagokban. Ha elgépelés
+van egy migrációban, itt derül ki — nem a működő rendszeren.
+
+---
+
 ## Mi hol van
 
 ```

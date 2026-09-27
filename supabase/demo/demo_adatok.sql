@@ -360,9 +360,12 @@ begin
       when v_nap =  current_date then 'CONFIRMED'
       else 'CONFIRMED' end::booking_status;
 
+    -- LEADÓS foglalásnál a "mikor hozza" a drop_off_at, nem a start_at.
+    -- Korábban a start_at-ba került, és emiatt a heti nézet kártyáin nem
+    -- látszott időpont: a mező, amit néztünk, üres volt.
     insert into public.bookings (
       customer_id, vehicle_id, booking_type, status, source, service_date,
-      start_at, package_id, scope, planned_duration_minutes,
+      drop_off_at, package_id, scope, planned_duration_minutes,
       estimated_price_huf, final_price_huf,
       actual_started_at, actual_finished_at, internal_notes)
     values (
@@ -433,6 +436,29 @@ begin
 
   update public.customers set billing_kind = 'SZERZODESES' where id = v_ceg;
 end $$;
+
+
+-- =============================================================================
+--  PRÓBA LEÍRÁSOK A SZOLGÁLTATÁSOKHOZ
+-- =============================================================================
+--  A munkalapon minden egyéb szolgáltatás mellett van egy karikás „i": ha
+--  ráállsz, megjelenik a leírása. Telefon közben ez a leggyakoribb kérdés —
+--  „és az mit takar?".
+--
+--  A leírásokat NEKED kell megírni, a saját szavaiddal: Szolgáltatások →
+--  Egyéb szolgáltatások → Leírás. Az alábbi néhány mondat csak azért van itt,
+--  hogy a demóban látszódjon, hogyan működik. Élesben ne ezt használd — ezek
+--  szándékosan semmitmondóak, nem a te szolgáltatásod leírásai.
+--
+--  Csak azt írja felül, ami még üres, tehát a már megírt leírásokat nem
+--  bántja. Élesben ez a fájl amúgy sem fut le.
+
+update public.extras set description = 'Próba leírás a demóhoz. A valódi '
+  || 'szöveget a Szolgáltatások menüpontban lehet megírni.'
+where name in ('Felni és gumi mélytisztítás és ápolás',
+               'Vizes kárpittisztítás',
+               'Ózongenerátoros utastér fertőtlenítés')
+  and (description is null or btrim(description) = '');
 
 
 -- =============================================================================
