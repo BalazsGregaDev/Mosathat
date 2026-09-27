@@ -454,6 +454,39 @@ export class SupabaseSource implements DataSource {
     if (error) fail('Meghívó törlése', error)
   }
 
+  /**
+   * A saját jelszó átírása.
+   *
+   * A Supabase updateUser() NEM kéri a régi jelszót — ha csak azt hívnánk,
+   * egy nyitva felejtett gépnél bárki átvehetné a fiókot. Ezért előbb
+   * megpróbálunk belépni a mostanival, egy ELDOBHATÓ klienssel: az nem ment
+   * el semmit (persistSession: false), tehát a bent ülő munkamenethez hozzá
+   * sem ér, akkor sem, ha a próba sikerül.
+   */
+  async changeOwnPassword(mostani: string, uj: string): Promise<void> {
+    const { data: most } = await this.sb.auth.getUser()
+    const email = most.user?.email
+    if (!email) throw new Error('Nincs bejelentkezett felhasználó.')
+
+    const eldobhato = createClient(this.url, this.anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    })
+    const { error: belepesHiba } = await eldobhato.auth.signInWithPassword({
+      email, password: mostani,
+    })
+    if (belepesHiba) throw new Error('A mostani jelszó nem stimmel.')
+
+    const { error } = await this.sb.auth.updateUser({ password: uj })
+    if (error) throw new Error(`Jelszó módosítása: ${emberiHiba(error.message)}`)
+  }
+
+  async setStaffPassword(staffId: string, uj: string): Promise<void> {
+    const { error } = await this.sb.rpc('set_staff_password', {
+      p_staff_id: staffId, p_jelszo: uj,
+    })
+    if (error) fail('Jelszó beállítása', error)
+  }
+
   // --- bérletek és szerződések -----------------------------------------------
 
   async listPasses(): Promise<PassBalanceRow[]> {

@@ -230,7 +230,9 @@
    sorban, mégis elcsúszva.
    Így csak azokra vonatkozik, amik tényleg egymás alatt következnek. */
 .panel-torzs > .mezo + .mezo,
-.lap-torzs > .mezo + .mezo { margin-top: var(--t4); }
+.lap-torzs > .mezo + .mezo,
+/* Űrlapon belül is: a mezők ott is egymás alatt következnek. */
+.lap-torzs > form > .mezo + .mezo { margin-top: var(--t4); }
 
 .mezo-sor {
   display: grid;
@@ -636,4 +638,28 @@ button.extra-cimke:disabled { opacity: .55; cursor: default; }
 @media (max-width: 480px) {
   .extra-valaszto { grid-template-columns: 1fr; }
   .ertek-gombok, .extra-cimkek { justify-content: flex-start; }
+}
+
+/* ---------------------------------------------------------------------------
+   Melyik napról szól, ami látszik
+   ---------------------------------------------------------------------------
+   Az Áttekintés mindig a mai napot mutatja. Hogy ezt ne kelljen elhinni,
+   ki is van írva — a lap fejlécében teljes dátummal, a paneleken röviden. */
+
+.oldal-datum {
+  font-size: var(--m-sm);
+  color: var(--szoveg-halk);
+  align-self: baseline;
+}
+
+/* A panel fejlécében a dátum jobbra ül. A panelcím nagybetűs és ritkított,
+   a dátum nem: az egy adat, nem rovatcím. */
+.panel > h3 .fej-datum {
+  margin-left: auto;
+  font-size: var(--m-xs);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--szoveg-halk);
+  font-family: var(--betu-szam);
 }

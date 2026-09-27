@@ -21,6 +21,7 @@ import PartnersView from '../partners/PartnersView'
 import UsersPage from '../users/UsersPage'
 import ArlistaPanel, { PANEL_ALAP, type PanelAllapot } from '../services/ArlistaPanel'
 import ArlistaGombok, { type ArlistaFul } from '../services/ArlistaGombok'
+import JelszoModal from '../common/JelszoModal'
 
 // Az oldalak. Ami még nincs megépítve, az szürke és nem kattintható — nem
 // azért, hogy szép legyen a lista, hanem hogy látszódjon a terv, és ne
@@ -74,6 +75,7 @@ export default function AppShell() {
   const [reszletId, setReszletId] = useState<string | null>(null)
   const [szerkesztId, setSzerkesztId] = useState<string | null>(null)
   const [fiok, setFiok] = useState(false)
+  const [jelszoNyitva, setJelszoNyitva] = useState(false)
 
   useEffect(() => {
     if (!fiok) return
@@ -133,6 +135,9 @@ export default function AppShell() {
         {user && ROLE_LABEL[user.role] !== user.name && (
           <div className="szerep">{ROLE_LABEL[user.role]}</div>
         )}
+        {/* A jelszó mindenkinek kell — az alkalmazott a Felhasználók
+            menüpontot nem is látja. Ezért van itt, a neve alatt. */}
+        <button className="ki" onClick={() => setJelszoNyitva(true)}>Jelszó módosítása</button>
         <button className="ki" onClick={() => void signOut()}>Kilépés</button>
       </div>
     </>
@@ -254,7 +259,6 @@ export default function AppShell() {
             /* A kapacitássávra kattintva átvisz arra a napra — az áttekintés
                akkor hasznos, ha egy kattintással el lehet indulni belőle. */
             <DashboardPage
-              nap={nap}
               onNapra={(d) => { setNap(d.slice(0, 10)); setOldal('nap') }}
             />
           )}
@@ -290,6 +294,15 @@ export default function AppShell() {
           <button className="fiok-hatter" onClick={() => setFiok(false)} aria-label="Menü bezárása" />
           <aside className="fiok">{menuTartalom}</aside>
         </>
+      )}
+
+      {jelszoNyitva && user && (
+        <JelszoModal
+          kinek={user.name}
+          sajat
+          onMent={(mostani, uj) => data.changeOwnPassword(mostani, uj)}
+          onBezar={() => { setJelszoNyitva(false); setFiok(false) }}
+        />
       )}
 
       {ujNyitva && (

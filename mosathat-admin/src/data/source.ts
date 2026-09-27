@@ -132,6 +132,18 @@ export interface DataSource {
   updateStaff(id: string, patch: { full_name?: string; role?: StaffRole; active?: boolean }): Promise<void>
   deleteInvite(email: string): Promise<void>
 
+  /**
+   * A SAJÁT jelszó átírása. A mostanit is meg kell adni: enélkül egy nyitva
+   * felejtett gépnél bárki átvehetné a fiókot.
+   */
+  changeOwnPassword(mostani: string, uj: string): Promise<void>
+
+  /**
+   * Új jelszó valaki MÁSNAK — annak, aki kizárta magát. A jogosultságot az
+   * adatbázis dönti el, nem a felület: tulajdonos csak alkalmazottnak adhat.
+   */
+  setStaffPassword(staffId: string, uj: string): Promise<void>
+
   // --- bérletek és szerződések ---
   listPasses(): Promise<PassBalanceRow[]>
   createPass(input: NewPassInput): Promise<string>

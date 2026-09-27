@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { ROLE_LABEL, ROLE_LEIRAS, type NewStaffInput, type StaffRole, type StaffRow } from '../../lib/types'
+import JelszoModal from '../common/JelszoModal'
 
 // ---------------------------------------------------------------------------
 //  Felhasználók
@@ -170,6 +171,7 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
   const { data } = useApp()
   const [dolgozik, setDolgozik] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
+  const [jelszo, setJelszo] = useState(false)
 
   async function modosit(patch: { role?: StaffRole; active?: boolean }) {
     setDolgozik(true)
@@ -221,11 +223,32 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
       </td>
 
       <td>
-        {kezelheto && (
-          <button className="btn btn-kicsi" disabled={dolgozik}
-                  onClick={() => void modosit({ active: !s.active })}>
-            {s.active ? 'Kikapcsolás' : 'Bekapcsolás'}
-          </button>
+        <div className="sor-gombok">
+          {kezelheto && (
+            <button className="btn btn-kicsi" disabled={dolgozik}
+                    onClick={() => void modosit({ active: !s.active })}>
+              {s.active ? 'Kikapcsolás' : 'Bekapcsolás'}
+            </button>
+          )}
+          {/* Csak annak, akinek már van fiókja: a meghívott a saját maga
+              által megadott jelszóval lép be először. */}
+          {kezelheto && s.id && (
+            <button className="btn btn-kicsi btn-csendes" disabled={dolgozik}
+                    onClick={() => setJelszo(true)}>
+              Új jelszó
+            </button>
+          )}
+        </div>
+
+        {/* A .fedo fixen pozicionált, tehát a táblázatból kilépve, a képernyő
+            fölött jelenik meg — nem a cellán belül szorong. */}
+        {jelszo && s.id && (
+          <JelszoModal
+            kinek={s.full_name}
+            sajat={false}
+            onMent={async (_mostani: string, uj: string) => { await data.setStaffPassword(s.id!, uj) }}
+            onBezar={() => setJelszo(false)}
+          />
         )}
       </td>
     </tr>

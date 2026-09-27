@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { ft, napRovidCim, oraSzam } from '../../lib/format'
+import { ft, hetCim, maStr, napCim, napRovidCim, oraSzam } from '../../lib/format'
 import type { DashboardSummary, WeekDay } from '../../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -35,11 +35,17 @@ const TERHELES_SZO: Record<'jo' | 'szoros' | 'tele', string> = {
 // dátumból: az index már az adatban benne van, és mindig stimmel.
 const NAPOK = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
 
-export default function DashboardPage({ nap, onNapra }: {
-  nap: string
+export default function DashboardPage({ onNapra }: {
   onNapra: (nap: string) => void
 }) {
   const { data } = useApp()
+  // Az Áttekintés MINDIG a mai napról szól, akkor is, ha az Időpontokban épp
+  // jövő csütörtököt nézed. Korábban a közös napválasztót használta, így egy
+  // jövő heti napról átváltva a képernyő annak a napnak az adatait mutatta —
+  // „Ma" felirattal. Ez nem tévedés volt, hanem hazugság: a szám jó volt, a
+  // címke nem. Egy áttekintés, amiben nem lehet megbízni, rosszabb, mintha
+  // ott sem lenne.
+  const nap = maStr()
   const [ossz, setOssz] = useState<DashboardSummary | null>(null)
   const [het, setHet] = useState<WeekDay[]>([])
   const [hiba, setHiba] = useState<string | null>(null)
@@ -73,11 +79,21 @@ export default function DashboardPage({ nap, onNapra }: {
 
   return (
     <div className="oldal" style={tolt ? { opacity: 0.55 } : undefined}>
+      {/* Mindig ki van írva, melyik napról van szó. Enélkül a „Ma" csak egy
+          szó, amiről el kell hinni, hogy igaz. */}
+      <div className="oldal-fej">
+        <h2>Áttekintés</h2>
+        <span className="oldal-datum">{napCim(nap)}</span>
+      </div>
+
       <div className="attekintes">
 
         {/* ---------- MA: egy nagy szám, körülötte a támogató adatok ---------- */}
         <section className="panel kiemelt">
-          <h3>Ma</h3>
+          <h3>
+            Ma
+            <span className="fej-datum">{napRovidCim(nap)}</span>
+          </h3>
           <div className="panel-torzs">
             <div className="hos">
               <div className="hos-cimke">Várható bevétel</div>
@@ -103,7 +119,10 @@ export default function DashboardPage({ nap, onNapra }: {
 
         {/* ---------- A HÉT KAPACITÁSA ---------- */}
         <section className="panel">
-          <h3>A hét kapacitása</h3>
+          <h3>
+            A hét kapacitása
+            <span className="fej-datum">{hetCim(nap)}</span>
+          </h3>
           <div className="panel-torzs">
             <p className="halk" style={{ fontSize: 'var(--m-xs)', marginBottom: 'var(--t3)' }}>
               A lefoglalt munka a napi kapacitás arányában. A kapacitás a munkaidőből

@@ -465,6 +465,19 @@ export class DemoSource implements DataSource {
     await this.rows(`select delete_invite($1)`, [email])
   }
 
+  // A demóban nincs valódi belépés: a belépő képernyőn bármilyen jelszó jó.
+  // Nem teszünk úgy, mintha működne — a hazug „Kész" rosszabb, mint az
+  // őszinte üzenet, mert élesben aztán senki nem próbálná ki újra.
+  async changeOwnPassword(): Promise<void> {
+    throw new Error('A demóban nincs valódi jelszó, ezért nincs mit átírni. '
+      + 'Éles adatbázissal ez a gomb működik.')
+  }
+
+  async setStaffPassword(): Promise<void> {
+    throw new Error('A demóban nincs valódi jelszó, ezért nincs mit átírni. '
+      + 'Éles adatbázissal ez a gomb működik.')
+  }
+
   // --- bérletek és szerződések -----------------------------------------------
 
   async listPasses(): Promise<PassBalanceRow[]> {

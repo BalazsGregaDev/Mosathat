@@ -373,3 +373,10 @@
 }
 .fej-mentes:empty { display: none; }
 .oldal-fej .fej-mentes + .fulek { margin-left: var(--t3); }
+
+/* Két gomb egy táblázatcellában: ne feszítsék szét a sort. */
+.sor-gombok { display: flex; gap: var(--t2); flex-wrap: wrap; }
+
+/* A mező alatti magyarázat, ha épp hibát jelez. A szöveg maga mondja meg,
+   mi a baj — a szín csak megerősíti. */
+.mezo small.hibaszoveg { color: var(--v-baj); }
