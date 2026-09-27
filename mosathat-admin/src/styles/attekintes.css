@@ -523,30 +523,40 @@ button.extra-cimke:disabled { opacity: .55; cursor: default; }
   border-radius: var(--r);
   background: var(--lap-2);
 }
+/* Egy tétel: [pipa név] [i]
+                    ár
+   A név és az ár egymás alatt — a nevek hosszúak, egy sorban az ár elvenné
+   a helyet és minden második név három sorba törne. A súgógomb a jobb felső
+   sarokban, mindig ugyanott, akármilyen hosszú a név. */
 .extra-tetel {
   display: grid;
-  grid-template-columns: auto 1fr;
-  /* A név és az ár egymás alatt: a nevek hosszúak, egy sorban az ár
-     elvenné a helyet és minden második név három sorba törne. */
-  gap: 0 9px;
+  grid-template-columns: 1fr auto;
+  gap: 0 6px;
   align-items: start;
   padding: 7px 8px;
   border-radius: var(--r-sm);
   font-size: var(--m-sm);
   line-height: 1.35;
-  cursor: pointer;
   min-width: 0;
 }
 .extra-tetel:hover { background: var(--lap); }
+
+.extra-valaszt {
+  grid-column: 1; grid-row: 1;
+  display: flex; align-items: start; gap: 9px;
+  cursor: pointer; min-width: 0;
+}
 /* Nagyobb pipa: a mosóállásban vizes kézzel használják. */
 .extra-tetel input {
-  grid-row: 1 / span 2;
+  flex: 0 0 auto;
   width: 16px; height: 16px;
   margin: 1px 0 0; cursor: pointer;
   accent-color: var(--zold);
 }
 .extra-tetel .nev { min-width: 0; }
 .extra-tetel .ar {
+  grid-column: 1; grid-row: 2;
+  padding-left: 25px;                /* a pipa szélessége + a rés */
   font-size: var(--m-xs); color: var(--szoveg-halk);
   font-variant-numeric: tabular-nums;
 }
@@ -556,6 +566,53 @@ button.extra-cimke:disabled { opacity: .55; cursor: default; }
 .extra-tetel[data-kert='true'] { background: var(--zold-halvany); }
 .extra-tetel[data-kert='true'] .nev { font-weight: var(--vastag-eros); color: var(--zold-sotet); }
 .extra-valaszto .ures { grid-column: 1 / -1; }
+
+/* ---------------------------------------------------------------------------
+   Súgó: a karikás „i" és a buborék
+   --------------------------------------------------------------------------- */
+
+.sugo-gomb {
+  grid-column: 2; grid-row: 1;
+  flex: 0 0 auto;
+  width: 17px; height: 17px;
+  margin-top: 1px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--keret-eros);
+  border-radius: 50%;
+  background: var(--lap);
+  color: var(--szoveg-halk);
+  font-family: var(--betu-szam);
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1;
+  cursor: help;
+  padding: 0;
+  transition: border-color var(--atmenet), color var(--atmenet), background var(--atmenet);
+}
+.sugo-gomb:hover, .sugo-gomb[aria-expanded='true'] {
+  border-color: var(--zold); color: var(--zold-sotet); background: var(--zold-halvany);
+}
+.sugo-gomb:focus-visible { outline: 2px solid var(--zold); outline-offset: 1px; }
+
+/* A buborék a képernyőhöz képest áll (a helyét a Sugo.tsx számolja ki), így
+   a szélső oszlopoknál sem lóg ki. */
+.sugo-buborek {
+  position: fixed;
+  z-index: 90;
+  padding: 10px 12px;
+  border: 1px solid var(--keret-eros);
+  border-radius: var(--r);
+  background: var(--lap);
+  box-shadow: 0 8px 24px rgb(0 0 0 / .14);
+  font-size: var(--m-sm);
+  line-height: 1.45;
+  pointer-events: none;      /* ne akadjon az egér útjába, csak mutat */
+}
+.sugo-cim {
+  font-weight: var(--vastag-eros);
+  margin-bottom: 3px;
+}
+.sugo-szoveg { color: var(--szoveg-halk); }
 
 /* Az osztott elrendezésben (foglalás balra, árlista jobbra) a foglalás fele
    olyan széles. Három oszlop ott már nem fér el olvashatóan. */

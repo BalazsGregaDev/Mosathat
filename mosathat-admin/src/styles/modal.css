@@ -321,3 +321,9 @@
 .mennyisegsor input { width: 78px; text-align: center; padding: 6px; }
 .mennyisegsor .egyseg { font-size: var(--m-xs); color: var(--szoveg-halk); width: 42px; }
 .mennyisegsor .ar { font-weight: var(--vastag-eros); min-width: 78px; text-align: right; }
+
+/* A szolgáltatás neve mellett a karikás „i" — a leírás ott van, de csak
+   akkor foglal helyet, amikor kérik. A címkén kívül ül, hogy a megnyitása
+   ne pipálja ki a szolgáltatást. */
+.extra-sav { display: flex; align-items: center; gap: 6px; }
+.extra-sav .extra { flex: 1; min-width: 0; }

@@ -9,6 +9,8 @@ import {
   type DayBooking, type ServiceArea, type VehicleCategory,
 } from '../../lib/types'
 import Szerkesztheto, { type Valaszthato } from '../common/Szerkesztheto'
+import Sugo from '../common/Sugo'
+import { EGYSEG } from '../services/Arlista'
 
 // A legördülők tartalma. A feliratok ugyanabból a szótárból jönnek, mint
 // mindenhol máshol — így nem lehet két különböző neve ugyanannak.
@@ -468,13 +470,18 @@ export default function BookingDetail({
                 {extraNyitva && !lezart && (
                   <div className="extra-valaszto">
                     {valaszthatoExtrak.map((e) => (
-                      <label className="extra-tetel" key={e.id}
-                             data-kert={kertExtrak.has(e.id)}>
-                        <input type="checkbox"
-                               checked={kertExtrak.has(e.id)}
-                               disabled={extraMegy}
-                               onChange={() => void extraBillent(e.id)} />
-                        <span className="nev">{e.name}</span>
+                      <div className="extra-tetel" key={e.id}
+                           data-kert={kertExtrak.has(e.id)}>
+                        {/* A név és a pipa egy címkében: a névre kattintás is
+                            pipál. A súgó viszont KÍVÜL van rajta, különben a
+                            leírás megnyitása felvenné a szolgáltatást. */}
+                        <label className="extra-valaszt">
+                          <input type="checkbox"
+                                 checked={kertExtrak.has(e.id)}
+                                 disabled={extraMegy}
+                                 onChange={() => void extraBillent(e.id)} />
+                          <span className="nev">{e.name}</span>
+                        </label>
                         {/* Aminek nincs ára, az nulla forintot ad a foglaláshoz.
                             Ezt ki kell mondani: telefon közben a „—" jelenthetné
                             azt is, hogy ingyen van. */}
@@ -482,8 +489,13 @@ export default function BookingDetail({
                           !e.requires_quote && !e.price_huf ? ' nincs-ar' : ''}`}>
                           {e.requires_quote ? 'egyedi'
                             : e.price_huf ? ft(e.price_huf) : 'nincs ár'}
+                          {e.price_unit !== 'ALKALOM' && !e.requires_quote && e.price_huf
+                            ? ` / ${EGYSEG[e.price_unit]}` : ''}
                         </span>
-                      </label>
+                        {e.description?.trim() && (
+                          <Sugo cim={e.name} szoveg={e.description} />
+                        )}
+                      </div>
                     ))}
                     {valaszthatoExtrak.length === 0 && (
                       <div className="ures">Nincs felvett egyéb szolgáltatás.</div>

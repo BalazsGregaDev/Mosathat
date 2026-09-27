@@ -8,6 +8,7 @@ import {
   CATEGORY_LABEL, SCOPE_LABEL, type BookingScope, type BookingType,
   type Extra, type LatestStart, type VehicleCategory,
 } from '../../lib/types'
+import Sugo from '../common/Sugo'
 
 const MERETEK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
 const TERJEDELEM: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
@@ -440,22 +441,29 @@ export default function BookingForm({
                   const darabos = e.price_unit === 'ULES' || e.price_unit === 'AJTO' || e.price_unit === 'LITER'
                   return (
                     <div key={e.id}>
-                      <label className="extra" data-aktiv={aktiv}>
-                        <input type="checkbox" checked={aktiv}
-                               onChange={(ev) => extraAllit(e, ev.target.checked)} />
-                        <span className="nev">{e.name}</span>
-                        <span className={`ar ${e.price_huf == null ? 'kerdes' : ''}`}>
-                          {e.requires_quote
-                            ? 'árajánlat'
-                            : e.price_huf == null
-                              ? 'ár hiányzik'
-                              : `${ft(e.price_huf)}${
-                                  e.price_unit === 'ULES' ? ' / ülés'
-                                  : e.price_unit === 'AJTO' ? ' / ajtó'
-                                  : e.price_unit === 'LITER' ? ' / liter' : ''
-                                }`}
-                        </span>
-                      </label>
+                      {/* A súgó a címkén KÍVÜL van: ha belül lenne, a leírás
+                          megnyitása egyben fel is venné a szolgáltatást. */}
+                      <div className="extra-sav">
+                        <label className="extra" data-aktiv={aktiv}>
+                          <input type="checkbox" checked={aktiv}
+                                 onChange={(ev) => extraAllit(e, ev.target.checked)} />
+                          <span className="nev">{e.name}</span>
+                          <span className={`ar ${e.price_huf == null ? 'kerdes' : ''}`}>
+                            {e.requires_quote
+                              ? 'árajánlat'
+                              : e.price_huf == null
+                                ? 'ár hiányzik'
+                                : `${ft(e.price_huf)}${
+                                    e.price_unit === 'ULES' ? ' / ülés'
+                                    : e.price_unit === 'AJTO' ? ' / ajtó'
+                                    : e.price_unit === 'LITER' ? ' / liter' : ''
+                                  }`}
+                          </span>
+                        </label>
+                        {e.description?.trim() && (
+                          <Sugo cim={e.name} szoveg={e.description} />
+                        )}
+                      </div>
 
                       {aktiv && darabos && (
                         <div className="mennyiseg">
