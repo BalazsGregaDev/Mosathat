@@ -7,6 +7,7 @@ import {
   type CustomerSummary, type VehicleSummary,
 } from '../../lib/types'
 import Szerkesztheto, { type Valaszthato } from '../common/Szerkesztheto'
+import KartyaFej from '../common/KartyaFej'
 
 // ---------------------------------------------------------------------------
 //  Ügyfelek — egy oldal, két rendezés.
@@ -33,37 +34,6 @@ const TIPUSOK: Valaszthato[] = [
   { ertek: 'MAGAN', cimke: 'Magánszemély' },
   { ertek: 'CEG', cimke: 'Cég' },
 ]
-
-// ---------------------------------------------------------------------------
-//  Kártyafejléc — rákattintva nyílik ki a többi adat
-//
-//  Alaphelyzetben három dolog látszik: név, rendszám, telefonszám. Ez az,
-//  amivel keresni szoktak — „a fehér Octavia, Anita, valami 30-as szám".
-//  A többi (márka, ülésszám, költés, jegyzet) akkor kell, amikor épp azt
-//  keresed, és addig csak nyújtja a listát.
-//
-//  A rendszám és a név közül az egyik mindig a kártya CÍME: járműnézetben a
-//  rendszám, ügyfélnézetben a név. Ezért nem ismételjük meg alatta külön
-//  sorban — ugyanaz az adat kétszer egy háromsoros kártyán zaj lenne.
-// ---------------------------------------------------------------------------
-
-function KartyaFej({ nyitva, onValt, children }: {
-  nyitva: boolean
-  onValt: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <h3 className="kartya-fej">
-      <button type="button" className="kartya-nyito" aria-expanded={nyitva} onClick={onValt}>
-        <span className="cim">{children}</span>
-        <span className="nyil" aria-hidden="true">›</span>
-        <span className="csakolvaso">
-          {nyitva ? 'további adatok elrejtése' : 'további adatok megjelenítése'}
-        </span>
-      </button>
-    </h3>
-  )
-}
 
 export default function CustomersPage() {
   const { data } = useApp()

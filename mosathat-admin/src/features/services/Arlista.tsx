@@ -4,6 +4,7 @@ import {
   type BookingScope, type Package, type ServiceArea, type VehicleCategory,
 } from '../../lib/types'
 import type { Catalog } from '../../data'
+import Sugo from '../common/Sugo'
 
 // ---------------------------------------------------------------------------
 //  Az árlista tartalma — egy helyen leírva.
@@ -114,26 +115,76 @@ export function CsomagArak({ k, tomor }: { k: Catalog; tomor?: boolean }) {
   )
 }
 
-/** Extrák: ár, időigény, leírás. A leírás az, amit telefonban felolvasol. */
-export function ExtraLista({ k, q, onQ }: {
+/** Extrák: ár, időigény, leírás. A leírás az, amit telefonban felolvasol.
+ *
+ *  Két alakja van. Teljes szélességben a leírás külön oszlopban áll — ott van
+ *  hely rá. A csomagok MELLETT viszont (tomor) a leírás a karikás „i" alá
+ *  kerül: a név és az ár így is elfér egy fél hasábban, a leírás meg ott
+ *  van, amikor kérik. Ugyanaz az adat, két sűrűség — nem két lista. */
+export function ExtraLista({ k, q, onQ, tomor }: {
   k: Catalog
   q: string
   onQ: (v: string) => void
+  tomor?: boolean
 }) {
   const keresett = k.extras.filter((e) =>
     e.active && (q === '' || e.name.toLowerCase().includes(q.toLowerCase())
                  || (e.description ?? '').toLowerCase().includes(q.toLowerCase())))
 
+  const kereso = (
+    <input
+      className="beviteli"
+      style={{ marginBottom: 'var(--t3)' }}
+      value={q}
+      onChange={(e) => onQ(e.target.value)}
+      placeholder="Keresés név vagy leírás szerint"
+      aria-label="Keresés a szolgáltatások között"
+    />
+  )
+
+  if (tomor) {
+    return (
+      <>
+        {kereso}
+        <div className="panel">
+          <div className="panel-torzs">
+            <table className="lista extra-tomor">
+              <thead>
+                <tr><th>Szolgáltatás</th><th>Ár</th><th>Idő</th></tr>
+              </thead>
+              <tbody>
+                {keresett.map((e) => (
+                  <tr key={e.id}>
+                    <th scope="row">
+                      <span className="nev">{e.name}</span>
+                      {e.description?.trim() && <Sugo cim={e.name} szoveg={e.description} />}
+                      {e.recommends_overnight && (
+                        <span className="cimke-pill" data-r="figyelem">éjszakára</span>
+                      )}
+                    </th>
+                    <td className="szam">
+                      {e.requires_quote ? 'egyedi' : ft(e.price_huf)}
+                      {e.price_unit !== 'ALKALOM' && !e.requires_quote && (
+                        <span className="halk"> / {EGYSEG[e.price_unit]}</span>
+                      )}
+                    </td>
+                    <td className="szam">{idotartam(e.work_minutes)}</td>
+                  </tr>
+                ))}
+                {keresett.length === 0 && (
+                  <tr><td colSpan={3}><div className="ures">Nincs találat.</div></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
-      <input
-        className="beviteli"
-        style={{ marginBottom: 'var(--t3)' }}
-        value={q}
-        onChange={(e) => onQ(e.target.value)}
-        placeholder="Keresés név vagy leírás szerint"
-        aria-label="Keresés a szolgáltatások között"
-      />
+      {kereso}
       <div className="panel panelek-szeles">
         <div className="panel-torzs">
           <div className="tablagorgo">

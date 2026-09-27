@@ -1,15 +1,27 @@
 /* Áttekintés és Beállítások. */
 
-/* A két felső panel egymás mellett: bal oldalon a mai nap, jobbra ami
-   közbeszólhat. Ez az a két dolog, amit reggel meg kell nézni. */
+/* Négy panel, két hasábban — a képernyő teljes szélességében.
+
+     Ma                  |  A hét kapacitása
+     Leggyakoribb        |  Figyelmet igényel
+
+   Felül az, ami MOST van: a mai bevétel és a hét terhelése. Alul az, ami a
+   döntést segíti: mit rendelnek, és mi az, ami közbeszólhat.
+
+   A panelek a tetejükhöz igazodnak (align-items: start), tehát egy hosszabb
+   panel nem nyújtja meg a mellette állót üres helyre. */
 .attekintes {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--t4);
   align-items: start;
 }
-@media (max-width: 900px) {
+/* Ha nincs figyelmeztetés, a mellette álló panel átveszi a helyét. */
+.attekintes .teljes-sor { grid-column: 1 / -1; }
+
+@media (max-width: 1000px) {
   .attekintes { grid-template-columns: 1fr; }
+  .attekintes .teljes-sor { grid-column: auto; }
 }
 
 /* --- a nagy szám ------------------------------------------------------------ */

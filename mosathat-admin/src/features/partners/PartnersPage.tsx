@@ -7,6 +7,7 @@ import {
   type ContractRow, type ContractSize, type ContractTier,
   type PassBalanceRow, type SearchHit, type ValidityKind, type VehicleCategory,
 } from '../../lib/types'
+import KartyaFej from '../common/KartyaFej'
 
 const TIERS: ContractTier[] = ['NORMAL', 'PREMIUM']
 const SIZES: ContractSize[] = ['NORMAL', 'NAGY']
@@ -89,19 +90,13 @@ export default function PartnersPage() {
             <div className="panel"><div className="ures">Még nincs bérlet.</div></div>
           )}
 
-          <div className="panelek">
+          <div className="panelek panelek-ugyfel">
             {berletek.map(({ fej, tetelek }) => {
               const osszes = tetelek.reduce((a, t) => a + t.qty_total, 0)
               const maradt = tetelek.reduce((a, t) => a + t.qty_left, 0)
               return (
-                <div className="panel" key={fej.pass_id} data-lejart={fej.lejart}>
-                  <h3>
-                    {fej.customer_name}
-                    <span className="szam" style={{ textTransform: 'none', letterSpacing: 0 }}>
-                      {maradt}/{osszes} alkalom
-                    </span>
-                  </h3>
-                  <div className="panel-torzs">
+                <BerletKartya key={fej.pass_id} lejart={fej.lejart}
+                              cim={fej.customer_name} maradt={maradt} osszes={osszes}>
                     <div className="adatsor">
                       <span>{fej.pass_name}</span>
                       <span className="ertek">{ft(fej.price_huf)}</span>
@@ -148,8 +143,7 @@ export default function PartnersPage() {
                         Kivezetés
                       </button>
                     )}
-                  </div>
-                </div>
+                </BerletKartya>
               )
             })}
           </div>
@@ -167,20 +161,16 @@ export default function PartnersPage() {
             <div className="panel"><div className="ures">Még nincs szerződéses cég.</div></div>
           )}
 
-          <div className="panelek">
+          <div className="panelek panelek-ugyfel">
             {contracts.map((c) => (
-              <div className="panel" key={c.id}>
-                <h3>{c.company_name ?? c.customer_name}</h3>
-                <div className="panel-torzs">
+              <CegKartya key={c.id} cim={c.company_name ?? c.customer_name}
+                         nev={c.customer_name} hozomViszem={c.pickup_delivery}
+                         arDb={c.prices.length}>
                   {c.tax_number && (
                     <div className="adatsor">
                       <span>Adószám</span><span className="ertek">{c.tax_number}</span>
                     </div>
                   )}
-                  <div className="adatsor">
-                    <span>Hozom-viszem</span>
-                    <span className="ertek">{c.pickup_delivery ? 'igen' : 'nem'}</span>
-                  </div>
 
                   <table className="artabla keskeny" style={{ marginTop: 'var(--t3)' }}>
                     <thead>
@@ -208,8 +198,7 @@ export default function PartnersPage() {
                           onClick={() => setSzerkContract(c)}>
                     Szerkesztés
                   </button>
-                </div>
-              </div>
+              </CegKartya>
             ))}
           </div>
         </>
@@ -580,6 +569,77 @@ function ContractForm({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+//  Kártyák — csukva a lényeg, nyitva a részletek
+//
+//  Ugyanaz az elrendezés, mint az Ügyfelek menüpontban: hat kártya fér egy
+//  sorba, és csak az van kint, amivel keresni szoktak. Egy bérletnél ez az,
+//  hogy kié és hány alkalom van még rajta; egy szerződésnél az, hogy melyik
+//  cég és van-e hozom-viszem. A tételek és az árak egy kattintásra vannak.
+// ---------------------------------------------------------------------------
+
+function BerletKartya({ cim, maradt, osszes, lejart, children }: {
+  cim: string
+  maradt: number
+  osszes: number
+  lejart: boolean
+  children: React.ReactNode
+}) {
+  const [nyitva, setNyitva] = useState(false)
+  return (
+    <div className="panel" data-lejart={lejart} data-nyitva={nyitva}>
+      <KartyaFej nyitva={nyitva} onValt={() => setNyitva(!nyitva)}>
+        {cim}
+      </KartyaFej>
+      <div className="panel-torzs">
+        <div className="adatsor">
+          <span>Hátralévő</span>
+          <span className="ertek szam">
+            {maradt}/{osszes}
+            {lejart && <span style={{ color: 'var(--v-baj)' }}> · lejárt</span>}
+          </span>
+        </div>
+        {nyitva && children}
+      </div>
+    </div>
+  )
+}
+
+function CegKartya({ cim, nev, hozomViszem, arDb, children }: {
+  cim: string
+  nev: string
+  hozomViszem: boolean
+  arDb: number
+  children: React.ReactNode
+}) {
+  const [nyitva, setNyitva] = useState(false)
+  return (
+    <div className="panel" data-nyitva={nyitva}>
+      <KartyaFej nyitva={nyitva} onValt={() => setNyitva(!nyitva)}>
+        {cim}
+      </KartyaFej>
+      <div className="panel-torzs">
+        {cim !== nev && (
+          <div className="adatsor">
+            <span>Kapcsolattartó</span><span className="ertek">{nev}</span>
+          </div>
+        )}
+        <div className="adatsor">
+          <span>Hozom-viszem</span>
+          <span className="ertek">{hozomViszem ? 'igen' : 'nem'}</span>
+        </div>
+        {!nyitva && (
+          <div className="adatsor">
+            <span>Egyedi ár</span>
+            <span className="ertek szam">{arDb}</span>
+          </div>
+        )}
+        {nyitva && children}
       </div>
     </div>
   )

@@ -69,6 +69,7 @@ export default function DashboardPage({ nap, onNapra }: {
 
   const ma = ossz.ma
   const csucs = Math.max(1, ...ossz.nepszeru.map((n) => n.db))
+  const gondokVannak = ossz.gondok.length > 0
 
   return (
     <div className="oldal" style={tolt ? { opacity: 0.55 } : undefined}>
@@ -100,15 +101,55 @@ export default function DashboardPage({ nap, onNapra }: {
           </div>
         </section>
 
-        {/* ---------- FIGYELMET IGÉNYEL ---------- */}
+        {/* ---------- A HÉT KAPACITÁSA ---------- */}
         <section className="panel">
-          <h3>Figyelmet igényel</h3>
+          <h3>A hét kapacitása</h3>
           <div className="panel-torzs">
-            {ossz.gondok.length === 0 ? (
+            <p className="halk" style={{ fontSize: 'var(--m-xs)', marginBottom: 'var(--t3)' }}>
+              A lefoglalt munka a napi kapacitás arányában. A kapacitás a munkaidőből
+              és a párhuzamosan mosott autók számából jön, nem a nyitvatartásból.
+            </p>
+            <div className="meterek">
+              {het.map((d) => <MeterSor key={d.nap} d={d} ma={ossz.nap.slice(0, 10)} onNapra={onNapra} />)}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- LEGGYAKORIBB ----------
+            Ha nincs figyelmeztetés, ez a panel a teljes sort elfoglalja —
+            különben üresen maradna mellette a fél képernyő. */}
+        <section className={`panel${gondokVannak ? '' : ' teljes-sor'}`}>
+          <h3>Leggyakoribb az elmúlt 90 napban</h3>
+          <div className="panel-torzs">
+            {ossz.nepszeru.length === 0 ? (
               <p className="halk" style={{ fontSize: 'var(--m-sm)' }}>
-                Most nincs semmi, ami közbeszólna.
+                Még nincs elég lezárt munka.
               </p>
             ) : (
+              <div className="rangsor">
+                {ossz.nepszeru.map((n) => (
+                  <div className="rangsor-sor" key={n.nev}>
+                    <div className="rangsor-nev">{n.nev}</div>
+                    <div className="rangsor-sav">
+                      <div className="rud" style={{ width: `${(n.db / csucs) * 100}%` }} />
+                    </div>
+                    <div className="rangsor-szam">{n.db}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ---------- FIGYELMET IGÉNYEL ----------
+            Csak akkor van itt, ha tényleg van mit mondania. Egy panel, ami
+            minden reggel azt írja, hogy „most nincs semmi", pár nap alatt
+            láthatatlanná válik — és akkor sem nézünk rá, amikor van benne
+            valami. Inkább ne legyen ott, amíg nincs mit jelenteni. */}
+        {gondokVannak && (
+          <section className="panel">
+            <h3>Figyelmet igényel</h3>
+            <div className="panel-torzs">
               <ul className="gondok">
                 {ossz.gondok.map((g, i) => (
                   <li key={i} data-suly={g.suly}>
@@ -118,48 +159,10 @@ export default function DashboardPage({ nap, onNapra }: {
                   </li>
                 ))}
               </ul>
-            )}
-          </div>
-        </section>
-      </div>
-
-      {/* ---------- A HÉT KAPACITÁSA ---------- */}
-      <section className="panel panelek-szeles" style={{ marginTop: 'var(--t4)' }}>
-        <h3>A hét kapacitása</h3>
-        <div className="panel-torzs">
-          <p className="halk" style={{ fontSize: 'var(--m-xs)', marginBottom: 'var(--t3)' }}>
-            A lefoglalt munka a napi kapacitás arányában. A kapacitás a munkaidőből
-            és a párhuzamosan mosott autók számából jön, nem a nyitvatartásból.
-          </p>
-          <div className="meterek">
-            {het.map((d) => <MeterSor key={d.nap} d={d} ma={ossz.nap.slice(0, 10)} onNapra={onNapra} />)}
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- LEGGYAKORIBB ---------- */}
-      <section className="panel panelek-szeles" style={{ marginTop: 'var(--t4)' }}>
-        <h3>Leggyakoribb az elmúlt 90 napban</h3>
-        <div className="panel-torzs">
-          {ossz.nepszeru.length === 0 ? (
-            <p className="halk" style={{ fontSize: 'var(--m-sm)' }}>
-              Még nincs elég lezárt munka.
-            </p>
-          ) : (
-            <div className="rangsor">
-              {ossz.nepszeru.map((n) => (
-                <div className="rangsor-sor" key={n.nev}>
-                  <div className="rangsor-nev">{n.nev}</div>
-                  <div className="rangsor-sav">
-                    <div className="rud" style={{ width: `${(n.db / csucs) * 100}%` }} />
-                  </div>
-                  <div className="rangsor-szam">{n.db}</div>
-                </div>
-              ))}
             </div>
-          )}
-        </div>
-      </section>
+          </section>
+        )}
+      </div>
     </div>
   )
 }

@@ -47,8 +47,16 @@ export default function UsersPage() {
   if (hiba) return <div className="oldal"><div className="hibauzenet">{hiba}</div></div>
   if (!sorok) return <div className="oldal"><div className="betolt">Betöltés…</div></div>
 
-  const meglevo = sorok.filter((s) => !s.meghivo)
-  const meghivok = sorok.filter((s) => s.meghivo)
+  // A fejlesztői hozzáférés a rendszert karbantartó fiók, nem a vállalkozás
+  // dolgozója. A tulajdonos nem tudja kezelni, nem is tartozik rá — ezért
+  // nem is látja: sem a listában, sem a szerepkörök magyarázatában. Egy sor,
+  // amin semmit nem lehet csinálni, csak kérdést szül.
+  const lathato = (s: StaffRow) => fejleszto || s.role !== 'SUPERADMIN'
+  const meglevo = sorok.filter((s) => !s.meghivo && lathato(s))
+  const meghivok = sorok.filter((s) => s.meghivo && lathato(s))
+  const szerepek: StaffRole[] = fejleszto
+    ? ['SUPERADMIN', 'TULAJDONOS', 'STAFF']
+    : ['TULAJDONOS', 'STAFF']
 
   return (
     <div className="oldal">
@@ -79,9 +87,8 @@ export default function UsersPage() {
                 <tr>
                   <th>Név</th>
                   <th>Szerepkör</th>
-                  <th>Belépés</th>
                   <th>Állapot</th>
-                  <th />
+                  <th>Hozzáférés</th>
                 </tr>
               </thead>
               <tbody>
@@ -132,7 +139,7 @@ export default function UsersPage() {
         <h3>Mit jelentenek a szerepkörök</h3>
         <div className="panel-torzs">
           <dl className="szerepek">
-            {(['SUPERADMIN', 'TULAJDONOS', 'STAFF'] as StaffRole[]).map((r) => (
+            {szerepek.map((r) => (
               <div key={r}>
                 <dt><span className="cimke-pill" data-r={r}>{ROLE_LABEL[r]}</span></dt>
                 <dd>{ROLE_LEIRAS[r]}</dd>
@@ -207,10 +214,6 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
         )}
       </td>
 
-      <td className="halk">
-        {s.belepett_mar ? 'volt már' : 'még nem lépett be'}
-      </td>
-
       <td>
         {s.active
           ? <span className="cimke-pill" data-r="aktiv">Aktív</span>
@@ -221,7 +224,7 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
         {kezelheto && (
           <button className="btn btn-kicsi" disabled={dolgozik}
                   onClick={() => void modosit({ active: !s.active })}>
-            {s.active ? 'Kikapcsolás' : 'Visszakapcsolás'}
+            {s.active ? 'Kikapcsolás' : 'Bekapcsolás'}
           </button>
         )}
       </td>

@@ -1,6 +1,12 @@
 /* Belső oldalak: Szolgáltatások, Cégek és bérletesek. */
 
-.oldal { max-width: 1100px; }
+/* Nincs szélességi korlát: a tartalom kitölti a rendelkezésre álló helyet.
+   Egy 1100px-es sáv egy 1920-as monitoron azt jelentette, hogy a jobb
+   harmad üresen állt, miközben a kártyák szorongtak. Ahol a sorhossz
+   tényleg számít (hosszú magyarázó szöveg), ott a szöveg kap korlátot,
+   nem az egész oldal. */
+.oldal { max-width: none; }
+.oldal > .magyarazat, .oldal-fej + .magyarazat { max-width: 90ch; }
 
 .oldal-fej {
   display: flex; align-items: center; gap: var(--t4);
@@ -92,6 +98,27 @@
 .extrasor .fo {
   display: flex; align-items: center; gap: var(--t3);
   padding: var(--t2) var(--t4);
+}
+
+/* A csomagok MELLETT a hasáb keskeny: ott a név a saját sorát kapja, alatta
+   az ár és az időtartam egymás mellett. Egy sorba préselve a név három
+   sorba törne, a mezők meg egymás alá csúsznának középre — pont úgy nézett
+   ki, mintha elromlott volna. */
+.szolg-jobb .extrasor .fo {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  column-gap: var(--t2);
+  padding: var(--t2) var(--t3);
+}
+.szolg-jobb .extrasor .nev { justify-content: flex-start; }
+.szolg-jobb .szammezo input { width: 68px; }
+.szolg-jobb .szammezo .suffix { min-width: 34px; }
+.szolg-jobb .extrasor .reszletek { padding: 0 var(--t3) var(--t3); }
+
+@media (max-width: 1400px) {
+  .szolg-jobb .extrasor .fo { grid-template-columns: 1fr; row-gap: 6px; }
+  .szolg-jobb .extrasor .szammezo { justify-self: start; }
 }
 .extrasor .nev {
   flex: 1; min-width: 0; text-align: left;
@@ -235,7 +262,10 @@
    telefonszám. A többi egy kattintásra. */
 
 /* Keskenyebb kártyák: egy sorba több fér, kevesebbet kell görgetni. */
-.panelek-ugyfel { grid-template-columns: repeat(auto-fill, minmax(238px, 1fr)); }
+/* Hat kártya fér egy sorba egy teljes képernyős ablakban. Kisebb ablaknál
+   a böngésző magától tör: az auto-fill annyi hasábot rak ki, amennyi
+   elfér, tehát nincs külön töréspont, amit karban kellene tartani. */
+.panelek-ugyfel { grid-template-columns: repeat(auto-fill, minmax(212px, 1fr)); }
 .panelek-ugyfel .panel-torzs { padding: var(--t2) var(--t3) var(--t3); }
 .panelek-ugyfel .adatsor { padding: 5px 0; }
 /* Az utolsó sor alatt nem kell elválasztó: ott a kártya kerete zár. */
@@ -277,3 +307,69 @@
 .kartya-nyito:hover .nyil { color: var(--zold); }
 
 .panelek-ugyfel .panel[data-nyitva='true'] { border-color: var(--keret-eros); }
+
+/* A kinyitott kártya két hasábot foglal. Csukva három adat van benne, oda
+   elég egy keskeny hasáb — nyitva viszont táblázatok és hosszabb sorok
+   jönnek elő, amik egy 210 pixeles hasábban három sorba törnének. */
+.panelek-ugyfel .panel[data-nyitva='true'] { grid-column: span 2; }
+@media (max-width: 560px) {
+  .panelek-ugyfel .panel[data-nyitva='true'] { grid-column: auto; }
+}
+
+/* A bérletkártyán a tételek táblája: keskeny hasábban se törjön szét. */
+.panelek-ugyfel .artabla.keskeny { min-width: 0; }
+.panelek-ugyfel .artabla.keskeny th[scope='row'] { white-space: normal; }
+.panelek-ugyfel .artabla.keskeny td { white-space: nowrap; }
+.panelek-ugyfel .savtart { width: 60px !important; }
+
+/* ===========================================================================
+   Szolgáltatások — csomagok és egyéb szolgáltatások egymás mellett
+   ===========================================================================
+   Az egyéb szolgáltatások listája soronként egy név és egy ár. Külön lapon
+   ez egy csaknem üres képernyő, miközben telefonáláskor sokszor épp a kettő
+   együtt kell: „a Premium ennyi, a kárpittisztítás külön ennyi".
+
+   A töréspont párja a ServicesView-ban van (KETTO_PX). Ha az egyiket
+   átírod, a másikat is. */
+.szolg-ketto {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: var(--t4);
+  align-items: start;
+}
+.szolg-jobb { position: sticky; top: 0; }
+.szolg-cim {
+  display: flex; align-items: center; gap: var(--t2);
+  font-size: var(--m-xs); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  margin-bottom: var(--t3);
+}
+
+/* A tömör lista fél hasábban is elfér: nincs leírás-oszlop, a leírás a
+   karikás „i" alatt van. Ezért a min-width sem kell — nem görget. */
+.extra-tomor { min-width: 0; }
+.extra-tomor tbody th { width: auto; }
+.extra-tomor tbody th .nev { margin-right: 6px; }
+.extra-tomor th[scope='row'] {
+  display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap;
+  font-weight: var(--vastag-kozep);
+}
+.extra-tomor td { white-space: nowrap; text-align: right; }
+.extra-tomor thead th:not(:first-child) { text-align: right; }
+.extra-tomor .cimke-pill { font-size: 9px; }
+
+@media (max-width: 1179px) {
+  .szolg-ketto { grid-template-columns: 1fr; }
+  .szolg-jobb { position: static; }
+}
+
+/* A lap fejlécének jobb oldala: ide kerül a mentés gomb, egy vonalba a
+   fülekkel. A margin-left: auto tolja jobbra; a fülek utána következnek,
+   ezért a saját margin-left: auto-juk már nem tol semmit. */
+.fej-mentes {
+  display: flex; align-items: center; gap: var(--t3);
+  margin-left: auto;
+  font-size: var(--m-sm);
+}
+.fej-mentes:empty { display: none; }
+.oldal-fej .fej-mentes + .fulek { margin-left: var(--t3); }

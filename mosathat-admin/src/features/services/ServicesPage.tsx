@@ -9,6 +9,8 @@ import {
 } from '../../lib/types'
 import type { Catalog } from '../../data'
 import { CsomagTartalom, Tobblet } from './Arlista'
+import { KETTO_PX } from './ServicesView'
+import { useSzeles } from '../../state/useSzeles'
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
 const TERJEDELMEK: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
@@ -85,6 +87,9 @@ export default function ServicesPage() {
   const { data, catalog } = useApp()
   const [k, setK] = useState<Catalog | null>(catalog)
   const [ful, setFul] = useState<'csomagok' | 'tartalom' | 'extrak'>('csomagok')
+  // Széles képernyőn a csomagok mellé fér az egyéb szolgáltatások listája is:
+  // soronként egy név, egy ár és egy időtartam. Keskenyen külön fülre megy.
+  const szeles = useSzeles(KETTO_PX)
 
   const ujra = useCallback(async () => {
     setK(await data.getCatalog())
@@ -118,10 +123,12 @@ export default function ServicesPage() {
           <button className={ful === 'tartalom' ? 'aktiv' : ''} onClick={() => setFul('tartalom')}>
             Mi van bennük?
           </button>
-          <button className={ful === 'extrak' ? 'aktiv' : ''} onClick={() => setFul('extrak')}>
-            Egyéb szolgáltatások
-            {hianyzoExtraAr > 0 && <span className="jelzo">{hianyzoExtraAr}</span>}
-          </button>
+          {!szeles && (
+            <button className={ful === 'extrak' ? 'aktiv' : ''} onClick={() => setFul('extrak')}>
+              Egyéb szolgáltatások
+              {hianyzoExtraAr > 0 && <span className="jelzo">{hianyzoExtraAr}</span>}
+            </button>
+          )}
         </div>
       </div>
 
@@ -138,113 +145,140 @@ export default function ServicesPage() {
       )}
 
       {ful === 'csomagok' && (
-        <div className="panelek panelek-szeles">
-          {k.packages.map((p) => (
-            <div className="panel" key={p.id}>
-              {/* Ugyanaz az egysoros összefoglaló, mint az alkalmazotti
-                  nézetben és az árlista ablakban — ne kelljen két helyen
-                  fejben tartani, mi a különbség a csomagok között. */}
-              <h3 className="csomag-cim">
-                {p.name}
-                <Tobblet k={k} packageId={p.id} />
-              </h3>
-              <div className="panel-torzs">
-                <p className="halk" style={{ fontSize: 'var(--m-sm)', marginBottom: 'var(--t3)' }}>
-                  {p.description}
-                </p>
+        <div className={szeles ? 'szolg-ketto' : undefined}>
+          <div className="szolg-bal">
+          <div className="panelek panelek-szeles">
+            {k.packages.map((p) => (
+              <div className="panel" key={p.id}>
+                {/* Ugyanaz az egysoros összefoglaló, mint az alkalmazotti
+                    nézetben és az árlista ablakban — ne kelljen két helyen
+                    fejben tartani, mi a különbség a csomagok között. */}
+                <h3 className="csomag-cim">
+                  {p.name}
+                  <Tobblet k={k} packageId={p.id} />
+                </h3>
+                <div className="panel-torzs">
+                  <p className="halk" style={{ fontSize: 'var(--m-sm)', marginBottom: 'var(--t3)' }}>
+                    {p.description}
+                  </p>
 
-                <div className="tablagorgo">
-                <table className="artabla">
-                  <thead>
-                    <tr>
-                      <th />
-                      {TERJEDELMEK.map((s) => (
-                        <th key={s} colSpan={2}>{SCOPE_LABEL[s]}</th>
-                      ))}
-                    </tr>
-                    <tr className="alfejlec">
-                      <th />
-                      {TERJEDELMEK.map((s) => [
-                        <th key={s + 'a'}>Ár</th>,
-                        <th key={s + 'i'}>Perc</th>,
-                      ])}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {KATEGORIAK.map((c) => (
-                      <tr key={c}>
-                        <th scope="row">{CATEGORY_SHORT[c]}</th>
-                        {TERJEDELMEK.map((s) => {
-                          const sor = ar(p, c, s)
-                          return [
-                            <td key={s + 'a'}>
-                              <SzamMezo
-                                cimke={`${p.name} · ${CATEGORY_SHORT[c]} · ${SCOPE_LABEL[s]} ára`}
-                                ertek={sor?.price_huf ?? null}
-                                lepes={100}
-                                onMent={async (v) => {
-                                  await data.updatePackagePrice(p.id, c, s, {
-                                    price_huf: v,
-                                    duration_minutes: sor?.duration_minutes ?? null,
-                                  })
-                                  await ujra()
-                                }}
-                              />
-                            </td>,
-                            <td key={s + 'i'}>
-                              <SzamMezo
-                                cimke={`${p.name} · ${CATEGORY_SHORT[c]} · ${SCOPE_LABEL[s]} időtartama`}
-                                ertek={sor?.duration_minutes ?? null}
-                                lepes={15}
-                                onMent={async (v) => {
-                                  await data.updatePackagePrice(p.id, c, s, {
-                                    price_huf: sor?.price_huf ?? null,
-                                    duration_minutes: v,
-                                  })
-                                  await ujra()
-                                }}
-                              />
-                            </td>,
-                          ]
-                        })}
+                  <div className="tablagorgo">
+                  <table className="artabla">
+                    <thead>
+                      <tr>
+                        <th />
+                        {TERJEDELMEK.map((s) => (
+                          <th key={s} colSpan={2}>{SCOPE_LABEL[s]}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-                </div>
-
-                <div className="fsrész">
-                  <div className="cimke">Full Service (mélytisztítás)</div>
-                  <table className="artabla keskeny">
+                      <tr className="alfejlec">
+                        <th />
+                        {TERJEDELMEK.map((s) => [
+                          <th key={s + 'a'}>Ár</th>,
+                          <th key={s + 'i'}>Perc</th>,
+                        ])}
+                      </tr>
+                    </thead>
                     <tbody>
-                      {KATEGORIAK.map((c) => {
-                        const sor = fsAr(p, c)
-                        return (
-                          <tr key={c}>
-                            <th scope="row">{CATEGORY_SHORT[c]}</th>
-                            <td>
-                              <SzamMezo
-                                cimke={`${p.name} Full Service · ${CATEGORY_SHORT[c]} ára`}
-                                ertek={sor?.price_huf ?? null}
-                                hianyzoJelzes={!sor?.requires_quote}
-                                onMent={async (v) => {
-                                  await data.updateFullServicePrice(p.id, c, { price_huf: v })
-                                  await ujra()
-                                }}
-                              />
-                            </td>
-                            <td className="halk" style={{ fontSize: 'var(--m-xs)' }}>
-                              {sor?.requires_quote ? 'árajánlatos' : 'saját ár, nem csomag + extra'}
-                            </td>
-                          </tr>
-                        )
-                      })}
+                      {KATEGORIAK.map((c) => (
+                        <tr key={c}>
+                          <th scope="row">{CATEGORY_SHORT[c]}</th>
+                          {TERJEDELMEK.map((s) => {
+                            const sor = ar(p, c, s)
+                            return [
+                              <td key={s + 'a'}>
+                                <SzamMezo
+                                  cimke={`${p.name} · ${CATEGORY_SHORT[c]} · ${SCOPE_LABEL[s]} ára`}
+                                  ertek={sor?.price_huf ?? null}
+                                  lepes={100}
+                                  onMent={async (v) => {
+                                    await data.updatePackagePrice(p.id, c, s, {
+                                      price_huf: v,
+                                      duration_minutes: sor?.duration_minutes ?? null,
+                                    })
+                                    await ujra()
+                                  }}
+                                />
+                              </td>,
+                              <td key={s + 'i'}>
+                                <SzamMezo
+                                  cimke={`${p.name} · ${CATEGORY_SHORT[c]} · ${SCOPE_LABEL[s]} időtartama`}
+                                  ertek={sor?.duration_minutes ?? null}
+                                  lepes={15}
+                                  onMent={async (v) => {
+                                    await data.updatePackagePrice(p.id, c, s, {
+                                      price_huf: sor?.price_huf ?? null,
+                                      duration_minutes: v,
+                                    })
+                                    await ujra()
+                                  }}
+                                />
+                              </td>,
+                            ]
+                          })}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
+                  </div>
+
+                  <div className="fsrész">
+                    <div className="cimke">Full Service (mélytisztítás)</div>
+                    <table className="artabla keskeny">
+                      <tbody>
+                        {KATEGORIAK.map((c) => {
+                          const sor = fsAr(p, c)
+                          return (
+                            <tr key={c}>
+                              <th scope="row">{CATEGORY_SHORT[c]}</th>
+                              <td>
+                                <SzamMezo
+                                  cimke={`${p.name} Full Service · ${CATEGORY_SHORT[c]} ára`}
+                                  ertek={sor?.price_huf ?? null}
+                                  hianyzoJelzes={!sor?.requires_quote}
+                                  onMent={async (v) => {
+                                    await data.updateFullServicePrice(p.id, c, { price_huf: v })
+                                    await ujra()
+                                  }}
+                                />
+                              </td>
+                              <td className="halk" style={{ fontSize: 'var(--m-xs)' }}>
+                                {sor?.requires_quote ? 'árajánlatos' : 'saját ár, nem csomag + extra'}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          </div>
+
+          {/* Széles képernyőn ide, a csomagok mellé kerül. Keskenyen külön
+              fülre megy — ott a fenti gombsorban jelenik meg. */}
+          {szeles && (
+            <div className="szolg-jobb">
+              <h3 className="szolg-cim">
+                Egyéb szolgáltatások
+                {hianyzoExtraAr > 0 && (
+                  <span className="jelzo" title="Ennyinek nincs ára">{hianyzoExtraAr}</span>
+                )}
+              </h3>
+              <div className="panel">
+                <div className="extralista">
+                  {k.extras.map((e) => (
+                    <ExtraSor key={e.id} e={e} onMent={async (patch) => {
+                      await data.updateExtra(e.id, patch)
+                      await ujra()
+                    }} />
+                  ))}
                 </div>
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
 

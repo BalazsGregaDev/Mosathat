@@ -621,7 +621,9 @@ export const ROLE_LABEL: Record<StaffRole, string> = {
 export const ROLE_LEIRAS: Record<StaffRole, string> = {
   SUPERADMIN: 'Mindenhez hozzáfér. Ide kerülnek később a fejlesztést segítő funkciók.',
   TULAJDONOS: 'Az alkalmazáson belül mindenhez hozzáfér, és alkalmazottat vehet fel.',
-  STAFF: 'A napi munkához mindent tud. Az áttekintéshez és a beállításokhoz nem fér hozzá.',
+  STAFF: 'A napi munkához mindent tud: időpontot vesz fel, módosít és zár le. '
+    + 'A Cégek és bérletesek, valamint az Ügyfelek menüpontot csak olvasni tudja, '
+    + 'szerkeszteni nem. Az Áttekintéshez és a Beállításokhoz nem fér hozzá.',
 }
 
 export interface StaffRow {

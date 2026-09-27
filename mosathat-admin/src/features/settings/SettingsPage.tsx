@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
 import { idoMezo, maStr, napRovidCim } from '../../lib/format'
@@ -24,13 +25,28 @@ import type { DayOverride, OpeningDay, ShopSettings, ValidityKind } from '../../
 
 type Ful = 'ido' | 'altalanos' | 'kivetel'
 
+/** A fejléc jobb oldala: ide portálozzák a nézetek a saját mentés gombjukat. */
+const FejHely = createContext<HTMLElement | null>(null)
+
+/** A gyereket a lap fejlécébe teszi. Amíg nincs meg a hely (első render),
+ *  nem rajzol semmit — a következő renderben már ott lesz. */
+function Fejbe({ children }: { children: React.ReactNode }) {
+  const hely = useContext(FejHely)
+  return hely ? createPortal(children, hely) : null
+}
+
 export default function SettingsPage() {
   const [ful, setFul] = useState<Ful>('ido')
+  // A mentés gomb helye a fejlécben, a fülek mellett. Azért portál, mert a
+  // gomb ahhoz a nézethez tartozik, amelyik ment — de ott állna jól, ahol a
+  // többi gomb. Korábban külön kártyán ült, üres fejléccel, a lap alján.
+  const [fejHely, setFejHely] = useState<HTMLElement | null>(null)
 
   return (
     <div className="oldal">
       <div className="oldal-fej">
         <h2>Beállítások</h2>
+        <div className="fej-mentes" ref={setFejHely} />
         <div className="fulek">
           <button className={ful === 'ido' ? 'aktiv' : ''} onClick={() => setFul('ido')}>
             Nyitvatartás
@@ -44,9 +60,11 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {ful === 'ido' && <Nyitvatartas />}
-      {ful === 'altalanos' && <Altalanos />}
-      {ful === 'kivetel' && <Kivetelnapok />}
+      <FejHely.Provider value={fejHely}>
+        {ful === 'ido' && <Nyitvatartas />}
+        {ful === 'altalanos' && <Altalanos />}
+        {ful === 'kivetel' && <Kivetelnapok />}
+      </FejHely.Provider>
     </div>
   )
 }
@@ -143,7 +161,7 @@ function Nyitvatartas() {
             <thead>
               <tr>
                 <th>Nap</th>
-                <th>Zárva</th>
+                <th>Nyitva</th>
                 <th colSpan={2}>Nyitvatartás</th>
                 <th colSpan={2}>Munkaidő</th>
                 <th>Szünet</th>
@@ -155,10 +173,14 @@ function Nyitvatartas() {
                 return (
                   <tr key={d.weekday} data-zarva={zarva || undefined}>
                     <th scope="row">{d.nev}</th>
+                    {/* A pipa azt jelenti, hogy aznap dolgozunk. Fordítva
+                        („Zárva" bepipálva = zárva) minden bejelölt sor egy
+                        tiltást jelentett volna, és a hét legtöbb napja
+                        üresen állt. A pipa jelentse azt, ami a gyakoribb. */}
                     <td>
-                      <input type="checkbox" checked={zarva}
-                             onChange={(e) => zarvaAllit(d, e.target.checked)}
-                             aria-label={`${d.nev} zárva`} />
+                      <input type="checkbox" checked={!zarva}
+                             onChange={(e) => zarvaAllit(d, !e.target.checked)}
+                             aria-label={`${d.nev} nyitva`} />
                     </td>
                     {/* Zárt napon nincs mit beállítani. Négy letiltott, üres
                         mező helyett egy szó — az legalább mond valamit. */}
@@ -221,7 +243,7 @@ function Nyitvatartas() {
           </table>
         </div>
 
-        <div className="urlap-lab">
+        <Fejbe>
           <MentesJelzo allapot={allapot} />
           <button className="btn btn-fo" disabled={allapot === 'megy'}
                   onClick={() => void fut(async () => {
@@ -230,7 +252,7 @@ function Nyitvatartas() {
                   })}>
             Mentés
           </button>
-        </div>
+        </Fejbe>
       </div>
     </div>
   )
@@ -327,21 +349,19 @@ function Altalanos() {
         </div>
       </div>
 
-      <div className="panel">
-        <h3>&nbsp;</h3>
-        <div className="panel-torzs">
-          <div className="urlap-lab">
-            <MentesJelzo allapot={allapot} />
-            <button className="btn btn-fo" disabled={allapot === 'megy'}
-                    onClick={() => void fut(async () => {
-                      await data.saveShopSettings(s)
-                      setS(await data.getShopSettings())
-                    })}>
-              Mentés
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Itt korábban egy külön kártya állt, üres fejléccel, benne semmi
+          más, csak a mentés gomb. A gomb a lap fejlécébe került, a fülek
+          mellé — a kártya így fölöslegessé vált. */}
+      <Fejbe>
+        <MentesJelzo allapot={allapot} />
+        <button className="btn btn-fo" disabled={allapot === 'megy'}
+                onClick={() => void fut(async () => {
+                  await data.saveShopSettings(s)
+                  setS(await data.getShopSettings())
+                })}>
+          Mentés
+        </button>
+      </Fejbe>
     </div>
   )
 }
