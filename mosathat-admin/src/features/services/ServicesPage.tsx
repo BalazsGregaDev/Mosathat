@@ -223,7 +223,7 @@ export default function ServicesPage() {
                   </div>
 
                   <div className="fsrész">
-                    <div className="cimke">Full Service (mélytisztítás)</div>
+                    <div className="cimke">Full Service (Csomag+Kárpit/Bőrtisztítás)</div>
                     <table className="artabla keskeny">
                       <tbody>
                         {KATEGORIAK.map((c) => {
