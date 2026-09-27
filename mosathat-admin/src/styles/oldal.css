@@ -225,3 +225,55 @@
   line-height: 1.5;
 }
 .csomag-tobblet .valaszto { color: var(--keret-eros); }
+
+/* ===========================================================================
+   Ügyfélkártyák — csukva három adat, nyitva minden
+   ===========================================================================
+   Egy autókozmetikában sok autó fordul meg. Ha minden kártya tizenkét soros,
+   a lista végiggörgethetetlen, és pont az vész el benne, amit keresel.
+   Csukva ezért csak az van kint, amivel keresni szoktak: név, rendszám,
+   telefonszám. A többi egy kattintásra. */
+
+/* Keskenyebb kártyák: egy sorba több fér, kevesebbet kell görgetni. */
+.panelek-ugyfel { grid-template-columns: repeat(auto-fill, minmax(238px, 1fr)); }
+.panelek-ugyfel .panel-torzs { padding: var(--t2) var(--t3) var(--t3); }
+.panelek-ugyfel .adatsor { padding: 5px 0; }
+/* Az utolsó sor alatt nem kell elválasztó: ott a kártya kerete zár. */
+.panelek-ugyfel .panel-torzs > .adatsor:last-child { border-bottom: none; }
+
+/* A fejléc maga a nyitógomb — az egész sáv kattintható, nem csak egy ikon.
+   Vizes kézzel, tableten egy nagy célpont többet ér egy pontos kis nyílnál. */
+.kartya-fej { padding: 0 !important; }
+.kartya-nyito {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--t2);
+  width: 100%;
+  padding: var(--t3) var(--t4);
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.kartya-nyito:hover { background: var(--lap); }
+.kartya-nyito:focus-visible { outline: 2px solid var(--zold); outline-offset: -2px; }
+.kartya-nyito .cim {
+  display: flex; align-items: center; gap: var(--t2);
+  min-width: 0; flex: 1;
+}
+
+/* A nyíl jobbra mutat, nyitva lefelé fordul. Nem szín jelzi az állapotot,
+   hanem az irány — így akkor is látszik, ha valaki nem különbözteti meg. */
+.kartya-nyito .nyil {
+  flex: 0 0 auto;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--szoveg-halvany);
+  transition: transform var(--atmenet), color var(--atmenet);
+}
+.kartya-nyito[aria-expanded='true'] .nyil { transform: rotate(90deg); color: var(--zold); }
+.kartya-nyito:hover .nyil { color: var(--zold); }
+
+.panelek-ugyfel .panel[data-nyitva='true'] { border-color: var(--keret-eros); }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { ft } from '../../lib/format'
@@ -34,6 +34,37 @@ const TIPUSOK: Valaszthato[] = [
   { ertek: 'CEG', cimke: 'Cég' },
 ]
 
+// ---------------------------------------------------------------------------
+//  Kártyafejléc — rákattintva nyílik ki a többi adat
+//
+//  Alaphelyzetben három dolog látszik: név, rendszám, telefonszám. Ez az,
+//  amivel keresni szoktak — „a fehér Octavia, Anita, valami 30-as szám".
+//  A többi (márka, ülésszám, költés, jegyzet) akkor kell, amikor épp azt
+//  keresed, és addig csak nyújtja a listát.
+//
+//  A rendszám és a név közül az egyik mindig a kártya CÍME: járműnézetben a
+//  rendszám, ügyfélnézetben a név. Ezért nem ismételjük meg alatta külön
+//  sorban — ugyanaz az adat kétszer egy háromsoros kártyán zaj lenne.
+// ---------------------------------------------------------------------------
+
+function KartyaFej({ nyitva, onValt, children }: {
+  nyitva: boolean
+  onValt: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <h3 className="kartya-fej">
+      <button type="button" className="kartya-nyito" aria-expanded={nyitva} onClick={onValt}>
+        <span className="cim">{children}</span>
+        <span className="nyil" aria-hidden="true">›</span>
+        <span className="csakolvaso">
+          {nyitva ? 'további adatok elrejtése' : 'további adatok megjelenítése'}
+        </span>
+      </button>
+    </h3>
+  )
+}
+
 export default function CustomersPage() {
   const { data } = useApp()
   const [nezet, setNezet] = useState<Nezet>('jarmu')
@@ -44,8 +75,12 @@ export default function CustomersPage() {
   const [hiba, setHiba] = useState<string | null>(null)
   const [nyitott, setNyitott] = useState<string | null>(null)
 
-  const betolt = useCallback(async (keres: string) => {
-    setTolt(true)
+  // A „Betöltés…" csak az első alkalommal jelenik meg. Egy mentés utáni
+  // újratöltésnél nem: olyankor a lista egy pillanatra eltűnne, a kártyák
+  // újra létrejönnének — és a kinyitott kártya becsukódna az orrunk előtt,
+  // pont amikor épp szerkesztjük. A lista helyben cserélődik.
+  const betolt = useCallback(async (keres: string, elso = false) => {
+    if (elso) setTolt(true)
     try {
       if (nezet === 'ugyfel') setUgyfelek(await data.listCustomers(keres))
       else setJarmuvek(await data.listVehicles(keres))
@@ -53,15 +88,23 @@ export default function CustomersPage() {
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
     } finally {
-      setTolt(false)
+      if (elso) setTolt(false)
     }
   }, [data, nezet])
 
-  // Gépelés közben keres, 250 ms csend után.
+  // Gépelés közben keres, 250 ms csend után. Az első betöltés (és a
+  // nézetváltás) mutatja a „Betöltés…" feliratot, a többi nem.
+  const voltMar = useRef(false)
   useEffect(() => {
-    const t = window.setTimeout(() => void betolt(q), 250)
+    const t = window.setTimeout(() => {
+      void betolt(q, !voltMar.current)
+      voltMar.current = true
+    }, 250)
     return () => window.clearTimeout(t)
   }, [q, betolt])
+
+  // Nézetváltásnál más a lista, ott jogos a betöltésjelzés.
+  useEffect(() => { voltMar.current = false }, [nezet])
 
   const ujra = () => void betolt(q)
 
@@ -102,7 +145,7 @@ export default function CustomersPage() {
       )}
 
       {!tolt && nezet === 'jarmu' && (
-        <div className="panelek">
+        <div className="panelek panelek-ugyfel">
           {jarmuvek.map((v) => (
             <JarmuKartya key={v.id} v={v} onValtozas={ujra} />
           ))}
@@ -113,7 +156,7 @@ export default function CustomersPage() {
       )}
 
       {!tolt && nezet === 'ugyfel' && (
-        <div className="panelek">
+        <div className="panelek panelek-ugyfel">
           {ugyfelek.map((c) => (
             <UgyfelKartya key={c.id} c={c} nyitott={nyitott === c.id}
                           onNyit={() => setNyitott(nyitott === c.id ? null : c.id)}
@@ -132,6 +175,7 @@ export default function CustomersPage() {
 
 function JarmuKartya({ v, onValtozas }: { v: VehicleSummary; onValtozas: () => void }) {
   const { data } = useApp()
+  const [nyitva, setNyitva] = useState(false)
   const ment = async (patch: Record<string, unknown>) => {
     await data.saveVehicle({ id: v.id, ...patch })
     onValtozas()
@@ -142,58 +186,65 @@ function JarmuKartya({ v, onValtozas }: { v: VehicleSummary; onValtozas: () => v
   }
 
   return (
-    <div className="panel">
-      <h3>
+    <div className="panel" data-nyitva={nyitva}>
+      <KartyaFej nyitva={nyitva} onValt={() => setNyitva(!nyitva)}>
         <span className="rendszam">{v.plate_raw}</span>
         {v.billing_kind !== 'NORMAL' && (
           <span className="cimke-pill billing" data-b={v.billing_kind}>
             {BILLING_LABEL[v.billing_kind]}
           </span>
         )}
-      </h3>
+      </KartyaFej>
       <div className="panel-torzs">
-        <Szerkesztheto cimke="Rendszám" ertek={v.plate_raw} tipus="rendszam"
-                       onMent={(x) => ment({ plate_raw: x })} />
-        <Szerkesztheto cimke="Márka" ertek={v.brand} ures="nincs megadva"
-                       onMent={(x) => ment({ brand: x })} />
-        <Szerkesztheto cimke="Modell" ertek={v.model} ures="nincs megadva"
-                       onMent={(x) => ment({ model: x })} />
-        <Szerkesztheto cimke="Méret" ertek={v.category} valaszthato={KATEGORIAK}
-                       onMent={(x) => ment({ category: x })} />
-        <Szerkesztheto cimke="Ülések" ertek={v.seats ? String(v.seats) : ''} tipus="szam"
-                       ures="5 (alapértelmezett)"
-                       onMent={(x) => ment({ seats: x })} />
-        <Szerkesztheto cimke="Megjegyzés" ertek={v.notes} sor={2} ures="nincs"
-                       onMent={(x) => ment({ notes: x })} />
-
-        <div className="valaszto-vonal-vekony" />
-
+        {/* A rendszám a kártya címe — itt a tulajdonos és a telefonszám az,
+            ami csukott állapotban is kell. */}
         <Szerkesztheto cimke="Tulajdonos" ertek={v.customer_name}
                        onMent={(x) => ugyfel({ name: x })} />
         <Szerkesztheto cimke="Telefon" ertek={v.customer_phone} tipus="telefon"
                        onMent={(x) => ugyfel({ phone: x })} />
-        {v.company_name && (
-          <Szerkesztheto cimke="Cég" ertek={v.company_name}
-                         onMent={(x) => ugyfel({ company_name: x })} />
-        )}
 
-        <div className="adatsor">
-          <span>Munkák</span>
-          <span className="ertek szam">{v.latogatas}</span>
-        </div>
-        <div className="adatsor">
-          <span>Utoljára</span>
-          <span className="ertek">
-            {v.utolso ? (
-              <>
-                <span className="szam">{v.utolso.slice(0, 10)}</span>
-                {v.utolso_csomag && <span className="halk"> · {v.utolso_csomag}</span>}
-              </>
-            ) : (
-              <span className="halvany">még nem járt itt</span>
+        {nyitva && (
+          <>
+            <div className="valaszto-vonal-vekony" />
+
+            <Szerkesztheto cimke="Rendszám" ertek={v.plate_raw} tipus="rendszam"
+                           onMent={(x) => ment({ plate_raw: x })} />
+            <Szerkesztheto cimke="Márka" ertek={v.brand} ures="nincs megadva"
+                           onMent={(x) => ment({ brand: x })} />
+            <Szerkesztheto cimke="Modell" ertek={v.model} ures="nincs megadva"
+                           onMent={(x) => ment({ model: x })} />
+            <Szerkesztheto cimke="Méret" ertek={v.category} valaszthato={KATEGORIAK}
+                           onMent={(x) => ment({ category: x })} />
+            <Szerkesztheto cimke="Ülések" ertek={v.seats ? String(v.seats) : ''} tipus="szam"
+                           ures="5 (alapértelmezett)"
+                           onMent={(x) => ment({ seats: x })} />
+            <Szerkesztheto cimke="Megjegyzés" ertek={v.notes} sor={2} ures="nincs"
+                           onMent={(x) => ment({ notes: x })} />
+
+            {v.company_name && (
+              <Szerkesztheto cimke="Cég" ertek={v.company_name}
+                             onMent={(x) => ugyfel({ company_name: x })} />
             )}
-          </span>
-        </div>
+
+            <div className="adatsor">
+              <span>Munkák</span>
+              <span className="ertek szam">{v.latogatas}</span>
+            </div>
+            <div className="adatsor">
+              <span>Utoljára</span>
+              <span className="ertek">
+                {v.utolso ? (
+                  <>
+                    <span className="szam">{v.utolso.slice(0, 10)}</span>
+                    {v.utolso_csomag && <span className="halk"> · {v.utolso_csomag}</span>}
+                  </>
+                ) : (
+                  <span className="halvany">még nem járt itt</span>
+                )}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -208,75 +259,86 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas }: {
   onValtozas: () => void
 }) {
   const { data } = useApp()
+  const [reszletek, setReszletek] = useState(false)
   const ment = async (patch: Record<string, unknown>) => {
     await data.saveCustomer({ id: c.id, ...patch })
     onValtozas()
   }
 
   return (
-    <div className="panel">
-      <h3>
+    <div className="panel" data-nyitva={reszletek}>
+      <KartyaFej nyitva={reszletek} onValt={() => setReszletek(!reszletek)}>
         {c.company_name || c.name}
         {c.billing_kind !== 'NORMAL' && (
           <span className="cimke-pill billing" data-b={c.billing_kind}>
             {BILLING_LABEL[c.billing_kind]}
           </span>
         )}
-      </h3>
+      </KartyaFej>
       <div className="panel-torzs">
         <Szerkesztheto cimke="Név" ertek={c.name} onMent={(x) => ment({ name: x })} />
         <Szerkesztheto cimke="Telefon" ertek={c.phone} tipus="telefon"
                        onMent={(x) => ment({ phone: x })} />
-        <Szerkesztheto cimke="E-mail" ertek={c.email} tipus="email" ures="nincs"
-                       onMent={(x) => ment({ email: x })} />
-        <Szerkesztheto cimke="Típus" ertek={c.type} valaszthato={TIPUSOK}
-                       onMent={(x) => ment({ type: x })} />
-        <Szerkesztheto cimke="Cégnév" ertek={c.company_name} ures="nincs"
-                       onMent={(x) => ment({ company_name: x })} />
-        <Szerkesztheto cimke="Megjegyzés" ertek={c.notes} sor={2} ures="nincs"
-                       onMent={(x) => ment({ notes: x })} />
-        <Szerkesztheto cimke="Belső jegyzet" ertek={c.internal_notes} sor={2} ures="nincs"
-                       onMent={(x) => ment({ internal_notes: x })} />
 
-        <div className="valaszto-vonal-vekony" />
+        {!reszletek && (
+          <div className="adatsor">
+            <span>Járművei</span>
+            <span className="ertek szam">{c.jarmuvek}</span>
+          </div>
+        )}
 
-        <div className="adatsor">
-          <span>Járművei</span>
-          <span className="ertek">{c.jarmuvek}</span>
-        </div>
-        <div className="adatsor">
-          <span>Munkák</span>
-          <span className="ertek">{c.latogatas}</span>
-        </div>
-
-        {c.latogatas > 0 && (
+        {reszletek && (
           <>
+            <Szerkesztheto cimke="E-mail" ertek={c.email} tipus="email" ures="nincs"
+                           onMent={(x) => ment({ email: x })} />
+            <Szerkesztheto cimke="Típus" ertek={c.type} valaszthato={TIPUSOK}
+                           onMent={(x) => ment({ type: x })} />
+            <Szerkesztheto cimke="Cégnév" ertek={c.company_name} ures="nincs"
+                           onMent={(x) => ment({ company_name: x })} />
+            <Szerkesztheto cimke="Megjegyzés" ertek={c.notes} sor={2} ures="nincs"
+                           onMent={(x) => ment({ notes: x })} />
+            <Szerkesztheto cimke="Belső jegyzet" ertek={c.internal_notes} sor={2} ures="nincs"
+                           onMent={(x) => ment({ internal_notes: x })} />
+
+            <div className="valaszto-vonal-vekony" />
+
             <div className="adatsor">
-              <span>Összesen költött</span>
-              <span className="ertek">{ft(c.osszesen)}</span>
+              <span>Járművei</span>
+              <span className="ertek">{c.jarmuvek}</span>
             </div>
             <div className="adatsor">
-              <span>Átlagosan</span>
-              <span className="ertek">{ft(c.atlag)}</span>
+              <span>Munkák</span>
+              <span className="ertek">{c.latogatas}</span>
             </div>
-            <div className="adatsor">
-              <span>Utoljára</span>
-              <span className="ertek szam">{c.utolso?.slice(0, 10)}</span>
-            </div>
-            {c.kedvenc_csomag && (
-              <div className="adatsor">
-                <span>Leggyakrabban</span>
-                <span className="ertek" style={{ fontFamily: 'var(--betu)' }}>
-                  {c.kedvenc_csomag}
-                </span>
-              </div>
-            )}
-            {c.atlag_napok !== null && (
-              <p className="halk" style={{ fontSize: 'var(--m-xs)', marginTop: 'var(--t2)' }}>
-                Átlagosan {c.atlag_napok} naponta jár be. Ez belső információ —
-                nem megy ki az ügyfélnek.
-              </p>
-            )}
+
+            {c.latogatas > 0 && (
+              <>
+                <div className="adatsor">
+                  <span>Összesen költött</span>
+                  <span className="ertek">{ft(c.osszesen)}</span>
+                </div>
+                <div className="adatsor">
+                  <span>Átlagosan</span>
+                  <span className="ertek">{ft(c.atlag)}</span>
+                </div>
+                <div className="adatsor">
+                  <span>Utoljára</span>
+                  <span className="ertek szam">{c.utolso?.slice(0, 10)}</span>
+                </div>
+                {c.kedvenc_csomag && (
+                  <div className="adatsor">
+                    <span>Leggyakrabban</span>
+                    <span className="ertek" style={{ fontFamily: 'var(--betu)' }}>
+                      {c.kedvenc_csomag}
+                    </span>
+                  </div>
+                )}
+                {c.atlag_napok !== null && (
+                  <p className="halk" style={{ fontSize: 'var(--m-xs)', marginTop: 'var(--t2)' }}>
+                    Átlagosan {c.atlag_napok} naponta jár be. Ez belső információ —
+                    nem megy ki az ügyfélnek.
+                  </p>
+                )}
           </>
         )}
         {c.latogatas === 0 && (
@@ -290,6 +352,8 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas }: {
         </button>
 
         {nyitott && <UgyfelJarmuvei customerId={c.id} onValtozas={onValtozas} />}
+          </>
+        )}
       </div>
     </div>
   )
