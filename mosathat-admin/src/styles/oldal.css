@@ -384,3 +384,9 @@
 /* Új jármű felvétele az ügyfél autói közé. */
 .uj-jarmu { margin-top: var(--t3); }
 .uj-jarmu .urlap-lab { margin-top: var(--t3); padding-top: var(--t3); }
+
+.uj-jarmu-fej {
+  font-size: var(--m-xs); letter-spacing: .06em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  margin-bottom: var(--t3);
+}

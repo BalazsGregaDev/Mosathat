@@ -154,6 +154,7 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
 }) {
   const { data } = useApp()
   const [nyitva, setNyitva] = useState(false)
+  const [ujAuto, setUjAuto] = useState(false)
   const ment = async (patch: Record<string, unknown>) => {
     await data.saveVehicle({ id: v.id, ...patch })
     onValtozas()
@@ -221,6 +222,26 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
                 )}
               </span>
             </div>
+
+            {/* Ugyanannak a tulajdonosnak a következő autója. Itt is kell,
+                nem csak az ügyfélnézetben: a listát alapból jármű szerint
+                nézik, és ha csak amott volna, négy kattintásra lenne a
+                felvétel — vagyis gyakorlatilag sehol. */}
+            {szerkesztheto && (
+              ujAuto ? (
+                <UjJarmu
+                  customerId={v.customer_id}
+                  kinek={v.customer_name}
+                  onKesz={() => { setUjAuto(false); onValtozas() }}
+                  onMegse={() => setUjAuto(false)}
+                />
+              ) : (
+                <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }}
+                        onClick={() => setUjAuto(true)}>
+                  + További jármű {v.customer_name.split(' ')[0]} nevére
+                </button>
+              )
+            )}
           </>
         )}
       </div>
@@ -239,6 +260,8 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas, szerkesztheto }: {
 }) {
   const { data } = useApp()
   const [reszletek, setReszletek] = useState(false)
+  const [ujAuto, setUjAuto] = useState(false)
+  const [revizio, setRevizio] = useState(0)
   const ment = async (patch: Record<string, unknown>) => {
     await data.saveCustomer({ id: c.id, ...patch })
     onValtozas()
@@ -326,13 +349,36 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas, szerkesztheto }: {
           </p>
         )}
 
-        <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }} onClick={onNyit}>
-          {nyitott ? 'Járművek elrejtése' : 'Járművei'}
-        </button>
+        {/* A két gomb egy sorban. A felvétel eddig a járműlista ALJÁN volt,
+            tehát csak azután látszott, hogy valaki megnyitotta a listát —
+            négy kattintás után. Így egy kattintás. */}
+        <div className="sor-gombok" style={{ marginTop: 'var(--t3)' }}>
+          <button className="btn btn-kicsi" onClick={onNyit}>
+            {nyitott ? 'Járművek elrejtése' : `Járművei (${c.jarmuvek})`}
+          </button>
+          {szerkesztheto && !ujAuto && (
+            <button className="btn btn-kicsi" onClick={() => setUjAuto(true)}>
+              + További jármű
+            </button>
+          )}
+        </div>
+
+        {ujAuto && (
+          <UjJarmu
+            customerId={c.id}
+            onKesz={() => {
+              setUjAuto(false)
+              setRevizio((n) => n + 1)   // a járműlista olvassa újra magát
+              onValtozas()
+              if (!nyitott) onNyit()     // és rögtön látszódjon is
+            }}
+            onMegse={() => setUjAuto(false)}
+          />
+        )}
 
         {nyitott && (
           <UgyfelJarmuvei customerId={c.id} onValtozas={onValtozas}
-                         szerkesztheto={szerkesztheto} />
+                         revizio={revizio} szerkesztheto={szerkesztheto} />
         )}
           </>
         )}
@@ -342,18 +388,15 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas, szerkesztheto }: {
 }
 
 /** Egy ügyfél autói — a teljes listából szűrve, hogy ne legyen külön lekérdezés. */
-function UgyfelJarmuvei({ customerId, onValtozas, szerkesztheto }: {
+function UgyfelJarmuvei({ customerId, onValtozas, revizio, szerkesztheto }: {
   customerId: string
   onValtozas: () => void
+  /** Nő, valahányszor új autót vettek fel — ilyenkor újra kell olvasni. */
+  revizio: number
   szerkesztheto: boolean
 }) {
   const { data } = useApp()
   const [sorok, setSorok] = useState<VehicleSummary[] | null>(null)
-  const [ujAuto, setUjAuto] = useState(false)
-  // Az új autó felvétele után ezt a listát is újra kell olvasni, nem csak a
-  // fölötte lévő kártyát — különben a most felvett autó nem jelenne meg.
-  const [revizio, setRevizio] = useState(0)
-  const ujra = () => setRevizio((n) => n + 1)
 
   useEffect(() => {
     let el = true
@@ -392,31 +435,17 @@ function UgyfelJarmuvei({ customerId, onValtozas, szerkesztheto }: {
       ))}
       {sorok.length === 0 && <div className="ures">Nincs járműve.</div>}
 
-      {/* Egy ügyfélnek több autója lehet — a feleségé, a céges kisbusz. Eddig
-          új autó csak foglaláskor keletkezett; ha valaki telefonon annyit
-          mond, hogy „legközelebb a másikkal jönnék", nem volt hova felvenni. */}
-      {szerkesztheto && (
-        ujAuto ? (
-          <UjJarmu
-            customerId={customerId}
-            onKesz={() => { setUjAuto(false); void ujra(); onValtozas() }}
-            onMegse={() => setUjAuto(false)}
-          />
-        ) : (
-          <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }}
-                  onClick={() => setUjAuto(true)}>
-            + További jármű
-          </button>
-        )
-      )}
     </div>
   )
 }
 
 /** Új autó felvétele egy meglévő ügyfélhez. A rendszám elég hozzá — a többit
  *  úgyis a foglaláskor látják, amikor ott áll az autó. */
-function UjJarmu({ customerId, onKesz, onMegse }: {
+function UjJarmu({ customerId, kinek, onKesz, onMegse }: {
   customerId: string
+  /** Kinek a nevére kerül. Ki van írva, mert a járműnézetben egy autó
+   *  kártyájáról indul a felvétel — ott nem magától értetődő, kihez megy. */
+  kinek?: string
   onKesz: () => void
   onMegse: () => void
 }) {
@@ -449,6 +478,7 @@ function UjJarmu({ customerId, onKesz, onMegse }: {
 
   return (
     <div className="alkartya uj-jarmu">
+      {kinek && <div className="uj-jarmu-fej">Új autó — {kinek}</div>}
       {hiba && <div className="hibauzenet">{hiba}</div>}
 
       <label className="mezo">
