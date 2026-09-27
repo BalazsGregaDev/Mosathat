@@ -212,6 +212,17 @@ export default function BookingDetail({
     }
   }
 
+  async function lemond() {
+    if (!b) return
+    const ok = window.confirm(
+      `Biztos lemondod? ${b.plate_raw} · ${b.customer_name}\n\n`
+      + 'A foglalás megmarad lemondottként, az időpont pedig azonnal '
+      + 'felszabadul. Az ügyfél és az autó adata nem vész el.',
+    )
+    if (!ok) return
+    await allapot('CANCELLED_BY_CUSTOMER')
+  }
+
   // --- ár ----------------------------------------------------------------------
 
   // Amit a rendszer javasol: a becsült ár, a most megadott felárakkal.
@@ -321,6 +332,10 @@ export default function BookingDetail({
   }
 
   const kovetkezo = b ? NEXT_STATUS[b.status] : undefined
+  const lemondott = b ? ['CANCELLED_BY_CUSTOMER', 'CANCELLED_BY_SHOP'].includes(b.status) : false
+  // Lemondani addig lehet, amíg a munka nincs lezárva. Ha már elkészült az
+  // autó, az nem lemondás — az egy elvégzett munka.
+  const lemondhato = b ? !lezart && !lemondott && b.status !== 'NO_SHOW' : false
   const keszLista = lista.filter((t) => t.done).length
 
   return (
@@ -797,6 +812,23 @@ export default function BookingDetail({
                 {b.status === 'CONFIRMED' && (
                   <button className="btn" onClick={() => void allapot('NO_SHOW')}>
                     Nem jött el
+                  </button>
+                )}
+                {/* Lemondás. A foglalás sora MEGMARAD — egyrészt mert a
+                    lemondások száma üzleti adat, másrészt mert egy véletlen
+                    lemondás így visszavonható. A nap kapacitásából viszont
+                    azonnal kiesik, tehát az időpont újra kiadható.
+                    Az ügyfél és az autó adata sem vész el: azok külön sorok,
+                    és akkor is megmaradnak, ha ez volt az első foglalása. */}
+                {lemondhato && (
+                  <button className="btn btn-veszelyes"
+                          onClick={() => void lemond()}>
+                    Lemondta
+                  </button>
+                )}
+                {lemondott && (
+                  <button className="btn" onClick={() => void allapot('CONFIRMED')}>
+                    Mégis jön
                   </button>
                 )}
                 {lezart && (

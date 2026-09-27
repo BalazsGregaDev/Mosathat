@@ -36,7 +36,13 @@ const TIPUSOK: Valaszthato[] = [
 ]
 
 export default function CustomersPage() {
-  const { data } = useApp()
+  const { data, user } = useApp()
+  // Az alkalmazottnak ez a képernyő OLVASHATÓ, nem szerkeszthető. A napi
+  // munkájához tartozó adatokat a foglalási ablakban írja át — ott az a
+  // foglalásé, itt viszont a törzsadat, ami minden későbbi foglalásra hat.
+  // Ugyanez a szabály az adatbázisban is be van építve (save_customer,
+  // save_vehicle): a képernyő csak megmutatja, nem ez tartja be.
+  const szerkesztheto = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
   const [nezet, setNezet] = useState<Nezet>('jarmu')
   const [q, setQ] = useState('')
   const [ugyfelek, setUgyfelek] = useState<CustomerSummary[]>([])
@@ -117,7 +123,7 @@ export default function CustomersPage() {
       {!tolt && nezet === 'jarmu' && (
         <div className="panelek panelek-ugyfel">
           {jarmuvek.map((v) => (
-            <JarmuKartya key={v.id} v={v} onValtozas={ujra} />
+            <JarmuKartya key={v.id} v={v} onValtozas={ujra} szerkesztheto={szerkesztheto} />
           ))}
           {jarmuvek.length === 0 && (
             <div className="panel"><div className="ures">Nincs találat.</div></div>
@@ -130,7 +136,7 @@ export default function CustomersPage() {
           {ugyfelek.map((c) => (
             <UgyfelKartya key={c.id} c={c} nyitott={nyitott === c.id}
                           onNyit={() => setNyitott(nyitott === c.id ? null : c.id)}
-                          onValtozas={ujra} />
+                          onValtozas={ujra} szerkesztheto={szerkesztheto} />
           ))}
           {ugyfelek.length === 0 && (
             <div className="panel"><div className="ures">Nincs találat.</div></div>
@@ -143,7 +149,9 @@ export default function CustomersPage() {
 
 // ---------------------------------------------------------------------------
 
-function JarmuKartya({ v, onValtozas }: { v: VehicleSummary; onValtozas: () => void }) {
+function JarmuKartya({ v, onValtozas, szerkesztheto }: {
+  v: VehicleSummary; onValtozas: () => void; szerkesztheto: boolean
+}) {
   const { data } = useApp()
   const [nyitva, setNyitva] = useState(false)
   const ment = async (patch: Record<string, unknown>) => {
@@ -168,31 +176,31 @@ function JarmuKartya({ v, onValtozas }: { v: VehicleSummary; onValtozas: () => v
       <div className="panel-torzs">
         {/* A rendszám a kártya címe — itt a tulajdonos és a telefonszám az,
             ami csukott állapotban is kell. */}
-        <Szerkesztheto cimke="Tulajdonos" ertek={v.customer_name}
+        <Szerkesztheto zarolt={!szerkesztheto} cimke="Tulajdonos" ertek={v.customer_name}
                        onMent={(x) => ugyfel({ name: x })} />
-        <Szerkesztheto cimke="Telefon" ertek={v.customer_phone} tipus="telefon"
+        <Szerkesztheto zarolt={!szerkesztheto} cimke="Telefon" ertek={v.customer_phone} tipus="telefon"
                        onMent={(x) => ugyfel({ phone: x })} />
 
         {nyitva && (
           <>
             <div className="valaszto-vonal-vekony" />
 
-            <Szerkesztheto cimke="Rendszám" ertek={v.plate_raw} tipus="rendszam"
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Rendszám" ertek={v.plate_raw} tipus="rendszam"
                            onMent={(x) => ment({ plate_raw: x })} />
-            <Szerkesztheto cimke="Márka" ertek={v.brand} ures="nincs megadva"
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Márka" ertek={v.brand} ures="nincs megadva"
                            onMent={(x) => ment({ brand: x })} />
-            <Szerkesztheto cimke="Modell" ertek={v.model} ures="nincs megadva"
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Modell" ertek={v.model} ures="nincs megadva"
                            onMent={(x) => ment({ model: x })} />
-            <Szerkesztheto cimke="Méret" ertek={v.category} valaszthato={KATEGORIAK}
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Méret" ertek={v.category} valaszthato={KATEGORIAK}
                            onMent={(x) => ment({ category: x })} />
-            <Szerkesztheto cimke="Ülések" ertek={v.seats ? String(v.seats) : ''} tipus="szam"
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Ülések" ertek={v.seats ? String(v.seats) : ''} tipus="szam"
                            ures="5 (alapértelmezett)"
                            onMent={(x) => ment({ seats: x })} />
-            <Szerkesztheto cimke="Megjegyzés" ertek={v.notes} sor={2} ures="nincs"
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Megjegyzés" ertek={v.notes} sor={2} ures="nincs"
                            onMent={(x) => ment({ notes: x })} />
 
             {v.company_name && (
-              <Szerkesztheto cimke="Cég" ertek={v.company_name}
+              <Szerkesztheto zarolt={!szerkesztheto} cimke="Cég" ertek={v.company_name}
                              onMent={(x) => ugyfel({ company_name: x })} />
             )}
 
@@ -222,11 +230,12 @@ function JarmuKartya({ v, onValtozas }: { v: VehicleSummary; onValtozas: () => v
 
 // ---------------------------------------------------------------------------
 
-function UgyfelKartya({ c, nyitott, onNyit, onValtozas }: {
+function UgyfelKartya({ c, nyitott, onNyit, onValtozas, szerkesztheto }: {
   c: CustomerSummary
   nyitott: boolean
   onNyit: () => void
   onValtozas: () => void
+  szerkesztheto: boolean
 }) {
   const { data } = useApp()
   const [reszletek, setReszletek] = useState(false)
@@ -246,8 +255,8 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas }: {
         )}
       </KartyaFej>
       <div className="panel-torzs">
-        <Szerkesztheto cimke="Név" ertek={c.name} onMent={(x) => ment({ name: x })} />
-        <Szerkesztheto cimke="Telefon" ertek={c.phone} tipus="telefon"
+        <Szerkesztheto zarolt={!szerkesztheto} cimke="Név" ertek={c.name} onMent={(x) => ment({ name: x })} />
+        <Szerkesztheto zarolt={!szerkesztheto} cimke="Telefon" ertek={c.phone} tipus="telefon"
                        onMent={(x) => ment({ phone: x })} />
 
         {!reszletek && (
@@ -259,15 +268,15 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas }: {
 
         {reszletek && (
           <>
-            <Szerkesztheto cimke="E-mail" ertek={c.email} tipus="email" ures="nincs"
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="E-mail" ertek={c.email} tipus="email" ures="nincs"
                            onMent={(x) => ment({ email: x })} />
-            <Szerkesztheto cimke="Típus" ertek={c.type} valaszthato={TIPUSOK}
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Típus" ertek={c.type} valaszthato={TIPUSOK}
                            onMent={(x) => ment({ type: x })} />
-            <Szerkesztheto cimke="Cégnév" ertek={c.company_name} ures="nincs"
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Cégnév" ertek={c.company_name} ures="nincs"
                            onMent={(x) => ment({ company_name: x })} />
-            <Szerkesztheto cimke="Megjegyzés" ertek={c.notes} sor={2} ures="nincs"
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Megjegyzés" ertek={c.notes} sor={2} ures="nincs"
                            onMent={(x) => ment({ notes: x })} />
-            <Szerkesztheto cimke="Belső jegyzet" ertek={c.internal_notes} sor={2} ures="nincs"
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Belső jegyzet" ertek={c.internal_notes} sor={2} ures="nincs"
                            onMent={(x) => ment({ internal_notes: x })} />
 
             <div className="valaszto-vonal-vekony" />
@@ -321,7 +330,10 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas }: {
           {nyitott ? 'Járművek elrejtése' : 'Járművei'}
         </button>
 
-        {nyitott && <UgyfelJarmuvei customerId={c.id} onValtozas={onValtozas} />}
+        {nyitott && (
+          <UgyfelJarmuvei customerId={c.id} onValtozas={onValtozas}
+                         szerkesztheto={szerkesztheto} />
+        )}
           </>
         )}
       </div>
@@ -330,12 +342,18 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas }: {
 }
 
 /** Egy ügyfél autói — a teljes listából szűrve, hogy ne legyen külön lekérdezés. */
-function UgyfelJarmuvei({ customerId, onValtozas }: {
+function UgyfelJarmuvei({ customerId, onValtozas, szerkesztheto }: {
   customerId: string
   onValtozas: () => void
+  szerkesztheto: boolean
 }) {
   const { data } = useApp()
   const [sorok, setSorok] = useState<VehicleSummary[] | null>(null)
+  const [ujAuto, setUjAuto] = useState(false)
+  // Az új autó felvétele után ezt a listát is újra kell olvasni, nem csak a
+  // fölötte lévő kártyát — különben a most felvett autó nem jelenne meg.
+  const [revizio, setRevizio] = useState(0)
+  const ujra = () => setRevizio((n) => n + 1)
 
   useEffect(() => {
     let el = true
@@ -343,7 +361,7 @@ function UgyfelJarmuvei({ customerId, onValtozas }: {
       if (el) setSorok(v.filter((x) => x.customer_id === customerId))
     })
     return () => { el = false }
-  }, [data, customerId])
+  }, [data, customerId, revizio])
 
   if (!sorok) return <div className="betolt">Betöltés…</div>
 
@@ -351,18 +369,18 @@ function UgyfelJarmuvei({ customerId, onValtozas }: {
     <div style={{ marginTop: 'var(--t3)' }}>
       {sorok.map((v) => (
         <div key={v.id} className="alkartya">
-          <Szerkesztheto cimke="Rendszám" ertek={v.plate_raw} tipus="rendszam"
+          <Szerkesztheto zarolt={!szerkesztheto} cimke="Rendszám" ertek={v.plate_raw} tipus="rendszam"
                          onMent={async (x) => {
                            await data.saveVehicle({ id: v.id, plate_raw: x }); onValtozas()
                          }} />
-          <Szerkesztheto cimke="Autó" ertek={[v.brand, v.model].filter(Boolean).join(' ')}
+          <Szerkesztheto zarolt={!szerkesztheto} cimke="Autó" ertek={[v.brand, v.model].filter(Boolean).join(' ')}
                          ures="nincs megadva"
                          onMent={async (x) => {
                            const [marka, ...t] = x.split(' ')
                            await data.saveVehicle({ id: v.id, brand: marka ?? '', model: t.join(' ') })
                            onValtozas()
                          }} />
-          <Szerkesztheto cimke="Méret" ertek={v.category} valaszthato={KATEGORIAK}
+          <Szerkesztheto zarolt={!szerkesztheto} cimke="Méret" ertek={v.category} valaszthato={KATEGORIAK}
                          onMent={async (x) => {
                            await data.saveVehicle({ id: v.id, category: x }); onValtozas()
                          }} />
@@ -373,6 +391,110 @@ function UgyfelJarmuvei({ customerId, onValtozas }: {
         </div>
       ))}
       {sorok.length === 0 && <div className="ures">Nincs járműve.</div>}
+
+      {/* Egy ügyfélnek több autója lehet — a feleségé, a céges kisbusz. Eddig
+          új autó csak foglaláskor keletkezett; ha valaki telefonon annyit
+          mond, hogy „legközelebb a másikkal jönnék", nem volt hova felvenni. */}
+      {szerkesztheto && (
+        ujAuto ? (
+          <UjJarmu
+            customerId={customerId}
+            onKesz={() => { setUjAuto(false); void ujra(); onValtozas() }}
+            onMegse={() => setUjAuto(false)}
+          />
+        ) : (
+          <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }}
+                  onClick={() => setUjAuto(true)}>
+            + További jármű
+          </button>
+        )
+      )}
+    </div>
+  )
+}
+
+/** Új autó felvétele egy meglévő ügyfélhez. A rendszám elég hozzá — a többit
+ *  úgyis a foglaláskor látják, amikor ott áll az autó. */
+function UjJarmu({ customerId, onKesz, onMegse }: {
+  customerId: string
+  onKesz: () => void
+  onMegse: () => void
+}) {
+  const { data } = useApp()
+  const [plate, setPlate] = useState('')
+  const [brand, setBrand] = useState('')
+  const [model, setModel] = useState('')
+  const [category, setCategory] = useState('SZEMELYAUTO')
+  const [megy, setMegy] = useState(false)
+  const [hiba, setHiba] = useState<string | null>(null)
+  // A fókusz nem autoFocus attribútummal megy: az a képernyőolvasót
+  // használóknak ugrálásnak tűnik. Megnyitás után tesszük a mezőbe, egyszer.
+  const rendszamMezo = useRef<HTMLInputElement>(null)
+  useEffect(() => { rendszamMezo.current?.focus() }, [])
+
+  async function ment() {
+    if (!plate.trim() || megy) return
+    setMegy(true)
+    setHiba(null)
+    try {
+      await data.addVehicle({
+        customer_id: customerId, plate_raw: plate, brand, model, category,
+      })
+      onKesz()
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+      setMegy(false)
+    }
+  }
+
+  return (
+    <div className="alkartya uj-jarmu">
+      {hiba && <div className="hibauzenet">{hiba}</div>}
+
+      <label className="mezo">
+        <span>Rendszám</span>
+        <input ref={rendszamMezo} className="beviteli beviteli-rendszam"
+               value={plate} disabled={megy}
+               onChange={(e) => setPlate(e.target.value)}
+               onKeyDown={(e) => { if (e.key === 'Enter') void ment() }} />
+      </label>
+
+      <div className="mezo-sor">
+        <label className="mezo">
+          <span>Márka</span>
+          <input className="beviteli" value={brand} disabled={megy}
+                 onChange={(e) => setBrand(e.target.value)} />
+        </label>
+        <label className="mezo">
+          <span>Modell</span>
+          <input className="beviteli" value={model} disabled={megy}
+                 onChange={(e) => setModel(e.target.value)} />
+        </label>
+      </div>
+
+      <div className="mezo">
+        <span>Méret</span>
+        <div className="ertek-gombok" style={{ justifyContent: 'flex-start' }}>
+          {KATEGORIAK.map((k) => (
+            <button key={k.ertek} type="button" disabled={megy}
+                    className={k.ertek === category ? 'aktiv' : ''}
+                    aria-pressed={k.ertek === category}
+                    onClick={() => setCategory(k.ertek)}>
+              {k.cimke}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="urlap-lab">
+        <button className="btn btn-csendes btn-kicsi" onClick={onMegse} disabled={megy}>
+          Mégse
+        </button>
+        <button className="btn btn-fo btn-kicsi" onClick={() => void ment()}
+                disabled={!plate.trim() || megy}>
+          {megy ? 'Mentés…' : 'Felvétel'}
+        </button>
+      </div>
     </div>
   )
 }

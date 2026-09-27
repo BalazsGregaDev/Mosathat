@@ -380,3 +380,7 @@
 /* A mező alatti magyarázat, ha épp hibát jelez. A szöveg maga mondja meg,
    mi a baj — a szín csak megerősíti. */
 .mezo small.hibaszoveg { color: var(--v-baj); }
+
+/* Új jármű felvétele az ügyfél autói közé. */
+.uj-jarmu { margin-top: var(--t3); }
+.uj-jarmu .urlap-lab { margin-top: var(--t3); padding-top: var(--t3); }

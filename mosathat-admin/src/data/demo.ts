@@ -365,6 +365,12 @@ export class DemoSource implements DataSource {
     await this.rows(`select save_vehicle($1::jsonb)`, [JSON.stringify(patch)])
   }
 
+  async addVehicle(input: Record<string, unknown>): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(
+      `select add_vehicle($1::jsonb) as id`, [JSON.stringify(input)])
+    return r.id
+  }
+
   async listCustomers(q = ''): Promise<CustomerSummary[]> {
     return this.rows<CustomerSummary>(`select * from list_customers($1, 200)`, [q])
   }

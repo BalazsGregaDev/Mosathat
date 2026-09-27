@@ -315,6 +315,12 @@ export class SupabaseSource implements DataSource {
     if (error) fail('Jármű mentése', error)
   }
 
+  async addVehicle(input: Record<string, unknown>): Promise<string> {
+    const { data, error } = await this.sb.rpc('add_vehicle', { p: input })
+    if (error) fail('Jármű felvétele', error)
+    return data as string
+  }
+
   async listCustomers(q = ''): Promise<CustomerSummary[]> {
     const { data, error } = await this.sb.rpc('list_customers', { p_q: q, p_limit: 200 })
     if (error) fail('Ügyfelek', error)

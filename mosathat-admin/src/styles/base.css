@@ -192,3 +192,9 @@ hr.valaszto-vonal { border: none; border-top: 1px solid var(--keret); margin: va
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* Visszafordítható, de kellemetlen művelet: lemondás. Nem piros tömb — az a
+   „soha ne nyomd meg" üzenete volna, pedig ez egy hétköznapi lépés. Csak
+   annyira más, hogy a szem ne tévessze össze a mellette lévő „Kész van"-nal. */
+.btn-veszelyes { color: var(--v-baj); border-color: #f2d3cd; }
+.btn-veszelyes:hover:not(:disabled) { background: #fdf1ef; border-color: var(--v-baj); }

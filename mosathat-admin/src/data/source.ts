@@ -102,6 +102,8 @@ export interface DataSource {
   listVehicles(q?: string): Promise<VehicleSummary[]>
   saveCustomer(patch: Record<string, unknown>): Promise<void>
   saveVehicle(patch: Record<string, unknown>): Promise<void>
+  /** További autó egy meglévő ügyfélhez. A rendszám ütközését az adatbázis szűri. */
+  addVehicle(input: Record<string, unknown>): Promise<string>
 
   // --- áttekintés ---
   getDashboard(date: string): Promise<DashboardSummary>
