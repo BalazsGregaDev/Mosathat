@@ -54,6 +54,10 @@ function emberiHiba(uzenet: string): string {
   return uzenet
 }
 
+/** Hogy a valós idejű kapcsolat hibáját egyszer írjuk ki, ne minden
+ *  újrapróbálkozásnál. */
+let elojelzesVolt = false
+
 function fail(op: string, error: { message: string } | null): never {
   throw new Error(`${op}: ${emberiHiba(error?.message ?? 'ismeretlen hiba')}`)
 }
@@ -548,7 +552,25 @@ export class SupabaseSource implements DataSource {
       .channel('mosathat-elo')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, onValtozas)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_tasks' }, onValtozas)
-      .subscribe()
+      // Ha a kapcsolat nem épül fel, a Supabase kliense a végtelenségig
+      // újrapróbálkozik, és a böngésző konzolja megtelik WebSocket hibával —
+      // magyarázat nélkül. Egyszer kiírjuk, mit jelent, és mit NEM jelent.
+      .subscribe((allapot) => {
+        if (allapot === 'SUBSCRIBED') { elojelzesVolt = false; return }
+        if (allapot !== 'CHANNEL_ERROR' && allapot !== 'TIMED_OUT') return
+        if (elojelzesVolt) return
+        elojelzesVolt = true
+        console.warn(
+          '[Mosathat] A valós idejű frissítés nem épült fel.\n'
+          + 'Ez NEM töri el a rendszert: minden adat betöltődik, csak nem '
+          + 'frissül magától, ha másik gépen változik valami.\n'
+          + 'A két szokásos ok:\n'
+          + '  1. A Supabase → Database → Replication alatt a bookings és a '
+          + 'booking_tasks táblán nincs bekapcsolva a Realtime.\n'
+          + '  2. A VITE_SUPABASE_ANON_KEY értékébe szóköz vagy sortörés '
+          + 'került (a hibás címben %0A látszik a kulcs végén).',
+        )
+      })
 
     return () => {
       void this.sb.removeChannel(csatorna)
