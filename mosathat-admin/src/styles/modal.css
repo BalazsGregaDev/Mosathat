@@ -38,6 +38,10 @@
   flex: 1 1 auto;
   min-height: 0;            /* enélkül a flexbox nem engedi görgetni */
   overflow-y: auto;
+  /* A görgetés az ablak alján ne adódjon tovább a mögötte lévő listának:
+     enélkül a munkalap végén továbbhúzva a nap nézet indul el alatta. */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: var(--t5);
   display: flex; flex-direction: column; gap: var(--t5);
 }
@@ -56,6 +60,15 @@
 }
 .lap-lab .osszeg .alatta { font-size: var(--m-xs); color: var(--szoveg-halk); }
 .lap-lab .gombok { margin-left: auto; display: flex; gap: var(--t2); }
+
+/* --- a munkalap lába ---------------------------------------------------------
+   Két csoport: fent az ár és a Szerkesztés (ennyibe kerül — itt tudod
+   átírni), lent a munka haladása (Törlés, a következő állapot, Bezárás).
+   Nagy képernyőn a kettő egy sorba fér; telefonon két sor lesz belőle. */
+.munkalap-lab { flex-wrap: wrap; }
+.munkalap-lab .lab-fent {
+  display: flex; align-items: center; gap: var(--t4);
+}
 
 /* --- szakaszok az űrlapon ---------------------------------------------------- */
 
@@ -200,6 +213,35 @@
     padding-bottom: calc(var(--t3) + env(safe-area-inset-bottom));
   }
   .lap-lab .gombok .btn { padding: 11px 16px; }
+
+  /* A munkalap lába telefonon két sor.
+
+     Eddig egy sorban állt mind a hat gomb, és a jobb szélső egyszerűen
+     lelógott a képernyőről — pont a Bezárás és a következő lépés gombja,
+     tehát az a kettő, amit a legtöbbször megnyomnak.
+
+     A gombok itt szétosztják maguk közt a szélességet, és ha négynél többen
+     vannak, új sorba törnek. Így akárhány állapotgomb jön később, nem lóg le
+     semmi. */
+  .munkalap-lab {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--t3);
+  }
+  .munkalap-lab .lab-fent {
+    justify-content: space-between;
+    gap: var(--t3);
+  }
+  .munkalap-lab .osszeg .ertek { font-size: var(--m-lg); }
+  .munkalap-lab .gombok {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+  .munkalap-lab .gombok .btn {
+    flex: 1 1 auto;
+    padding: 11px 10px;
+    white-space: nowrap;
+  }
 }
 
 /* --- munkalista csoportok (Kívül / Belül / Csomagon kívül) -------------------- */

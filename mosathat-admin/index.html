@@ -2,7 +2,21 @@
 <html lang="hu">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- A nagyítás SZÁNDÉKOSAN le van tiltva.
+
+         Ez nem esztétikai döntés. Ha a telefonon két ujjal belenagyítasz, a
+         böngésző egy kisebb ablakon át mutatja a lapot, és onnantól az
+         ujjmozdulat nem a listát görgeti, hanem ezt az ablakot tologatja.
+         Így lehet oldalra elhúzni a képet (és nem áll vissza), és így fagy
+         be a munkalap görgetése is: a lap görög, csak nem látszik belőle,
+         mert a nagyított kivágás nem mozdul.
+
+         Ez egy munkaeszköz, amit egész nap, félkézzel, vizes ujjal
+         használnak — ott a véletlen nagyítás naponta többször elrontja a
+         görgetést. A szövegméretet ezért a felület adja meg elég nagyra,
+         nem a nagyítás. -->
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#14181a" />
 
     <!-- Beágyazott ikon: külön fájl nélkül is van favicon, és nem kér a

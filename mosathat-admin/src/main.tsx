@@ -12,7 +12,10 @@ import './styles/naptar.css'
 import './styles/arpanel.css'
 
 import { AppProvider } from './state/AppContext'
+import { nagyitasTiltas } from './lib/nagyitas'
 import App from './App'
+
+nagyitasTiltas()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

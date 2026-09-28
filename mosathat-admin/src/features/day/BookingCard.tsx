@@ -104,7 +104,10 @@ export default function BookingCard({ b, onMegnyit }: { b: DayBooking; onMegnyit
         {/* 3. sor — mit kér, mennyiért, hol tart a munka */}
         <div className="kartya-also">
           <span className="csomag">
-            {b.package_name ?? 'Csak extrák'}
+            {/* Ha nincs csomag, azt mondjuk ki: „Nincs csomag". A korábbi
+                „Csak extrák" azt sugallta, hogy ez egy külön fajta foglalás —
+                pedig csak annyi történt, hogy a csomag még nincs kiválasztva. */}
+            {b.package_name ?? 'Nincs csomag'}
             {b.full_service && ' + Full Service'}
             {b.scope !== 'TELJES' && ` · ${SCOPE_LABEL[b.scope]}`}
           </span>

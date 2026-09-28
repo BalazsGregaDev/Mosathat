@@ -81,10 +81,42 @@
 .arlista.tomor { min-width: 420px; }
 .arlista.tomor th, .arlista.tomor td { padding: 5px 8px; }
 .arlista.tomor .ar { font-size: var(--m-sm); }
-.arpanel-torzs .lista { min-width: 460px; }
 .arpanel-torzs .lista thead th,
 .arpanel-torzs .lista tbody td,
 .arpanel-torzs .lista tbody th { padding: var(--t2) var(--t3); }
+
+/* --- Egyéb szolgáltatások: inkább törjön két sorba, mint hogy kilógjon -------
+
+   Ez a panel keskeny — telefonon a képernyő teljes szélessége, asztali gépen
+   is csak egy hasáb. A táblázatnak eddig 460px volt a legkisebb szélessége,
+   hogy a szolgáltatás neve egy sorba férjen; egy 390px-es telefonon ettől
+   vízszintesen ki kellett görgetni a nevekért és az árakért. Pont akkor,
+   amikor telefonálás közben gyorsan meg kellene mondani.
+
+   Most a táblázat a panelhez igazodik: az ár és az idő annyi helyet kap,
+   amennyi a számoknak kell, a maradék a névé, és a hosszú név két sorba
+   törik. A CSOMAGOK fül táblázata ettől nem változik: annak más az
+   osztálya (.arlista.tomor), és az marad, ahogy volt. */
+.arpanel-torzs .lista.extra-tomor {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+.arpanel-torzs .lista.extra-tomor thead th,
+.arpanel-torzs .lista.extra-tomor tbody th,
+.arpanel-torzs .lista.extra-tomor tbody td {
+  white-space: normal;      /* ez engedi a kétsoros törést */
+  overflow-wrap: anywhere;  /* egy hosszú szó se lógjon ki */
+  vertical-align: top;
+}
+/* Az ár és az idő számok: szűk, fix oszlop elég nekik. A maradék a névé. */
+.arpanel-torzs .lista.extra-tomor thead th:nth-child(2),
+.arpanel-torzs .lista.extra-tomor tbody td:nth-child(2) { width: 30%; }
+.arpanel-torzs .lista.extra-tomor thead th:nth-child(3),
+.arpanel-torzs .lista.extra-tomor tbody td:nth-child(3) { width: 26%; }
+/* Az időt egy sorban akarjuk látni: a „30 perc" kettétörve lassabban
+   olvasható, mint amennyi helyet megspórolna. */
+.arpanel-torzs .lista.extra-tomor tbody td:nth-child(3) { white-space: nowrap; }
 
 /* --- méretező sarok ----------------------------------------------------------- */
 
@@ -112,6 +144,33 @@
   .arpanel-fej { cursor: default; }
   .arpanel-fej .fogo { display: none; }
   .arpanel-meret { display: none; }
+
+  /* Amíg az árlista nyitva van, csak ŐT lehet görgetni.
+
+     Enélkül az ujj a panelen mozog, de a nap/hét/hónap nézet görög alatta:
+     a panel törzse hamar a végére ér, és onnantól a mozdulat átcsordul a
+     mögötte lévő listára. A `touch-action: none` az ujjat állítja meg, az
+     `overflow: hidden` az egeret és a billentyűt — kettő kell, mert kétféle
+     úton lehet görgetni. */
+  body.arlista-nyitva .tartalom,
+  body.arlista-nyitva .lap-torzs {
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  /* A panel saját törzse viszont görögjön, és a végén ne adja tovább a
+     mozdulatot senkinek. */
+  .arpanel-torzs {
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+
+  /* Telefonon 2 ponttal kisebb betű és szűkebb belső margó: ennyi kellett
+     ahhoz, hogy a hosszú nevek is elférjenek két sorban. */
+  .arpanel-torzs .lista.extra-tomor { font-size: calc(var(--m-sm) - 2px); }
+  .arpanel-torzs .lista.extra-tomor thead th,
+  .arpanel-torzs .lista.extra-tomor tbody th,
+  .arpanel-torzs .lista.extra-tomor tbody td { padding: var(--t2); }
 }
 
 /* --- a gombok a foglalási ablakok fejlécében ---------------------------------

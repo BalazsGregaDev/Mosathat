@@ -15,6 +15,17 @@ html, body {
   max-width: 100%;
 }
 
+/* A csippentéses nagyítás kikapcsolása — a szabvány szerinti mód.
+
+   A `pan-x pan-y` azt mondja: görgetni mindkét irányba lehet, nagyítani nem.
+   (A `manipulation` kulcsszó ugyanez volna, plusz a nagyítás — az nem kell.)
+   A dupla koppintásos nagyítás is elmarad, és vele a koppintás utáni 300 ms
+   várakozás: a felület ettől érezhetően gyorsabban reagál.
+
+   Ez a lapon belüli vízszintes görgetést NEM érinti: az árlista táblázata
+   ugyanúgy húzható oldalra, mert az a saját dobozán belüli görgetés. */
+body { touch-action: pan-x pan-y; }
+
 body {
   margin: 0;
   background: var(--hatter);

@@ -798,17 +798,26 @@ export default function BookingDetail({
               </div>
             </div>
 
-            <div className="lap-lab">
-              <div className="osszeg">
-                <span className="ertek">{ft(b.final_price_huf ?? b.estimated_price_huf)}</span>
-                <span className="alatta">{b.final_price_huf ? 'végleges' : 'becsült'}</span>
-              </div>
-              <div className="gombok">
+            {/* A láb két sorból áll, és telefonon tényleg két sor lesz belőle.
+                Fent az ár és a hozzá tartozó Szerkesztés — ez a kettő egy
+                gondolat: ennyibe kerül, és itt tudod átírni. Lent a munka
+                haladása: Törlés, a következő állapot, Bezárás.
+
+                Egy sorban ez a hat gomb telefonon nem fért ki: a jobb szélen
+                lévők egyszerűen lelógtak a képernyőről. */}
+            <div className="lap-lab munkalap-lab">
+              <div className="lab-fent">
+                <div className="osszeg">
+                  <span className="ertek">{ft(b.final_price_huf ?? b.estimated_price_huf)}</span>
+                  <span className="alatta">{b.final_price_huf ? 'végleges' : 'becsült'}</span>
+                </div>
                 {!lezart && (
                   <button className="btn" onClick={onSzerkeszt}>
                     Szerkesztés
                   </button>
                 )}
+              </div>
+              <div className="gombok">
                 {b.status === 'CONFIRMED' && (
                   <button className="btn" onClick={() => void allapot('NO_SHOW')}>
                     Nem jött el

@@ -87,6 +87,23 @@ export default function ArlistaPanel({ ful, onFul, onBezar, allapot, onAllapot, 
 
   useEffect(() => { data.getCatalog().then(setK) }, [data])
 
+  // TELEFONON a mögöttes tartalom görgetése le van tiltva, amíg ez nyitva van.
+  //
+  // Enélkül az ujj a panelen mozog, de a nap/hét/hónap nézet görög alatta: a
+  // panel törzse hamar a végére ér, onnantól a mozdulat „átcsordul" a mögötte
+  // lévő listára. Telefonon ez az esetek túlnyomó többsége, mert a panel
+  // alacsony, a lista meg hosszú.
+  //
+  // Nagy képernyőn viszont SZÁNDÉKOSAN nincs zár: ott a panel egy lebegő
+  // ablak a naptár mellett, és pont az a dolga, hogy közben a naptárt is
+  // lehessen használni. A különbséget a CSS dönti el, nem itt egy
+  // képernyőszélesség-vizsgálat — így egy ablakátméretezés is helyesen
+  // viselkedik, külön figyelés nélkül.
+  useEffect(() => {
+    document.body.classList.add('arlista-nyitva')
+    return () => document.body.classList.remove('arlista-nyitva')
+  }, [])
+
   // Ha még nincs eltett hely, vagy a mentett hely időközben kilógna (kisebb
   // lett az ablak), akkor visszatesszük a jobb oldalra.
   useEffect(() => {
@@ -179,7 +196,14 @@ export default function ArlistaPanel({ ful, onFul, onBezar, allapot, onAllapot, 
         ) : ful === 'csomagok' ? (
           <CsomagArak k={k} tomor />
         ) : (
-          <ExtraLista k={k} q={q} onQ={setQ} />
+          /* A TÖMÖR változat kell ide, nem a teljes. A teljesnek négy oszlopa
+             van (a leírás külön oszlopban), és ez a panel keskeny: telefonon
+             a negyedik oszlop egyszerűen lelógott a képernyő széléről, a
+             leírásból csak a „MEG…" látszott.
+
+             A tömör változatban a leírás a név melletti karikás „i" alá
+             kerül — ugyanaz az adat, csak akkor foglal helyet, amikor kérik. */
+          <ExtraLista k={k} q={q} onQ={setQ} tomor />
         )}
       </div>
 
