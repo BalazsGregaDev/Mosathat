@@ -528,6 +528,24 @@ export default function BookingDetail({
                   valaszthato={TIPUSOK} gombok
                   onMent={(v) => mezoMent({ booking_type: v })} />
 
+                {/* A szerződésben megállapodott fuvardíj. Csak hozom-viszem
+                    foglalásnál jelenik meg, és csak akkor, ha az ügyfélnek
+                    van rá élő megállapodása.
+
+                    SZÁNDÉKOSAN nincs beleszámolva a lenti árba: a szerződéses
+                    árazás még nincs bekötve a foglalás árába, és ha csak a
+                    fuvar volna benne, az összeg félig lenne szerződéses. Itt
+                    emlékeztetőként áll, hogy a számlázásnál ne maradjon le. */}
+                {b.pickup_fee_huf != null && (
+                  <div className="adatsor">
+                    <span>Fuvar</span>
+                    <span className="ertek">
+                      {ft(b.pickup_fee_huf)}
+                      <span className="halk"> · a lenti áron felül</span>
+                    </span>
+                  </div>
+                )}
+
                 <Szerkesztheto
                   cimke="Nap" ertek={b.service_date.slice(0, 10)} tipus="datum" zarolt={lezart}
                   onMent={(v) => mezoMent({ service_date: v })} />

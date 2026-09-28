@@ -34,7 +34,11 @@
   margin-top: 3px;
 }
 
-.menu { padding: var(--t3) var(--t2); flex: 1; overflow-y: auto; }
+/* A min-height: 0 nem elhagyható. Oszlopirányú flexben egy elem alapból nem
+   lehet kisebb a saját tartalmánál (min-height: auto), tehát nem is tud
+   görgetni: a magassága a tartalomhoz nő, és a szülő levágja az alját.
+   Pontosan ez a „hosszú lista alja nem érhető el" hiba. */
+.menu { padding: var(--t3) var(--t2); flex: 1; min-height: 0; overflow-y: auto; }
 
 .menu button {
   display: flex;
@@ -134,8 +138,19 @@
 
 .tartalom {
   flex: 1;
+  /* Enélkül a görgetés elromlik, amint a tartalom menet közben megnő —
+     például ha egy kártyán belül lenyílik a „További jármű" űrlap. Oszlopos
+     flexben az elem alapból nem mehet a saját tartalma alá (min-height:
+     auto), ezért nem görgetni kezd, hanem MEGNŐ, a .fo pedig levágja az
+     alját: felfelé nem enged a lista tetejéig, lefelé viszont van üres hely.
+     A min-height: 0 mondja meg, hogy a doboz maradhat kisebb — és akkor
+     azon belül lesz görgetés. */
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;      /* a tartalom se tudjon oldalra csúszni */
+  /* A görgetés a lista végén ne adódjon tovább az oldalnak: iPhone-on ez a
+     „lap egésze elmozdul, aztán visszaugrik" mozgás. */
+  overscroll-behavior-y: contain;
   padding: var(--t5);
 }
 

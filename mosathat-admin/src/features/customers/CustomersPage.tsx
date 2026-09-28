@@ -7,6 +7,7 @@ import {
   type CustomerSummary, type VehicleSummary,
 } from '../../lib/types'
 import Szerkesztheto, { type Valaszthato } from '../common/Szerkesztheto'
+import { urlapMegnyilt } from '../../lib/kepernyo'
 import KartyaFej from '../common/KartyaFej'
 
 // ---------------------------------------------------------------------------
@@ -195,7 +196,7 @@ function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   // Ez a kapcsoló mondja meg, hogy már láttuk a figyelmeztetést.
   const [ismetles, setIsmetles] = useState(false)
   const nevMezo = useRef<HTMLInputElement>(null)
-  useEffect(() => { nevMezo.current?.focus() }, [])
+  useEffect(() => { urlapMegnyilt(nevMezo.current) }, [])
 
   async function ment(megis = false) {
     if (!name.trim() || !phone.trim() || megy) return
@@ -677,9 +678,10 @@ function UjJarmu({ customerId, kinek, onKesz, onMegse }: {
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
   // A fókusz nem autoFocus attribútummal megy: az a képernyőolvasót
-  // használóknak ugrálásnak tűnik. Megnyitás után tesszük a mezőbe, egyszer.
+  // használóknak ugrálásnak tűnik. Megnyitás után tesszük a mezőbe, egyszer —
+  // és telefonon nem is a mezőbe, csak az űrlapot görgetjük a képbe.
   const rendszamMezo = useRef<HTMLInputElement>(null)
-  useEffect(() => { rendszamMezo.current?.focus() }, [])
+  useEffect(() => { urlapMegnyilt(rendszamMezo.current) }, [])
 
   async function ment() {
     if (!plate.trim() || megy) return

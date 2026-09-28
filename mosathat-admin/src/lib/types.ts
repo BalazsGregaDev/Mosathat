@@ -248,6 +248,13 @@ export interface DayBooking {
   package_code: string | null
   package_name: string | null
 
+  /**
+   * A fuvar ára ennél a foglalásnál, a munka árán FELÜL. Csak akkor van
+   * értéke, ha a foglalás hozom-viszem, és az ügyfélnek van érvényes
+   * szerződése fuvardíjjal. A foglalás árában NINCS benne.
+   */
+  pickup_fee_huf: number | null
+
   tasks_total: number
   tasks_done: number
   first_done_at: string | null
@@ -480,6 +487,8 @@ export interface ContractRow {
   company_name: string | null
   tax_number: string | null
   pickup_delivery: boolean
+  /** A fuvar ára alkalmanként, a munka árán felül. NULL: nincs külön megállapodva. */
+  pickup_delivery_fee_huf: number | null
   valid_from: string
   valid_until: string | null
   active: boolean
@@ -492,6 +501,7 @@ export interface ContractInput {
   customer_id: string
   tax_number: string | null
   pickup_delivery: boolean
+  pickup_delivery_fee_huf: number | null
   valid_until: string | null
   notes: string | null
   prices: { tier: ContractTier; size: ContractSize; price_huf: number }[]

@@ -13,9 +13,11 @@ import './styles/arpanel.css'
 
 import { AppProvider } from './state/AppContext'
 import { nagyitasTiltas } from './lib/nagyitas'
+import { billentyuzetHelyreallitas } from './lib/kepernyo'
 import App from './App'
 
 nagyitasTiltas()
+billentyuzetHelyreallitas()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -15,8 +15,14 @@
          használnak — ott a véletlen nagyítás naponta többször elrontja a
          görgetést. A szövegméretet ezért a felület adja meg elég nagyra,
          nem a nagyítás. -->
+    <!-- Az `interactive-widget=resizes-content` a képernyő-billentyűzetről
+         szól: amikor feljön, a böngésző ne a lapot tolja el alatta (mert
+         akkor a lista elugrik, és a billentyűzet helyén üres hely marad),
+         hanem egyszerűen kisebbnek vegye a látható területet. Amelyik
+         böngésző még nem ismeri, az figyelmen kívül hagyja. -->
     <meta name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no,
+                   viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#14181a" />
 
     <!-- Beágyazott ikon: külön fájl nélkül is van favicon, és nem kér a

@@ -68,6 +68,7 @@
 
 .arpanel-torzs {
   flex: 1 1 auto;
+  min-height: 0;           /* enélkül a flexbox nem engedi görgetni */
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   padding: var(--t3);

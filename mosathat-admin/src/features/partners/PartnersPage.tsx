@@ -181,6 +181,12 @@ export default function PartnersPage() {
                       <span>Adószám</span><span className="ertek">{c.tax_number}</span>
                     </div>
                   )}
+                  {c.pickup_delivery && c.pickup_delivery_fee_huf != null && (
+                    <div className="adatsor">
+                      <span>Fuvar</span>
+                      <span className="ertek">{ft(c.pickup_delivery_fee_huf)} / út</span>
+                    </div>
+                  )}
 
                   <table className="artabla keskeny" style={{ marginTop: 'var(--t3)' }}>
                     <thead>
@@ -436,6 +442,8 @@ function ContractForm({
   const [ugyfelNev, setUgyfelNev] = useState(contract?.company_name ?? contract?.customer_name ?? '')
   const [adoszam, setAdoszam] = useState(contract?.tax_number ?? '')
   const [hozomViszem, setHozomViszem] = useState(contract?.pickup_delivery ?? false)
+  const [fuvardij, setFuvardij] = useState(
+    contract?.pickup_delivery_fee_huf != null ? String(contract.pickup_delivery_fee_huf) : '')
   const [lejarat, setLejarat] = useState(contract?.valid_until?.slice(0, 10) ?? '')
   const [arak, setArak] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -462,6 +470,8 @@ function ContractForm({
         customer_id: ugyfelId,
         tax_number: adoszam.trim() || null,
         pickup_delivery: hozomViszem,
+        pickup_delivery_fee_huf: hozomViszem && fuvardij.trim() !== ''
+          ? Number(fuvardij) : null,
         valid_until: lejarat || null,
         notes: null,
         prices: TIERS.flatMap((tier) =>
@@ -538,6 +548,26 @@ function ContractForm({
                      onChange={(e) => setHozomViszem(e.target.checked)} />
               <span>Hozom-viszem szolgáltatás jár</span>
             </label>
+
+            {/* A fuvar ára KÜLÖN mező, nem a csomagárba építve: nem minden
+                autóért kell elmenni. Egy flottából az egyiket behozzák, a
+                másikért menni kell — ha a fuvar bele volna árazva, a behozott
+                autó is fizetné.
+
+                Hogy melyik foglalásnál számít, azt a foglalás típusa mondja
+                meg (Hozom-viszem), nem ez a mező. */}
+            {hozomViszem && (
+              <div className="mezo">
+                <span>Fuvar ára alkalmanként</span>
+                <input className="beviteli" type="number" inputMode="numeric" min={0}
+                       value={fuvardij} placeholder="pl. 4000"
+                       onChange={(e) => setFuvardij(e.target.value)} />
+                <small>
+                  A munka árán FELÜL, egy útra. Üresen hagyva nincs külön
+                  megállapodva — akkor a munkalapon sem fog megjelenni.
+                </small>
+              </div>
+            )}
           </div>
 
           <div className="szakasz">

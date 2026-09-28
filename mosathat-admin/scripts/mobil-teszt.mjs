@@ -226,6 +226,68 @@ await p.waitForTimeout(2200)
   await p.screenshot({ path: '/tmp/d-munkalap.png' })
 }
 
+console.log('\n=== 7) lenyíló űrlap nem rontja el a görgetést ===\n')
+await p.setViewportSize({ width: 390, height: 844 })
+await p.waitForTimeout(600)
+// A 6. pont munkalapja még nyitva van.
+if (await p.locator('.lap-fej .bezar').count()) {
+  await p.locator('.lap-fej .bezar').first().click()
+  await p.waitForTimeout(800)
+}
+await p.locator('.mobil-fejlec .hamburger').click()
+await p.waitForTimeout(500)
+await p.locator('.fiok button').filter({ hasText: 'Ügyfelek' }).first().click()
+await p.waitForTimeout(2500)
+await p.locator('.fulek button').filter({ hasText: 'Ügyfél szerint' }).click()
+await p.waitForTimeout(2000)
+{
+  const meret = () => p.evaluate(() => {
+    const t = document.querySelector('.tartalom')
+    const also = [...document.querySelectorAll('.tartalom .panel')].pop()
+    return {
+      scrollH: t.scrollHeight, clientH: t.clientHeight, top: t.scrollTop,
+      minH: getComputedStyle(t).minHeight,
+      tulcsordul: getComputedStyle(t).overscrollBehaviorY,
+      tartalomAlja: also
+        ? Math.round(also.getBoundingClientRect().bottom - t.getBoundingClientRect().top + t.scrollTop)
+        : 0,
+    }
+  })
+  ok('a görgetődoboz zsugorodhat (min-height: 0)', '0px', (await meret()).minH)
+  ok('a görgetés nem csordul tovább a lapra', 'contain', (await meret()).tulcsordul)
+
+  // A kártyák csukva nyílnak; a „További jármű" gomb a lenyitott kártyán van.
+  const fej = p.locator('.tartalom .panel .kartya-fej, .tartalom .panel h3').first()
+  if (await fej.count()) { await fej.click(); await p.waitForTimeout(700) }
+
+  const gomb = p.getByRole('button', { name: /További jármű/ }).first()
+  if (await gomb.count()) {
+    await gomb.scrollIntoViewIfNeeded()
+    const elotte = await meret()
+    await gomb.click()
+    await p.waitForTimeout(400)
+    const utana = await meret()
+    ok('az űrlap megnyitásakor nő a görgethető magasság', true, utana.scrollH > elotte.scrollH)
+    ok('nem nyílt fel billentyűzet (nincs fókuszált mező)', 'BODY',
+      await p.evaluate(() => document.activeElement?.tagName))
+
+    await p.evaluate(() => { document.querySelector('.tartalom').scrollTop = 0 })
+    await p.waitForTimeout(250)
+    ok('a lista tetejéig fel lehet görgetni', 0, (await meret()).top)
+
+    await p.evaluate(() => { document.querySelector('.tartalom').scrollTop = 99999 })
+    await p.waitForTimeout(250)
+    const v = await meret()
+    // A .tartalom alul 96px helyet hagy a lebegő + gombnak; ennél több üres
+    // hely azt jelentené, hogy a doboz nagyobb, mint a tartalma.
+    ok('alul nincs indokolatlan üres hely', true, v.scrollH - v.tartalomAlja <= 100)
+    ok('a lap egésze nem csúszott el', 0, await p.evaluate(() => window.scrollY))
+    await p.screenshot({ path: '/tmp/m-ujjarmu.png' })
+  } else {
+    console.log('         (nincs ügyfélkártya, kihagyva)')
+  }
+}
+
 await b.close()
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)
 process.exit(baj === 0 ? 0 : 1)

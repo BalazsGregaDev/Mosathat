@@ -133,7 +133,14 @@ export default function PartnersView() {
                 <div className="ceg-fej">
                   <strong>{c.company_name || c.customer_name}</strong>
                   {c.pickup_delivery && (
-                    <span className="cimke-pill" data-r="hozomviszem">Hozom-viszem</span>
+                    <span className="cimke-pill" data-r="hozomviszem">
+                      Hozom-viszem
+                      {/* Az ár is ott van a címkén: az alkalmazott ezt a
+                          képernyőt telefon közben nézi, és ilyenkor pont ez a
+                          kérdés — „és a fuvar mennyi?". */}
+                      {c.pickup_delivery_fee_huf != null
+                        && ` · ${ft(c.pickup_delivery_fee_huf)} / út`}
+                    </span>
                   )}
                 </div>
                 <table className="artabla keskeny">

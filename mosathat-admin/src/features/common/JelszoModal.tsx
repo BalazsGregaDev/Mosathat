@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { urlapMegnyilt } from '../../lib/kepernyo'
 
 // ---------------------------------------------------------------------------
 //  Jelszó megadása
@@ -35,7 +36,7 @@ export default function JelszoModal({ kinek, sajat, onMent, onBezar }: {
   const [hiba, setHiba] = useState<string | null>(null)
   const elso = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { elso.current?.focus() }, [])
+  useEffect(() => { urlapMegnyilt(elso.current) }, [])
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !megy) onBezar() }
     window.addEventListener('keydown', k)
