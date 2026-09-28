@@ -5,7 +5,7 @@ import type {
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
-  ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
+  RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
 } from '../lib/types'
 import type { Catalog, DataSource, SessionUser } from './source'
 import { calcArgs, num, numOrNull, toCalcResult } from './source'
@@ -110,7 +110,14 @@ export class SupabaseSource implements DataSource {
       .eq('id', id)
       .maybeSingle()
     if (!data || !data.active) return null
-    return { id: data.id, name: data.full_name, role: data.role, email }
+    // A szerkesztési jogot nem a szerepkörből következtetjük ki: a szerepkör
+    // alapértéke és az erre a fiókra szóló külön döntés együtt adja ki, és
+    // ugyanez a függvény őrzi a mentést is.
+    const { data: jog } = await this.sb.rpc('can_edit_customers')
+    return {
+      id: data.id, name: data.full_name, role: data.role, email,
+      canEditCustomers: jog === true,
+    }
   }
 
   // --- katalógus ------------------------------------------------------------
@@ -325,6 +332,12 @@ export class SupabaseSource implements DataSource {
     return data as string
   }
 
+  async addCustomer(input: Record<string, unknown>): Promise<string> {
+    const { data, error } = await this.sb.rpc('add_customer', { p: input })
+    if (error) fail('Ügyfél felvétele', error)
+    return data as string
+  }
+
   async listCustomers(q = ''): Promise<CustomerSummary[]> {
     const { data, error } = await this.sb.rpc('list_customers', { p_q: q, p_limit: 200 })
     if (error) fail('Ügyfelek', error)
@@ -453,10 +466,21 @@ export class SupabaseSource implements DataSource {
 
   async updateStaff(
     id: string,
-    patch: { full_name?: string; role?: StaffRole; active?: boolean },
+    patch: { full_name?: string; role?: StaffRole; active?: boolean; can_edit_customers?: boolean | null },
   ): Promise<void> {
     const { error } = await this.sb.rpc('set_staff', { p: { id, ...patch } })
     if (error) fail('Felhasználó módosítása', error)
+  }
+
+  async listRolePermissions(): Promise<RolePermission[]> {
+    const { data, error } = await this.sb.rpc('list_role_permissions')
+    if (error) fail('Szerepkörök jogai', error)
+    return (data ?? []) as RolePermission[]
+  }
+
+  async setRolePermission(role: StaffRole, patch: { can_edit_customers: boolean }): Promise<void> {
+    const { error } = await this.sb.rpc('set_role_permission', { p: { role, ...patch } })
+    if (error) fail('Szerepkör jogának módosítása', error)
   }
 
   async deleteInvite(email: string): Promise<void> {

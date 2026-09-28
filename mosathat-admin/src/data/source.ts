@@ -3,7 +3,7 @@ import type {
   ContractInput, ContractRow, DashboardSummary, DayBooking, DayCapacity, DayOverride,
   Extra, FullServicePrice,
   LatestStart, NewBookingInput, PackageMatrixRow, PackageExtraRow, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
-  PlateLookup, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
+  PlateLookup, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow,
 } from '../lib/types'
 
@@ -37,6 +37,14 @@ export interface SessionUser {
   name: string
   role: StaffRole
   email: string | null
+  /**
+   * Szerkesztheti-e az ügyfeleket, járműveket és bérleteket. Nem a
+   * szerepkörből számolt érték: a szerepkör alapértéke és az erre a fiókra
+   * szóló külön döntés együtt adja ki, és az adatbázis mondja meg
+   * (can_edit_customers()). A felület csak ELREJTI, amit nem lehet — a
+   * tiltást a mentő függvények tartják be.
+   */
+  canEditCustomers: boolean
 }
 
 export interface DataSource {
@@ -104,6 +112,14 @@ export interface DataSource {
   saveVehicle(patch: Record<string, unknown>): Promise<void>
   /** További autó egy meglévő ügyfélhez. A rendszám ütközését az adatbázis szűri. */
   addVehicle(input: Record<string, unknown>): Promise<string>
+  /**
+   * Új ügyfél foglalás nélkül — ezen megy a régi, papíros adatok feltöltése.
+   *
+   * Ha a telefonszám már szerepel valakinél, HIBÁT ad vissza a név
+   * megnevezésével. Ugyanaz a hívás `megis: true`-val mégis felveszi: egy
+   * családban előfordul közös szám, de a legtöbbször elgépelés.
+   */
+  addCustomer(input: Record<string, unknown>): Promise<string>
 
   // --- áttekintés ---
   getDashboard(date: string): Promise<DashboardSummary>
@@ -131,8 +147,22 @@ export interface DataSource {
    * marad. Egyébként null.
    */
   createStaff(input: NewStaffInput): Promise<string | null>
-  updateStaff(id: string, patch: { full_name?: string; role?: StaffRole; active?: boolean }): Promise<void>
+  /**
+   * A `can_edit_customers` háromállapotú: `true`/`false` erre a fiókra szóló
+   * külön döntés, `null` pedig azt jelenti, hogy megint a szerepköréhez
+   * igazodik. A kulcs kihagyása változatlanul hagyja.
+   */
+  updateStaff(id: string, patch: {
+    full_name?: string
+    role?: StaffRole
+    active?: boolean
+    can_edit_customers?: boolean | null
+  }): Promise<void>
   deleteInvite(email: string): Promise<void>
+
+  /** A szerepkörök alapértelmezései — amit a fiókok külön döntés nélkül követnek. */
+  listRolePermissions(): Promise<RolePermission[]>
+  setRolePermission(role: StaffRole, patch: { can_edit_customers: boolean }): Promise<void>
 
   /**
    * A SAJÁT jelszó átírása. A mostanit is meg kell adni: enélkül egy nyitva

@@ -25,7 +25,13 @@ const AFA = 0.27
 // ---------------------------------------------------------------------------
 
 export default function PartnersPage() {
-  const { data } = useApp()
+  const { data, user } = useApp()
+  // Ugyanaz a kapcsoló, mint az Ügyfelek képernyőn: itt is törzsadatról van
+  // szó, csak a megállapodás oldaláról. Az alkalmazott a bérletet HASZNÁLJA
+  // (az alkalom levonása a foglalás lezárásának a része) — kiadni és
+  // kivezetni nem tudja. Az adatbázis is így tartja be: create_pass,
+  // save_contract, deactivate_pass.
+  const szerkesztheto = user?.canEditCustomers === true
   const [ful, setFul] = useState<'berletek' | 'cegek'>('berletek')
   const [passes, setPasses] = useState<PassBalanceRow[]>([])
   const [contracts, setContracts] = useState<ContractRow[]>([])
@@ -81,10 +87,12 @@ export default function PartnersPage() {
 
       {!tolt && ful === 'berletek' && (
         <>
-          <button className="btn btn-fo" style={{ marginBottom: 'var(--t4)' }}
-                  onClick={() => setUjBerlet(true)}>
-            + Új bérlet
-          </button>
+          {szerkesztheto && (
+            <button className="btn btn-fo" style={{ marginBottom: 'var(--t4)' }}
+                    onClick={() => setUjBerlet(true)}>
+              + Új bérlet
+            </button>
+          )}
 
           {berletek.length === 0 && (
             <div className="panel"><div className="ures">Még nincs bérlet.</div></div>
@@ -133,7 +141,7 @@ export default function PartnersPage() {
                       </tbody>
                     </table>
 
-                    {fej.active && (
+                    {fej.active && szerkesztheto && (
                       <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }}
                               onClick={async () => {
                                 if (!window.confirm('Biztos kivezeted ezt a bérletet?')) return
@@ -152,10 +160,12 @@ export default function PartnersPage() {
 
       {!tolt && ful === 'cegek' && (
         <>
-          <button className="btn btn-fo" style={{ marginBottom: 'var(--t4)' }}
-                  onClick={() => setSzerkContract('uj')}>
-            + Új szerződés
-          </button>
+          {szerkesztheto && (
+            <button className="btn btn-fo" style={{ marginBottom: 'var(--t4)' }}
+                    onClick={() => setSzerkContract('uj')}>
+              + Új szerződés
+            </button>
+          )}
 
           {contracts.length === 0 && (
             <div className="panel"><div className="ures">Még nincs szerződéses cég.</div></div>
@@ -194,10 +204,12 @@ export default function PartnersPage() {
                     </tbody>
                   </table>
 
-                  <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }}
-                          onClick={() => setSzerkContract(c)}>
-                    Szerkesztés
-                  </button>
+                  {szerkesztheto && (
+                    <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }}
+                            onClick={() => setSzerkContract(c)}>
+                      Szerkesztés
+                    </button>
+                  )}
               </CegKartya>
             ))}
           </div>

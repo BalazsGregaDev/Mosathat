@@ -24,7 +24,7 @@ import type {
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
-  ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
+  RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
 } from '../lib/types'
 import type { Catalog, DataSource, SessionUser } from './source'
 import { calcArgs, num, numOrNull, toCalcResult } from './source'
@@ -103,10 +103,15 @@ export class DemoSource implements DataSource {
 
     const sorrendben = Object.keys(MIGRACIOK).sort()
     for (const utvonal of sorrendben) await db.exec(MIGRACIOK[utvonal])
-    await db.exec(demoAdatok)
 
     // A három belépő. Nem csak azért, hogy a created_by ne legyen üres:
     // így ki lehet próbálni, mit lát egy alkalmazott és mit a tulaj.
+    //
+    // A DEMÓ ADATOK ELŐTT kell megcsinálni, és be is kell lépni a fejlesztői
+    // fiókkal: a demó adatok ugyanazokat a függvényeket hívják, mint a
+    // felület (create_pass, save_contract), azok pedig már megkérdezik, ki
+    // hívja őket. Bejelentkezett felhasználó nélkül a feltöltés elhasalna —
+    // és pont ez a jó: azt jelenti, hogy a szabály valóban ott van.
     for (const b of DEMO_BELEPOK) {
       await db.query(
         `insert into auth.users (id, email, last_sign_in_at)
@@ -117,6 +122,8 @@ export class DemoSource implements DataSource {
         [b.id, b.name, b.role])
     }
     await db.exec(`select set_config('app.uid', '${DEMO_STAFF_ID}', false)`)
+
+    await db.exec(demoAdatok)
     this.db = db
   }
 
@@ -155,7 +162,10 @@ export class DemoSource implements DataSource {
     // Ettől kezdve az adatbázis is őt látja bejelentkezettnek: a jogosultsági
     // ellenőrzések ugyanúgy futnak, mint élesben.
     await this.pg.exec(`select set_config('app.uid', '${b.id}', false)`)
-    const u: SessionUser = { id: b.id, name: b.name, role: b.role, email: b.email }
+    const u: SessionUser = {
+      id: b.id, name: b.name, role: b.role, email: b.email,
+      canEditCustomers: await this.szerkesztheti(),
+    }
     this.user = u
     return u
   }
@@ -165,7 +175,16 @@ export class DemoSource implements DataSource {
   }
 
   async currentUser(): Promise<SessionUser | null> {
+    // A jog közben átállítható a Felhasználók képernyőn, ezért újra
+    // megkérdezzük — nem a belépéskori állapotot őrizzük.
+    if (this.user) this.user = { ...this.user, canEditCustomers: await this.szerkesztheti() }
     return this.user
+  }
+
+  /** Az adatbázis dönt, nem a szerepkörből számolunk — élesben is ez a helyzet. */
+  private async szerkesztheti(): Promise<boolean> {
+    const [r] = await this.rows<{ v: boolean }>(`select can_edit_customers() as v`)
+    return r?.v === true
   }
 
   // --- katalógus ------------------------------------------------------------
@@ -371,6 +390,12 @@ export class DemoSource implements DataSource {
     return r.id
   }
 
+  async addCustomer(input: Record<string, unknown>): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(
+      `select add_customer($1::jsonb) as id`, [JSON.stringify(input)])
+    return r.id
+  }
+
   async listCustomers(q = ''): Promise<CustomerSummary[]> {
     return this.rows<CustomerSummary>(`select * from list_customers($1, 200)`, [q])
   }
@@ -462,9 +487,18 @@ export class DemoSource implements DataSource {
 
   async updateStaff(
     id: string,
-    patch: { full_name?: string; role?: StaffRole; active?: boolean },
+    patch: { full_name?: string; role?: StaffRole; active?: boolean; can_edit_customers?: boolean | null },
   ): Promise<void> {
     await this.rows(`select set_staff($1::jsonb)`, [JSON.stringify({ id, ...patch })])
+  }
+
+  async listRolePermissions(): Promise<RolePermission[]> {
+    return this.rows<RolePermission>(`select * from list_role_permissions()`)
+  }
+
+  async setRolePermission(role: StaffRole, patch: { can_edit_customers: boolean }): Promise<void> {
+    await this.rows(`select set_role_permission($1::jsonb)`,
+      [JSON.stringify({ role, ...patch })])
   }
 
   async deleteInvite(email: string): Promise<void> {

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { ROLE_LABEL, ROLE_LEIRAS, type NewStaffInput, type StaffRole, type StaffRow } from '../../lib/types'
+import {
+  ROLE_LABEL, ROLE_LEIRAS,
+  type NewStaffInput, type RolePermission, type StaffRole, type StaffRow,
+} from '../../lib/types'
 import JelszoModal from '../common/JelszoModal'
+import Csuszka from '../common/Csuszka'
 
 // ---------------------------------------------------------------------------
 //  Felhasználók
@@ -22,17 +26,21 @@ import JelszoModal from '../common/JelszoModal'
 // ---------------------------------------------------------------------------
 
 export default function UsersPage() {
-  const { data, user } = useApp()
+  const { data, user, refreshUser } = useApp()
   const [sorok, setSorok] = useState<StaffRow[] | null>(null)
+  const [jogok, setJogok] = useState<RolePermission[]>([])
   const [hiba, setHiba] = useState<string | null>(null)
   const [ujNyitva, setUjNyitva] = useState(false)
   const [uzenet, setUzenet] = useState<string | null>(null)
 
   const betolt = useCallback(() => {
-    data.listStaff()
-      .then((s) => { setSorok(s); setHiba(null) })
+    Promise.all([data.listStaff(), data.listRolePermissions()])
+      .then(([s, j]) => { setSorok(s); setJogok(j); setHiba(null) })
       .catch((e) => setHiba(e instanceof Error ? e.message : String(e)))
-  }, [data])
+    // A saját jogosultság is változhatott: ha most kapcsolta be magának, a
+    // többi képernyőnek is tudnia kell róla, különben újratöltésig nem látszik.
+    void refreshUser()
+  }, [data, refreshUser])
 
   useEffect(betolt, [betolt])
 
@@ -58,6 +66,12 @@ export default function UsersPage() {
   const szerepek: StaffRole[] = fejleszto
     ? ['SUPERADMIN', 'TULAJDONOS', 'STAFF']
     : ['TULAJDONOS', 'STAFF']
+  // A tulajdonos csak az alkalmazottak jogát állítja. A sajátját és a
+  // fejlesztőit nem — ezt az adatbázis is így tartja be, a lista csak nem
+  // kínál fel olyan kapcsolót, amire nemet kapna.
+  const allithatoSzerepek: StaffRole[] = fejleszto
+    ? ['SUPERADMIN', 'TULAJDONOS', 'STAFF']
+    : ['STAFF']
 
   return (
     <div className="oldal">
@@ -79,6 +93,30 @@ export default function UsersPage() {
         </div>
       )}
 
+      {/* Szerepkör szintű jog. A táblázat FÖLÖTT áll, mert ez a kiindulás: a
+          soroknál csak az van eltárolva, aki ettől eltér. Fordított sorrendben
+          a sorokban látott „Be" megmagyarázhatatlan volna. */}
+      <div className="panel panelek-szeles" style={{ marginBottom: 'var(--t4)' }}>
+        <h3>Ügyfelek, cégek és bérletesek szerkesztése</h3>
+        <div className="panel-torzs">
+          <p className="halk" style={{ fontSize: 'var(--m-xs)', marginBottom: 'var(--t3)' }}>
+            Ez a menüpontokban lévő adat átírását engedi: ügyfél, jármű, bérlet,
+            szerződés. A foglalás felvétele és módosítása nem ez — azt mindenki
+            tudja. Régi adatok feltöltésekor érdemes bekapcsolni, utána vissza.
+          </p>
+          {allithatoSzerepek.map((r) => (
+            <SzerepkorJog key={r} role={r}
+                          be={jogok.find((j) => j.role === r)?.can_edit_customers ?? false}
+                          onValtozas={betolt} />
+          ))}
+          {!fejleszto && (
+            <p className="halk" style={{ fontSize: 'var(--m-xs)', marginTop: 'var(--t3)' }}>
+              Tulajdonosként ezt mindig tudod, azt nem kell bekapcsolni.
+            </p>
+          )}
+        </div>
+      </div>
+
       <div className="panel panelek-szeles">
         <h3>Hozzáférések</h3>
         <div className="panel-torzs">
@@ -89,6 +127,7 @@ export default function UsersPage() {
                   <th>Név</th>
                   <th>Szerepkör</th>
                   <th>Állapot</th>
+                  <th>Ügyfelek szerkesztése</th>
                   <th>Hozzáférés</th>
                 </tr>
               </thead>
@@ -161,6 +200,40 @@ export default function UsersPage() {
   )
 }
 
+/** Egy szerepkör kapcsolója. Mindenkire hat, akinél nincs külön beállítás. */
+function SzerepkorJog({ role, be, onValtozas }: {
+  role: StaffRole
+  be: boolean
+  onValtozas: () => void
+}) {
+  const { data } = useApp()
+  const [dolgozik, setDolgozik] = useState(false)
+  const [hiba, setHiba] = useState<string | null>(null)
+
+  async function valt(uj: boolean) {
+    setDolgozik(true)
+    try {
+      await data.setRolePermission(role, { can_edit_customers: uj })
+      setHiba(null)
+      onValtozas()
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDolgozik(false)
+    }
+  }
+
+  return (
+    <div className="csuszka-sor" style={{ marginBottom: 'var(--t2)' }}>
+      <span className="cimke-pill" data-r={role}>{ROLE_LABEL[role]}</span>
+      <Csuszka be={be} dolgozik={dolgozik}
+               cimke={`${ROLE_LABEL[role]}: ügyfelek szerkesztése`}
+               onValt={(uj) => void valt(uj)} />
+      {hiba && <span className="sor-hiba">{hiba}</span>}
+    </div>
+  )
+}
+
 function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
   s: StaffRow
   en: boolean
@@ -173,7 +246,9 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
   const [hiba, setHiba] = useState<string | null>(null)
   const [jelszo, setJelszo] = useState(false)
 
-  async function modosit(patch: { role?: StaffRole; active?: boolean }) {
+  async function modosit(patch: {
+    role?: StaffRole; active?: boolean; can_edit_customers?: boolean | null
+  }) {
     setDolgozik(true)
     try {
       await data.updateStaff(s.id!, patch)
@@ -220,6 +295,31 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
         {s.active
           ? <span className="cimke-pill" data-r="aktiv">Aktív</span>
           : <span className="cimke-pill" data-r="tiltott">Kikapcsolva</span>}
+      </td>
+
+      {/* Fiókra szóló kivétel. Amíg nincs, a szerepkörét követi — ezt ki is
+          írjuk, különben úgy tűnne, mint egy itt beállított érték, és a
+          szerepkör kapcsolójának a hatása érthetetlen lenne. */}
+      <td>
+        {kezelheto ? (
+          <>
+            <Csuszka be={s.can_edit_customers} dolgozik={dolgozik}
+                     cimke={`${s.full_name}: ügyfelek szerkesztése`}
+                     onValt={(uj) => void modosit({ can_edit_customers: uj })} />
+            <div className="csuszka-alatt">
+              {s.can_edit_customers_sajat ? (
+                <button className="szoveg-gomb" disabled={dolgozik}
+                        onClick={() => void modosit({ can_edit_customers: null })}>
+                  vissza a szerepköréhez
+                </button>
+              ) : (
+                <>a szerepkörét követi</>
+              )}
+            </div>
+          </>
+        ) : (
+          <span className="halk">{s.can_edit_customers ? 'Be' : 'Ki'}</span>
+        )}
       </td>
 
       <td>

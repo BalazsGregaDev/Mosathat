@@ -622,8 +622,9 @@ export const ROLE_LEIRAS: Record<StaffRole, string> = {
   SUPERADMIN: 'Mindenhez hozzáfér. Ide kerülnek később a fejlesztést segítő funkciók.',
   TULAJDONOS: 'Az alkalmazáson belül mindenhez hozzáfér, és alkalmazottat vehet fel.',
   STAFF: 'A napi munkához mindent tud: időpontot vesz fel, módosít és zár le. '
-    + 'A Cégek és bérletesek, valamint az Ügyfelek menüpontot csak olvasni tudja, '
-    + 'szerkeszteni nem. Az Áttekintéshez és a Beállításokhoz nem fér hozzá.',
+    + 'Az Áttekintéshez és a Beállításokhoz nem fér hozzá. Az Ügyfelek, valamint '
+    + 'a Cégek és bérletesek menüpont alapból csak olvasható nála — ezt a lap '
+    + 'tetején lévő kapcsolóval lehet megnyitni, szerepkörre vagy egy fiókra.',
 }
 
 export interface StaffRow {
@@ -637,6 +638,16 @@ export interface StaffRow {
   /** Igaz, ha még csak meghívó van, fiók nincs. */
   meghivo: boolean
   created_at: string
+  /** Szerkesztheti-e most az ügyfeleket, cégeket és bérleteket. */
+  can_edit_customers: boolean
+  /** Igaz, ha ez a fiókra szóló külön döntés — nem a szerepköre alapértéke. */
+  can_edit_customers_sajat: boolean
+}
+
+/** Egy szerepkör alapértelmezései. Amelyik fiókon nincs külön döntés, ezt követi. */
+export interface RolePermission {
+  role: StaffRole
+  can_edit_customers: boolean
 }
 
 export interface NewStaffInput {

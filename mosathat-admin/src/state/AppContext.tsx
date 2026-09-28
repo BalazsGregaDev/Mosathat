@@ -20,6 +20,12 @@ interface AppValue {
   /** Számláló: ha nő, a nap újratöltődik. Mentés után ezt kell hívni. */
   revision: number
   refresh(): void
+  /**
+   * A bejelentkezett dolgozó adatainak újrakérdezése. Akkor kell, ha menet
+   * közben változott a jogosultsága — enélkül a képernyő a belépéskori
+   * állapotot mutatná, és a felhasználó azt hinné, nem történt semmi.
+   */
+  refreshUser(): Promise<void>
 }
 
 const Ctx = createContext<AppValue | null>(null)
@@ -102,9 +108,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(() => setRevision((r) => r + 1), [])
 
+  const refreshUser = useCallback(async () => {
+    if (!data) return
+    setUser(await data.currentUser())
+  }, [data])
+
   const value = useMemo<AppValue | null>(
-    () => (data ? { data, user, catalog, signIn, signOut, revision, refresh } : null),
-    [data, user, catalog, signIn, signOut, revision, refresh],
+    () => (data ? { data, user, catalog, signIn, signOut, revision, refresh, refreshUser } : null),
+    [data, user, catalog, signIn, signOut, revision, refresh, refreshUser],
   )
 
   if (hiba) {

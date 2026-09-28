@@ -37,12 +37,15 @@ const TIPUSOK: Valaszthato[] = [
 
 export default function CustomersPage() {
   const { data, user } = useApp()
-  // Az alkalmazottnak ez a képernyő OLVASHATÓ, nem szerkeszthető. A napi
-  // munkájához tartozó adatokat a foglalási ablakban írja át — ott az a
+  // Ez a képernyő alapból OLVASHATÓ az alkalmazottnak, nem szerkeszthető: a
+  // napi munkájához tartozó adatokat a foglalási ablakban írja át — ott az a
   // foglalásé, itt viszont a törzsadat, ami minden későbbi foglalásra hat.
-  // Ugyanez a szabály az adatbázisban is be van építve (save_customer,
-  // save_vehicle): a képernyő csak megmutatja, nem ez tartja be.
-  const szerkesztheto = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
+  //
+  // „Alapból", mert a Felhasználók képernyőn ez szerepkörre és fiókra
+  // bekapcsolható — régi adatok feltöltésekor erre szükség van. A jogot nem
+  // itt számoljuk ki: az adatbázis mondja meg, és ugyanaz a szabály őrzi a
+  // mentést is (save_customer, save_vehicle, add_customer).
+  const szerkesztheto = user?.canEditCustomers === true
   const [nezet, setNezet] = useState<Nezet>('jarmu')
   const [q, setQ] = useState('')
   const [ugyfelek, setUgyfelek] = useState<CustomerSummary[]>([])
@@ -50,6 +53,7 @@ export default function CustomersPage() {
   const [tolt, setTolt] = useState(true)
   const [hiba, setHiba] = useState<string | null>(null)
   const [nyitott, setNyitott] = useState<string | null>(null)
+  const [ujUgyfel, setUjUgyfel] = useState(false)
 
   // A „Betöltés…" csak az első alkalommal jelenik meg. Egy mentés utáni
   // újratöltésnél nem: olyankor a lista egy pillanatra eltűnne, a kártyák
@@ -96,6 +100,12 @@ export default function CustomersPage() {
             Ügyfél szerint
           </button>
         </div>
+        {szerkesztheto && (
+          <button className="btn btn-fo" style={{ marginLeft: 'auto' }}
+                  onClick={() => setUjUgyfel(true)}>
+            + Ügyfél hozzáadása
+          </button>
+        )}
       </div>
 
       <input
@@ -143,6 +153,216 @@ export default function CustomersPage() {
           )}
         </div>
       )}
+
+      {ujUgyfel && (
+        <UjUgyfel
+          onBezar={() => setUjUgyfel(false)}
+          onKesz={() => { setUjUgyfel(false); void betolt(q) }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+//  Új ügyfél — ez a régi, papíros adatok feltöltésének az útja.
+//
+//  Az autó MELLÉ került, nem külön lépésbe: egy papíron egy sor egy autó és
+//  egy név. Ha két külön ablakban kellene felvenni, minden ügyfélnél kétszer
+//  kellene megkeresni ugyanazt.
+//
+//  A telefonszám az, amin az ügyfelet később megtalálják, ezért kötelező. Ha
+//  már van vele ügyfél, az adatbázis megmondja, kinél — ilyenkor nem
+//  tiltunk, hanem megkérdezzük: egy családban közös szám is előfordul.
+// ---------------------------------------------------------------------------
+
+function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void }) {
+  const { data } = useApp()
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [tipus, setTipus] = useState('MAGAN')
+  const [ceg, setCeg] = useState('')
+  const [adoszam, setAdoszam] = useState('')
+  const [notes, setNotes] = useState('')
+  const [plate, setPlate] = useState('')
+  const [brand, setBrand] = useState('')
+  const [model, setModel] = useState('')
+  const [category, setCategory] = useState('SZEMELYAUTO')
+  const [megy, setMegy] = useState(false)
+  const [hiba, setHiba] = useState<string | null>(null)
+  // Ha a telefonszám már szerepel valakinél, a mentés nem megy át magától.
+  // Ez a kapcsoló mondja meg, hogy már láttuk a figyelmeztetést.
+  const [ismetles, setIsmetles] = useState(false)
+  const nevMezo = useRef<HTMLInputElement>(null)
+  useEffect(() => { nevMezo.current?.focus() }, [])
+
+  async function ment(megis = false) {
+    if (!name.trim() || !phone.trim() || megy) return
+    setMegy(true)
+    setHiba(null)
+    try {
+      const id = await data.addCustomer({
+        name, phone, email, notes, megis,
+        type: tipus,
+        company_name: tipus === 'CEG' ? ceg : '',
+        tax_number: tipus === 'CEG' ? adoszam : '',
+      })
+      // Az autó már nem bukhat el a telefonszámon: az ügyfél megvan. Ha a
+      // rendszám ütközik, azt külön mondjuk meg — de az ügyfél marad.
+      if (plate.trim()) {
+        try {
+          await data.addVehicle({ customer_id: id, plate_raw: plate, brand, model, category })
+        } catch (e) {
+          setHiba(`Az ügyfél felvéve, de az autó nem: ${e instanceof Error ? e.message : String(e)}`)
+          setMegy(false)
+          setPlate('')
+          return
+        }
+      }
+      onKesz()
+    } catch (e) {
+      const uzenet = e instanceof Error ? e.message : String(e)
+      setHiba(uzenet)
+      setIsmetles(uzenet.includes('telefonszámmal már van ügyfél'))
+      setMegy(false)
+    }
+  }
+
+  const keszEnged = name.trim().length > 0 && phone.trim().length > 0
+
+  return (
+    <div className="fedo" role="presentation"
+         onMouseDown={(e) => e.target === e.currentTarget && onBezar()}>
+      <div className="lap" role="dialog" aria-modal="true" aria-label="Ügyfél hozzáadása">
+        <div className="lap-fej">
+          <h2>Ügyfél hozzáadása</h2>
+          <button className="bezar" onClick={onBezar} aria-label="Bezárás">×</button>
+        </div>
+
+        <div className="lap-torzs">
+          {hiba && (
+            <div className="hibauzenet">
+              {hiba}
+              {ismetles && (
+                <div style={{ marginTop: 'var(--t3)' }}>
+                  <button className="btn btn-kicsi" disabled={megy}
+                          onClick={() => void ment(true)}>
+                    Mégis felveszem
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mezo-sor">
+            <label className="mezo">
+              <span>Név</span>
+              <input ref={nevMezo} className="beviteli" value={name} disabled={megy}
+                     onChange={(e) => setName(e.target.value)} />
+            </label>
+            <label className="mezo">
+              <span>Telefonszám</span>
+              <input className="beviteli" type="tel" inputMode="tel" value={phone} disabled={megy}
+                     onChange={(e) => { setPhone(e.target.value); setIsmetles(false) }} />
+              <small>Ezen találod meg később. A +36-os és a 06-os alak ugyanaz.</small>
+            </label>
+          </div>
+
+          <label className="mezo">
+            <span>E-mail cím</span>
+            <input className="beviteli" type="email" inputMode="email" value={email} disabled={megy}
+                   onChange={(e) => setEmail(e.target.value)} />
+            <small>Nem kötelező. Enélkül nem tudunk visszaigazolást küldeni.</small>
+          </label>
+
+          <div className="mezo">
+            <span className="cimke">Típus</span>
+            <div className="ertek-gombok" style={{ justifyContent: 'flex-start' }}>
+              {TIPUSOK.map((t) => (
+                <button key={t.ertek} type="button" disabled={megy}
+                        className={t.ertek === tipus ? 'aktiv' : ''}
+                        aria-pressed={t.ertek === tipus}
+                        onClick={() => setTipus(t.ertek)}>
+                  {t.cimke}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {tipus === 'CEG' && (
+            <div className="mezo-sor">
+              <label className="mezo">
+                <span>Cégnév</span>
+                <input className="beviteli" value={ceg} disabled={megy}
+                       onChange={(e) => setCeg(e.target.value)} />
+              </label>
+              <label className="mezo">
+                <span>Adószám</span>
+                <input className="beviteli" value={adoszam} disabled={megy}
+                       onChange={(e) => setAdoszam(e.target.value)} />
+              </label>
+            </div>
+          )}
+
+          <label className="mezo">
+            <span>Megjegyzés</span>
+            <textarea className="beviteli" rows={2} value={notes} disabled={megy}
+                      onChange={(e) => setNotes(e.target.value)} />
+          </label>
+
+          {/* Az első autó itt, nem külön ablakban: a papíron is egy sorban van. */}
+          <div className="valaszto-vonal-vekony" />
+          <p className="halk" style={{ fontSize: 'var(--m-xs)' }}>
+            Az autója mindjárt felvehető. Ha most nincs kéznél, hagyd üresen — a
+            kártyáján később egy kattintás.
+          </p>
+
+          <div className="mezo-sor">
+            <label className="mezo">
+              <span>Rendszám</span>
+              <input className="beviteli beviteli-rendszam" value={plate} disabled={megy}
+                     onChange={(e) => setPlate(e.target.value)} />
+            </label>
+            <label className="mezo">
+              <span>Márka</span>
+              <input className="beviteli" value={brand} disabled={megy}
+                     onChange={(e) => setBrand(e.target.value)} />
+            </label>
+            <label className="mezo">
+              <span>Modell</span>
+              <input className="beviteli" value={model} disabled={megy}
+                     onChange={(e) => setModel(e.target.value)} />
+            </label>
+          </div>
+
+          {plate.trim() !== '' && (
+            <div className="mezo">
+              <span className="cimke">Méret</span>
+              <div className="ertek-gombok" style={{ justifyContent: 'flex-start' }}>
+                {KATEGORIAK.map((k) => (
+                  <button key={k.ertek} type="button" disabled={megy}
+                          className={k.ertek === category ? 'aktiv' : ''}
+                          aria-pressed={k.ertek === category}
+                          onClick={() => setCategory(k.ertek)}>
+                    {k.cimke}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="lap-lab">
+            <div className="gombok">
+              <button className="btn" onClick={onBezar} disabled={megy}>Mégse</button>
+              <button className="btn btn-fo" disabled={!keszEnged || megy}
+                      onClick={() => void ment()}>
+                {megy ? 'Felvétel…' : 'Felvétel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
