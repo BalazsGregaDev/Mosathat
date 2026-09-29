@@ -313,7 +313,7 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
                   vissza a szerepköréhez
                 </button>
               ) : (
-                <>a szerepkörét követi</>
+                <></>
               )}
             </div>
           </>

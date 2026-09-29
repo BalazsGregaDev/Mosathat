@@ -360,12 +360,9 @@ begin
       when v_nap =  current_date then 'CONFIRMED'
       else 'CONFIRMED' end::booking_status;
 
-    -- LEADÓS foglalásnál a "mikor hozza" a drop_off_at, nem a start_at.
-    -- Korábban a start_at-ba került, és emiatt a heti nézet kártyáin nem
-    -- látszott időpont: a mező, amit néztünk, üres volt.
     insert into public.bookings (
       customer_id, vehicle_id, booking_type, status, source, service_date,
-      drop_off_at, package_id, scope, planned_duration_minutes,
+      start_at, package_id, scope, planned_duration_minutes,
       estimated_price_huf, final_price_huf,
       actual_started_at, actual_finished_at, internal_notes)
     values (
@@ -402,6 +399,9 @@ declare
   v_ceg     uuid;
   v_prem    uuid := (select id from public.packages where code = 'PREMIUM');
   v_start   uuid := (select id from public.packages where code = 'START');
+  v_auto    uuid;   -- a hozom-viszem foglaláshoz
+  v_b       uuid;
+  v_calc    record;
 begin
   -- ---------- BÉRLET: magánügyfél, tíz alkalom ----------
   select id into v_ugyfel from public.customers where name = 'Kovács Péter' limit 1;
@@ -426,6 +426,7 @@ begin
     'customer_id',     v_ceg,
     'tax_number',      '12345678-2-41',
     'pickup_delivery', true,
+    'pickup_delivery_fee_huf', 4000,
     'valid_until',     (current_date + 300)::text,
     'notes',           'DEMO — flottaszerződés, hozom-viszem szolgáltatással',
     'prices', jsonb_build_array(
@@ -435,30 +436,31 @@ begin
       jsonb_build_object('tier', 'PREMIUM', 'size', 'NAGY',   'price_huf', 18000))));
 
   update public.customers set billing_kind = 'SZERZODESES' where id = v_ceg;
+
+  -- ---------- HOZOM-VISZEM: a céges flotta egyik autójáért mi megyünk ----------
+  -- A demóban is legyen ilyen nap, mert a nap nézeten külön jelölés tartozik
+  -- hozzá (H-V), és a beosztásnál számít: valakinek el kell mennie érte.
+  select v.id into v_auto from public.vehicles v
+   where v.customer_id = v_ceg order by v.plate_raw limit 1;
+
+  if v_auto is not null then
+    select * into v_calc from public.calc_service(v_prem, 'SZEMELYAUTO', 'TELJES');
+    insert into public.bookings (
+      customer_id, vehicle_id, booking_type, status, source, service_date,
+      drop_off_at, pick_up_at, package_id, scope, planned_duration_minutes,
+      estimated_price_huf, internal_notes)
+    values (v_ceg, v_auto, 'HOZOMVISZEM', 'CONFIRMED', 'TELEFON', current_date,
+      (current_date + time '10:00') at time zone 'Europe/Budapest',
+      (current_date + time '15:00') at time zone 'Europe/Budapest',
+      v_prem, 'TELJES', v_calc.work_minutes, v_calc.price_huf, 'DEMO')
+    returning id into v_b;
+    insert into public.booking_items (booking_id, kind, ref_id, name_snapshot,
+                                      quantity, unit_price_huf, price_huf, work_minutes)
+    values (v_b, 'PACKAGE', v_prem, 'Premium — Személyautó, külső és belső',
+            1, v_calc.price_huf, v_calc.price_huf, v_calc.work_minutes);
+    perform public.rebuild_booking_tasks(v_b);
+  end if;
 end $$;
-
-
--- =============================================================================
---  PRÓBA LEÍRÁSOK A SZOLGÁLTATÁSOKHOZ
--- =============================================================================
---  A munkalapon minden egyéb szolgáltatás mellett van egy karikás „i": ha
---  ráállsz, megjelenik a leírása. Telefon közben ez a leggyakoribb kérdés —
---  „és az mit takar?".
---
---  A leírásokat NEKED kell megírni, a saját szavaiddal: Szolgáltatások →
---  Egyéb szolgáltatások → Leírás. Az alábbi néhány mondat csak azért van itt,
---  hogy a demóban látszódjon, hogyan működik. Élesben ne ezt használd — ezek
---  szándékosan semmitmondóak, nem a te szolgáltatásod leírásai.
---
---  Csak azt írja felül, ami még üres, tehát a már megírt leírásokat nem
---  bántja. Élesben ez a fájl amúgy sem fut le.
-
-update public.extras set description = 'Próba leírás a demóhoz. A valódi '
-  || 'szöveget a Szolgáltatások menüpontban lehet megírni.'
-where name in ('Felni és gumi mélytisztítás és ápolás',
-               'Vizes kárpittisztítás',
-               'Ózongenerátoros utastér fertőtlenítés')
-  and (description is null or btrim(description) = '');
 
 
 -- =============================================================================
