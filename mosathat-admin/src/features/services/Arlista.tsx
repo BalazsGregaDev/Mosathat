@@ -22,6 +22,7 @@ export const EGYSEG: Record<string, string> = {
   DB: 'db', AJTO: 'ajtó', ULES: 'ülés', LITER: 'liter', ALKALOM: 'alkalom',
 }
 
+
 /**
  * „| Start + Gyors viasz, Gumiápolás, …" — amivel ez a csomag több az
  * előzőnél. A felsorolás az adatbázisból jön (v_package_extra), nem innen:
