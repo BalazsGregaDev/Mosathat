@@ -191,7 +191,6 @@ export interface PackageMatrixRow {
 export interface PackageExtraRow {
   package_id: string
   package_code: string
-  /** Az előd csomag neve — „a Start mindene, plusz…" */
   parent_name: string
   name: string
   area: ServiceArea
@@ -208,7 +207,6 @@ export interface Surcharge {
   active: boolean
 }
 
-// A v_day_bookings nézet egy sora. A napi nézet minden kártyája ebből él.
 export interface DayBooking {
   id: string
   service_date: string
