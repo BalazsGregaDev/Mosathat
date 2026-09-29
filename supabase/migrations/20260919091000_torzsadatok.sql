@@ -66,9 +66,9 @@ on conflict (id) do update set
 --  Elit a Premiumot.
 
 insert into public.packages (code, name, description, sort_order) values
-  ('START',   'Start',   'Alap külső mosás és belső takarítás.', 1),
-  ('PREMIUM', 'Premium', 'A Start mindene, plusz viaszolás, gumiápolás, belső műanyagápolás és illatosítás.', 2),
-  ('ELIT',    'Elit',    'A Premium mindene, hosszantartó vaxszal, falc mélytisztítással és alja kárpit mélytisztítással.', 3)
+  ('START',   'Start',   'Alap mosás és takarítás.', 1),
+  ('PREMIUM', 'Premium', 'Start + gyors viasz, gumiápolás, belső műanyag/bőr ápolás és illatosítás.', 2),
+  ('ELIT',    'Elit',    'Premium + hosszantartó vax, falc mélytisztítással és alja kárpit mélytisztítással.', 3)
 on conflict (code) do update
   set name = excluded.name,
       description = excluded.description,
