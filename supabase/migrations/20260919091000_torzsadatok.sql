@@ -83,6 +83,7 @@ update public.packages p
 set includes_package_id = (select id from public.packages where code = 'PREMIUM')
 where p.code = 'ELIT';
 
+-- asdasd
 
 -- =============================================================================
 --  3. CSOMAGTARTALOM

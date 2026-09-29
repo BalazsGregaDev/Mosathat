@@ -149,26 +149,7 @@ comment on view public.v_package_matrix is
   'köti össze a felülírt és a felülíró tételt (Falc áttörlés / Falc '
   'mélytisztítás), hogy a táblázatban egy sorba kerüljenek.';
 
--- -----------------------------------------------------------------------------
---  „Mivel több az előzőnél" — egy sor a csomag neve mellé
--- -----------------------------------------------------------------------------
---  A teljes táblázat tizennégy soros. Foglalás közben, telefonnal a fülnél
---  ennyit nem olvas el senki. Ott az kell, ami ténylegesen elhangzik:
---
---      „A Premium a Start mindene, plusz gyors viasz, gumiápolás,
---       illatosítás és műszerfalápolás."
---
---  Ez a nézet pontosan ezt a felsorolást adja: amivel a csomag több a
---  közvetlen elődjénél. Kétféleképpen lehet több:
---
---    ÚJ tétel      – az elődben nincs ilyen sor (Gumiápolás, Illatosítás)
---    MÁS tétel     – ugyanaz a sor, de más munka vagy más anyag
---                    (Falc áttörlés → Falc mélytisztítás,
---                     Gyors viasz   → Hosszantartó vax)
---
---  Mindkettő különbség, tehát mindkettő belekerül — a csomagban érvényes
---  nevén. A Startnak nincs elődje, ezért nem is ad vissza rá sort: ott
---  nincs mihez képest többet mondani.
+
 
 create or replace view public.v_package_extra
 with (security_invoker = on) as
