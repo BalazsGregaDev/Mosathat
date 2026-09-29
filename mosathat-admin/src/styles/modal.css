@@ -38,6 +38,19 @@
   flex: 1 1 auto;
   min-height: 0;            /* enélkül a flexbox nem engedi görgetni */
   overflow-y: auto;
+  /* Oldalra SEMMI.
+
+     Ha az overflow-y auto, a böngésző az overflow-x-et is `auto`-ra
+     számolja — vagyis a doboz vízszintesen is görgethető lesz, iPhone-on
+     pedig akkor is el lehet húzni ujjal, ha semmi nem lóg ki (rugózás).
+     Így lehetett az ablakot oldalra tolni.
+
+     A `hidden` megszünteti a vízszintes görgetést, a `touch-action: pan-y`
+     pedig az ujjmozdulatot: ebben az ablakban csak fel-le lehet húzni.
+     Vízszintesen görgethető tartalom (széles táblázat) nincs benne — az
+     árlista külön ablak. */
+  overflow-x: hidden;
+  touch-action: pan-y;
   /* A görgetés az ablak alján ne adódjon tovább a mögötte lévő listának:
      enélkül a munkalap végén továbbhúzva a nap nézet indul el alatta. */
   overscroll-behavior: contain;
@@ -82,6 +95,13 @@
 
 .sor-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--t3); }
 .sor-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--t3); }
+
+/* A rácsban ülő elem alapból nem mehet a saját legkisebb szélessége alá, egy
+   beviteli mezőnek pedig van ilyen (kb. 20 karakternyi). Három mező egy
+   sorban így simán szélesebb lehet a képernyőnél, és a doboz oldalra
+   görgethetővé válik — ez volt az „el tudom húzni oldalra" mozgás. */
+.sor-2 > *, .sor-3 > * { min-width: 0; }
+.sor-2 .beviteli, .sor-3 .beviteli { width: 100%; }
 
 @media (max-width: 560px) {
   .sor-2, .sor-3 { grid-template-columns: 1fr; }
@@ -208,6 +228,12 @@
   }
   .lap-fej { padding: var(--t3) var(--t4); padding-top: calc(var(--t3) + env(safe-area-inset-top)); }
   .lap-torzs { padding: var(--t4); gap: var(--t4); }
+
+  /* Telefonon két mező egy sorban már szorongana, három pedig kilógna.
+     A kétmezős sor egymás alá kerül; a hármasból kettő marad egy sorban —
+     ott dátum és órák állnak, azok elférnek. */
+  .sor-2 { grid-template-columns: 1fr; }
+  .sor-3 { grid-template-columns: 1fr 1fr; }
   .lap-lab {
     padding: var(--t3) var(--t4);
     padding-bottom: calc(var(--t3) + env(safe-area-inset-bottom));

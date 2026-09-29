@@ -42,4 +42,4 @@ export async function createDataSource(): Promise<DataSource> {
   return new DemoSource()
 }
 
-export type { DataSource, Catalog, SessionUser } from './source'
+export type { DataSource, Catalog, KeresesMezo, SessionUser } from './source'

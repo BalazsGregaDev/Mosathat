@@ -70,7 +70,7 @@ export function CsomagArak({ k, tomor }: { k: Catalog; tomor?: boolean }) {
                   <tr>
                     <th>Méret</th>
                     {TERJEDELMEK.map((s) => <th key={s}>{SCOPE_LABEL[s]}</th>)}
-                    <th>Több üléssoros</th>
+                    <th>Full Service</th>
                   </tr>
                 </thead>
                 <tbody>

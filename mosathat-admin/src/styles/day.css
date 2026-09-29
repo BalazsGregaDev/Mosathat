@@ -117,19 +117,31 @@
   display: flex; align-items: center; gap: var(--t2);
   flex-wrap: wrap; margin-bottom: 3px;
 }
+/* Az időpont másodlagos. Nem azért halványabb, hogy szebb legyen: ha két
+   dolog egyformán hangsúlyos, egyik sem az. Az autót keressük először. */
 .kartya .ido {
   font-family: var(--betu-szam);
-  font-size: var(--m-sm); font-weight: var(--vastag-fej);
+  font-size: var(--m-xs);
+  font-weight: var(--vastag-kozep);
+  color: var(--szoveg-halk);
 }
+
+/* A kártya legerősebb eleme. A műhelyben ez az egyetlen adat, ami magán az
+   autón is rajta van — erre esik a szem, amikor egy kocsit keresünk a
+   listában. */
 .kartya .rendszam {
   font-family: var(--betu-szam);
-  font-size: var(--m-sm); font-weight: var(--vastag-eros);
+  font-size: var(--m-md);
+  font-weight: var(--vastag-fej);
   letter-spacing: .06em;
+  color: var(--szoveg);
   background: var(--lap-2);
-  border: 1px solid var(--keret);
+  border: 1px solid var(--keret-eros);
   border-radius: var(--r-sm);
-  padding: 1px 6px;
+  padding: 2px 8px;
 }
+/* A H-V címke a rendszám mellé tapad: együtt olvassuk őket. */
+.kartya-felso .cimke-pill[data-r='hozomviszem'] { margin-left: 0; }
 .kartya .tolto { flex: 1; }
 
 /* 2. sor: kinek — a név viszi a hierarchiát */

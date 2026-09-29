@@ -32,6 +32,9 @@ export interface Catalog {
   packageExtras: PackageExtraRow[]
 }
 
+/** Melyik mezőből indult a keresés. */
+export type KeresesMezo = 'MIND' | 'RENDSZAM' | 'NEV'
+
 export interface SessionUser {
   id: string
   name: string
@@ -75,8 +78,14 @@ export interface DataSource {
   getStandingCars(): Promise<StandingCar[]>
 
   lookupPlate(plate: string): Promise<PlateLookup | null>
-  /** Rendszám, név és cégnév egyszerre — a legjobb néhány találat. */
-  searchCustomers(q: string, limit?: number): Promise<SearchHit[]>
+  /**
+   * Ügyfél- és járműkeresés. A `mezo` mondja meg, honnan jött a szöveg:
+   * 'RENDSZAM' csak rendszámot keres, 'NEV' nevet és cégnevet, 'MIND' mindet.
+   *
+   * Ez azért számít, mert ugyanaz a pár betű mást jelent a két mezőben: az
+   * „AB" a rendszám mezőben az ABC-123, a név mezőben Abonyi Péter.
+   */
+  searchCustomers(q: string, limit?: number, mezo?: KeresesMezo): Promise<SearchHit[]>
   calcService(input: CalcInput): Promise<CalcResult>
 
   createBooking(input: NewBookingInput): Promise<string>

@@ -4,6 +4,7 @@ import { maStr, percIdo } from '../lib/format'
 import type {
   BookingScope, BookingType, CalcResult, SearchHit, VehicleCategory,
 } from '../lib/types'
+import type { KeresesMezo } from '../data'
 
 // ---------------------------------------------------------------------------
 //  A foglalási űrlap állapota — felvitelhez ÉS szerkesztéshez.
@@ -14,9 +15,11 @@ import type {
 //
 //  Három dolgot csinál, ami magyarázatot érdemel:
 //
-//  1. AZONNALI KERESÉS. Már az első karaktertől keres — rendszámra, névre és
-//     cégnévre egyszerre. A telefonos foglalásnál ez a legfontosabb funkció:
-//     ha ismerjük az autót, a többi mező magától kitöltődik.
+//  1. AZONNALI KERESÉS A MEZŐKBŐL. Nincs külön kereső doboz: maga a Rendszám
+//     és a Név mező keres, az első karaktertől. A rendszám a rendszámok közt,
+//     a név a személy- és cégnevek közt — ugyanaz a két betű mást jelent a
+//     kettőben. Ha ismerjük az autót, egy koppintás kitölti a többi mezőt;
+//     ha nem, a beírt szöveg a helyén marad, nincs mit újra begépelni.
 //
 //  2. ÉLŐ ÁR ÉS IDŐ. Minden kattintás után újraszámol, de nem itt, hanem az
 //     adatbázisban, a calc_service()-szel. Ugyanazzal, ami majd a publikus
@@ -29,7 +32,6 @@ import type {
 
 export interface FormState {
   // ügyfél
-  keres: string // a kereső mező tartalma
   name: string
   phone: string
   plate: string
@@ -57,7 +59,6 @@ export interface FormState {
 }
 
 export const URES_URLAP: FormState = {
-  keres: '',
   name: '',
   phone: '',
   plate: '',
@@ -103,6 +104,8 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
   const [f, setF] = useState<FormState>({ ...URES_URLAP, date: kezdoNap })
   const [talalatok, setTalalatok] = useState<SearchHit[]>([])
   const [valasztott, setValasztott] = useState<SearchHit | null>(null)
+  /** Melyik mezőbe gépelnek most: ez alatt jelenik meg a találatlista. */
+  const [keresMezo, setKeresMezo] = useState<KeresesMezo | null>(null)
   const [keres, setKeres] = useState(false)
   const [calc, setCalc] = useState<CalcResult | null>(null)
   const [mentes, setMentes] = useState(false)
@@ -118,6 +121,7 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
     setHiba(null)
     setTalalatok([])
     setValasztott(null)
+    setKeresMezo(null)
 
     if (!bookingId) {
       setF({ ...URES_URLAP, date: kezdoNap })
@@ -132,7 +136,6 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
         if (!d) return
         const b = d.booking
         setF({
-          keres: '',
           name: d.customer.name === 'Névtelen' ? '' : d.customer.name,
           phone: d.customer.phone === '—' ? '' : d.customer.phone,
           plate: d.vehicle.plate_raw === '—' ? '' : d.vehicle.plate_raw,
@@ -171,10 +174,19 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
 
   const idozito = useRef<number | undefined>(undefined)
 
+  // A keresett szöveg abból a mezőből jön, amelyikbe épp gépelnek. Ha
+  // egyikbe sem (mert még hozzá se nyúltak, vagy már választottak a
+  // listából), nincs keresés és nincs lista sem.
+  const keresSzoveg =
+    keresMezo === 'RENDSZAM' ? f.plate : keresMezo === 'NEV' ? f.name : ''
+
   useEffect(() => {
-    if (szerkesztes) return
+    if (szerkesztes || !keresMezo) {
+      setTalalatok([])
+      return
+    }
     window.clearTimeout(idozito.current)
-    const q = f.keres.trim()
+    const q = keresSzoveg.trim()
     if (q.length < 1) {
       setTalalatok([])
       return
@@ -182,7 +194,7 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
     idozito.current = window.setTimeout(async () => {
       setKeres(true)
       try {
-        setTalalatok(await data.searchCustomers(q, 5))
+        setTalalatok(await data.searchCustomers(q, 5, keresMezo))
       } catch {
         setTalalatok([])
       } finally {
@@ -190,15 +202,33 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
       }
     }, 220)
     return () => window.clearTimeout(idozito.current)
-  }, [f.keres, data, szerkesztes])
+  }, [keresSzoveg, keresMezo, data, szerkesztes])
+
+  /**
+   * A Rendszám és a Név mező írása. Az érték ugyanúgy az űrlapra kerül, mint
+   * bármelyik másik mezőé — a keresés csak MELLÉKESEN indul el. Ezért marad
+   * ott, amit beírtál, akkor is, ha nincs találat.
+   */
+  const keresoIras = useCallback((mezo: 'RENDSZAM' | 'NEV', ertek: string) => {
+    setKeresMezo(mezo)
+    setF((p) => (mezo === 'RENDSZAM' ? { ...p, plate: ertek } : { ...p, name: ertek }))
+  }, [])
+
+  /** A találatlista bezárása választás nélkül (pl. máshova koppintanak). */
+  const keresoZar = useCallback(() => {
+    setKeresMezo(null)
+    setTalalatok([])
+  }, [])
 
   /** Találat kiválasztása: az ügyfél adatai betöltődnek, a szolgáltatás NEM. */
   const talalatValaszt = useCallback((h: SearchHit) => {
     setValasztott(h)
     setTalalatok([])
+    // A keresés leáll: a mezőkbe most éppen mi írtunk bele, azt nem kell
+    // újra megkeresni — különben a lista rögtön vissza is nyílna.
+    setKeresMezo(null)
     setF((p) => ({
       ...p,
-      keres: '',
       name: h.customer_name === 'Névtelen' ? '' : h.customer_name,
       phone: h.customer_phone === '—' ? '' : h.customer_phone,
       plate: h.plate_raw === '—' ? '' : h.plate_raw,
@@ -307,7 +337,8 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
 
   return {
     f, set, calc, menthetE, ment, mentes, hiba, tolt, szerkesztes,
-    talalatok, keres, valasztott, talalatValaszt, ezcKeri,
+    talalatok, keres, keresMezo, keresoIras, keresoZar,
+    valasztott, talalatValaszt, ezcKeri,
     percIdo, // a komponensnek is kell
   }
 }

@@ -25,8 +25,13 @@ const TIPUSOK: { id: BookingType; cimke: string }[] = [
 //  Időpont felvétele és módosítása — ugyanaz az űrlap.
 //
 //  A mezők sorrendje a telefonbeszélgetés sorrendje, nem esztétikai döntés.
-//  Legfelül a kereső: a hívás első másodperceiben dől el, hogy ismerjük-e az
-//  autót. Ha igen, a többi mező magától kitöltődik.
+//  Legfelül a rendszám: a hívás első másodperceiben dől el, hogy ismerjük-e
+//  az autót. Ez a mező EGYBEN kereső is — nincs külön kereső doboz, amibe
+//  előbb be kellene írni ugyanazt. Ha van találat, egy koppintás kitölti a
+//  többi mezőt; ha nincs, a beírt rendszám ott marad, ahova való.
+//
+//  Ugyanígy keres a Név mező is, csak az a nevek közt. Ugyanaz a két betű
+//  mást jelent a kettőben: az „AB" a rendszámnál ABC-123, a névnél Abonyi.
 //
 //  Ami szándékosan NINCS itt: az „erősen szennyezett" felár és a fix felár.
 //  Telefonon nem látjuk az autót — ezek a munkalapra kerültek, ahol a kocsi
@@ -55,12 +60,33 @@ export default function BookingForm({
   const katalogus = useCatalog()
   const {
     f, set, calc, menthetE, ment, mentes, hiba, tolt, szerkesztes,
-    talalatok, keres, valasztott, talalatValaszt, ezcKeri,
+    talalatok, keres, keresMezo, keresoIras, keresoZar,
+    valasztott, talalatValaszt, ezcKeri,
   } = useBookingForm(true, nap, bookingId)
 
   // Ha bármit beírtak, egy véletlen oldalfrissítés (mobilon a lehúzás)
   // ne vigye el szó nélkül.
   useMentetlen(Boolean(f.name || f.plate || f.phone || f.companyName || f.packageId))
+
+  // A találatlista egy sora. Ugyanaz a rendszám és a név mező alatt, csak
+  // más keresésből — ezért egy helyen van megírva.
+  const talalatLista = talalatok.length === 0 ? null : (
+    <div className="talalatlista">
+      {talalatok.map((h) => (
+        <button key={h.vehicle_id} type="button" className="talalatsor"
+                onClick={() => talalatValaszt(h)}>
+          <span className="rendszam">{h.plate_raw}</span>
+          <span className="nev">
+            {h.company_name || h.customer_name}
+            {h.company_name && h.customer_name !== h.company_name && (
+              <span className="halk"> · {h.customer_name}</span>
+            )}
+          </span>
+          <span className="auto halk">{[h.brand, h.model].filter(Boolean).join(' ')}</span>
+        </button>
+      ))}
+    </div>
+  )
 
   const [sav, setSav] = useState<LatestStart[]>([])
   const [extrakNyitva, setExtrakNyitva] = useState(false)
@@ -157,49 +183,48 @@ export default function BookingForm({
         <div className="lap-torzs">
           {tolt && <div className="betolt">Betöltés…</div>}
 
-          {/* ---------- KERESŐ (csak új foglalásnál) ---------- */}
-          {!szerkesztes && (
-            <div className="szakasz">
-              <div className="fej">
-                Ismerjük már?
-                {keres && <span className="jobbra halvany">keresés…</span>}
+          {/* ---------- ISMERJÜK MÁR? — ügyfél és autó egy blokkban ----------
+              A rendszám és a név mező EGYBEN kereső. Nincs külön kereső doboz:
+              oda is ugyanezt kellett beírni, aztán még egyszer ide. */}
+          <div className="szakasz">
+            <div className="fej">
+              {szerkesztes ? 'Ügyfél' : 'Ismerjük már?'}
+              {keres && <span className="jobbra halvany">keresés…</span>}
+            </div>
+
+            <div className="sor-2">
+              <div className="mezo kereso">
+                <label htmlFor="rendszam">Rendszám</label>
+                <input id="rendszam" className="beviteli beviteli-rendszam" value={f.plate}
+                       onChange={(e) => keresoIras('RENDSZAM', e.target.value)}
+                       onKeyDown={(e) => e.key === 'Escape' && keresoZar()}
+                       autoFocus={!szerkesztes}
+                       autoComplete="off" spellCheck={false} />
+                {keresMezo === 'RENDSZAM' && talalatLista}
               </div>
-              <div className="kereso">
-                <input
-                  className="beviteli"
-                  value={f.keres}
-                  onChange={(e) => set('keres', e.target.value)}
-                  placeholder="Rendszám, név vagy cég"
-                  autoFocus
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                {talalatok.length > 0 && (
-                  <div className="talalatlista">
-                    {talalatok.map((h) => (
-                      <button
-                        key={h.vehicle_id}
-                        type="button"
-                        className="talalatsor"
-                        onClick={() => talalatValaszt(h)}
-                      >
-                        <span className="rendszam">{h.plate_raw}</span>
-                        <span className="nev">
-                          {h.company_name || h.customer_name}
-                          {h.company_name && h.customer_name !== h.company_name && (
-                            <span className="halk"> · {h.customer_name}</span>
-                          )}
-                        </span>
-                        <span className="auto halk">
-                          {[h.brand, h.model].filter(Boolean).join(' ')}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <div className="mezo kereso">
+                <label htmlFor="nev">Név</label>
+                <input id="nev" className="beviteli" value={f.name}
+                       onChange={(e) => keresoIras('NEV', e.target.value)}
+                       onKeyDown={(e) => e.key === 'Escape' && keresoZar()}
+                       autoComplete="off" />
+                {keresMezo === 'NEV' && talalatLista}
               </div>
             </div>
-          )}
+
+            <div className="sor-2">
+              <div className="mezo">
+                <label htmlFor="tel">Telefonszám</label>
+                <input id="tel" className="beviteli" type="tel" inputMode="tel" value={f.phone}
+                       onChange={(e) => set('phone', e.target.value)} autoComplete="off" />
+              </div>
+              <div className="mezo">
+                <label htmlFor="ceg">Cég</label>
+                <input id="ceg" className="beviteli" value={f.companyName}
+                       onChange={(e) => set('companyName', e.target.value)} autoComplete="off" />
+              </div>
+            </div>
+          </div>
 
           {/* ---------- KORÁBBI VÁSÁRLÁS ---------- */}
           {valasztott?.utolso_csomag && (
@@ -222,36 +247,6 @@ export default function BookingForm({
               )}
             </div>
           )}
-
-          {/* ---------- ÜGYFÉL ---------- */}
-          <div className="szakasz">
-            <div className="fej">Ügyfél</div>
-            <div className="sor-2">
-              <div className="mezo">
-                <label htmlFor="nev">Név</label>
-                <input id="nev" className="beviteli" value={f.name}
-                       onChange={(e) => set('name', e.target.value)} autoComplete="off" />
-              </div>
-              <div className="mezo">
-                <label htmlFor="tel">Telefonszám</label>
-                <input id="tel" className="beviteli" type="tel" inputMode="tel" value={f.phone}
-                       onChange={(e) => set('phone', e.target.value)} autoComplete="off" />
-              </div>
-            </div>
-            <div className="sor-2">
-              <div className="mezo">
-                <label htmlFor="rendszam">Rendszám</label>
-                <input id="rendszam" className="beviteli beviteli-rendszam" value={f.plate}
-                       onChange={(e) => set('plate', e.target.value)}
-                       autoComplete="off" spellCheck={false} />
-              </div>
-              <div className="mezo">
-                <label htmlFor="ceg">Cég</label>
-                <input id="ceg" className="beviteli" value={f.companyName}
-                       onChange={(e) => set('companyName', e.target.value)} autoComplete="off" />
-              </div>
-            </div>
-          </div>
 
           {/* ---------- JÁRMŰ ---------- */}
           <div className="szakasz">
@@ -282,71 +277,6 @@ export default function BookingForm({
                        onChange={(e) => set('seats', e.target.value)} />
               </div>
             </div>
-          </div>
-
-          {/* ---------- CSOMAG ---------- */}
-          <div className="szakasz">
-            <div className="fej">Csomag</div>
-            <div className="csomagok">
-              {katalogus.packages.map((p) => {
-                const ar = csomagAr(p.id)
-                const kivalasztott = f.packageId === p.id
-                return (
-                  <button key={p.id} type="button" className="csomag" aria-label={p.name}
-                          aria-pressed={kivalasztott}
-                          onClick={() => set('packageId', kivalasztott ? null : p.id)}>
-                    <span className="jel" />
-                    <span style={{ minWidth: 0 }}>
-                      <span className="nev">{p.name}</span>
-                      <span className="leiras">{p.description}</span>
-                    </span>
-                    <span className="arblokk">
-                      <div className="ar">
-                        {ar?.requires_quote || ar?.price_huf == null ? 'Érdeklődjön' : ft(ar.price_huf)}
-                      </div>
-                      <div className="ido">{idotartam(ar?.duration_minutes ?? null)}</div>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {f.packageId && (
-              <label className="jelolo" data-aktiv={f.fullService}>
-                <input type="checkbox" checked={f.fullService}
-                       onChange={(e) => set('fullService', e.target.checked)} />
-                <span style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600 }}>Full Service</div>
-                  <div className="halk" style={{ fontSize: 'var(--m-xs)' }}>
-                    Mélytisztítás. Saját ára van, nem a csomag + extra összege.
-                  </div>
-                </span>
-                <span className="szam" style={{ fontWeight: 600 }}>
-                  {(() => {
-                    const fs = fullServiceAr(f.packageId!)
-                    return fs?.requires_quote || fs?.price_huf == null ? 'Érdeklődjön' : ft(fs.price_huf)
-                  })()}
-                </span>
-              </label>
-            )}
-
-            <div className="valaszto">
-              {TERJEDELEM.map((s) => (
-                <button key={s} type="button" aria-pressed={f.scope === s} onClick={() => set('scope', s)}>
-                  {SCOPE_LABEL[s]}
-                </button>
-              ))}
-            </div>
-
-            {f.scope !== 'TELJES' && calc && !calc.duration_known && (
-              <div className="figyelmeztet">
-                <span>
-                  <strong>Nincs rá időadat.</strong> A csak kívül / csak belül munkák
-                  időtartama még nincs feltöltve, ezért ez a foglalás nem terheli a napi
-                  kapacitást.
-                </span>
-              </div>
-            )}
           </div>
 
           {/* ---------- MIKOR ---------- */}
@@ -415,6 +345,71 @@ export default function BookingForm({
                      ? { fontSize: 'var(--m-sm)', color: 'var(--zold)', fontWeight: 500 }
                      : undefined}>
                 {belefer.uzenet}
+              </div>
+            )}
+          </div>
+
+          {/* ---------- CSOMAG ---------- */}
+          <div className="szakasz">
+            <div className="fej">Csomag</div>
+            <div className="csomagok">
+              {katalogus.packages.map((p) => {
+                const ar = csomagAr(p.id)
+                const kivalasztott = f.packageId === p.id
+                return (
+                  <button key={p.id} type="button" className="csomag" aria-label={p.name}
+                          aria-pressed={kivalasztott}
+                          onClick={() => set('packageId', kivalasztott ? null : p.id)}>
+                    <span className="jel" />
+                    <span style={{ minWidth: 0 }}>
+                      <span className="nev">{p.name}</span>
+                      <span className="leiras">{p.description}</span>
+                    </span>
+                    <span className="arblokk">
+                      <div className="ar">
+                        {ar?.requires_quote || ar?.price_huf == null ? 'Érdeklődjön' : ft(ar.price_huf)}
+                      </div>
+                      <div className="ido">{idotartam(ar?.duration_minutes ?? null)}</div>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {f.packageId && (
+              <label className="jelolo" data-aktiv={f.fullService}>
+                <input type="checkbox" checked={f.fullService}
+                       onChange={(e) => set('fullService', e.target.checked)} />
+                <span style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600 }}>Full Service</div>
+                  <div className="halk" style={{ fontSize: 'var(--m-xs)' }}>
+                    Mélytisztítás. Saját ára van, nem a csomag + extra összege.
+                  </div>
+                </span>
+                <span className="szam" style={{ fontWeight: 600 }}>
+                  {(() => {
+                    const fs = fullServiceAr(f.packageId!)
+                    return fs?.requires_quote || fs?.price_huf == null ? 'Érdeklődjön' : ft(fs.price_huf)
+                  })()}
+                </span>
+              </label>
+            )}
+
+            <div className="valaszto">
+              {TERJEDELEM.map((s) => (
+                <button key={s} type="button" aria-pressed={f.scope === s} onClick={() => set('scope', s)}>
+                  {SCOPE_LABEL[s]}
+                </button>
+              ))}
+            </div>
+
+            {f.scope !== 'TELJES' && calc && !calc.duration_known && (
+              <div className="figyelmeztet">
+                <span>
+                  <strong>Nincs rá időadat.</strong> A csak kívül / csak belül munkák
+                  időtartama még nincs feltöltve, ezért ez a foglalás nem terheli a napi
+                  kapacitást.
+                </span>
               </div>
             )}
           </div>

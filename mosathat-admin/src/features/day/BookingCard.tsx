@@ -10,8 +10,10 @@ import {
 // ---------------------------------------------------------------------------
 //  Egy kártya a napi listában.
 //
-//  A sorrend nem véletlen: mikor → melyik autó → kinek → mit kér → mennyi.
-//  Ez az a sorrend, ahogy a kérdések elhangzanak a műhelyben.
+//  A sorrend nem véletlen: MELYIK AUTÓ → mikor → kinek → mit kér → mennyi.
+//  A műhelyben a rendszámot keresi a szem először: az autó ott áll, a
+//  rendszám látszik rajta, és azt kell megtalálni a listában. Az időpont
+//  fontos, de csak másodszorra — ezért halványabb.
 //
 //  Ami szándékosan NINCS rajta: a "leadás" szó és a külön kiírt időtartam.
 //  Az időintervallumból mindkettő kiderül, és minden felesleges szó azt
@@ -88,10 +90,16 @@ export default function BookingCard({ b, onMegnyit }: { b: DayBooking; onMegnyit
           alatta: gomb a gombban érvénytelen, és a véletlen kattintás is
           pont a rossz helyre esne. */}
       <button className="kartya-nyit" onClick={onMegnyit}>
-        {/* 1. sor — mikor, melyik autó, hol tart */}
+        {/* 1. sor — melyik autó, mikor, hol tart */}
         <div className="kartya-felso">
-          <span className="ido">{idoSav(b)}</span>
           <span className="rendszam">{b.plate_raw}</span>
+          {/* Hozom-viszem: mi megyünk az autóért. Ez a nap beosztását
+              érinti (valakinek el kell mennie), ezért a kártyán is látszik,
+              nem csak a munkalapon. */}
+          {b.booking_type === 'HOZOMVISZEM' && (
+            <span className="cimke-pill" data-r="hozomviszem" title="Hozom-viszem">H-V</span>
+          )}
+          <span className="ido">{idoSav(b)}</span>
           <span className="tolto" />
           <span className="cimke-pill allapot-pill" data-a={b.status}>
             {STATUS_LABEL[b.status]}

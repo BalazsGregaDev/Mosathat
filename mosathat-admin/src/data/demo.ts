@@ -26,7 +26,7 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
 } from '../lib/types'
-import type { Catalog, DataSource, SessionUser } from './source'
+import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { calcArgs, num, numOrNull, toCalcResult } from './source'
 
 // ---------------------------------------------------------------------------
@@ -271,8 +271,9 @@ export class DemoSource implements DataSource {
     return r?.r ?? null
   }
 
-  async searchCustomers(q: string, limit = 5): Promise<SearchHit[]> {
-    return this.rows<SearchHit>(`select * from search_customers($1, $2::integer)`, [q, limit])
+  async searchCustomers(q: string, limit = 5, mezo: KeresesMezo = 'MIND'): Promise<SearchHit[]> {
+    return this.rows<SearchHit>(
+      `select * from search_customers($1, $2::integer, $3)`, [q, limit, mezo])
   }
 
   async calcService(input: CalcInput): Promise<CalcResult> {
