@@ -67,7 +67,7 @@ on conflict (id) do update set
 
 insert into public.packages (code, name, description, sort_order) values
   ('START',   'Start',   'Alap külső mosás és belső takarítás.', 1),
-  ('PREMIUM', 'Premium', 'A Start mindene, plusz viaszolás, gumiápolás és belső ápolás.', 2),
+  ('PREMIUM', 'Premium', 'A Start mindene, plusz viaszolás, gumiápolás, belső műanyagápolás és illatosítás.', 2),
   ('ELIT',    'Elit',    'A Premium mindene, hosszantartó vaxszal, falc mélytisztítással és alja kárpit mélytisztítással.', 3)
 on conflict (code) do update
   set name = excluded.name,
