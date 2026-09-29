@@ -183,12 +183,10 @@ export default function BookingForm({
         <div className="lap-torzs">
           {tolt && <div className="betolt">Betöltés…</div>}
 
-          {/* ---------- ISMERJÜK MÁR? — ügyfél és autó egy blokkban ----------
-              A rendszám és a név mező EGYBEN kereső. Nincs külön kereső doboz:
-              oda is ugyanezt kellett beírni, aztán még egyszer ide. */}
+          
           <div className="szakasz">
             <div className="fej">
-              {szerkesztes ? 'Ügyfél' : 'Ismerjük már?'}
+              {szerkesztes ? 'Ügyfél' : ' '}
               {keres && <span className="jobbra halvany">keresés…</span>}
             </div>
 
