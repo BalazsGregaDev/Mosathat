@@ -1,8 +1,8 @@
 import type { StandingCar } from '../../lib/types'
 
-// A napok óta nálunk álló autók (kereskedős munkák). Ezeken jellemzően
-// nyitvatartási időn kívül dolgozunk, ezért nem az órasávban a helyük —
-// de a szem elől sem szabad elveszniük.
+// A napok óta nálunk álló autók (többnapos munkák). A napi listában is ott
+// vannak, minden napjukon — itt egy helyen látszik mind, és hogy mennyi
+// idő van még a határidőig.
 
 function hatralevo(s: StandingCar): string {
   if (s.days_left === null || s.days_left === undefined) return '—'

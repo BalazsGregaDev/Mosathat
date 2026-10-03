@@ -22,7 +22,6 @@ export const EGYSEG: Record<string, string> = {
   DB: 'db', AJTO: 'ajtó', ULES: 'ülés', LITER: 'liter', ALKALOM: 'alkalom',
 }
 
-
 /**
  * „| Start + Gyors viasz, Gumiápolás, …" — amivel ez a csomag több az
  * előzőnél. A felsorolás az adatbázisból jön (v_package_extra), nem innen:
@@ -35,6 +34,28 @@ export function Tobblet({ k, packageId }: { k: Catalog; packageId: string }) {
     <span className="csomag-tobblet">
       {' '}<span className="valaszto" aria-hidden="true">|</span>
       {'\u00a0'}{sorok[0].parent_name} + {sorok.map((x) => x.name).join(', ')}
+    </span>
+  )
+}
+
+/**
+ * Ami a csomag neve mellé kerül, a cím sorába — EGYSZER.
+ *
+ *   Premium, Elit:  „| Start + Gyors viasz, Gumiápolás, …" — amivel több az
+ *                   előzőnél. A csomag leírása ugyanezt mondaná el még
+ *                   egyszer, ezért az nem jelenik meg alatta.
+ *   Start:          nincs mihez képest többet mondani — ott a leírása áll a
+ *                   cím mellett („| Alap külső mosás és belső takarítás.").
+ */
+export function CimMellett({ k, p }: { k: Catalog; p: Package }) {
+  if (k.packageExtras.some((x) => x.package_id === p.id)) {
+    return <Tobblet k={k} packageId={p.id} />
+  }
+  if (!p.description?.trim()) return null
+  return (
+    <span className="csomag-tobblet">
+      {' '}<span className="valaszto" aria-hidden="true">|</span>
+      {'\u00a0'}{p.description}
     </span>
   )
 }
@@ -53,18 +74,13 @@ export function CsomagArak({ k, tomor }: { k: Catalog; tomor?: boolean }) {
         <div className="panel panelek-szeles" key={p.id} style={{ marginBottom: 'var(--t4)' }}>
           {/* A cím mellett rögtön ott áll, amivel ez a csomag több az
               előzőnél. Telefon közben pont ez hangzik el: „a Start mindene,
-              plusz gyors viasz és gumiápolás". A Startnál nincs mihez képest
-              többet mondani, ott csak a neve áll. */}
+              plusz gyors viasz és gumiápolás". A Startnál a leírása áll ott.
+              Alatta nincs még egyszer leírás: ugyanazt mondaná el kétszer. */}
           <h3 className="csomag-cim">
             {p.name}
-            <Tobblet k={k} packageId={p.id} />
+            <CimMellett k={k} p={p} />
           </h3>
           <div className="panel-torzs">
-            {p.description && (
-              <p className="halk" style={{ fontSize: 'var(--m-sm)', marginBottom: 'var(--t3)' }}>
-                {p.description}
-              </p>
-            )}
             <div className="tablagorgo">
               <table className={`arlista${tomor ? ' tomor' : ''}`}>
                 <thead>

@@ -37,6 +37,15 @@
   --zold-halvany:  #e7f3ec;
   --zold-sotet:    #17593a;
 
+  /* --- egyéb szolgáltatás -------------------------------------------------
+     Narancs: ami a csomagon FELÜL kérve van. A zöld a „kész / jó" színe;
+     a külön kért munkának azt kell mondania, hogy „erre figyelj", nem azt,
+     hogy rendben van. Nem azonos a „Megérkezett" borostyánjával, hogy a
+     kettő ne keveredjen egy kártyán. */
+  --narancs:         #e07b1f;
+  --narancs-halvany: #fdeedd;
+  --narancs-sotet:   #9a4d0b;
+
   /* --- állapotszínek ------------------------------------------------------ */
   --v-varjuk:      #9aa39c;   /* CONFIRMED  — még nem jött meg */
   --v-erkezett:    #c9821f;   /* ARRIVED    — itt van, nem kezdtük el */

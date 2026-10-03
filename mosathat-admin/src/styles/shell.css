@@ -156,7 +156,48 @@
 
 /* --- mobil ------------------------------------------------------------------ */
 
-.mobil-fejlec, .fab, .fiok, .fiok-hatter { display: none; }
+.mobil-fejlec, .fab, .fiok, .fiok-hatter, .fejlec-hamburger { display: none; }
+
+/* --- tablet: a menü a hamburger mögött ----------------------------------------
+   Érintőképernyőn (tablet, fekvő helyzetben is) az oldalsáv eltűnik, és a
+   menü a fejléc bal szélén lévő gombbal nyílik — mint telefonon. Az oldalsáv
+   232 px-t venne el a naptártól, a tabletet pedig a műhelyben a NAPI LISTA
+   miatt nézik, nem a menüért. A fejléc maga (napváltó, nézetváltó, árlista,
+   Új időpont) marad: arra a szélességre még kényelmesen elfér.
+
+   Asztali gépen (egér) a 900 px fölötti szélességen marad az oldalsáv. */
+@media (hover: none) and (pointer: coarse) and (min-width: 901px) {
+  .keret { grid-template-columns: 1fr; }
+  .oldalsav { display: none; }
+  .fejlec { padding-left: var(--t3); }
+  .fejlec-hamburger {
+    display: inline-flex; flex-direction: column; justify-content: center; gap: 4px;
+    width: 42px; height: 42px; flex: none;
+    border: 1px solid var(--keret); background: var(--lap);
+    padding: 0 10px;
+    border-radius: var(--r);
+  }
+  .fejlec-hamburger span {
+    display: block; height: 2px; background: var(--szoveg); border-radius: 2px;
+  }
+
+  .fiok-hatter {
+    display: block;
+    border: none; padding: 0; margin: 0;
+    position: fixed; inset: 0;
+    background: rgba(20, 24, 26, .5);
+    z-index: 50;
+  }
+  .fiok {
+    display: flex; flex-direction: column;
+    position: fixed; inset: 0 auto 0 0;
+    width: min(300px, 60vw);
+    background: var(--sotet);
+    color: var(--sotet-szoveg);
+    z-index: 51;
+    padding-top: env(safe-area-inset-top);
+  }
+}
 
 @media (max-width: 900px) {
   .keret { grid-template-columns: 1fr; }

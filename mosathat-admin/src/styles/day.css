@@ -1,4 +1,4 @@
-/* A napi nézet: órasávok, foglaláskártyák, kapacitás, nálunk álló autók. */
+/* A napi nézet: a nap listája, foglaláskártyák, kapacitás, nálunk álló autók. */
 
 .nap-racs {
   display: grid;
@@ -45,62 +45,79 @@
   margin-top: var(--t2); font-size: var(--m-xs); color: var(--szoveg-halk);
 }
 
-/* --- óralista --------------------------------------------------------------- */
+/* --- a nap listája ------------------------------------------------------------
+   Egy oszlop, órasávok nélkül. Minden sor: bal oldalt a fogó (ezzel lehet
+   átrendezni), mellette a kártya. */
 
-.oralista {
-  background: var(--lap);
-  border: 1px solid var(--keret);
-  border-radius: var(--r-lg);
-  overflow: hidden;
+.napi-lista {
+  display: flex; flex-direction: column;
+  gap: var(--t2);
 }
 
-.ora-sor {
+.sor-elem {
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr);
-  border-bottom: 1px solid var(--keret);
-  min-height: 54px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: var(--t2);
+  align-items: stretch;
+  position: relative;
 }
-.ora-sor:last-child { border-bottom: none; }
 
-.ora-sor .ora-cimke {
-  padding: var(--t3) var(--t2) var(--t3) var(--t4);
-  font-family: var(--betu-szam);
-  font-size: var(--m-xs);
-  font-weight: var(--vastag-eros);
-  color: var(--szoveg-halvany);
-  border-right: 1px solid var(--keret);
+/* Húzás közben a többi kártya finoman odébb csúszik; a megfogott követi az
+   ujjat, átmenet nélkül (különben lemaradna). Húzáson kívül nincs átmenet:
+   elengedéskor a lista egyből a helyére ugrik, nem úszik vissza. */
+.napi-lista[data-huzas] .sor-elem { transition: transform 160ms ease; }
+.napi-lista[data-huzas] .sor-elem[data-fogva] {
+  transition: none;
+  z-index: 5;
+}
+.sor-elem[data-fogva] .kartya {
+  box-shadow: 0 14px 34px rgba(20, 24, 26, .22);
+  border-color: var(--keret-eros);
+}
+
+/* A fogó: egy függőleges sáv két oszlop ponttal. Ujjal is könnyen
+   elkapható (40 px széles, a kártya teljes magasságában). A touch-action
+   azért kell, hogy rajta húzva NE a lista görögjön, hanem a kártya mozduljon. */
+.fogo {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
   background: var(--lap-2);
+  cursor: grab;
+  touch-action: none;
+  padding: 0;
+}
+.fogo:hover { background: var(--hatter); border-color: var(--keret-eros); }
+.fogo:focus-visible { outline: 2px solid var(--zold); outline-offset: 2px; }
+.sor-elem[data-fogva] .fogo { cursor: grabbing; background: var(--zold-halvany); border-color: var(--zold); }
+.fogo span {
+  display: block; width: 12px; height: 26px;
+  background-image: radial-gradient(circle, var(--szoveg-halvany) 1.6px, transparent 1.8px);
+  background-size: 6px 6.5px;
 }
 
-.ora-sor .ora-tartalom {
-  padding: var(--t2) var(--t3);
-  display: flex; flex-direction: column; gap: var(--t2);
-  min-width: 0;
-}
+/* Húzás közben semmi ne jelölődjön ki a szövegből. */
+body.huzas-folyik { user-select: none; -webkit-user-select: none; cursor: grabbing; }
 
-/* ebédszünet: nem egy kártya, hanem egy áthúzott sáv */
-.ora-sor[data-szunet='true'] .ora-tartalom {
-  background: repeating-linear-gradient(
-    -45deg, var(--lap-2), var(--lap-2) 7px, #eef0eb 7px, #eef0eb 14px);
-  align-items: center; justify-content: center;
-}
-.szunet-felirat {
-  font-size: var(--m-xs); letter-spacing: .1em; text-transform: uppercase;
-  color: var(--szoveg-halvany); font-weight: var(--vastag-eros);
-}
-
-/* --- foglaláskártya --------------------------------------------------------- */
+/* --- foglaláskártya -----------------------------------------------------------
+   A műhelyben pár lépésről nézik, ezért a BETŰK kétszer akkorák, mint egy
+   irodai listán — a kártya viszont nem nagyobb: kicsi a belső hézag, és
+   ami összetartozik (rendszám, idő, csomag), egy sorban áll. Telefonon a
+   legnagyobb betűk kicsit visszább vesznek (clamp), hogy elférjenek. */
 
 .kartya {
   display: block;
   width: 100%;
+  min-width: 0;
   text-align: left;
   position: relative;
   background: var(--lap);
   border: 1px solid var(--keret);
-  border-left: 3px solid var(--v-varjuk);
+  /* A bal szél színe mondja az állapotot (Várjuk, Megérkezett, Dolgozunk,
+     Kész) — felirat helyett. Ezért vastagabb, mint egy díszcsík. */
+  border-left: 8px solid var(--v-varjuk);
   border-radius: var(--r);
-  padding: var(--t3) var(--t3) var(--t3) var(--t4);
+  padding: 6px var(--t3) 6px var(--t3);
   transition: border-color var(--atmenet), box-shadow var(--atmenet);
 }
 .kartya:hover { box-shadow: var(--arnyek); border-color: var(--keret-eros); }
@@ -113,75 +130,124 @@
 .kartya[data-allapot='CANCELLED_BY_CUSTOMER'],
 .kartya[data-allapot='CANCELLED_BY_SHOP'] { border-left-color: var(--v-baj); opacity: .55; }
 
+/* 1. sor: rendszám, H-V, idő … állapot */
 .kartya-felso {
-  display: flex; align-items: center; gap: var(--t2);
-  flex-wrap: wrap; margin-bottom: 3px;
-}
-/* Az időpont másodlagos. Nem azért halványabb, hogy szebb legyen: ha két
-   dolog egyformán hangsúlyos, egyik sem az. Az autót keressük először. */
-.kartya .ido {
-  font-family: var(--betu-szam);
-  font-size: var(--m-xs);
-  font-weight: var(--vastag-kozep);
-  color: var(--szoveg-halk);
+  display: flex; align-items: center; gap: 4px var(--t3);
+  flex-wrap: wrap;
 }
 
-/* A kártya legerősebb eleme. A műhelyben ez az egyetlen adat, ami magán az
-   autón is rajta van — erre esik a szem, amikor egy kocsit keresünk a
-   listában. */
+/* A kártya legerősebb eleme: az egyetlen adat, ami magán az autón is
+   rajta van — erre esik a szem, amikor egy kocsit keresünk a listában. */
 .kartya .rendszam {
   font-family: var(--betu-szam);
-  font-size: var(--m-md);
+  font-size: clamp(24px, 6.4vw, 32px);
   font-weight: var(--vastag-fej);
   letter-spacing: .06em;
+  line-height: 1.15;
   color: var(--szoveg);
   background: var(--lap-2);
-  border: 1px solid var(--keret-eros);
-  border-radius: var(--r-sm);
-  padding: 2px 8px;
+  border: 2px solid var(--keret-eros);
+  border-radius: var(--r);
+  padding: 0 10px;
+}
+
+/* Az időpont a rendszám mellett, másodlagosan — de messziről is olvasható. */
+.kartya .ido {
+  font-family: var(--betu-szam);
+  font-size: clamp(18px, 4.8vw, 22px);
+  font-weight: var(--vastag-eros);
+  color: var(--szoveg-halk);
+  white-space: nowrap;
+}
+.kartya .tolto { flex: 1; }
+
+.kartya .cimke-pill {
+  font-size: clamp(14px, 3.6vw, 18px);
+  padding: 2px 10px;
 }
 /* A H-V címke a rendszám mellé tapad: együtt olvassuk őket. */
 .kartya-felso .cimke-pill[data-r='hozomviszem'] { margin-left: 0; }
-.kartya .tolto { flex: 1; }
 
-/* 2. sor: kinek — a név viszi a hierarchiát */
-.kartya-kozep {
-  font-size: var(--m-sm);
+/* Az 1. sorban, az idő után: a csomag, és utána narancsban, ami KÜLÖN
+   kérve van. Ha az extrák nem férnek ki, csak ők törnek új sorba. */
+.kartya-felso .csomag,
+.kartya-felso .extrak {
+  min-width: 0;
+  font-size: clamp(18px, 5vw, 24px);
+  font-weight: var(--vastag-eros);
+  line-height: 1.25;
+  color: var(--szoveg);
+}
+.kartya-felso .extrak {
+  color: var(--narancs-sotet);
+  background: var(--narancs-halvany);
+  border-radius: var(--r-sm);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0 6px;
+}
+
+/* 2. sor: többnapos — hányadik nap, és mikor viszi */
+.kartya-tobbnap {
+  display: inline-block;
+  font-size: clamp(15px, 4vw, 20px);
   font-weight: var(--vastag-kozep);
-  margin-bottom: 3px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--v-kesz);
+  border: 1px solid #cbdeef;
+  background: #eaf2fa;
+  border-radius: var(--r-sm);
+  padding: 0 8px;
+  margin-top: 4px;
 }
 
-.kartya-also {
-  display: flex; align-items: center; gap: var(--t3);
-  flex-wrap: wrap; font-size: var(--m-xs); color: var(--szoveg-halk);
+/* 3. sor: a megjegyzés — legfeljebb három sor, a többi a munkalapon */
+.kartya-megj {
+  font-size: clamp(16px, 4.2vw, 22px);
+  line-height: 1.3;
+  color: var(--szoveg);
+  border-left: 3px solid var(--keret-eros);
+  padding: 0 0 0 10px;
+  margin-top: 4px;
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-.kartya-also .csomag { font-weight: var(--vastag-eros); color: var(--szoveg); }
-.kartya-also .tolto { flex: 1; }
+
+/* alul, egy sorban: balra az ár és a munkalista állása, jobbra a gombok.
+   Ha nem fér el (telefon), a gombok új sorba törnek, teljes szélességben. */
+.kartya-lab {
+  display: flex; align-items: center; gap: 6px var(--t4);
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--keret);
+}
+.kartya-allas {
+  display: flex; align-items: center; gap: var(--t4);
+  flex-wrap: wrap;
+  margin-right: auto;
+  font-size: clamp(15px, 4vw, 20px);
+  color: var(--szoveg-halk);
+}
+.kartya-allas .ido-hianyzik { color: var(--v-erkezett); font-weight: 600; }
 
 /* Az ár kiemelten: ez az, amit a tulaj a leggyakrabban keres a listán. */
-.kartya-also .ar-kiemelt {
+.kartya-allas .ar-kiemelt {
   font-family: var(--betu-szam);
-  font-size: var(--m-md);
+  font-size: clamp(20px, 5.4vw, 28px);
   font-weight: var(--vastag-fej);
   color: var(--szoveg);
 }
 
-.allapot-pill { background: var(--lap-2); color: var(--szoveg-halk); border: 1px solid var(--keret); }
-.allapot-pill[data-a='ARRIVED']     { background: #fdf4e6; color: #8a5a10; border-color: #f0dcb8; }
-.allapot-pill[data-a='IN_PROGRESS'] { background: var(--zold-halvany); color: var(--zold-sotet); border-color: #c3e2d1; }
-.allapot-pill[data-a='READY']       { background: #eaf2fa; color: #1f5285; border-color: #cbdeef; }
-.allapot-pill[data-a='NO_SHOW'],
-.allapot-pill[data-a='CANCELLED_BY_CUSTOMER'],
-.allapot-pill[data-a='CANCELLED_BY_SHOP'] { background: #fdf1ef; color: var(--v-baj); border-color: #f2d3cd; }
-
 .lista-jelzo {
-  font-family: var(--betu-szam); font-size: var(--m-xs);
+  font-family: var(--betu-szam);
   color: var(--szoveg-halk);
-  display: inline-flex; align-items: center; gap: 5px;
+  display: inline-flex; align-items: center; gap: 8px;
 }
 .lista-jelzo .csik {
-  width: 34px; height: 4px; border-radius: var(--r-kor);
+  width: 68px; height: 8px; border-radius: var(--r-kor);
   background: var(--keret); overflow: hidden;
 }
 .lista-jelzo .csik i { display: block; height: 100%; background: var(--zold); }
@@ -250,6 +316,35 @@
 .figyelem li::before { content: '•'; color: var(--v-erkezett); font-weight: 700; line-height: 1.4; }
 .figyelem li[data-sulyos='true']::before { color: var(--v-baj); }
 
+/* A figyelmeztetés alatt az érintett autók rendszáma — mind egy gomb, ami
+   megnyitja a munkalapot. Ujjal is elkapható méretű. */
+.figyelem-szoveg { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gond-rendszamok { display: flex; flex-wrap: wrap; gap: 6px; }
+.gond-rendszam {
+  font-family: var(--betu-szam);
+  font-size: var(--m-sm);
+  font-weight: var(--vastag-eros);
+  letter-spacing: .04em;
+  border: 1px solid var(--keret-eros);
+  background: var(--lap);
+  border-radius: var(--r-sm);
+  padding: 5px 10px;
+  min-height: 34px;
+}
+.gond-rendszam:hover { border-color: var(--zold); background: var(--zold-halvany); color: var(--zold-sotet); }
+
+/* --- a nap kártyája: kapacitás + számok + ki mikor van bent ------------------ */
+.kapacitas-adatok { margin-top: var(--t3); }
+.munkaido-valtozasok {
+  list-style: none; margin: var(--t3) 0 0; padding: var(--t2) 0 0;
+  border-top: 1px solid var(--keret);
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: var(--m-sm);
+}
+.munkaido-valtozasok li { padding: 3px 0; }
+/* Akinek a munkaideje nem számít a kapacitásba (tulajdonos), halványabb. */
+.munkaido-valtozasok li[data-szamit='false'] { color: var(--szoveg-halk); }
+
 /* ---------------------------------------------------------------------------
    A kártya megnyitó felülete és a gyorsgombok
    ---------------------------------------------------------------------------
@@ -267,15 +362,19 @@
 /* A gombok jobbra, a kártya alján. Balra tolva összefolynának a csomag
    nevével; jobbra a szem a hüvelykujj útjában találja őket. */
 .kartya-muvelet {
-  display: flex; justify-content: flex-end; gap: var(--t2);
-  margin-top: var(--t3);
-  padding-top: var(--t2);
-  border-top: 1px dashed var(--keret);
+  display: flex; justify-content: flex-end; gap: var(--t3);
+  margin-left: auto;
+}
+/* A gombok is kétszer akkorák: vizes kézzel, kesztyűben is el kell találni. */
+.kartya-muvelet .btn {
+  font-size: clamp(16px, 4.2vw, 20px);
+  padding: 6px 18px;
+  min-height: 44px;
 }
 
 .kartya-hiba {
   margin-top: var(--t2);
-  font-size: var(--m-xs);
+  font-size: var(--m-sm);
   color: var(--v-baj);
 }
 
@@ -285,6 +384,8 @@
 .kartya[data-allapot='CANCELLED_BY_SHOP'] .kartya-muvelet { opacity: 1; }
 
 @media (max-width: 560px) {
-  .kartya-muvelet { justify-content: stretch; }
-  .kartya-muvelet .btn { flex: 1; justify-content: center; }
+  .kartya-muvelet { justify-content: stretch; width: 100%; margin-left: 0; }
+  .kartya-muvelet .btn { flex: 1; justify-content: center; padding: 6px 10px; }
+  .sor-elem { grid-template-columns: 30px minmax(0, 1fr); gap: 6px; }
+  .kartya { padding: 6px 10px; }
 }

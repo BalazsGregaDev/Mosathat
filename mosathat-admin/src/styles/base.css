@@ -113,6 +113,31 @@ input, select, textarea { font: inherit; color: inherit; }
 
 textarea.beviteli { resize: vertical; min-height: 64px; font-size: var(--m-alap); }
 
+/* Dátum- és időmező: ne lógjon ki a dobozából.
+   A böngésző ezeknek a mezőknek saját legkisebb szélességet ad (a naptár
+   ikon és a „éééé. hh. nn." minta miatt), és egy keskeny oszlopban ez
+   nagyobb lehet, mint a hely — telefonon a „Szerződés vége" mező így lógott
+   ki a képernyő jobb szélén. */
+input[type='date'].beviteli,
+input[type='time'].beviteli {
+  min-width: 0;
+  max-width: 100%;
+}
+/* iPhone / iPad (Safari): ott a mező beépített megjelenése a hibás — a
+   saját megjelenés nélkül már tartja a 100%-ot. A min-height azért kell,
+   mert üresen különben összeesne egy vonallá. Ez a szabály csak Safarin
+   él (-webkit-touch-callout csak ott van), máshol a mező nem változik. */
+@supports (-webkit-touch-callout: none) {
+  input[type='date'].beviteli,
+  input[type='time'].beviteli {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-height: 44px;
+    text-align: left;
+  }
+}
+
 /* --- választósor (méret, terjedelem, típus) ---------------------------------- */
 
 .valaszto { display: flex; gap: var(--t2); flex-wrap: wrap; }

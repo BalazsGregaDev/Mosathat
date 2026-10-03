@@ -14,15 +14,26 @@ import { STATUS_LABEL, type DayBooking } from '../../lib/types'
 //  meg kell nyitni.
 // ---------------------------------------------------------------------------
 
+/** Többnapos-e: a Viszi napja későbbi, mint a Hozzáé (a régi „Több napos" is). */
+export function tobbnapos(b: DayBooking): boolean {
+  return b.last_day.slice(0, 10) > b.service_date.slice(0, 10)
+}
+
+/** „okt. 6-ig" helyett rövidebben: „6-ig" — a hónap a naptárból látszik. */
+function utolsoNapIg(b: DayBooking): string {
+  return `${Number(b.last_day.slice(8, 10))}-ig`
+}
+
 /**
  * Mettől meddig. Foglalástípusonként más:
- *   VAROS       – konkrét kezdés, és a munka hossza adja a végét
- *   LEADOS      – amikor hozza és amikor viszi
- *   TOBBNAPOS   – napokig áll nálunk, itt az óra nem mond semmit
+ *   megvárja     – konkrét kezdés, és a munka hossza adja a végét
+ *   itt hagyja   – amikor hozza és amikor viszi
+ *   többnapos    – napokig áll nálunk: az utolsó nap számít („6-ig")
  */
 export function idoSzoveg(b: DayBooking): string {
-  if (b.booking_type === 'TOBBNAPOS') {
-    return b.deadline_at ? `${b.deadline_at.slice(8, 10)}-ig` : 'több napos'
+  if (tobbnapos(b)) {
+    const viszi = b.pick_up_at ?? b.deadline_at
+    return viszi ? `${utolsoNapIg(b)}, ${ora(viszi)}` : utolsoNapIg(b)
   }
 
   // Leadósnál a hozza–viszi a lényeg, ha meg van beszélve.
@@ -48,9 +59,7 @@ export function idoSzoveg(b: DayBooking): string {
  * ott az a kérdés, MIKOR jön, nem az, hogy meddig tart.
  */
 export function idoRovidSzoveg(b: DayBooking): string {
-  if (b.booking_type === 'TOBBNAPOS') {
-    return b.deadline_at ? `${b.deadline_at.slice(8, 10)}-ig` : 'több nap'
-  }
+  if (tobbnapos(b)) return utolsoNapIg(b)
   const kezdes = b.start_at ?? b.drop_off_at
   return kezdes ? ora(kezdes) : '—'
 }
@@ -73,7 +82,7 @@ export default function MiniKartya({ b, onMegnyit, egysoros }: {
    * munkalapot nyitni úgyis félrekattintás lenne.
    */
   onMegnyit?: (id: string) => void
-  /** Havi nézetben egy sorba fér: idő és rendszám egymás mellett. */
+  /** Havi nézetben egy sorba fér: rendszám és idő egymás mellett. */
   egysoros?: boolean
 }) {
   const rendszamE = Boolean((b.plate_raw ?? '').trim())

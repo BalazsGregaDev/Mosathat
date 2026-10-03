@@ -3,15 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useApp, useCatalog } from '../../state/AppContext'
 import { ft } from '../../lib/format'
 import {
-  CATEGORY_SHORT, SIZE_LABEL, TIER_LABEL,
-  type ContractRow, type ContractSize, type ContractTier,
+  CATEGORY_SHORT, KIND_LABEL, SIZE_LABEL,
+  type ContractKind, type ContractRow, type ContractSize,
   type PassBalanceRow, type SearchHit, type ValidityKind, type VehicleCategory,
 } from '../../lib/types'
 import KartyaFej from '../common/KartyaFej'
-
-const TIERS: ContractTier[] = ['NORMAL', 'PREMIUM']
-const SIZES: ContractSize[] = ['NORMAL', 'NAGY']
-const AFA = 0.27
+import { useKerdes } from '../common/Kerdes'
+import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../common/Ceg'
+import SzerzodesArak, { AFA, FAJTAK, MERETEK } from './SzerzodesArak'
 
 // ---------------------------------------------------------------------------
 //  Cégek és bérletesek.
@@ -39,6 +38,7 @@ export default function PartnersPage() {
   const [hiba, setHiba] = useState<string | null>(null)
   const [ujBerlet, setUjBerlet] = useState(false)
   const [szerkContract, setSzerkContract] = useState<ContractRow | 'uj' | null>(null)
+  const [kerdesAblak, kerdez] = useKerdes()
 
   const ujra = useCallback(async () => {
     setTolt(true)
@@ -144,7 +144,11 @@ export default function PartnersPage() {
                     {fej.active && szerkesztheto && (
                       <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }}
                               onClick={async () => {
-                                if (!window.confirm('Biztos kivezeted ezt a bérletet?')) return
+                                if (!(await kerdez({
+                                  cim: 'Biztosan kivezeted ezt a bérletet?',
+                                  szoveg: 'A megmaradt alkalmak ezután nem használhatók fel.',
+                                  igen: 'Kivezetés', nem: 'Mégse', veszelyes: true,
+                                }))) return
                                 await data.deactivatePass(fej.pass_id)
                                 await ujra()
                               }}>
@@ -175,7 +179,7 @@ export default function PartnersPage() {
             {contracts.map((c) => (
               <CegKartya key={c.id} cim={c.company_name ?? c.customer_name}
                          nev={c.customer_name} hozomViszem={c.pickup_delivery}
-                         arDb={c.prices.length}>
+                         arDb={c.prices.length} autok={c.jarmuvek}>
                   {c.tax_number && (
                     <div className="adatsor">
                       <span>Adószám</span><span className="ertek">{c.tax_number}</span>
@@ -188,27 +192,18 @@ export default function PartnersPage() {
                     </div>
                   )}
 
-                  <table className="artabla keskeny" style={{ marginTop: 'var(--t3)' }}>
-                    <thead>
-                      <tr><th /><th>Bruttó</th><th>Nettó</th></tr>
-                    </thead>
-                    <tbody>
-                      {TIERS.flatMap((tier) =>
-                        SIZES.map((size) => {
-                          const p = c.prices.find((x) => x.tier === tier && x.size === size)
-                          return (
-                            <tr key={tier + size} data-hianyzik={!p}>
-                              <th scope="row">{TIER_LABEL[tier]} · {SIZE_LABEL[size]}</th>
-                              <td className="szam">{p ? ft(p.price_huf) : '—'}</td>
-                              <td className="szam halk">
-                                {p ? ft(Math.round(p.price_huf / (1 + AFA))) : '—'}
-                              </td>
-                            </tr>
-                          )
-                        }),
-                      )}
-                    </tbody>
-                  </table>
+                  {c.valid_until && (
+                    <div className="adatsor">
+                      <span>Szerződés vége</span>
+                      <span className="ertek">{c.valid_until.slice(0, 10)}</span>
+                    </div>
+                  )}
+
+                  {/* Bruttó árak, alattuk halványan a nettó: a cégekkel
+                      nettóban egyeznek meg, a pultnál bruttót mondunk. */}
+                  <div style={{ marginTop: 'var(--t3)' }}>
+                    <SzerzodesArak prices={c.prices} netto />
+                  </div>
 
                   {szerkesztheto && (
                     <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }}
@@ -234,6 +229,7 @@ export default function PartnersPage() {
           onKesz={() => { setSzerkContract(null); void ujra() }}
         />
       )}
+      {kerdesAblak}
     </div>
   )
 }
@@ -427,6 +423,24 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
 // ---------------------------------------------------------------------------
 //  Szerződés
 // ---------------------------------------------------------------------------
+//
+//  A szerződés a CÉGÉ, nem egy ügyfélé: a cég bármelyik sofőrje hozza az
+//  autót, ugyanaz az ár jár. A cég ugyanazzal a keresővel választható, mint
+//  az új időpontnál — és ha új név, mentés előtt itt is összeveti a
+//  meglévőkkel („Erre a cégre gondoltál?").
+//
+//  Az árak csomagonként:
+//
+//                 Normál méret   Nagy méret
+//      Céges      [        ]     [        ]   ← a cég autói (Flotta)
+//      Magán      [        ]     [        ]   ← a dolgozók saját autója
+//
+//  Előbb ki kell választani, melyik csomagokra szól (Start, Premium, Elit) —
+//  csak azoknál jelennek meg a mezők. Amit üresen hagysz, arra nincs
+//  megállapodás: az listaáron megy.
+
+/** Egy ár kulcsa az űrlapban: csomag + méret + fajta. */
+const arKulcs = (pk: string, m: ContractSize, f: ContractKind) => `${pk}_${m}_${f}`
 
 function ContractForm({
   contract, onBezar, onKesz,
@@ -436,10 +450,10 @@ function ContractForm({
   onKesz: () => void
 }) {
   const { data } = useApp()
-  const [q, setQ] = useState('')
-  const [talalatok, setTalalatok] = useState<SearchHit[]>([])
-  const [ugyfelId, setUgyfelId] = useState<string | null>(contract?.customer_id ?? null)
-  const [ugyfelNev, setUgyfelNev] = useState(contract?.company_name ?? contract?.customer_name ?? '')
+  const katalogus = useCatalog()
+  const [cegAblak, cegEgyeztet] = useCegEgyeztetes()
+  const [ceg, setCeg] = useState<CegErtek>(
+    contract ? { id: contract.company_id, nev: contract.company_name ?? contract.customer_name } : URES_CEG)
   const [adoszam, setAdoszam] = useState(contract?.tax_number ?? '')
   const [hozomViszem, setHozomViszem] = useState(contract?.pickup_delivery ?? false)
   const [fuvardij, setFuvardij] = useState(
@@ -447,36 +461,58 @@ function ContractForm({
   const [lejarat, setLejarat] = useState(contract?.valid_until?.slice(0, 10) ?? '')
   const [arak, setArak] = useState<Record<string, string>>(() =>
     Object.fromEntries(
-      (contract?.prices ?? []).map((p) => [`${p.tier}_${p.size}`, String(p.price_huf)]),
+      (contract?.prices ?? []).map((p) => [arKulcs(p.package_id, p.size, p.kind), String(p.price_huf)]),
     ),
   )
+  // Melyik csomagokra szól. Szerkesztéskor azok, amelyekre már van ár.
+  const [csomagok, setCsomagok] = useState<string[]>(() =>
+    [...new Set((contract?.prices ?? []).map((p) => p.package_id))])
   const [ment, setMent] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (q.trim().length < 1) { setTalalatok([]); return }
-    const t = window.setTimeout(async () => {
-      try { setTalalatok(await data.searchCustomers(q, 5)) } catch { setTalalatok([]) }
-    }, 220)
-    return () => window.clearTimeout(t)
-  }, [q, data])
+  const aktivCsomagok = katalogus.packages.filter((p) => p.active)
+
+  function csomagBillent(id: string) {
+    setCsomagok((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]))
+  }
+
+  // A kiválasztott csomagok a katalógus sorrendjében (Start, Premium, Elit).
+  const valasztott = aktivCsomagok.filter((p) => csomagok.includes(p.id))
 
   async function mentes() {
-    if (!ugyfelId) return
-    setMent(true); setHiba(null)
+    if (!ceg.nev.trim() || ment) return
+    setHiba(null)
+    // Új cégnév: előbb összevetjük a meglévőkkel (azonos → ahhoz kötjük,
+    // hasonló → megkérdezzük). Szerkesztésnél a cég már adott.
+    let c = ceg
+    try {
+      const e = await cegEgyeztet(ceg)
+      if (e === null) return
+      c = e
+      setCeg(e)
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+      return
+    }
+
+    setMent(true)
     try {
       await data.saveContract({
         id: contract?.id ?? null,
-        customer_id: ugyfelId,
+        company_id: c.id,
+        company_name: c.id ? null : c.nev.trim(),
         tax_number: adoszam.trim() || null,
         pickup_delivery: hozomViszem,
         pickup_delivery_fee_huf: hozomViszem && fuvardij.trim() !== ''
           ? Number(fuvardij) : null,
         valid_until: lejarat || null,
-        notes: null,
-        prices: TIERS.flatMap((tier) =>
-          SIZES.map((size) => ({ tier, size, price_huf: Number(arak[`${tier}_${size}`]) || 0 })),
-        ).filter((p) => p.price_huf > 0),
+        notes: contract?.notes ?? null,
+        // Csak a kiválasztott csomagok árai mennek: ha egy csomagot
+        // kivettél, az árai is törlődnek.
+        prices: valasztott.flatMap((p) => MERETEK.flatMap((m) => FAJTAK.map((f) => ({
+          package_id: p.id, size: m, kind: f,
+          price_huf: Number(arak[arKulcs(p.id, m, f)]) || 0,
+        })))).filter((x) => x.price_huf > 0),
       })
       onKesz()
     } catch (e) {
@@ -497,50 +533,29 @@ function ContractForm({
         <div className="lap-torzs">
           <div className="szakasz">
             <div className="fej">Cég</div>
-            {ugyfelId ? (
-              <div className="talalat">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--t3)' }}>
-                  <strong>{ugyfelNev}</strong>
-                  {!contract && (
-                    <button className="btn btn-kicsi" style={{ marginLeft: 'auto' }}
-                            onClick={() => setUgyfelId(null)}>Más cég</button>
-                  )}
-                </div>
-              </div>
+            {contract ? (
+              <div className="talalat"><strong>{ceg.nev}</strong></div>
             ) : (
-              <div className="kereso">
-                <input className="beviteli" value={q} onChange={(e) => setQ(e.target.value)}
-                       placeholder="Cégnév vagy rendszám" autoFocus />
-                {talalatok.length > 0 && (
-                  <div className="talalatlista">
-                    {talalatok.map((h) => (
-                      <button key={h.vehicle_id} type="button" className="talalatsor"
-                              onClick={() => {
-                                setUgyfelId(h.customer_id)
-                                setUgyfelNev(h.company_name || h.customer_name)
-                                setTalalatok([]); setQ('')
-                              }}>
-                        <span className="rendszam">{h.plate_raw}</span>
-                        <span className="nev">{h.company_name || h.customer_name}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <CegValaszto inputId="szerz-ceg" ertek={ceg}
+                           onValt={(uj) => setCeg(uj)} />
             )}
           </div>
 
           <div className="szakasz">
-            <div className="sor-2">
+            {/* Telefonon egymás alatt: a dátummező a böngészőben nem megy a
+                saját legkisebb szélessége alá, és két oszlopban kilógott a
+                képernyő jobb szélén. */}
+            <div className="sor-2 szerz-adatok">
               <div className="mezo">
                 <label htmlFor="ado">Adószám</label>
                 <input id="ado" className="beviteli" value={adoszam}
                        onChange={(e) => setAdoszam(e.target.value)} />
               </div>
               <div className="mezo">
-                <label htmlFor="lej">Szerződés vége (üres = határozatlan)</label>
+                <label htmlFor="lej">Szerződés vége</label>
                 <input id="lej" className="beviteli" type="date" value={lejarat}
                        onChange={(e) => setLejarat(e.target.value)} />
+                <small>Üresen hagyva határozatlan.</small>
               </div>
             </div>
             <label className="jelolo" data-aktiv={hozomViszem}>
@@ -550,12 +565,8 @@ function ContractForm({
             </label>
 
             {/* A fuvar ára KÜLÖN mező, nem a csomagárba építve: nem minden
-                autóért kell elmenni. Egy flottából az egyiket behozzák, a
-                másikért menni kell — ha a fuvar bele volna árazva, a behozott
-                autó is fizetné.
-
-                Hogy melyik foglalásnál számít, azt a foglalás típusa mondja
-                meg (Hozom-viszem), nem ez a mező. */}
+                autóért kell elmenni. Hogy melyik foglalásnál számít, azt a
+                foglalás típusa mondja meg (Hozom-viszem), nem ez a mező. */}
             {hozomViszem && (
               <div className="mezo">
                 <span>Fuvar ára alkalmanként</span>
@@ -564,39 +575,59 @@ function ContractForm({
                        onChange={(e) => setFuvardij(e.target.value)} />
                 <small>
                   A munka árán FELÜL, egy útra. Üresen hagyva nincs külön
-                  megállapodva — akkor a munkalapon sem fog megjelenni.
+                  megállapodva.
                 </small>
               </div>
             )}
           </div>
 
           <div className="szakasz">
-            <div className="fej">Ft / autó</div>
+            <div className="fej">Melyik csomagokra szól?</div>
+            <div className="valaszto">
+              {aktivCsomagok.map((p) => (
+                <button key={p.id} type="button" aria-pressed={csomagok.includes(p.id)}
+                        onClick={() => csomagBillent(p.id)}>
+                  {p.name}
+                </button>
+              ))}
+            </div>
             <p className="halk" style={{ fontSize: 'var(--m-xs)' }}>
-              Bruttó árak. Amit üresen hagysz, arra nincs megállapodás — az a
-              kombináció listaáron megy.
+              Bruttó árak. <strong>Céges</strong>: a cég autói. <strong>Magán</strong>: a cég
+              dolgozóinak saját autója (a foglalásnál „Saját"). Amit üresen hagysz, arra
+              nincs megállapodás — az listaáron megy.
             </p>
-            {TIERS.map((tier) => (
-              <div className="sor-2" key={tier}>
-                {SIZES.map((size) => {
-                  const kulcs = `${tier}_${size}`
-                  const brutto = Number(arak[kulcs]) || 0
-                  return (
-                    <div className="mezo" key={kulcs}>
-                      <label htmlFor={kulcs}>{TIER_LABEL[tier]} · {SIZE_LABEL[size]}</label>
-                      <input id={kulcs} className="beviteli szam" type="number" inputMode="numeric"
-                             step={500} value={arak[kulcs] ?? ''}
-                             onChange={(e) => setArak((a) => ({ ...a, [kulcs]: e.target.value }))} />
-                      {brutto > 0 && (
-                        <span className="halk" style={{ fontSize: 'var(--m-xs)' }}>
-                          nettó {ft(Math.round(brutto / (1 + AFA)))}
+
+            {valasztott.map((p) => (
+              <div className="szerz-csomag" key={p.id}>
+                <div className="szerz-csomag-cim">{p.name}</div>
+                <div className="szerz-racs">
+                  <span />
+                  {MERETEK.map((m) => <span key={m} className="oszlopcim">{SIZE_LABEL[m]}</span>)}
+                  {FAJTAK.map((f) => [
+                    <span key={f} className="sorcim">{KIND_LABEL[f]}</span>,
+                    ...MERETEK.map((m) => {
+                      const kulcs = arKulcs(p.id, m, f)
+                      const brutto = Number(arak[kulcs]) || 0
+                      return (
+                        <span key={kulcs} className="szerz-mezo">
+                          <input className="beviteli szam" type="number" inputMode="numeric"
+                                 step={500} min={0}
+                                 aria-label={`${p.name} · ${SIZE_LABEL[m]} · ${KIND_LABEL[f]} ár`}
+                                 value={arak[kulcs] ?? ''}
+                                 onChange={(e) => setArak((a) => ({ ...a, [kulcs]: e.target.value }))} />
+                          {brutto > 0 && (
+                            <small className="halk">nettó {ft(Math.round(brutto / (1 + AFA)))}</small>
+                          )}
                         </span>
-                      )}
-                    </div>
-                  )
-                })}
+                      )
+                    }),
+                  ])}
+                </div>
               </div>
             ))}
+            {valasztott.length === 0 && (
+              <div className="ures">Válaszd ki fent, melyik csomagokra szól a szerződés.</div>
+            )}
           </div>
 
           {hiba && <div className="hibauzenet">{hiba}</div>}
@@ -606,12 +637,13 @@ function ContractForm({
           <div className="gombok" style={{ marginLeft: 0, width: '100%' }}>
             <button className="btn" onClick={onBezar} disabled={ment}>Mégse</button>
             <button className="btn btn-fo" onClick={() => void mentes()}
-                    disabled={!ugyfelId || ment} style={{ marginLeft: 'auto' }}>
+                    disabled={!ceg.nev.trim() || ment} style={{ marginLeft: 'auto' }}>
               {ment ? 'Mentés…' : 'Mentés'}
             </button>
           </div>
         </div>
       </div>
+      {cegAblak}
     </div>
   )
 }
@@ -652,11 +684,12 @@ function BerletKartya({ cim, maradt, osszes, lejart, children }: {
   )
 }
 
-function CegKartya({ cim, nev, hozomViszem, arDb, children }: {
+function CegKartya({ cim, nev, hozomViszem, arDb, autok, children }: {
   cim: string
   nev: string
   hozomViszem: boolean
   arDb: number
+  autok: number
   children: React.ReactNode
 }) {
   const [nyitva, setNyitva] = useState(false)
@@ -674,6 +707,10 @@ function CegKartya({ cim, nev, hozomViszem, arDb, children }: {
         <div className="adatsor">
           <span>Hozom-viszem</span>
           <span className="ertek">{hozomViszem ? 'igen' : 'nem'}</span>
+        </div>
+        <div className="adatsor">
+          <span>Autók</span>
+          <span className="ertek szam">{autok}</span>
         </div>
         {!nyitva && (
           <div className="adatsor">

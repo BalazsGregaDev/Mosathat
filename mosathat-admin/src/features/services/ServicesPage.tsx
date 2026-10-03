@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { ft } from '../../lib/format'
@@ -8,9 +8,10 @@ import {
   type PackagePrice, type VehicleCategory,
 } from '../../lib/types'
 import type { Catalog } from '../../data'
-import { CsomagTartalom, Tobblet } from './Arlista'
+import { CimMellett, CsomagTartalom } from './Arlista'
 import { KETTO_PX } from './ServicesView'
 import { useSzeles } from '../../state/useSzeles'
+import { urlapMegnyilt } from '../../lib/kepernyo'
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
 const TERJEDELMEK: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
@@ -84,16 +85,20 @@ function SzamMezo({
 }
 
 export default function ServicesPage() {
-  const { data, catalog } = useApp()
+  const { data, catalog, refreshCatalog } = useApp()
   const [k, setK] = useState<Catalog | null>(catalog)
   const [ful, setFul] = useState<'csomagok' | 'tartalom' | 'extrak'>('csomagok')
   // Széles képernyőn a csomagok mellé fér az egyéb szolgáltatások listája is:
   // soronként egy név, egy ár és egy időtartam. Keskenyen külön fülre megy.
   const szeles = useSzeles(KETTO_PX)
 
+  // Minden mentés után: ez a képernyő ÉS a foglalási űrlap katalógusa is
+  // frissül — különben az új ár / új szolgáltatás csak újrabelépés után
+  // jelenne meg az Új időpontnál.
   const ujra = useCallback(async () => {
     setK(await data.getCatalog())
-  }, [data])
+    void refreshCatalog()
+  }, [data, refreshCatalog])
 
   useEffect(() => {
     void ujra()
@@ -155,12 +160,9 @@ export default function ServicesPage() {
                     fejben tartani, mi a különbség a csomagok között. */}
                 <h3 className="csomag-cim">
                   {p.name}
-                  <Tobblet k={k} packageId={p.id} />
+                  <CimMellett k={k} p={p} />
                 </h3>
                 <div className="panel-torzs">
-                  <p className="halk" style={{ fontSize: 'var(--m-sm)', marginBottom: 'var(--t3)' }}>
-                    {p.description}
-                  </p>
 
                   <div className="tablagorgo">
                   <table className="artabla">
@@ -276,6 +278,7 @@ export default function ServicesPage() {
                     }} />
                   ))}
                 </div>
+                <UjExtra onKesz={ujra} />
               </div>
             </div>
           )}
@@ -299,6 +302,7 @@ export default function ServicesPage() {
               }} />
             ))}
           </div>
+          <UjExtra onKesz={ujra} />
         </div>
       )}
     </div>
@@ -384,6 +388,106 @@ function ExtraSor({ e, onMent }: { e: Extra; onMent: (patch: Partial<Extra>) => 
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+//  Új egyéb szolgáltatás
+//
+//  Három adat kell hozzá: név, ár, idő. A többit (leírás, száradási idő,
+//  aktív) utána a listában lehet beállítani, ugyanúgy, mint a meglévőknél —
+//  a felvett tétel a lista végére kerül, kinyitható.
+//
+//  Ugyanaz a név (ékezet és kisbetű nélkül is) nem lehet kétszer: azt az
+//  adatbázis szól vissza, itt csak megjelenik.
+// ---------------------------------------------------------------------------
+
+function UjExtra({ onKesz }: { onKesz: () => Promise<void> }) {
+  const { data } = useApp()
+  const [nyitva, setNyitva] = useState(false)
+  const [nev, setNev] = useState('')
+  const [ar, setAr] = useState('')
+  const [perc, setPerc] = useState('')
+  const [megy, setMegy] = useState(false)
+  const [hiba, setHiba] = useState<string | null>(null)
+  // Nyitáskor a kurzor a név mezőbe kerül (egérrel); telefonon csak a képbe
+  // görgetjük az űrlapot, a billentyűzet a koppintásra jön fel.
+  const nevMezo = useRef<HTMLInputElement>(null)
+  useEffect(() => { if (nyitva) urlapMegnyilt(nevMezo.current) }, [nyitva])
+
+  function bezar() {
+    setNyitva(false); setNev(''); setAr(''); setPerc(''); setHiba(null)
+  }
+
+  async function ment() {
+    if (!nev.trim() || megy) return
+    setMegy(true)
+    setHiba(null)
+    try {
+      await data.createExtra({
+        name: nev.trim(),
+        // Üresen hagyva NULL, nem nulla: „még nincs ára", nem „ingyenes".
+        price_huf: ar.trim() === '' ? null : Number(ar),
+        work_minutes: perc.trim() === '' ? null : Number(perc),
+      })
+      await onKesz()
+      bezar()
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+    } finally {
+      setMegy(false)
+    }
+  }
+
+  if (!nyitva) {
+    return (
+      <div className="uj-extra">
+        <button type="button" className="btn btn-kicsi" onClick={() => setNyitva(true)}>
+          + Új szolgáltatás
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="uj-extra nyitva">
+      {hiba && <div className="hibauzenet">{hiba}</div>}
+      <div className="mezo">
+        <label htmlFor="uj-extra-nev">Név</label>
+        <input id="uj-extra-nev" ref={nevMezo} className="beviteli" value={nev} disabled={megy}
+               onChange={(e) => setNev(e.target.value)}
+               onKeyDown={(e) => { if (e.key === 'Enter') void ment() }} />
+      </div>
+      {/* Az ár és az idő egymás mellett: egy gondolat — mennyibe kerül, és
+          mennyi ideig tart. */}
+      <div className="uj-extra-szamok">
+        <label className="mezo">
+          <span>Ár</span>
+          <span className="szammezo">
+            <input className="beviteli szam" type="number" inputMode="numeric" min={0} step={100}
+                   value={ar} disabled={megy} onChange={(e) => setAr(e.target.value)} />
+            <span className="suffix">Ft</span>
+          </span>
+        </label>
+        <label className="mezo">
+          <span>Idő</span>
+          <span className="szammezo">
+            <input className="beviteli szam" type="number" inputMode="numeric" min={0} step={5}
+                   value={perc} disabled={megy} onChange={(e) => setPerc(e.target.value)} />
+            <span className="suffix">perc</span>
+          </span>
+        </label>
+      </div>
+      <div className="urlap-lab" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
+        <button type="button" className="btn btn-csendes btn-kicsi" onClick={bezar} disabled={megy}>
+          Mégse
+        </button>
+        <button type="button" className="btn btn-fo btn-kicsi" onClick={() => void ment()}
+                disabled={!nev.trim() || megy}>
+          {megy ? 'Felvétel…' : 'Felvétel'}
+        </button>
+      </div>
     </div>
   )
 }

@@ -3,19 +3,23 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useApp } from '../../state/AppContext'
 import { ft } from '../../lib/format'
 import {
-  BILLING_LABEL, CATEGORY_LABEL, CATEGORY_SHORT,
-  type CustomerSummary, type VehicleSummary,
+  BILLING_LABEL, CATEGORY_LABEL, CATEGORY_SHORT, KIND_LABEL,
+  type CompanySummary, type CustomerSummary, type VehicleSummary,
 } from '../../lib/types'
 import Szerkesztheto, { type Valaszthato } from '../common/Szerkesztheto'
 import { urlapMegnyilt } from '../../lib/kepernyo'
 import KartyaFej from '../common/KartyaFej'
 
 // ---------------------------------------------------------------------------
-//  Ügyfelek — egy oldal, két rendezés.
+//  Ügyfelek — egy oldal, három rendezés: jármű, ügyfél és cég szerint.
 //
-//  Nem két menüpont. Az adat egyetlen lánc: ügyfél → jármű → foglalások.
-//  Két külön lista ugyanannak a láncnak a két végét mutatná, és minden
-//  ügyfél kétszer szerepelne a rendszerben.
+//  Nem három menüpont. Az adat egyetlen lánc: cég → ügyfél (sofőr) → jármű →
+//  foglalások. Külön listák ugyanannak a láncnak a különböző pontjait
+//  mutatnák, és minden ügyfél többször szerepelne a rendszerben.
+//
+//  A Cég szerinti nézet azért kell, mert egy flottánál az autók különböző
+//  sofőrök nevén vannak: ügyfél szerint öt kártyán szétszórva, cég szerint
+//  egy helyen, mind.
 //
 //  Amit a soron látni kell, az nem a nyers adat, hanem a történet: hányszor
 //  járt itt, mennyit költött, milyen sűrűn jár. Ezt az adatbázis számolja —
@@ -26,7 +30,7 @@ import KartyaFej from '../common/KartyaFej'
 //  elavul, és pont attól lesz használhatatlan a rendszer.
 // ---------------------------------------------------------------------------
 
-type Nezet = 'jarmu' | 'ugyfel'
+type Nezet = 'jarmu' | 'ugyfel' | 'ceg'
 
 const KATEGORIAK: Valaszthato[] = (['SZEMELYAUTO', 'SUV', 'KISBUSZ'] as const)
   .map((v) => ({ ertek: v, cimke: CATEGORY_LABEL[v] }))
@@ -51,9 +55,9 @@ export default function CustomersPage() {
   const [q, setQ] = useState('')
   const [ugyfelek, setUgyfelek] = useState<CustomerSummary[]>([])
   const [jarmuvek, setJarmuvek] = useState<VehicleSummary[]>([])
+  const [cegek, setCegek] = useState<CompanySummary[]>([])
   const [tolt, setTolt] = useState(true)
   const [hiba, setHiba] = useState<string | null>(null)
-  const [nyitott, setNyitott] = useState<string | null>(null)
   const [ujUgyfel, setUjUgyfel] = useState(false)
 
   // A „Betöltés…" csak az első alkalommal jelenik meg. Egy mentés utáni
@@ -64,6 +68,7 @@ export default function CustomersPage() {
     if (elso) setTolt(true)
     try {
       if (nezet === 'ugyfel') setUgyfelek(await data.listCustomers(keres))
+      else if (nezet === 'ceg') setCegek(await data.listCompanies(keres))
       else setJarmuvek(await data.listVehicles(keres))
       setHiba(null)
     } catch (e) {
@@ -99,6 +104,9 @@ export default function CustomersPage() {
           </button>
           <button className={nezet === 'ugyfel' ? 'aktiv' : ''} onClick={() => setNezet('ugyfel')}>
             Ügyfél szerint
+          </button>
+          <button className={nezet === 'ceg' ? 'aktiv' : ''} onClick={() => setNezet('ceg')}>
+            Cég szerint
           </button>
         </div>
         {szerkesztheto && (
@@ -145,11 +153,18 @@ export default function CustomersPage() {
       {!tolt && nezet === 'ugyfel' && (
         <div className="panelek panelek-ugyfel">
           {ugyfelek.map((c) => (
-            <UgyfelKartya key={c.id} c={c} nyitott={nyitott === c.id}
-                          onNyit={() => setNyitott(nyitott === c.id ? null : c.id)}
-                          onValtozas={ujra} szerkesztheto={szerkesztheto} />
+            <UgyfelKartya key={c.id} c={c} onValtozas={ujra} szerkesztheto={szerkesztheto} />
           ))}
           {ugyfelek.length === 0 && (
+            <div className="panel"><div className="ures">Nincs találat.</div></div>
+          )}
+        </div>
+      )}
+
+      {!tolt && nezet === 'ceg' && (
+        <div className="panelek panelek-ugyfel">
+          {cegek.map((c) => <CegKartya key={c.id} c={c} />)}
+          {cegek.length === 0 && (
             <div className="panel"><div className="ures">Nincs találat.</div></div>
           )}
         </div>
@@ -402,6 +417,17 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
                        onMent={(x) => ugyfel({ name: x })} />
         <Szerkesztheto zarolt={!szerkesztheto} cimke="Telefon" ertek={v.customer_phone} tipus="telefon"
                        onMent={(x) => ugyfel({ phone: x })} />
+        {/* A cégnév csukva is látszik: egy flottás autónál a cég az első
+            kérdés („kinek számlázzuk?"), nem a sofőr neve. */}
+        {v.company_name && (
+          <Szerkesztheto zarolt={!szerkesztheto} cimke="Cégnév" ertek={v.company_name}
+                         onMent={(x) => ugyfel({ company_name: x })}
+                         utotag={v.szerzodes && (
+                           <span className="cimke-pill szerzodes-pill">
+                             szerződés{v.contract_kind ? ` · ${KIND_LABEL[v.contract_kind]}` : ''}
+                           </span>
+                         )} />
+        )}
 
         {nyitva && (
           <>
@@ -415,14 +441,12 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
                            onMent={(x) => ment({ model: x })} />
             <Szerkesztheto zarolt={!szerkesztheto} cimke="Méret" ertek={v.category} valaszthato={KATEGORIAK}
                            onMent={(x) => ment({ category: x })} />
-            <Szerkesztheto zarolt={!szerkesztheto} cimke="Ülések" ertek={v.seats ? String(v.seats) : ''} tipus="szam"
-                           ures="5 (alapértelmezett)"
-                           onMent={(x) => ment({ seats: x })} />
             <Szerkesztheto zarolt={!szerkesztheto} cimke="Megjegyzés" ertek={v.notes} sor={2} ures="nincs"
                            onMent={(x) => ment({ notes: x })} />
 
-            {v.company_name && (
-              <Szerkesztheto zarolt={!szerkesztheto} cimke="Cég" ertek={v.company_name}
+            {/* Cég nélküli autónál itt lehet hozzáadni. */}
+            {!v.company_name && (
+              <Szerkesztheto zarolt={!szerkesztheto} cimke="Cégnév" ertek="" ures="nincs"
                              onMent={(x) => ugyfel({ company_name: x })} />
             )}
 
@@ -472,10 +496,8 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
 
 // ---------------------------------------------------------------------------
 
-function UgyfelKartya({ c, nyitott, onNyit, onValtozas, szerkesztheto }: {
+function UgyfelKartya({ c, onValtozas, szerkesztheto }: {
   c: CustomerSummary
-  nyitott: boolean
-  onNyit: () => void
   onValtozas: () => void
   szerkesztheto: boolean
 }) {
@@ -503,10 +525,15 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas, szerkesztheto }: {
         <Szerkesztheto zarolt={!szerkesztheto} cimke="Telefon" ertek={c.phone} tipus="telefon"
                        onMent={(x) => ment({ phone: x })} />
 
+        {/* A rendszámok, nem a darabszám: „Járművei: 2" semmit nem mond, az
+            „ABC-123, LMN-882" alapján viszont egy pillantással megvan, kié
+            az autó, ami épp beállt. Nyitva a teljes lista van lent. */}
         {!reszletek && (
           <div className="adatsor">
             <span>Járművei</span>
-            <span className="ertek szam">{c.jarmuvek}</span>
+            <span className="ertek rendszamok">
+              {c.rendszamok.length > 0 ? c.rendszamok.join(', ') : <span className="halvany">nincs</span>}
+            </span>
           </div>
         )}
 
@@ -525,10 +552,6 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas, szerkesztheto }: {
 
             <div className="valaszto-vonal-vekony" />
 
-            <div className="adatsor">
-              <span>Járművei</span>
-              <span className="ertek">{c.jarmuvek}</span>
-            </div>
             <div className="adatsor">
               <span>Munkák</span>
               <span className="ertek">{c.latogatas}</span>
@@ -570,19 +593,20 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas, szerkesztheto }: {
           </p>
         )}
 
-        {/* A két gomb egy sorban. A felvétel eddig a járműlista ALJÁN volt,
-            tehát csak azután látszott, hogy valaki megnyitotta a listát —
-            négy kattintás után. Így egy kattintás. */}
-        <div className="sor-gombok" style={{ marginTop: 'var(--t3)' }}>
-          <button className="btn btn-kicsi" onClick={onNyit}>
-            {nyitott ? 'Járművek elrejtése' : `Járművei (${c.jarmuvek})`}
-          </button>
-          {szerkesztheto && !ujAuto && (
+        {/* A kinyitott ügyfélnél a járművei rögtön ott vannak — nincs
+            külön „Járművei" gomb. Aki kinyitja, az többnyire épp az autóit
+            keresi. */}
+        <div className="szakasz-cim">Járművei ({c.jarmuvek})</div>
+        <UgyfelJarmuvei customerId={c.id} onValtozas={onValtozas}
+                       revizio={revizio} szerkesztheto={szerkesztheto} />
+
+        {szerkesztheto && !ujAuto && (
+          <div className="sor-gombok" style={{ marginTop: 'var(--t3)' }}>
             <button className="btn btn-kicsi" onClick={() => setUjAuto(true)}>
               + További jármű
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {ujAuto && (
           <UjJarmu
@@ -591,16 +615,99 @@ function UgyfelKartya({ c, nyitott, onNyit, onValtozas, szerkesztheto }: {
               setUjAuto(false)
               setRevizio((n) => n + 1)   // a járműlista olvassa újra magát
               onValtozas()
-              if (!nyitott) onNyit()     // és rögtön látszódjon is
             }}
             onMegse={() => setUjAuto(false)}
           />
         )}
-
-        {nyitott && (
-          <UgyfelJarmuvei customerId={c.id} onValtozas={onValtozas}
-                         revizio={revizio} szerkesztheto={szerkesztheto} />
+          </>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+//  Cég szerint: egy cég, az összes autója
+//
+//  Csukva: a cég neve, van-e szerződése, és az autók rendszámai. Nyitva
+//  autónként egy sor: rendszám, típus, kinek a nevén van (a sofőr és a
+//  telefonszáma), és szerződéses cégnél, hogy Céges vagy Magán áron megy.
+//
+//  Itt nincs szerkesztés: az autó és a sofőr adatai a Jármű és az Ügyfél
+//  nézetben írhatók át — ez a nézet az áttekintésre való, hogy egy flotta
+//  minden autója egy helyen legyen.
+// ---------------------------------------------------------------------------
+
+function CegKartya({ c }: { c: CompanySummary }) {
+  const [nyitva, setNyitva] = useState(false)
+  return (
+    <div className="panel" data-nyitva={nyitva}>
+      <KartyaFej nyitva={nyitva} onValt={() => setNyitva(!nyitva)}>
+        {c.name}
+        {c.szerzodes && <span className="cimke-pill szerzodes-pill">szerződés</span>}
+      </KartyaFej>
+      <div className="panel-torzs">
+        <div className="adatsor">
+          <span>Autók ({c.jarmuvek})</span>
+          <span className="ertek rendszamok">
+            {c.autok.length > 0
+              ? c.autok.map((a) => a.plate_raw).join(', ')
+              : <span className="halvany">nincs</span>}
+          </span>
+        </div>
+
+        {nyitva && (
+          <>
+            {c.tax_number && (
+              <div className="adatsor">
+                <span>Adószám</span><span className="ertek">{c.tax_number}</span>
+              </div>
+            )}
+            {c.szerzodes && (
+              <div className="adatsor">
+                <span>Szerződés</span>
+                <span className="ertek">
+                  {c.szerzodes_vege ? `${c.szerzodes_vege.slice(0, 10)}-ig` : 'határozatlan'}
+                  {c.hozom_viszem && <span className="halk"> · hozom-viszem</span>}
+                </span>
+              </div>
+            )}
+            <div className="adatsor">
+              <span>Sofőrök / kapcsolattartók</span>
+              <span className="ertek szam">{c.ugyfelek}</span>
+            </div>
+            <div className="adatsor">
+              <span>Munkák</span>
+              <span className="ertek szam">
+                {c.latogatas}
+                {c.utolso && <span className="halk"> · utoljára {c.utolso.slice(0, 10)}</span>}
+              </span>
+            </div>
+
+            <div className="szakasz-cim">Autók</div>
+            <div className="ceg-autok">
+              {c.autok.map((a) => (
+                <div className="ceg-auto" key={a.id}>
+                  <div className="ceg-auto-fej">
+                    <span className="rendszam">{a.plate_raw}</span>
+                    <span className="halk">
+                      {[a.brand, a.model].filter(Boolean).join(' ')}
+                      {(a.brand || a.model) ? ' · ' : ''}{CATEGORY_SHORT[a.category]}
+                    </span>
+                    {c.szerzodes && a.contract_kind && (
+                      <span className="cimke-pill szerzodes-pill">{KIND_LABEL[a.contract_kind]}</span>
+                    )}
+                  </div>
+                  <div className="ceg-auto-sofor">
+                    {a.customer_name}
+                    {a.customer_phone && a.customer_phone !== '—' && (
+                      <> · <a href={`tel:${a.customer_phone}`} className="hivas">{a.customer_phone}</a></>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {c.autok.length === 0 && <div className="ures">Ennek a cégnek még nincs autója.</div>}
+            </div>
           </>
         )}
       </div>

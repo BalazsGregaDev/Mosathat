@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { ft, hetCim, maStr, napCim, napRovidCim, oraSzam } from '../../lib/format'
-import type { DashboardSummary, WeekDay } from '../../lib/types'
+import { billentyuzetElore } from '../../lib/billentyuzet'
+import type { DashboardSummary, Gond, MunkalapFokusz, WeekDay } from '../../lib/types'
 
 // ---------------------------------------------------------------------------
 //  Áttekintés
@@ -35,8 +36,12 @@ const TERHELES_SZO: Record<'jo' | 'szoros' | 'tele', string> = {
 // dátumból: az index már az adatban benne van, és mindig stimmel.
 const NAPOK = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
 
-export default function DashboardPage({ onNapra }: {
+export default function DashboardPage({ onNapra, onMegnyit, onOldal }: {
   onNapra: (nap: string) => void
+  /** Egy foglalás munkalapja — a telefonszámnál a mezővel írásra nyitva. */
+  onMegnyit: (id: string, fokusz?: MunkalapFokusz) => void
+  /** Másik oldalra visz (pl. a hiányzó árnál a Szolgáltatásokra). */
+  onOldal: (oldal: 'szolgaltatasok' | 'partnerek') => void
 }) {
   const { data } = useApp()
   // Az Áttekintés MINDIG a mai napról szól, akkor is, ha az Időpontokban épp
@@ -171,11 +176,7 @@ export default function DashboardPage({ onNapra }: {
             <div className="panel-torzs">
               <ul className="gondok">
                 {ossz.gondok.map((g, i) => (
-                  <li key={i} data-suly={g.suly}>
-                    <span className="jel" aria-hidden="true">{g.suly >= 3 ? '!' : '•'}</span>
-                    <span className="cimke">{g.cimke}</span>
-                    <span className="szoveg">{g.szoveg}</span>
-                  </li>
+                  <GondSor key={i} g={g} onMegnyit={onMegnyit} onOldal={onOldal} />
                 ))}
               </ul>
             </div>
@@ -183,6 +184,70 @@ export default function DashboardPage({ onNapra }: {
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Egy figyelmeztetés. Mindegyikre lehet kattintani, és oda visz, ahol a
+ * gondot meg lehet oldani:
+ *
+ *   - egy foglalás (határidő)       → a sor maga nyitja meg a munkalapot
+ *   - több foglalás (nincs telefon) → a rendszámok egyenként gombok; a
+ *                                      telefonszám nélkülinél a munkalap a
+ *                                      telefon mezővel, írásra készen nyílik
+ *   - hiányzó ár / bérlet           → a megfelelő oldal
+ */
+function GondSor({ g, onMegnyit, onOldal }: {
+  g: Gond
+  onMegnyit: (id: string, fokusz?: MunkalapFokusz) => void
+  onOldal: (oldal: 'szolgaltatasok' | 'partnerek') => void
+}) {
+  const fokusz: MunkalapFokusz | undefined = g.cel === 'telefon' ? 'telefon' : undefined
+  const foglalasok = g.foglalasok ?? []
+
+  function nyit(id: string) {
+    // A billentyűzetet a kattintáson BELÜL kell előhívni (lásd billentyuzet.ts).
+    if (fokusz === 'telefon') billentyuzetElore('tel')
+    onMegnyit(id, fokusz)
+  }
+
+  const tartalom = (
+    <>
+      <span className="jel" aria-hidden="true">{g.suly >= 3 ? '!' : '•'}</span>
+      <span className="cimke">{g.cimke}</span>
+      <span className="szoveg">{g.szoveg}</span>
+    </>
+  )
+
+  // Egy foglalás, vagy egy oldal: az egész sor egy gomb.
+  const egyCel = foglalasok.length === 1
+    ? () => nyit(foglalasok[0].id)
+    : g.cel === 'szolgaltatasok' || g.cel === 'partnerek'
+      ? () => onOldal(g.cel as 'szolgaltatasok' | 'partnerek')
+      : null
+
+  if (egyCel) {
+    return (
+      <li data-suly={g.suly} className="kattinthato">
+        <button type="button" className="gond-sor" onClick={egyCel}>{tartalom}</button>
+      </li>
+    )
+  }
+
+  return (
+    <li data-suly={g.suly}>
+      {tartalom}
+      {foglalasok.length > 1 && (
+        <span className="gond-rendszamok">
+          {foglalasok.map((f) => (
+            <button key={f.id} type="button" className="gond-rendszam" onClick={() => nyit(f.id)}
+                    title={`${napRovidCim(f.service_date.slice(0, 10))} — megnyitás`}>
+              {f.plate_raw}
+            </button>
+          ))}
+        </span>
+      )}
+    </li>
   )
 }
 

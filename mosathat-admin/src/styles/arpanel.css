@@ -139,6 +139,7 @@
     left: 0 !important; right: 0;
     top: auto !important; bottom: 0;
     width: auto !important; height: 68vh !important;
+    height: 68dvh !important;
     border-radius: var(--r-lg) var(--r-lg) 0 0;
     border-bottom: none;
   }
@@ -234,12 +235,13 @@
 @media (max-width: 1024px) {
   .arpanel.osztott {
     left: 0; right: 0; top: auto; bottom: 0;
-    height: 60vh; width: auto;
+    height: 60vh; height: 60dvh; width: auto;
     border-radius: var(--r-lg) var(--r-lg) 0 0;
   }
   .fedo.osztott {
     justify-content: center; align-items: flex-start;
     padding: var(--t4) var(--t4) 62vh;
+    padding-bottom: 62dvh;
   }
   .fedo.osztott .lap,
   .fedo.osztott .lap-szeles {

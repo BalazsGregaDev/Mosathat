@@ -20,14 +20,16 @@ const MIGRACIOK = import.meta.glob('../../../supabase/migrations/*.sql', {
 import demoAdatok from '../../../supabase/demo/demo_adatok.sql?raw'
 
 import type {
+  AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
   BookingStatus, BookingTask, CalcInput, CalcResult, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
+  Quote, CompanyHit, CompanyCandidate,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
-import { calcArgs, num, numOrNull, toCalcResult } from './source'
+import { calcArgs, idoRovidit, num, numOrNull, toCalcResult, toQuote } from './source'
 
 // ---------------------------------------------------------------------------
 //  Demó mód — valódi PostgreSQL a böngészőben
@@ -124,6 +126,24 @@ export class DemoSource implements DataSource {
     await db.exec(`select set_config('app.uid', '${DEMO_STAFF_ID}', false)`)
 
     await db.exec(demoAdatok)
+
+    // A műhelyben hárman dolgoznak. A demóban a két másik alkalmazottnak nincs
+    // belépője, de a kapacitás velük számol — és az egyikük ma korábban megy,
+    // hogy a napi kártyán látsszon, hogyan jelenik meg egy munkaidő-változás,
+    // és mennyit vesz el a kapacitásból (egy hiányzó: 80%).
+    await db.exec(`
+      insert into auth.users (id, email) values
+        ('00000000-0000-4000-8000-000000000004', 'gabor@demo.local'),
+        ('00000000-0000-4000-8000-000000000005', 'peter@demo.local')
+      on conflict do nothing;
+      insert into public.staff (id, full_name, role) values
+        ('00000000-0000-4000-8000-000000000004', 'Gábor', 'STAFF'),
+        ('00000000-0000-4000-8000-000000000005', 'Péter', 'STAFF')
+      on conflict (id) do nothing;
+      insert into public.staff_absences (staff_id, day, kind, starts, note) values
+        ('00000000-0000-4000-8000-000000000004', current_date, 'KORABBAN_TAVOZIK',
+         '16:00', 'DEMO — korábban megy');
+    `)
     this.db = db
   }
 
@@ -216,19 +236,44 @@ export class DemoSource implements DataSource {
 
   // --- nap ------------------------------------------------------------------
 
+  // A nap foglalásai a day_bookings()-ból: a többnapos autók minden napjukon
+  // ott vannak, és a sorrendet az adatbázis adja (a kézi rendezéssel együtt).
+  // A sorrend így nem függ attól, mit csinál a lekérdezés a holtversenyekkel.
   async getDay(date: string): Promise<DayBooking[]> {
-    return this.rows<DayBooking>(
-      `select * from v_day_bookings
-        where service_date = $1::date
-        order by coalesce(start_at, drop_off_at) nulls last, plate_raw`,
-      [date],
-    )
+    const r = await this.rows<{ day_bookings: DayBooking }>(
+      `select * from day_bookings($1::date)`, [date])
+    return r.map((x) => x.day_bookings)
+  }
+
+  async setDayOrder(date: string, ids: string[]): Promise<void> {
+    await this.pg.query(`select set_day_order($1::date, $2::uuid[])`, [date, ids])
+  }
+
+  async getDayAbsences(date: string): Promise<DayAbsence[]> {
+    const r = await this.rows<DayAbsence>(`select * from day_absences($1::date)`, [date])
+    return r.map(idoRovidit)
+  }
+
+  async listAbsences(): Promise<AbsenceRow[]> {
+    const r = await this.rows<AbsenceRow>(`select * from absence_list()`)
+    return r.map(idoRovidit)
+  }
+
+  async setAbsence(input: AbsenceInput): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select set_absence($1::jsonb) as id`,
+      [JSON.stringify(input)])
+    return r.id
+  }
+
+  async deleteAbsence(id: string): Promise<void> {
+    await this.pg.query(`select delete_absence($1::uuid)`, [id])
   }
 
   async getRange(from: string, to: string): Promise<DayBooking[]> {
     return this.rows<DayBooking>(
+      // Ami az időszakba belelóg (a többnapos is, ha korábban kezdődött).
       `select * from v_day_bookings
-        where service_date between $1::date and $2::date
+        where service_date <= $2::date and last_day >= $1::date
         order by service_date, coalesce(start_at, drop_off_at) nulls last, plate_raw`,
       [from, to],
     )
@@ -248,6 +293,11 @@ export class DemoSource implements DataSource {
       booked_minutes: num(r?.booked_minutes),
       free_minutes: num(r?.free_minutes),
       load_pct: num(r?.load_pct),
+      base_capacity_minutes: num(r?.base_capacity_minutes),
+      staff_pct: numOrNull(r?.staff_pct),
+      staff_total: num(r?.staff_total),
+      cars: num(r?.cars),
+      revenue_huf: num(r?.revenue_huf),
     }
   }
 
@@ -274,6 +324,20 @@ export class DemoSource implements DataSource {
   async searchCustomers(q: string, limit = 5, mezo: KeresesMezo = 'MIND'): Promise<SearchHit[]> {
     return this.rows<SearchHit>(
       `select * from search_customers($1, $2::integer, $3)`, [q, limit, mezo])
+  }
+
+  async quoteBooking(input: Partial<NewBookingInput> & CalcInput): Promise<Quote> {
+    const [r] = await this.rows<{ r: Record<string, unknown> }>(
+      `select quote_booking($1::jsonb) as r`, [JSON.stringify(input)])
+    return toQuote(r?.r)
+  }
+
+  async searchCompanies(q: string, limit = 6): Promise<CompanyHit[]> {
+    return this.rows<CompanyHit>(`select * from search_companies($1, $2::integer)`, [q, limit])
+  }
+
+  async companyCandidates(name: string): Promise<CompanyCandidate[]> {
+    return this.rows<CompanyCandidate>(`select * from ceg_jeloltek($1)`, [name])
   }
 
   async calcService(input: CalcInput): Promise<CalcResult> {
@@ -322,18 +386,27 @@ export class DemoSource implements DataSource {
   // --- szolgáltatások szerkesztése -------------------------------------------
 
   async updateExtra(id: string, patch: Partial<Extra>): Promise<void> {
+    // Csak az a mező változik, ami a patch-ben benne van — ugyanúgy, mint
+    // élesben (Supabase update). A `p ? 'mező'` dönt: a kifejezett null is
+    // érték (pl. az ár törlése), a hiányzó kulcs viszont „ne nyúlj hozzá".
     await this.pg.query(
-      `update extras set name = coalesce($2, name),
-                         description = $3,
-                         price_huf = $4,
-                         work_minutes = $5,
-                         rest_minutes = coalesce($6, rest_minutes),
-                         active = coalesce($7, active),
-                         updated_at = now()
-        where id = $1::uuid`,
-      [id, patch.name ?? null, patch.description ?? null, patch.price_huf ?? null,
-       patch.work_minutes ?? null, patch.rest_minutes ?? null, patch.active ?? null],
+      `update extras set
+         name         = case when $2::jsonb ? 'name'         then $2->>'name' else name end,
+         description  = case when $2::jsonb ? 'description'  then $2->>'description' else description end,
+         price_huf    = case when $2::jsonb ? 'price_huf'    then ($2->>'price_huf')::integer else price_huf end,
+         work_minutes = case when $2::jsonb ? 'work_minutes' then ($2->>'work_minutes')::integer else work_minutes end,
+         rest_minutes = case when $2::jsonb ? 'rest_minutes' then coalesce(($2->>'rest_minutes')::integer, 0) else rest_minutes end,
+         active       = case when $2::jsonb ? 'active'       then ($2->>'active')::boolean else active end,
+         updated_at   = now()
+       where id = $1::uuid`,
+      [id, JSON.stringify(patch)],
     )
+  }
+
+  async createExtra(input: { name: string; price_huf: number | null; work_minutes: number | null }): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select create_extra($1::jsonb) as id`,
+      [JSON.stringify(input)])
+    return r.id
   }
 
   async updatePackagePrice(
@@ -403,6 +476,11 @@ export class DemoSource implements DataSource {
 
   async listVehicles(q = ''): Promise<VehicleSummary[]> {
     return this.rows<VehicleSummary>(`select * from list_vehicles($1, 200)`, [q])
+  }
+
+  async listCompanies(q = ''): Promise<CompanySummary[]> {
+    const r = await this.rows<{ c: CompanySummary }>(`select list_companies($1, 200) as c`, [q])
+    return r.map((x) => x.c)
   }
 
   // --- áttekintés -------------------------------------------------------------

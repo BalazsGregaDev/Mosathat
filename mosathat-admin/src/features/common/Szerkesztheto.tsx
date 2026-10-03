@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { billentyuzetTakarit } from '../../lib/billentyuzet'
+
 // ---------------------------------------------------------------------------
 //  Helyben szerkeszthető adat
 //
@@ -49,6 +51,7 @@ export default function Szerkesztheto({
   ures = '—',
   utotag,
   sor,
+  kezdetbenNyitva,
 }: {
   cimke: string
   /** A megjelenített és szerkesztett érték. Üres is lehet. */
@@ -68,9 +71,17 @@ export default function Szerkesztheto({
   utotag?: React.ReactNode
   /** Több soros szöveg (megjegyzés). */
   sor?: number
+  /**
+   * Szerkesztésre nyitva jelenik meg, a meglévő érték kijelölve. A „Figyelmet
+   * igényel" listából jövet: „nincs telefonszám" → a mezőbe rögtön írni lehet.
+   */
+  kezdetbenNyitva?: boolean
 }) {
-  const [nyitva, setNyitva] = useState(false)
-  const [piszkozat, setPiszkozat] = useState('')
+  const [nyitva, setNyitva] = useState(Boolean(kezdetbenNyitva && !zarolt))
+  const [piszkozat, setPiszkozat] = useState(kezdetbenNyitva ? (ertek ?? '') : '')
+  // Csak az első, kívülről kért nyitásnál jelöljük ki a szöveget: ha később
+  // valaki rákattint, ott tartja a kurzort, ahová bökött.
+  const kijelol = useRef(Boolean(kezdetbenNyitva))
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
   const mezo = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
@@ -80,7 +91,17 @@ export default function Szerkesztheto({
   const friss = useRef('')
 
   useEffect(() => { friss.current = piszkozat }, [piszkozat])
-  useEffect(() => { if (nyitva) mezo.current?.focus() }, [nyitva])
+  useEffect(() => {
+    if (!nyitva) return
+    mezo.current?.focus()
+    if (kijelol.current) {
+      kijelol.current = false
+      mezo.current?.select()
+      // A telefon billentyűzete már az ideiglenes mezőn fent van (lásd
+      // billentyuzet.ts) — most, hogy a valódi mezőé a fókusz, az eltűnhet.
+      billentyuzetTakarit()
+    }
+  }, [nyitva])
 
   function nyit() {
     if (zarolt || megy) return

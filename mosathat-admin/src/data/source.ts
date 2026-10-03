@@ -3,7 +3,8 @@ import type {
   ContractInput, ContractRow, DashboardSummary, DayBooking, DayCapacity, DayOverride,
   Extra, FullServicePrice,
   LatestStart, NewBookingInput, PackageMatrixRow, PackageExtraRow, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
-  PlateLookup, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
+  PlateLookup, Quote, CompanyHit, CompanyCandidate, AbsenceInput, AbsenceRow, DayAbsence,
+  CompanySummary, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow,
 } from '../lib/types'
 
@@ -69,6 +70,9 @@ export interface DataSource {
    * Foglalások egy időszakra, a heti és a havi nézethez. Ugyanaz a nézet,
    * mint a napinál — nem külön lekérdezés, hogy ne lehessen két különböző
    * válasz ugyanarra a napra.
+   *
+   * Minden foglalás, ami az időszakba BELELÓG: a hétfőn kezdődő hétbe a
+   * szombaton hozott, kedden vitt autó is beletartozik.
    */
   getRange(from: string, to: string): Promise<DayBooking[]>
   getBooking(id: string): Promise<DayBooking | null>
@@ -87,6 +91,33 @@ export interface DataSource {
    */
   searchCustomers(q: string, limit?: number, mezo?: KeresesMezo): Promise<SearchHit[]>
   calcService(input: CalcInput): Promise<CalcResult>
+  /**
+   * Az ár, ahogy a foglalás menteni fogja: szerződéses árral, Flotta/Saját
+   * szerint, hozom-viszem fuvarral. Ugyanaz a függvény dönt, ami a mentéskor —
+   * az űrlap nem mutathat mást, mint ami elmentődik.
+   */
+  quoteBooking(input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
+
+  /** A nap kézi sorrendje: a nap ÖSSZES foglalása, az új sorrendben. */
+  setDayOrder(date: string, ids: string[]): Promise<void>
+
+  /** Egy nap munkaidő-változásai mindenkiről (a napi kapacitás-kártyára). */
+  getDayAbsences(date: string): Promise<DayAbsence[]>
+  /**
+   * Munkaidő-változások a mai naptól (Profilom). Az alkalmazott a sajátját
+   * kapja, a tulajdonos és a fejlesztő mindenkiét.
+   */
+  listAbsences(): Promise<AbsenceRow[]>
+  setAbsence(input: AbsenceInput): Promise<string>
+  deleteAbsence(id: string): Promise<void>
+
+  /** A Cég mező keresője: cégnév az első betűtől, ékezet és cégforma nélkül is. */
+  searchCompanies(q: string, limit?: number): Promise<CompanyHit[]>
+  /**
+   * Mentés előtt: van-e ilyen nevű cég (AZONOS — ehhez kötjük), vagy nagyon
+   * hasonló (HASONLO — rá kell kérdezni, hogy ugyanaz-e).
+   */
+  companyCandidates(name: string): Promise<CompanyCandidate[]>
 
   createBooking(input: NewBookingInput): Promise<string>
   /** Meglévő foglalás módosítása. Ár, idő, tételek, munkalista újraszámolva. */
@@ -104,6 +135,8 @@ export interface DataSource {
 
   // --- szolgáltatások szerkesztése ---
   updateExtra(id: string, patch: Partial<Extra>): Promise<void>
+  /** Új egyéb szolgáltatás (csak tulajdonos / fejlesztő). */
+  createExtra(input: { name: string; price_huf: number | null; work_minutes: number | null }): Promise<string>
   updatePackagePrice(
     packageId: string, category: VehicleCategory, scope: BookingScope,
     patch: { price_huf?: number | null; duration_minutes?: number | null },
@@ -117,6 +150,8 @@ export interface DataSource {
   // --- ügyfelek és járművek ---
   listCustomers(q?: string): Promise<CustomerSummary[]>
   listVehicles(q?: string): Promise<VehicleSummary[]>
+  /** Cégenként az összes autó (Ügyfelek → Cég szerint). */
+  listCompanies(q?: string): Promise<CompanySummary[]>
   saveCustomer(patch: Record<string, unknown>): Promise<void>
   saveVehicle(patch: Record<string, unknown>): Promise<void>
   /** További autó egy meglévő ügyfélhez. A rendszám ütközését az adatbázis szűri. */
@@ -233,6 +268,36 @@ export function calcArgs(i: CalcInput) {
   }
 }
 
+/** A quote_booking() jsonb válasza → Quote. A számokat számmá alakítjuk. */
+export function toQuote(r: Record<string, unknown> | null | undefined): Quote {
+  const lines = Array.isArray(r?.lines) ? (r!.lines as Record<string, unknown>[]) : []
+  return {
+    price_huf: num(r?.price_huf),
+    work_minutes: numOrNull(r?.work_minutes),
+    rest_minutes: num(r?.rest_minutes),
+    requires_quote: Boolean(r?.requires_quote),
+    duration_known: r?.duration_known !== false,
+    lines: lines.map((l) => ({
+      kind: l.kind as Quote['lines'][number]['kind'],
+      ref_id: (l.ref_id as string | null) ?? null,
+      name: String(l.name ?? ''),
+      quantity: num(l.quantity),
+      unit_price_huf: num(l.unit_price_huf),
+      price_huf: num(l.price_huf),
+      work_minutes: num(l.work_minutes),
+      sort_order: num(l.sort_order),
+    })),
+    company_id: (r?.company_id as string | null) ?? null,
+    contract_id: (r?.contract_id as string | null) ?? null,
+    contract_kind: (r?.contract_kind as Quote['contract_kind']) ?? null,
+    contract_price: Boolean(r?.contract_price),
+    contract_prices: Object.fromEntries(
+      Object.entries((r?.contract_prices as Record<string, unknown> | null) ?? {})
+        .map(([k, v]) => [k, num(v)]),
+    ),
+  }
+}
+
 export function toCalcResult(row: Record<string, unknown> | undefined): CalcResult {
   return {
     price_huf: num(row?.price_huf),
@@ -240,5 +305,17 @@ export function toCalcResult(row: Record<string, unknown> | undefined): CalcResu
     rest_minutes: num(row?.rest_minutes),
     requires_quote: Boolean(row?.requires_quote),
     duration_known: Boolean(row?.duration_known),
+  }
+}
+
+/**
+ * Az adatbázis az időt "16:00:00" alakban adja; a felület "16:00"-t vár
+ * (a type="time" mező is ezt kapja és ezt adja vissza).
+ */
+export function idoRovidit<T extends { starts: string | null; ends: string | null }>(r: T): T {
+  return {
+    ...r,
+    starts: r.starts ? r.starts.slice(0, 5) : null,
+    ends: r.ends ? r.ends.slice(0, 5) : null,
   }
 }

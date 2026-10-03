@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react'
 import { useApp } from '../../state/AppContext'
 import { ft } from '../../lib/format'
 import {
-  CATEGORY_SHORT, SIZE_LABEL, TIER_LABEL,
-  type ContractRow, type ContractSize, type ContractTier, type PassBalanceRow,
+  CATEGORY_SHORT,
+  type ContractRow, type PassBalanceRow,
 } from '../../lib/types'
+import SzerzodesArak from './SzerzodesArak'
 
 // ---------------------------------------------------------------------------
 //  Cégek és bérletesek — alkalmazotti nézet
@@ -19,9 +20,6 @@ import {
 //  Amit nem kell: bérletet létrehozni, árat átírni, szerződést kötni.
 //  Ezért itt ezek nem letiltott gombok, hanem egyszerűen nincsenek.
 // ---------------------------------------------------------------------------
-
-const TIERS: ContractTier[] = ['NORMAL', 'PREMIUM']
-const SIZES: ContractSize[] = ['NORMAL', 'NAGY']
 
 export default function PartnersView() {
   const { data } = useApp()
@@ -143,20 +141,9 @@ export default function PartnersView() {
                     </span>
                   )}
                 </div>
-                <table className="artabla keskeny">
-                  <tbody>
-                    {TIERS.map((tier) => SIZES.map((size) => {
-                      const p = c.prices.find((x) => x.tier === tier && x.size === size)
-                      if (!p) return null
-                      return (
-                        <tr key={`${tier}-${size}`}>
-                          <th scope="row">{TIER_LABEL[tier]} · {SIZE_LABEL[size]}</th>
-                          <td className="szam">{ft(p.price_huf)} / autó</td>
-                        </tr>
-                      )
-                    }))}
-                  </tbody>
-                </table>
+                {/* Csomagonként: normál és nagy méret, Céges (a cég autói) és
+                    Magán (a dolgozók saját autója) ár. */}
+                <SzerzodesArak prices={c.prices} />
                 {c.notes && <p className="halk" style={{ fontSize: 'var(--m-xs)' }}>{c.notes}</p>}
               </div>
             ))

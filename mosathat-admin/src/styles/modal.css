@@ -4,8 +4,26 @@
   position: fixed; inset: 0;
   background: rgba(20, 24, 26, .48);
   display: flex; align-items: center; justify-content: center;
-  padding: var(--t5);
+  /* A térköz a képernyő szélétől: alap 24 px, de a telefon/tablet „nem
+     rajzolható" sávjai (kamera-kivágás, alsó navigációs gombok) ezen FELÜL
+     jönnek. Enélkül a munkalap alja a rendszergombok alá csúszott. */
+  padding:
+    calc(var(--t5) + env(safe-area-inset-top))
+    calc(var(--t5) + env(safe-area-inset-right))
+    calc(var(--t5) + env(safe-area-inset-bottom))
+    calc(var(--t5) + env(safe-area-inset-left));
   z-index: 60;
+}
+
+/* A látható képernyő magassága — nem a teljes.
+
+   Telefonon és tableten a böngésző címsora hol látszik, hol nem. A régi
+   100vh a NAGYOBBIK méret (címsor nélkül): amikor a címsor látszik, az
+   ablak alja ennyivel a képernyő alá lógott — pont a gombok. A 100dvh
+   mindig az éppen látható magasság, a címsorral és a billentyűzettel
+   együtt változik. Ahol a böngésző nem ismeri, ott marad az inset: 0. */
+@supports (height: 100dvh) {
+  .fedo { bottom: auto; height: 100dvh; }
 }
 
 .lap {
@@ -13,7 +31,9 @@
   border-radius: var(--r-lg);
   box-shadow: var(--arnyek-lg);
   width: min(620px, 100%);
-  max-height: calc(100vh - 48px);
+  /* A fedő belső magasságához mérve: ott már benne van a térköz és a
+     rendszersávok helye. */
+  max-height: 100%;
   display: flex;
   flex-direction: column;   /* fej / görgethető törzs / láb — nem sticky */
   overflow: hidden;
@@ -107,6 +127,36 @@
   .sor-2, .sor-3 { grid-template-columns: 1fr; }
 }
 
+/* --- Hozza / Viszi: nap + óra egy sorban -------------------------------------
+   Bal oldalt a sor neve (Hozza, Viszi), mellette a két mező. A nap és az óra
+   telefonon is egymás mellett marad: összetartoznak, és így a két sor
+   egymás alatt pont úgy olvasható, mint egy kis menetrend. */
+.napora-sor {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  align-items: end;
+  gap: var(--t3);
+}
+.napora-cim {
+  font-weight: var(--vastag-eros);
+  font-size: var(--m-sm);
+  padding-bottom: 10px;          /* a mezők szövegvonalához igazítva */
+}
+.napora-sor .sor-2 { grid-template-columns: 1.3fr 1fr; }
+@media (max-width: 560px) {
+  .napora-sor .sor-2 { grid-template-columns: 1.3fr 1fr; }
+}
+
+/* Többnapos jelzés: nem hiba, csak tudnivaló — halvány keret, nem piros. */
+.tobbnapos-jelzes {
+  font-size: var(--m-sm);
+  padding: var(--t2) var(--t3);
+  border-left: 3px solid var(--narancs);
+  background: var(--narancs-halvany);
+  color: var(--narancs-sotet);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+
 /* --- rendszám találat -------------------------------------------------------- */
 
 .talalat {
@@ -174,8 +224,9 @@
   cursor: pointer;
 }
 .extra:hover { background: var(--lap-2); }
-.extra[data-aktiv='true'] { background: var(--zold-halvany); border-color: #c7e0d2; }
-.extra input[type='checkbox'] { width: 17px; height: 17px; accent-color: var(--zold); flex: none; }
+.extra[data-aktiv='true'] { background: var(--narancs-halvany); border-color: var(--narancs); }
+.extra[data-aktiv='true'] .nev { color: var(--narancs-sotet); font-weight: var(--vastag-eros); }
+.extra input[type='checkbox'] { width: 17px; height: 17px; accent-color: var(--narancs); flex: none; }
 .extra .nev { flex: 1; min-width: 0; font-size: var(--m-sm); }
 .extra .ar {
   font-family: var(--betu-szam); font-size: var(--m-sm);
@@ -295,15 +346,16 @@
 
 .munkacsoport-alcim {
   font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--v-erkezett); font-weight: var(--vastag-eros);
+  color: var(--narancs-sotet); font-weight: var(--vastag-eros);
   padding: var(--t2) var(--t3) 0;
   border-top: 1px dashed var(--keret);
   margin-top: var(--t2);
 }
 
 /* A külön kért szolgáltatás szemet szúr: ezt tényleg nyugtázni kell. */
-.munka-extra { background: #fdf7ea; }
-.munka-extra:hover { background: #faf0d8; }
+.munka-extra { background: var(--narancs-halvany); }
+.munka-extra:hover { background: #fbe3c8; }
+.munka-extra input[type='checkbox'] { accent-color: var(--narancs); }
 
 .munka input:disabled { opacity: .4; cursor: not-allowed; }
 .munka:has(input:disabled) { cursor: default; }
@@ -360,7 +412,7 @@
 }
 .osszecsuk .db {
   font-family: var(--betu-szam); font-size: var(--m-xs); font-weight: var(--vastag-eros);
-  background: var(--zold); color: #fff;
+  background: var(--narancs); color: #fff;   /* ugyanaz a narancs, mint a kiválasztott sor */
   border-radius: var(--r-kor); padding: 1px 8px;
 }
 .osszecsuk .nyil { font-size: var(--m-lg); line-height: 1; color: var(--szoveg-halk); }
@@ -395,3 +447,42 @@
    ne pipálja ki a szolgáltatást. */
 .extra-sav { display: flex; align-items: center; gap: 6px; }
 .extra-sav .extra { flex: 1; min-width: 0; }
+
+/* --- megerősítő kérdés („Biztosan elkészült?") -------------------------------
+   Kicsi, középre igazított doboz minden képernyőn — telefonon sem teljes
+   képernyős, mert egy kérdés, nem egy űrlap. A gombok nagyok: vizes ujjal is
+   el kell találni őket, és nem lóghatnak egymásba. */
+.fedo.kerdes-fedo {
+  z-index: 90;                       /* a munkalap és az árlista fölött */
+  align-items: center;
+  justify-content: center;
+  padding: var(--t4);
+}
+.kerdes-ablak {
+  background: var(--lap);
+  border-radius: var(--r-lg);
+  box-shadow: var(--arnyek-lg);
+  width: min(400px, 100%);
+  padding: var(--t5);
+  display: flex; flex-direction: column; gap: var(--t3);
+}
+.kerdes-ablak h2 { font-size: var(--m-lg); }
+.kerdes-ablak p { color: var(--szoveg-halk); font-size: var(--m-sm); line-height: 1.5; }
+.kerdes-gombok { display: flex; gap: var(--t3); margin-top: var(--t2); }
+.kerdes-gombok .btn { flex: 1; padding: 13px 16px; font-size: var(--m-md); }
+
+.btn-veszelyes-teli { background: var(--v-baj); border-color: var(--v-baj); color: #fff; }
+.btn-veszelyes-teli:hover:not(:disabled) { filter: brightness(.94); }
+
+@media (max-width: 700px) {
+  .fedo.kerdes-fedo { padding: var(--t4); align-items: center; }
+}
+
+/* --- Cég mező ----------------------------------------------------------------- */
+.ceg-kereso { position: relative; display: flex; flex-direction: column; gap: 3px; }
+.ceg-allapot { font-size: var(--m-xs); }
+.ceg-allapot.meglevo { color: var(--zold-sotet); }
+.ceg-allapot.uj { color: var(--szoveg-halk); }
+.szerzodes-pill { background: #eaf2fa; color: #1f5285; flex: none; }
+.ceg-jeloltek { display: flex; flex-direction: column; gap: var(--t2); margin-top: var(--t2); }
+.ceg-jeloltek .btn { justify-content: flex-start; text-align: left; padding: 12px 14px; }

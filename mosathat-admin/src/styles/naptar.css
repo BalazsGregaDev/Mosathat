@@ -73,8 +73,9 @@
   text-decoration: line-through;
 }
 
-/* Havi nézetben egy sor: idő és rendszám egymás mellett, mert öt tételnek
-   kell elférnie egy cellában. */
+/* Havi nézetben egy sor: elöl a rendszám, utána az idő, mert öt tételnek
+   kell elférnie egy cellában. A rendszám áll elöl — ugyanúgy, mint a napi
+   és a heti nézetben: az autót keressük, nem az órát. */
 .minikartya.egysoros {
   display: flex; align-items: baseline; gap: 6px;
   padding: 2px 6px;
@@ -84,7 +85,6 @@
 .minikartya.egysoros .ido {
   font-size: 10px;
   flex: 0 0 auto;
-  order: -1;                      /* az idő elöl: az alapján fut végig a szem */
 }
 
 /* Havi naptárban a sorok nem gombok: az egész cella visz a napra. Ettől
@@ -104,6 +104,70 @@
 .tovabb:hover { background: var(--lap-2); color: var(--szoveg); }
 
 /* --- heti nézet -------------------------------------------------------------- */
+
+/* A napok közös fejléce az oszlopok fölött. Keskeny képernyőn (ahol az
+   oszlopok egymás alá kerülnek) ez eltűnik, és minden oszlop a saját
+   fejlécét mutatja. */
+.hetfejsor { margin-bottom: var(--t2); }
+.hetfejsor .oszlopfej {
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+}
+.hetfejsor .oszlopfej[data-ma] { border-color: var(--zold); }
+.hetfejsor .oszlopfej[data-ma] .nev { color: var(--zold-sotet); }
+.oszlopfej-sajat { display: none !important; }
+
+/* A többnapos munkák sávjai: ugyanabban az öt oszlopban, mint a napok, és
+   pontosan azokon a napokon futnak végig, amikor az autó nálunk van. */
+.hetsavok {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px var(--t3);
+  margin-bottom: var(--t3);
+}
+.hetsav {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0;
+  text-align: left;
+  background: var(--lap);
+  border: 1px solid var(--keret);
+  border-left: 4px solid var(--v-varjuk);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+  line-height: 1.25;
+}
+.hetsav:hover { background: var(--lap-2); border-color: var(--keret-eros); }
+.hetsav .rendszam {
+  font-family: var(--betu-szam);
+  font-size: var(--m-sm);
+  font-weight: var(--vastag-eros);
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.hetsav .hv {
+  font-size: 10px; font-weight: var(--vastag-eros);
+  border: 1px solid var(--keret-eros); border-radius: var(--r-kor);
+  padding: 0 6px; color: var(--szoveg-halk);
+}
+.hetsav .idotav {
+  margin-left: auto;
+  font-family: var(--betu-szam);
+  font-size: var(--m-xs);
+  color: var(--szoveg-halk);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  min-width: 0;
+}
+/* A hét elé / mögé nyúló sáv vége nyitott: nem itt kezdődik / végződik. */
+.hetsav[data-korabbrol] { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-style: dashed; }
+.hetsav[data-tovabb] { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: 2px dashed var(--keret-eros); }
+
+.hetsav[data-a='ARRIVED']     { border-left-color: var(--v-erkezett); }
+.hetsav[data-a='IN_PROGRESS'] { border-left-color: var(--v-dolgozunk); }
+.hetsav[data-a='READY']       { border-left-color: var(--v-kesz); }
+.hetsav[data-a='COMPLETED']   { border-left-color: var(--v-lezart); opacity: .7; }
+.hetsav[data-a='NO_SHOW'],
+.hetsav[data-a='CANCELLED_BY_CUSTOMER'],
+.hetsav[data-a='CANCELLED_BY_SHOP'] { border-left-color: var(--v-baj); opacity: .6; text-decoration: line-through; }
 
 .hetracs {
   display: grid;
@@ -238,6 +302,12 @@
    ott a rács maga az információ — egy hasábba tördelve nem naptár többé. */
 @media (max-width: 900px) {
   .hetracs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Két (vagy egy) oszlopban a sáv nem tud „végigfutni" a napokon: itt a
+     többnapos munkák egymás alatti sorok, a dátumtartománnyal. */
+  .hetfejsor { display: none; }
+  .oszlopfej-sajat { display: flex !important; }
+  .hetsavok { grid-template-columns: 1fr; grid-template-rows: none !important; }
+  .hetsav { grid-column: auto !important; grid-row: auto !important; }
 }
 @media (max-width: 560px) {
   .hetracs { grid-template-columns: 1fr; }

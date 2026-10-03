@@ -26,6 +26,12 @@ interface AppValue {
    * állapotot mutatná, és a felhasználó azt hinné, nem történt semmi.
    */
   refreshUser(): Promise<void>
+  /**
+   * A katalógus újratöltése — a Szolgáltatások képernyő hívja, ha valamit
+   * átírtak vagy felvettek (pl. új egyéb szolgáltatás). Enélkül az új tétel
+   * csak a következő belépés után jelenne meg a foglalási űrlapon.
+   */
+  refreshCatalog(): Promise<void>
 }
 
 const Ctx = createContext<AppValue | null>(null)
@@ -113,9 +119,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUser(await data.currentUser())
   }, [data])
 
+  const refreshCatalog = useCallback(async () => {
+    if (!data) return
+    setCatalog(await data.getCatalog())
+  }, [data])
+
   const value = useMemo<AppValue | null>(
-    () => (data ? { data, user, catalog, signIn, signOut, revision, refresh, refreshUser } : null),
-    [data, user, catalog, signIn, signOut, revision, refresh, refreshUser],
+    () => (data
+      ? { data, user, catalog, signIn, signOut, revision, refresh, refreshUser, refreshCatalog }
+      : null),
+    [data, user, catalog, signIn, signOut, revision, refresh, refreshUser, refreshCatalog],
   )
 
   if (hiba) {

@@ -1,14 +1,16 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import type {
+  AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
   BookingStatus, BookingTask, CalcInput, CalcResult, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
+  Quote, CompanyHit, CompanyCandidate,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
-import { calcArgs, num, numOrNull, toCalcResult } from './source'
+import { calcArgs, idoRovidit, num, numOrNull, toCalcResult, toQuote } from './source'
 
 // ---------------------------------------------------------------------------
 //  Éles mód — Supabase
@@ -156,23 +158,54 @@ export class SupabaseSource implements DataSource {
 
   // --- nap ------------------------------------------------------------------
 
+  // A nap foglalásai a day_bookings()-ból: a többnapos autók minden napjukon
+  // ott vannak, és a sorrendet az adatbázis adja (a kézi rendezéssel együtt).
+  // Eddig a lekérdezés csak idő szerint rendezett, és az egyforma idejű
+  // foglalások sorrendje egy állapotváltás után összekeveredhetett.
   async getDay(date: string): Promise<DayBooking[]> {
-    const { data, error } = await this.sb
-      .from('v_day_bookings')
-      .select('*')
-      .eq('service_date', date)
-      .order('start_at', { nullsFirst: false })
-      .order('drop_off_at', { nullsFirst: false })
+    const { data, error } = await this.sb.rpc('day_bookings', { p_day: date })
     if (error) fail('Napi foglalások', error)
-    return (data ?? []) as DayBooking[]
+    return ((data ?? []) as DayBooking[])
+      .slice()
+      .sort((a, z) => (a.sorrend ?? 0) - (z.sorrend ?? 0))
+  }
+
+  async setDayOrder(date: string, ids: string[]): Promise<void> {
+    const { error } = await this.sb.rpc('set_day_order', { p_day: date, p_ids: ids })
+    if (error) fail('Sorrend mentése', error)
+  }
+
+  async getDayAbsences(date: string): Promise<DayAbsence[]> {
+    const { data, error } = await this.sb.rpc('day_absences', { p_day: date })
+    if (error) fail('Munkaidő-változások', error)
+    return ((data ?? []) as DayAbsence[]).map(idoRovidit)
+  }
+
+  async listAbsences(): Promise<AbsenceRow[]> {
+    const { data, error } = await this.sb.rpc('absence_list')
+    if (error) fail('Munkaidő-változások', error)
+    return ((data ?? []) as AbsenceRow[]).map(idoRovidit)
+  }
+
+  async setAbsence(input: AbsenceInput): Promise<string> {
+    const { data, error } = await this.sb.rpc('set_absence', { p: input })
+    if (error) fail('Munkaidő-változás mentése', error)
+    return data as string
+  }
+
+  async deleteAbsence(id: string): Promise<void> {
+    const { error } = await this.sb.rpc('delete_absence', { p_id: id })
+    if (error) fail('Munkaidő-változás törlése', error)
   }
 
   async getRange(from: string, to: string): Promise<DayBooking[]> {
     const { data, error } = await this.sb
       .from('v_day_bookings')
       .select('*')
-      .gte('service_date', from)
+      // Ami az időszakba belelóg: előtte vagy közben kezdődik, és nem ér
+      // véget előtte.
       .lte('service_date', to)
+      .gte('last_day', from)
       .order('service_date')
       .order('start_at', { nullsFirst: false })
       .order('drop_off_at', { nullsFirst: false })
@@ -197,6 +230,11 @@ export class SupabaseSource implements DataSource {
       booked_minutes: num(r?.booked_minutes),
       free_minutes: num(r?.free_minutes),
       load_pct: num(r?.load_pct),
+      base_capacity_minutes: num(r?.base_capacity_minutes),
+      staff_pct: numOrNull(r?.staff_pct),
+      staff_total: num(r?.staff_total),
+      cars: num(r?.cars),
+      revenue_huf: num(r?.revenue_huf),
     }
   }
 
@@ -236,6 +274,24 @@ export class SupabaseSource implements DataSource {
       { p_q: q, p_limit: limit, p_mezo: mezo })
     if (error) fail('Keresés', error)
     return (data ?? []) as SearchHit[]
+  }
+
+  async quoteBooking(input: Partial<NewBookingInput> & CalcInput): Promise<Quote> {
+    const { data, error } = await this.sb.rpc('quote_booking', { p: input })
+    if (error) fail('Árszámítás', error)
+    return toQuote(data as Record<string, unknown>)
+  }
+
+  async searchCompanies(q: string, limit = 6): Promise<CompanyHit[]> {
+    const { data, error } = await this.sb.rpc('search_companies', { p_q: q, p_limit: limit })
+    if (error) fail('Cégkeresés', error)
+    return (data ?? []) as CompanyHit[]
+  }
+
+  async companyCandidates(name: string): Promise<CompanyCandidate[]> {
+    const { data, error } = await this.sb.rpc('ceg_jeloltek', { p_nev: name })
+    if (error) fail('Cégnév egyeztetése', error)
+    return (data ?? []) as CompanyCandidate[]
   }
 
   async calcService(input: CalcInput): Promise<CalcResult> {
@@ -281,6 +337,12 @@ export class SupabaseSource implements DataSource {
   async updateExtra(id: string, patch: Partial<Extra>): Promise<void> {
     const { error } = await this.sb.from('extras').update(patch).eq('id', id)
     if (error) fail('Szolgáltatás mentése', error)
+  }
+
+  async createExtra(input: { name: string; price_huf: number | null; work_minutes: number | null }): Promise<string> {
+    const { data, error } = await this.sb.rpc('create_extra', { p: input })
+    if (error) fail('Új szolgáltatás', error)
+    return data as string
   }
 
   async updatePackagePrice(
@@ -349,6 +411,12 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('list_vehicles', { p_q: q, p_limit: 200 })
     if (error) fail('Járművek', error)
     return (data ?? []) as VehicleSummary[]
+  }
+
+  async listCompanies(q = ''): Promise<CompanySummary[]> {
+    const { data, error } = await this.sb.rpc('list_companies', { p_q: q, p_limit: 200 })
+    if (error) fail('Cégek', error)
+    return (data ?? []) as CompanySummary[]
   }
 
   // --- áttekintés -------------------------------------------------------------
@@ -567,8 +635,10 @@ export class SupabaseSource implements DataSource {
   }
 
   subscribe(onValtozas: () => void): () => void {
-    // Két táblát figyelünk: a foglalásokat és a munkalistát. Ez a kettő
-    // változik menet közben — az egyik a pultnál, a másik a mosóállásban.
+    // Négy táblát figyelünk: a foglalásokat és a munkalistát (ez a kettő
+    // változik menet közben — az egyik a pultnál, a másik a mosóállásban),
+    // a nap kézi sorrendjét (ha a tableten átrendezik, a pultnál is úgy
+    // álljon), és a munkaidő-változásokat (a kapacitás azokból számol).
     //
     // A változás tartalmát szándékosan nem használjuk fel: csak jelezzük,
     // hogy újra kell tölteni. Így nem kell a kliensben újraépíteni azt,
@@ -577,6 +647,8 @@ export class SupabaseSource implements DataSource {
       .channel('mosathat-elo')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, onValtozas)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_tasks' }, onValtozas)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'day_order' }, onValtozas)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_absences' }, onValtozas)
       // Ha a kapcsolat nem épül fel, a Supabase kliense a végtelenségig
       // újrapróbálkozik, és a böngésző konzolja megtelik WebSocket hibával —
       // magyarázat nélkül. Egyszer kiírjuk, mit jelent, és mit NEM jelent.
@@ -590,8 +662,9 @@ export class SupabaseSource implements DataSource {
           + 'Ez NEM töri el a rendszert: minden adat betöltődik, csak nem '
           + 'frissül magától, ha másik gépen változik valami.\n'
           + 'A két szokásos ok:\n'
-          + '  1. A Supabase → Database → Replication alatt a bookings és a '
-          + 'booking_tasks táblán nincs bekapcsolva a Realtime.\n'
+          + '  1. A Supabase → Database → Replication alatt a bookings, a '
+          + 'booking_tasks, a day_order és a staff_absences táblán nincs '
+          + 'bekapcsolva a Realtime.\n'
           + '  2. A VITE_SUPABASE_ANON_KEY értékébe szóköz vagy sortörés '
           + 'került (a hibás címben %0A látszik a kulcs végén).',
         )

@@ -116,10 +116,38 @@
 .szolg-jobb .szammezo .suffix { min-width: 34px; }
 .szolg-jobb .extrasor .reszletek { padding: 0 var(--t3) var(--t3); }
 
+/* Keskenyebb hasábban a név a saját sorába kerül, alatta az ár és az idő
+   EGYMÁS MELLETT — nem egymás alatt. A kettő egy gondolat (mennyibe kerül,
+   mennyi ideig tart), és egymás alatt a lista kétszer olyan hosszú lett. */
 @media (max-width: 1400px) {
-  .szolg-jobb .extrasor .fo { grid-template-columns: 1fr; row-gap: 6px; }
+  .szolg-jobb .extrasor .fo {
+    grid-template-columns: auto auto 1fr;
+    row-gap: 6px;
+  }
+  .szolg-jobb .extrasor .nev { grid-column: 1 / -1; }
   .szolg-jobb .extrasor .szammezo { justify-self: start; }
 }
+
+/* Telefonon a külön fülön ugyanígy: név fent, ár és idő alatta egy sorban. */
+@media (max-width: 560px) {
+  .extrasor .fo {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    row-gap: 6px;
+    column-gap: var(--t3);
+  }
+  .extrasor .nev { grid-column: 1 / -1; }
+}
+
+/* --- új egyéb szolgáltatás --------------------------------------------------- */
+.uj-extra {
+  padding: var(--t3) var(--t4);
+  border-top: 1px solid var(--keret);
+  display: flex; flex-direction: column; gap: var(--t3);
+}
+.uj-extra.nyitva { background: var(--lap-2); }
+.uj-extra-szamok { display: flex; gap: var(--t4); flex-wrap: wrap; }
+.uj-extra-szamok .szammezo input { width: 110px; }
 .extrasor .nev {
   flex: 1; min-width: 0; text-align: left;
   border: none; background: none; padding: 0;
@@ -390,3 +418,93 @@
   color: var(--szoveg-halk); font-weight: var(--vastag-eros);
   margin-bottom: var(--t3);
 }
+
+/* --- szerződés: árak csomagonként ----------------------------------------------
+   Egy csomag egy kis rács: fent a két méret, balra a két fajta (Céges,
+   Magán). Telefonon is három oszlop marad — a mezők keskenyek, de egy
+   ötjegyű ár kényelmesen elfér bennük. */
+.szerz-csomag {
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+  padding: var(--t2) var(--t3) var(--t3);
+}
+.szerz-csomag-cim { font-weight: var(--vastag-eros); margin-bottom: var(--t2); }
+.szerz-racs {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px var(--t2);
+  align-items: start;
+}
+.szerz-racs .oszlopcim {
+  font-size: var(--m-xs); color: var(--szoveg-halk);
+  font-weight: var(--vastag-eros);
+}
+.szerz-racs .sorcim {
+  font-size: var(--m-sm); font-weight: var(--vastag-kozep);
+  padding-top: 9px;
+}
+.szerz-mezo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.szerz-mezo .beviteli { width: 100%; min-width: 0; }
+.szerz-mezo small { font-size: 10px; }
+
+/* A kártyán: két ároszlop (Céges, Magán), alattuk halványan a nettó. */
+.szerzodes-arak td { white-space: nowrap; }
+.szerzodes-arak .netto { font-size: 10px; }
+.szerzodes-arak tr[data-elso] th { padding-top: 8px; }
+
+/* --- Ügyfelek: rendszámok, cég nézet ------------------------------------------ */
+
+/* A rendszámok listája a kártyán: szám-betűvel, de törhet (sok autónál). */
+.adatsor .ertek.rendszamok {
+  font-family: var(--betu-szam);
+  letter-spacing: .03em;
+  text-align: right;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.szakasz-cim {
+  margin-top: var(--t3);
+  padding-top: var(--t2);
+  border-top: 1px solid var(--keret);
+  font-size: var(--m-xs); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+}
+
+.ceg-autok { display: flex; flex-direction: column; margin-top: var(--t2); }
+.ceg-auto { padding: 7px 0; border-bottom: 1px dashed var(--keret); }
+.ceg-auto:last-child { border-bottom: none; }
+.ceg-auto-fej { display: flex; align-items: baseline; gap: var(--t2); flex-wrap: wrap; }
+.ceg-auto-fej .rendszam {
+  font-family: var(--betu-szam); font-weight: var(--vastag-eros); letter-spacing: .05em;
+}
+.ceg-auto-fej .halk { font-size: var(--m-xs); }
+.ceg-auto-sofor { font-size: var(--m-sm); margin-top: 2px; }
+
+/* --- Profilom ------------------------------------------------------------------
+   Három panel: fiók, bejelentés, lista. Széles képernyőn a fiók és a
+   bejelentés egymás mellett, alattuk a lista; keskenyen egymás alatt. */
+.profil-racs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--t4);
+  align-items: start;
+}
+.profil-racs > .panel:last-child { grid-column: 1 / -1; }
+@media (max-width: 900px) {
+  .profil-racs { grid-template-columns: 1fr; }
+}
+.profil-urlap { display: flex; flex-direction: column; gap: var(--t3); }
+/* Az idő mezők telefonon is egymás mellett: rövidek. */
+.profil-idok { grid-template-columns: 1fr 1fr !important; }
+
+.valtozas-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.valtozas-lista li {
+  display: flex; align-items: center; gap: var(--t3); flex-wrap: wrap;
+  padding: var(--t2) 0;
+  border-bottom: 1px dashed var(--keret);
+}
+.valtozas-lista li:last-child { border-bottom: none; }
+.valtozas-lista li[data-szerk] { background: var(--zold-halvany); }
+.valtozas-szoveg { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; font-size: var(--m-sm); }
+.valtozas-gombok { display: flex; gap: var(--t2); }

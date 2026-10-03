@@ -26,6 +26,24 @@ export function ora(iso: string | null | undefined): string {
   return hhmm.format(new Date(iso))
 }
 
+/** Időbélyeg → "08:00" űrlapmezőbe (type=time). Üresből üres, nem „—". */
+export function helyiOra(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const f = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TZ,
+  })
+  return f.format(new Date(iso))
+}
+
+/** Időbélyeg → "2026-10-03", budapesti nap szerint (type=date mezőbe). */
+export function helyiNap(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const f = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: TZ,
+  })
+  return f.format(new Date(iso))
+}
+
 /** Kezdés + várható vég egy sorban: "08:00 – 11:30" */
 export function idosav(kezdes: string | null, percek: number): string {
   if (!kezdes) return '—'

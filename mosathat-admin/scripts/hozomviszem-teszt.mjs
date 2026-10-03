@@ -88,11 +88,13 @@ const hv = await foglal('HOZOMVISZEM', '09:00')
 const le = await foglal('LEADOS', '13:00')
 {
   const [a] = await q(`select pickup_fee_huf, estimated_price_huf from v_day_bookings where id=$1`, [hv])
-  const [b] = await q(`select pickup_fee_huf from v_day_bookings where id=$1`, [le])
+  const [b] = await q(`select pickup_fee_huf, estimated_price_huf from v_day_bookings where id=$1`, [le])
   ok('hozom-viszem foglalásnál ott a díj', 4500, a.pickup_fee_huf)
   ok('a lehozott autónál nincs', null, b.pickup_fee_huf)
-  ok('a foglalás ára NEM változott tőle', true, a.estimated_price_huf > 0)
-  console.log(`         a munka ára: ${a.estimated_price_huf} Ft, fuvar: ${a.pickup_fee_huf} Ft`)
+  // A 2026-10-03-i migráció óta a fuvar a foglalás ÁRÁBA is bekerül, külön
+  // tételsorként — a két foglalás közti különbség pontosan a fuvardíj.
+  ok('a fuvar benne van a hozom-viszem árában', 4500, a.estimated_price_huf - b.estimated_price_huf)
+  console.log(`         ár fuvarral: ${a.estimated_price_huf} Ft, nélküle: ${b.estimated_price_huf} Ft`)
 }
 
 console.log('\n=== 4) lejárt szerződésnél nincs díj ===\n')

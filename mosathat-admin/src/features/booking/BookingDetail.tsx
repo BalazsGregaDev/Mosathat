@@ -2,14 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { useMentetlen } from '../../state/useMentetlen'
-import { ft, idosav, idotartam, ora } from '../../lib/format'
+import { ft, helyiNap, helyiOra, idosav, idotartam } from '../../lib/format'
 import {
   CATEGORY_LABEL, NEXT_STATUS, SCOPE_LABEL, TYPE_LABEL,
   type BookingExtraRow, type BookingScope, type BookingTask, type BookingType,
-  type DayBooking, type ServiceArea, type VehicleCategory,
+  type DayBooking, type MunkalapFokusz, type ServiceArea, type VehicleCategory,
 } from '../../lib/types'
 import Szerkesztheto, { type Valaszthato } from '../common/Szerkesztheto'
 import Sugo from '../common/Sugo'
+import { useKerdes, type KerdesBeallitas } from '../common/Kerdes'
+import { ALLAPOT_KERDES, TORLES_KERDES } from '../common/kerdesek'
+import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../common/Ceg'
 import { EGYSEG } from '../services/Arlista'
 
 // A legördülők tartalma. A feliratok ugyanabból a szótárból jönnek, mint
@@ -20,8 +23,16 @@ const KATEGORIAK: Valaszthato[] = (['SZEMELYAUTO', 'SUV', 'KISBUSZ'] as VehicleC
 const TERJEDELMEK: Valaszthato[] = (['TELJES', 'KULSO', 'BELSO'] as BookingScope[])
   .map((v) => ({ ertek: v, cimke: SCOPE_LABEL[v] }))
 
-const TIPUSOK: Valaszthato[] = (['VAROS', 'LEADOS', 'TOBBNAPOS', 'HOZOMVISZEM'] as BookingType[])
+// A „Többnapos" nem külön típus többé: a Viszi napja dönti el. Ha a Viszi
+// későbbi napra esik, a foglalás többnapos — leadós és hozom-viszem is lehet.
+const TIPUSOK: Valaszthato[] = (['VAROS', 'LEADOS', 'HOZOMVISZEM'] as BookingType[])
   .map((v) => ({ ertek: v, cimke: TYPE_LABEL[v] }))
+
+// Szerződéses cégnél: a cég autója vagy a dolgozó saját autója.
+const JARMU_TIPUSOK: Valaszthato[] = [
+  { ertek: 'FLOTTA', cimke: 'Flotta' },
+  { ertek: 'SAJAT', cimke: 'Saját' },
+]
 
 // ---------------------------------------------------------------------------
 //  A munkalap.
@@ -64,6 +75,7 @@ export default function BookingDetail({
   onSzerkeszt,
   arlistaGombok,
   osztott,
+  fokusz,
 }: {
   bookingId: string
   onBezar: () => void
@@ -73,8 +85,11 @@ export default function BookingDetail({
   arlistaGombok?: React.ReactNode
   /** Nyitva az árlista: ilyenkor ez az ablak a bal oldalra húzódik. */
   osztott?: boolean
+  /** A „Figyelmet igényel" listából: melyik mező nyíljon rögtön írásra. */
+  fokusz?: MunkalapFokusz
 }) {
   const { data, catalog, refresh } = useApp()
+  const [kerdesAblak, kerdez] = useKerdes()
   const [b, setB] = useState<DayBooking | null>(null)
   const [lista, setLista] = useState<BookingTask[]>([])
   const [mennyisegek, setMennyisegek] = useState<BookingExtraRow[]>([])
@@ -194,33 +209,29 @@ export default function BookingDetail({
 
   // --- állapotváltás -----------------------------------------------------------
 
-  async function allapot(cel: Parameters<typeof data.setStatus>[1]) {
-    // A lezárás visszafordíthatatlan: a munkalap véglegessé válik.
-    if (cel === 'COMPLETED') {
-      const ok = window.confirm(
-        'Biztos lezárom? Minden adat helyes?\n\n' +
-          'Lezárás után a munkalista és az ár nem módosítható.',
-      )
-      if (!ok) return
-    }
+  // A kérdést a hívó adja meg, nem az állapot: a „Kész van" és a
+  // „Visszanyit" ugyanoda (READY) visz, de csak az elsőnél kell
+  // megkérdezni, hogy „Biztosan elkészült?".
+  //
+  // Az állapot azonnal átvált az ablakban, a mentés utána megy; az ablak
+  // nyitva marad, és nem tölt újra. A napi lista bezáráskor csendben
+  // frissül — a kártya a helyén marad.
+  async function allapot(cel: Parameters<typeof data.setStatus>[1], k?: KerdesBeallitas) {
+    if (k && !(await kerdez(k))) return
+    valtozott.current = true
+    setB((x) => (x ? { ...x, status: cel } : x))
     try {
       await data.setStatus(bookingId, cel)
-      valtozott.current = true
       await betolt()
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
+      await betolt()
     }
   }
 
   async function lemond() {
     if (!b) return
-    const ok = window.confirm(
-      `Biztos törlöd? ${b.plate_raw} · ${b.customer_name}\n\n`
-      + 'A foglalás törölve marad, az időpont pedig azonnal felszabadul. '
-      + 'Az ügyfél és az autó adata nem vész el, és a törlés visszavonható.',
-    )
-    if (!ok) return
-    await allapot('CANCELLED_BY_CUSTOMER')
+    await allapot('CANCELLED_BY_CUSTOMER', TORLES_KERDES(b))
   }
 
   // --- ár ----------------------------------------------------------------------
@@ -271,9 +282,13 @@ export default function BookingDetail({
   // Egy mező átírása. Az adatbázis a többi adatot változatlanul hagyja, de az
   // árat, az időt és a munkalistát újraszámolja — ugyanazon az úton, mint a
   // teljes szerkesztésnél. Két külön út előbb-utóbb eltérne egymástól.
+  //
+  // A „változott" jelzés a mentés ELŐTT áll be: ha valaki átírja az órát, és
+  // rögtön a Bezárás gombra bök, a bezárás hamarabb fut le, mint ahogy a
+  // mentés visszaér — a napi nézetnek akkor is frissülnie kell.
   const mezoMent = useCallback(async (patch: Record<string, unknown>) => {
-    await data.patchBooking(bookingId, patch)
     valtozott.current = true
+    await data.patchBooking(bookingId, patch)
     await betolt()
   }, [data, bookingId, betolt])
 
@@ -330,6 +345,9 @@ export default function BookingDetail({
       setExtraMegy(false)
     }
   }
+
+  const varos = b?.booking_type === 'VAROS'
+  const tobbnapos = b ? b.last_day.slice(0, 10) > b.service_date.slice(0, 10) : false
 
   const kovetkezo = b ? NEXT_STATUS[b.status] : undefined
   const lemondott = b ? ['CANCELLED_BY_CUSTOMER', 'CANCELLED_BY_SHOP'].includes(b.status) : false
@@ -418,11 +436,14 @@ export default function BookingDetail({
 
                 <Szerkesztheto
                   cimke="Telefon" ertek={b.customer_phone} tipus="telefon" zarolt={lezart}
+                  kezdetbenNyitva={fokusz === 'telefon'}
                   onMent={(v) => mezoMent({ customer_phone: v })}
                   utotag={b.customer_phone && (
                     <a href={`tel:${b.customer_phone}`} className="hivas"
                        title="Hívás">Hívás</a>
                   )} />
+
+                <CegSor b={b} zarolt={lezart} onMent={mezoMent} />
 
                 <Szerkesztheto
                   cimke="Rendszám" ertek={b.plate_raw} tipus="rendszam" zarolt={lezart}
@@ -436,10 +457,62 @@ export default function BookingDetail({
                     return mezoMent({ brand: marka ?? '', model: tobbi.join(' ') })
                   }} />
 
+                {/* ---------- Hozza / Viszi ----------
+                    Mindkettő nappal és órával. Ha a Viszi napja későbbi, a
+                    foglalás többnapos: minden napján ott lesz a napi nézetben.
+                    Megvárja esetén nincs külön Viszi: akkor viszi, amikor kész. */}
+                <NapOraSor
+                  cimke="Hozza"
+                  nap={b.service_date.slice(0, 10)}
+                  ora={helyiOra(varos ? b.start_at : b.drop_off_at)}
+                  zarolt={lezart}
+                  onMent={(m) => mezoMent({
+                    ...(m.nap !== undefined ? { service_date: m.nap } : {}),
+                    ...(m.ora !== undefined ? { [varos ? 'start_time' : 'drop_off_time']: m.ora } : {}),
+                  })} />
+
+                {varos ? (
+                  <div className="adatsor">
+                    <span>Viszi</span>
+                    <span className="ertek">
+                      {b.start_at && b.planned_duration_minutes > 0
+                        ? <>megvárja, kb. {idosav(b.start_at, b.planned_duration_minutes).split('–')[1]?.trim()}-kor kész</>
+                        : <span className="halvany">megvárja</span>}
+                    </span>
+                  </div>
+                ) : (
+                  <NapOraSor
+                    cimke="Viszi"
+                    // A régi „Több napos" foglalásnál a határidő a Viszi.
+                    nap={helyiNap(b.pick_up_at ?? b.deadline_at) || b.service_date.slice(0, 10)}
+                    ora={helyiOra(b.pick_up_at ?? b.deadline_at)}
+                    minNap={b.service_date.slice(0, 10)}
+                    zarolt={lezart}
+                    oraUres="nincs megbeszélve"
+                    utotag={tobbnapos && (
+                      <span className="cimke-pill tobbnapos-pill">
+                        {napokSzama(b.service_date, b.last_day)} nap
+                      </span>
+                    )}
+                    onMent={(m) => mezoMent({
+                      ...(m.nap !== undefined ? { pick_up_date: m.nap } : {}),
+                      ...(m.ora !== undefined ? { pick_up_time: m.ora } : {}),
+                    })} />
+                )}
+
                 <Szerkesztheto
                   cimke="Méret" ertek={b.category} zarolt={lezart}
                   valaszthato={KATEGORIAK} gombok
                   onMent={(v) => mezoMent({ category: v })} />
+
+                {/* Csak ha a foglalás szerződéses áron megy: a cég autója
+                    (céges ár) vagy a dolgozó saját autója (magán ár). */}
+                {b.contract_kind && (
+                  <Szerkesztheto
+                    cimke="Jármű típus" ertek={b.contract_kind} zarolt={lezart}
+                    valaszthato={JARMU_TIPUSOK} gombok
+                    onMent={(v) => mezoMent({ contract_kind: v })} />
+                )}
 
                 <Szerkesztheto
                   cimke="Csomag"
@@ -524,69 +597,39 @@ export default function BookingDetail({
                   onMent={(v) => mezoMent({ scope: v })} />
 
                 <Szerkesztheto
-                  cimke="Típus" ertek={b.booking_type} zarolt={lezart}
+                  cimke="Típus"
+                  // A régi „Többnapos" foglalás leadósként jelenik meg — hogy
+                  // többnapos, azt már a Viszi napja mutatja.
+                  ertek={b.booking_type === 'TOBBNAPOS' ? 'LEADOS' : b.booking_type}
+                  zarolt={lezart}
                   valaszthato={TIPUSOK} gombok
                   onMent={(v) => mezoMent({ booking_type: v })} />
 
                 {/* A szerződésben megállapodott fuvardíj. Csak hozom-viszem
-                    foglalásnál jelenik meg, és csak akkor, ha az ügyfélnek
-                    van rá élő megállapodása.
-
-                    SZÁNDÉKOSAN nincs beleszámolva a lenti árba: a szerződéses
-                    árazás még nincs bekötve a foglalás árába, és ha csak a
-                    fuvar volna benne, az összeg félig lenne szerződéses. Itt
-                    emlékeztetőként áll, hogy a számlázásnál ne maradjon le. */}
+                    foglalásnál, és csak ha a cégnek van rá élő szerződése.
+                    Az összeg BENNE van a lenti árban (külön tételként) — itt
+                    azért áll, hogy látsszon, miből jön ki a végösszeg. */}
                 {b.pickup_fee_huf != null && (
                   <div className="adatsor">
                     <span>Fuvar</span>
                     <span className="ertek">
                       {ft(b.pickup_fee_huf)}
-                      <span className="halk"> · a lenti áron felül</span>
+                      <span className="halk"> · benne az árban</span>
                     </span>
                   </div>
                 )}
 
-                <Szerkesztheto
-                  cimke="Nap" ertek={b.service_date.slice(0, 10)} tipus="datum" zarolt={lezart}
-                  onMent={(v) => mezoMent({ service_date: v })} />
-
-                {b.booking_type === 'VAROS' ? (
-                  <Szerkesztheto
-                    cimke="Kezdés" ertek={ora(b.start_at)} tipus="ido" zarolt={lezart}
-                    onMent={(v) => mezoMent({ start_time: v })}
-                    utotag={b.planned_duration_minutes > 0 && (
-                      <span className="halk">
-                        {' '}· {idosav(b.start_at, b.planned_duration_minutes).split('–')[1]?.trim()}
-                        -ig, {idotartam(b.planned_duration_minutes)}
-                      </span>
-                    )} />
-                ) : (
-                  <>
-                    <Szerkesztheto
-                      cimke="Hozza" ertek={ora(b.drop_off_at)} tipus="ido" zarolt={lezart}
-                      onMent={(v) => mezoMent({ drop_off_time: v })} />
-                    <Szerkesztheto
-                      cimke="Viszi" ertek={ora(b.pick_up_at)} tipus="ido" zarolt={lezart}
-                      ures="nincs megbeszélve"
-                      onMent={(v) => mezoMent({ pick_up_time: v })}
-                      utotag={b.planned_duration_minutes > 0 && (
-                        <span className="halk"> · {idotartam(b.planned_duration_minutes)} munka</span>
-                      )} />
-                  </>
-                )}
-
-                {b.booking_type === 'TOBBNAPOS' && (
-                  <>
-                    <Szerkesztheto
-                      cimke="Határidő napja" ertek={b.deadline_at?.slice(0, 10)}
-                      tipus="datum" zarolt={lezart}
-                      onMent={(v) => mezoMent({ deadline_date: v })} />
-                    <Szerkesztheto
-                      cimke="Határidő órája" ertek={ora(b.deadline_at)}
-                      tipus="ido" zarolt={lezart}
-                      onMent={(v) => mezoMent({ deadline_time: v })} />
-                  </>
-                )}
+                {/* A tervezett munkaidő: a csomag, a méret és az egyéb
+                    szolgáltatások összege. Nem szerkeszthető — abból jön ki,
+                    amit fent kiválasztottak. */}
+                <div className="adatsor">
+                  <span>Munkaóra</span>
+                  <span className="ertek">
+                    {b.planned_duration_minutes > 0
+                      ? idotartam(b.planned_duration_minutes)
+                      : <span className="halvany">nincs megadva</span>}
+                  </span>
+                </div>
               </div>
 
               {/* ---------- 1. MEGJEGYZÉS ---------- */}
@@ -864,7 +907,8 @@ export default function BookingDetail({
                   </button>
                 )}
                 {kovetkezo && (
-                  <button className="btn btn-fo" onClick={() => void allapot(kovetkezo.to)}>
+                  <button className="btn btn-fo"
+                          onClick={() => void allapot(kovetkezo.to, ALLAPOT_KERDES[kovetkezo.to])}>
                     {kovetkezo.label}
                   </button>
                 )}
@@ -876,6 +920,242 @@ export default function BookingDetail({
           </>
         )}
       </div>
+      {kerdesAblak}
+    </div>
+  )
+}
+
+
+// ---------------------------------------------------------------------------
+//  Hozza / Viszi sor: nap és óra egymás mellett
+// ---------------------------------------------------------------------------
+//
+//  Itt nem „kattints rá az átíráshoz" van, mint a többi adatnál, hanem a két
+//  mező mindig nyitva áll: a nap és az óra a leggyakrabban átírt adat
+//  („mégis csütörtökön hozza"), és a dátumválasztó amúgy is egy külön
+//  kattintás.
+//
+//  Mentés: a mezőből kilépéskor, vagy ha a változás után egy kis ideig nem
+//  nyúlnak hozzá. Az utóbbi a telefon miatt kell: ott a dátumválasztó
+//  bezárása után a mező fókuszban marad, és a kilépés csak a következő
+//  koppintásnál jönne. A várakozás pedig azért, mert asztali gépen a dátumot
+//  számjegyenként is be lehet gépelni — egy félig beírt évszámot (0202)
+//  nem szabad elmenteni.
+
+const VARAKOZAS_MS = 900
+
+function NapOraSor({
+  cimke,
+  nap,
+  ora,
+  minNap,
+  zarolt,
+  oraUres,
+  utotag,
+  onMent,
+}: {
+  cimke: string
+  nap: string
+  /** "08:00", vagy üres, ha nincs megbeszélve. */
+  ora: string
+  minNap?: string
+  zarolt: boolean
+  oraUres?: string
+  utotag?: React.ReactNode
+  onMent: (m: { nap?: string; ora?: string }) => Promise<void>
+}) {
+  const [napP, setNapP] = useState(nap)
+  const [oraP, setOraP] = useState(ora)
+  const [hiba, setHiba] = useState<string | null>(null)
+  const idozito = useRef<number | undefined>(undefined)
+  // Ami utoljára elment (vagy betöltődött): ehhez mérjük, van-e mit menteni.
+  const mentett = useRef({ nap, ora })
+
+  // Ha kívülről változik (mentés után újratöltés, másik gépen módosították),
+  // a mezők is követik.
+  useEffect(() => {
+    setNapP(nap); setOraP(ora)
+    mentett.current = { nap, ora }
+  }, [nap, ora])
+
+  useEffect(() => () => window.clearTimeout(idozito.current), [])
+
+  async function ment(ujNap: string, ujOra: string) {
+    window.clearTimeout(idozito.current)
+    const m: { nap?: string; ora?: string } = {}
+    // Csak a teljes, értelmes dátum mehet el (2000 utáni év).
+    if (ujNap !== mentett.current.nap && /^(2\d{3})-\d{2}-\d{2}$/.test(ujNap)) m.nap = ujNap
+    if (ujOra !== mentett.current.ora && (ujOra === '' || /^\d{2}:\d{2}$/.test(ujOra))) m.ora = ujOra
+    if (m.nap === undefined && m.ora === undefined) return
+    mentett.current = { nap: m.nap ?? mentett.current.nap, ora: m.ora ?? mentett.current.ora }
+    try {
+      await onMent(m)
+      setHiba(null)
+    } catch (e) {
+      // A mező a beírt értéken marad, hogy lássa, mit nem fogadott el.
+      mentett.current = { nap, ora }
+      setHiba(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  function kesobb(ujNap: string, ujOra: string) {
+    window.clearTimeout(idozito.current)
+    idozito.current = window.setTimeout(() => void ment(ujNap, ujOra), VARAKOZAS_MS)
+  }
+
+  if (zarolt) {
+    return (
+      <div className="adatsor">
+        <span>{cimke}</span>
+        <span className="ertek">
+          {nap.replaceAll('-', '. ')}. {ora || <span className="halvany">{oraUres ?? '—'}</span>}
+          {utotag}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="adatsor szerk-sor napora-adat">
+      <span className="szerk-cimke">{cimke}</span>
+      <span className="ertek">
+        <span className="napora-mezok">
+          <input type="date" className="beviteli" aria-label={`${cimke} napja`}
+                 value={napP} min={minNap}
+                 onChange={(e) => { setNapP(e.target.value); kesobb(e.target.value, oraP) }}
+                 onBlur={() => void ment(napP, oraP)} />
+          <input type="time" className="beviteli szam" step={300} aria-label={`${cimke} órája`}
+                 value={oraP} placeholder={oraUres}
+                 onChange={(e) => { setOraP(e.target.value); kesobb(napP, e.target.value) }}
+                 onBlur={() => void ment(napP, oraP)} />
+          {utotag}
+        </span>
+        {hiba && <div className="szerk-hiba">{hiba}</div>}
+      </span>
+    </div>
+  )
+}
+
+/** Hány napot fog át a foglalás, a Hozza és a Viszi napját is beleszámolva. */
+function napokSzama(elso: string, utolso: string): number {
+  const a = Date.parse(`${elso.slice(0, 10)}T12:00:00Z`)
+  const z = Date.parse(`${utolso.slice(0, 10)}T12:00:00Z`)
+  return Math.round((z - a) / 86_400_000) + 1
+}
+
+
+// ---------------------------------------------------------------------------
+//  Cég sor: kereső, és mentés előtt egyeztetés a hasonló nevekkel
+// ---------------------------------------------------------------------------
+//
+//  Ugyanaz a kereső, mint az új időpontnál. Ha a listából választanak, az
+//  rögtön elmegy. Ha gépelnek, kilépéskor megy: előtte az adatbázis
+//  összeveti a meglévő cégekkel, és ha nagyon hasonló van, rákérdez.
+//  Üresre törölve a foglalás ügyfele leválik a cégről.
+
+function CegSor({
+  b,
+  zarolt,
+  onMent,
+}: {
+  b: DayBooking
+  zarolt: boolean
+  onMent: (patch: Record<string, unknown>) => Promise<void>
+}) {
+  const [nyitva, setNyitva] = useState(false)
+  const [ertek, setErtek] = useState<CegErtek>(URES_CEG)
+  const [hiba, setHiba] = useState<string | null>(null)
+  const [cegAblak, cegEgyeztet] = useCegEgyeztetes()
+  // A friss érték a kilépéskor futó mentésnek (a kattintás és a kilépés
+  // ugyanabban a pillanatban jön, a state még a régi lehet).
+  const friss = useRef<CegErtek>(URES_CEG)
+  // Egyszerre egy mentés: a listából választás és az utána jövő kilépés ne
+  // menjen el kétszer. Escape-nél pedig a kilépés ne mentsen.
+  const megy = useRef(false)
+  const megse = useRef(false)
+
+  useEffect(() => {
+    if (nyitva) document.getElementById('munkalap-ceg')?.focus()
+  }, [nyitva])
+
+  function nyit() {
+    if (zarolt) return
+    const kezdo = { id: b.company_id, nev: b.company_name ?? '' }
+    setErtek(kezdo)
+    friss.current = kezdo
+    megse.current = false
+    setHiba(null)
+    setNyitva(true)
+  }
+
+  function valt(uj: CegErtek) {
+    setErtek(uj)
+    friss.current = uj
+    // Listából választott: nincs mit egyeztetni, mehet.
+    if (uj.id) void ment(uj)
+  }
+
+  async function ment(e: CegErtek) {
+    if (megy.current || megse.current) return
+    const nev = e.nev.trim()
+    const regiNev = (b.company_name ?? '').trim()
+
+    // Nem változott semmi: csak bezárjuk.
+    if ((e.id && e.id === b.company_id) || (!e.id && nev === '' && !b.company_id)
+        || (!e.id && nev === regiNev && b.company_id)) {
+      setNyitva(false)
+      return
+    }
+
+    megy.current = true
+    try {
+      const c = await cegEgyeztet({ id: e.id, nev })
+      if (c === null) return                 // „Erre gondoltál?" — Escape: marad nyitva
+      if (c.id && c.id === b.company_id) { setNyitva(false); return }
+      await onMent(c.id
+        ? { company_id: c.id }
+        : { company_id: null, company_name: c.nev })
+      setHiba(null)
+      setNyitva(false)
+    } catch (err) {
+      setHiba(err instanceof Error ? err.message : String(err))
+    } finally {
+      megy.current = false
+    }
+  }
+
+  if (!nyitva) {
+    return (
+      <div className="adatsor szerk-sor">
+        <span className="szerk-cimke">Cég</span>
+        <span className="ertek">
+          {zarolt ? (
+            <span className={b.company_name ? undefined : 'halvany'}>{b.company_name || 'nincs'}</span>
+          ) : (
+            <button type="button" className={`szerk-ertek${b.company_name ? '' : ' ures'}`}
+                    onClick={nyit} title="Kattints az átíráshoz">
+              {b.company_name || 'nincs'}
+            </button>
+          )}
+          {b.contract_kind && <span className="cimke-pill szerzodes-pill">szerződés</span>}
+        </span>
+        {cegAblak}
+      </div>
+    )
+  }
+
+  return (
+    <div className="adatsor szerk-sor szerk-nyitva"
+         onKeyDownCapture={(e) => {
+           if (e.key === 'Escape') { megse.current = true; setNyitva(false) }
+         }}>
+      <span className="szerk-cimke">Cég</span>
+      <span className="ertek">
+        <CegValaszto inputId="munkalap-ceg" ertek={ertek} onValt={valt}
+                     onKilep={() => void ment(friss.current)} />
+        {hiba && <div className="szerk-hiba">{hiba}</div>}
+      </span>
+      {cegAblak}
     </div>
   )
 }

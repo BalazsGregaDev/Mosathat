@@ -5,7 +5,7 @@ import {
   hetCim, honapCim, honapElseje, honapPlusz, maE, maStr, napCim, napLep,
   napPlusz, napRovidCim,
 } from '../../lib/format'
-import { ROLE_LABEL } from '../../lib/types'
+import { ROLE_LABEL, type MunkalapFokusz } from '../../lib/types'
 import DayView from '../day/DayView'
 import WeekView from '../day/WeekView'
 import MonthView from '../day/MonthView'
@@ -19,6 +19,7 @@ import SettingsPage from '../settings/SettingsPage'
 import ServicesView from '../services/ServicesView'
 import PartnersView from '../partners/PartnersView'
 import UsersPage from '../users/UsersPage'
+import ProfilPage from '../profil/ProfilPage'
 import ArlistaPanel, { PANEL_ALAP, type PanelAllapot } from '../services/ArlistaPanel'
 import ArlistaGombok, { type ArlistaFul } from '../services/ArlistaGombok'
 import JelszoModal from '../common/JelszoModal'
@@ -28,7 +29,7 @@ import JelszoModal from '../common/JelszoModal'
 // tűnjön elveszettnek egy funkció, ami csak később jön.
 type Oldal =
   | 'attekintes' | 'nap' | 'szolgaltatasok' | 'partnerek' | 'ugyfelek'
-  | 'beallitasok' | 'felhasznalok'
+  | 'beallitasok' | 'felhasznalok' | 'profilom'
 
 // A `tulaj: true` menüpontok az alkalmazottnak MEG SEM JELENNEK. Nem
 // szürkén, nem "nincs jogosultság" üzenettel — nincsenek ott. Egy szürke
@@ -45,6 +46,8 @@ const MENU: { id: Oldal; cimke: string; tulaj?: boolean }[] = [
   { id: 'ugyfelek', cimke: 'Ügyfelek' },
   { id: 'felhasznalok', cimke: 'Felhasználók', tulaj: true },
   { id: 'beallitasok', cimke: 'Beállítások', tulaj: true },
+  // Mindenkinek: jelszó, kilépés, és a munkaidő-változás bejelentése.
+  { id: 'profilom', cimke: 'Profilom' },
 ]
 
 const MENU_2 = [
@@ -73,6 +76,8 @@ export default function AppShell() {
   const [arPanel, setArPanel] = useState<PanelAllapot>(PANEL_ALAP)
   const [ujNyitva, setUjNyitva] = useState(false)
   const [reszletId, setReszletId] = useState<string | null>(null)
+  // A „Figyelmet igényel" sorából nyitva: melyik mező legyen rögtön írható.
+  const [reszletFokusz, setReszletFokusz] = useState<MunkalapFokusz | undefined>(undefined)
   const [szerkesztId, setSzerkesztId] = useState<string | null>(null)
   const [fiok, setFiok] = useState(false)
   const [jelszoNyitva, setJelszoNyitva] = useState(false)
@@ -87,6 +92,12 @@ export default function AppShell() {
   function ujFoglalasKesz() {
     setUjNyitva(false)
     refresh()
+  }
+
+  /** Munkalap megnyitása — opcionálisan egy mezővel írásra nyitva. */
+  function megnyit(id: string, fokusz?: MunkalapFokusz) {
+    setReszletFokusz(fokusz)
+    setReszletId(id)
   }
 
   const menuTartalom = (
@@ -194,6 +205,13 @@ export default function AppShell() {
       <div className="fo">
         {/* --- asztali fejléc --- */}
         <header className="fejlec">
+          {/* Tableten nincs oldalsáv (elvenné a helyet a naptártól): ott a
+              menü ezzel a gombbal nyílik, ugyanúgy, mint telefonon. Asztali
+              gépen ez a gomb nem látszik. */}
+          <button className="hamburger fejlec-hamburger" onClick={() => setFiok(true)}
+                  aria-label="Menü">
+            <span /><span /><span />
+          </button>
           {napiFejlec ? (
             <>
               <div className="napvalto">
@@ -260,13 +278,15 @@ export default function AppShell() {
                akkor hasznos, ha egy kattintással el lehet indulni belőle. */
             <DashboardPage
               onNapra={(d) => { setNap(d.slice(0, 10)); setOldal('nap') }}
+              onMegnyit={megnyit}
+              onOldal={(o) => setOldal(o)}
             />
           )}
           {oldal === 'nap' && nezet === 'nap' && (
-            <DayView nap={nap} onMegnyit={setReszletId} />
+            <DayView nap={nap} onMegnyit={megnyit} />
           )}
           {oldal === 'nap' && nezet === 'het' && (
-            <WeekView nap={nap} onMegnyit={setReszletId} onNapra={napraUgrik} />
+            <WeekView nap={nap} onMegnyit={(id) => megnyit(id)} onNapra={napraUgrik} />
           )}
           {oldal === 'nap' && nezet === 'honap' && (
             <MonthView nap={nap} onNapra={napraUgrik}
@@ -281,6 +301,7 @@ export default function AppShell() {
           {oldal === 'ugyfelek' && <CustomersPage />}
           {oldal === 'felhasznalok' && <UsersPage />}
           {oldal === 'beallitasok' && <SettingsPage />}
+          {oldal === 'profilom' && <ProfilPage onJelszo={() => setJelszoNyitva(true)} />}
         </main>
       </div>
 
@@ -337,8 +358,10 @@ export default function AppShell() {
 
       {reszletId && (
         <BookingDetail
+          key={reszletId}
           bookingId={reszletId}
-          onBezar={() => setReszletId(null)}
+          fokusz={reszletFokusz}
+          onBezar={() => { setReszletId(null); setReszletFokusz(undefined) }}
           onSzerkeszt={() => { setSzerkesztId(reszletId); setReszletId(null) }}
           arlistaGombok={arlistaGombokRovid}
           osztott={osztott}

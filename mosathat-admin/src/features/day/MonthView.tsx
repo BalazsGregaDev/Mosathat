@@ -21,7 +21,8 @@ import MiniKartya from './MiniKartya'
 //  Bal szélen a hétszám. Onnan egy kattintással át lehet váltani annak a
 //  hétnek a nézetére — a havi a tájékozódás, a heti a tervezés.
 //
-//  Naponta öt tétel fér el, a maradék „+3 további"-ként látszik.
+//  Naponta öt tétel fér el, a maradék „+3 további"-ként látszik. Minden
+//  tételen elöl a rendszám, utána az idő — ugyanúgy, mint a napi nézetben.
 //
 //  Miért nem hat sor fix magassággal: mert a hónapok 4–6 hetet ölelnek fel,
 //  és az üres sor csak helyet foglal. A rács annyi sorból áll, amennyi kell.
@@ -76,7 +77,12 @@ export default function MonthView({ nap, onNapra, onHetre }: {
   const napok = useMemo(() => {
     const m = new Map<string, DayBooking[]>()
     for (let i = 0; i < hetek * 7; i++) m.set(napPlusz(elso, i), [])
-    for (const b of sorok ?? []) m.get(b.service_date.slice(0, 10))?.push(b)
+    // Minden foglalás a kezdőnapján áll (a többnapos is, „6-ig" felirattal).
+    // Ami a rács előtt kezdődött, de belelóg, az a rács első napjára kerül.
+    for (const b of sorok ?? []) {
+      const kezd = b.service_date.slice(0, 10)
+      m.get(kezd < elso ? elso : kezd)?.push(b)
+    }
     return m
   }, [sorok, elso, hetek])
 

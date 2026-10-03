@@ -191,6 +191,7 @@ export interface PackageMatrixRow {
 export interface PackageExtraRow {
   package_id: string
   package_code: string
+  /** Az előd csomag neve — „a Start mindene, plusz…" */
   parent_name: string
   name: string
   area: ServiceArea
@@ -207,6 +208,7 @@ export interface Surcharge {
   active: boolean
 }
 
+// A v_day_bookings nézet egy sora. A napi nézet minden kártyája ebből él.
 export interface DayBooking {
   id: string
   service_date: string
@@ -247,9 +249,9 @@ export interface DayBooking {
   package_name: string | null
 
   /**
-   * A fuvar ára ennél a foglalásnál, a munka árán FELÜL. Csak akkor van
-   * értéke, ha a foglalás hozom-viszem, és az ügyfélnek van érvényes
-   * szerződése fuvardíjjal. A foglalás árában NINCS benne.
+   * A szerződésben megállapodott fuvardíj ennél a foglalásnál. Csak akkor van
+   * értéke, ha a foglalás hozom-viszem, és az ügyfél cégének van érvényes
+   * szerződése fuvardíjjal. A foglalás árában külön tételsorként benne van.
    */
   pickup_fee_huf: number | null
 
@@ -257,6 +259,23 @@ export interface DayBooking {
   tasks_done: number
   first_done_at: string | null
   last_done_at: string | null
+
+  /** A foglalás utolsó napja (a Viszi napja). */
+  last_day: string
+  /** Ha szerződéses áron ment: céges (flotta) vagy saját autó. */
+  contract_kind: ContractKind | null
+  company_id: string | null
+  /** Az egyéb szolgáltatások nevei vesszővel: „Motorkozmetika, Ózonos kezelés". */
+  extras_summary: string | null
+  extras_count: number
+
+  // A napi listában (day_bookings) ezek is jönnek:
+  /** Hányadik a nap listájában. */
+  sorrend?: number
+  /** Hányadik napja ez a foglalásnak (1 = az érkezés napja). */
+  nap_szama?: number
+  /** Hány napos összesen. 1 = egynapos. */
+  napok_szama?: number
 }
 
 export interface StandingCar {
@@ -284,6 +303,16 @@ export interface DayCapacity {
   booked_minutes: number
   free_minutes: number
   load_pct: number
+  /** Ennyi férne, ha minden alkalmazott bent volna. */
+  base_capacity_minutes: number
+  /** A jelenlét átlagos szorzója aznap (100 = mindenki bent). */
+  staff_pct: number | null
+  /** Hány alkalmazott számít a kapacitásba. */
+  staff_total: number
+  /** Hány autó van aznap — a többnaposak is. */
+  cars: number
+  /** Az aznap kezdődő foglalások értéke. */
+  revenue_huf: number
 }
 
 export interface WorkWindow {
@@ -320,6 +349,54 @@ export interface CalcResult {
   duration_known: boolean
 }
 
+/** Egy tételsor az árkijelzésben (a quote_booking() lines tömbje). */
+export interface QuoteLine {
+  kind: 'PACKAGE' | 'FULL_SERVICE' | 'EXTRA' | 'SURCHARGE' | 'FUVAR'
+  ref_id: string | null
+  name: string
+  quantity: number
+  unit_price_huf: number
+  price_huf: number
+  work_minutes: number
+  sort_order: number
+}
+
+export type ContractKind = 'FLOTTA' | 'SAJAT'
+
+/**
+ * A quote_booking() visszatérése: az ár, ahogy a foglalás menteni fogja —
+ * szerződéses árral és fuvarral együtt.
+ */
+export interface Quote extends CalcResult {
+  lines: QuoteLine[]
+  company_id: string | null
+  /** Van-e a cégnek élő szerződése. Csak ilyenkor kell Flotta / Saját választó. */
+  contract_id: string | null
+  contract_kind: ContractKind | null
+  /** A csomag ára a szerződésből jött-e. */
+  contract_price: boolean
+  /** Csomagonként a szerződéses ár erre a méretre és fajtára (csomag id →
+   *  forint). Ahol nincs megállapodott ár, ott nincs kulcs: listaáron megy. */
+  contract_prices: Record<string, number>
+}
+
+/** Egy találat a Cég mező keresőjéből. */
+export interface CompanyHit {
+  id: string
+  name: string
+  tax_number: string | null
+  ugyfelek: number
+  jarmuvek: number
+  szerzodes: boolean
+}
+
+/** Mentés előtti egyeztetés: van-e ilyen vagy hasonló nevű cég. */
+export interface CompanyCandidate {
+  id: string
+  name: string
+  egyezes: 'AZONOS' | 'HASONLO'
+}
+
 // Egy korábbi munka a rendszám alatt. Ebből lesz az "Ezt kéri →" gomb.
 export interface HistoryRow {
   customer_id: string
@@ -349,6 +426,9 @@ export interface SearchHit {
   utolso_datum: string | null
   utolso_csomag: string | null
   utolso_ar: number | null
+  company_id: string | null
+  /** Amit az autó legutóbb kapott: céges (flotta) vagy saját autó. */
+  contract_kind: ContractKind | null
 }
 
 // Amit a rendszám beírására visszakapunk.
@@ -373,9 +453,11 @@ export interface BookingFormData {
     scope: BookingScope
     full_service: boolean
     notes: string | null
+    contract_kind: ContractKind | null
   }
-  customer: Customer
-  vehicle: Vehicle
+  customer: Customer & { company_id: string | null }
+  vehicle: Vehicle & { contract_kind: ContractKind | null }
+  company: { id: string; name: string } | null
   extras: { extra_id: string; quantity: number | string }[]
 }
 
@@ -397,8 +479,14 @@ export interface CalcInput {
 }
 
 export interface NewBookingInput extends CalcInput {
+  /** A kiválasztott cég. Ha nincs, de van company_name, a név alapján dől el. */
+  company_id?: string | null
   company_name: string | null
-  deadline_time: string | null
+  /** Csak ha a cégnek élő szerződése van: céges autó vagy a dolgozó sajátja. */
+  contract_kind?: ContractKind | null
+  /** A Viszi napja. Ha későbbi, mint a service_date, a foglalás többnapos. */
+  pick_up_date?: string | null
+  deadline_time?: string | null
   // ügyfél: vagy meglévő, vagy új
   customer_id: string | null
   customer_name: string
@@ -415,7 +503,8 @@ export interface NewBookingInput extends CalcInput {
   start_time: string | null // HH:MM — VAROS-nál kötelező
   drop_off_time: string | null // HH:MM — LEADOS-nál
   pick_up_time: string | null
-  deadline_date: string | null // TOBBNAPOS-nál kötelező
+  /** Régi mező (a „Több napos" típusé). Helyette a pick_up_date. */
+  deadline_date?: string | null
   source: BookingSource
   notes: string | null
 }
@@ -443,6 +532,24 @@ export const TIER_LABEL: Record<ContractTier, string> = {
 export const SIZE_LABEL: Record<ContractSize, string> = {
   NORMAL: 'Normál méret',
   NAGY: 'Nagy méret',
+}
+
+/** A szerződés két ára egy csomagra: a cég autóira és a dolgozók saját autóira. */
+export const KIND_LABEL: Record<ContractKind, string> = {
+  FLOTTA: 'Céges',
+  SAJAT: 'Magán',
+}
+
+/** Egy szerződéses ár: csomag × méret × fajta. */
+export interface ContractPrice {
+  package_id: string
+  package_code: string
+  package_name: string
+  size: ContractSize
+  kind: ContractKind
+  price_huf: number
+  /** A régi (csomagszint) alak — csak a visszafelé kompatibilitásért. */
+  tier?: ContractTier
 }
 
 /** Egy sor a v_pass_balance nézetből: bérlet + egy tétele. */
@@ -491,18 +598,30 @@ export interface ContractRow {
   valid_until: string | null
   active: boolean
   notes: string | null
-  prices: { tier: ContractTier; size: ContractSize; price_huf: number }[]
+  prices: ContractPrice[]
+  /** A cég (a szerződés a cégé, nem egy ügyfélé). */
+  company_id: string
+  /** Hány ügyfél (sofőr) és hány autó tartozik a céghez. */
+  ugyfelek: number
+  jarmuvek: number
 }
 
+/**
+ * Szerződés mentése. A cég háromféleképpen adható meg: a meglévő cég
+ * azonosítója (company_id), egy név (company_name — ha nincs ilyen, létrejön,
+ * ugyanazzal a névkulccsal, mint mindenhol), vagy régi módon egy ügyfél.
+ */
 export interface ContractInput {
   id?: string | null
-  customer_id: string
+  company_id?: string | null
+  company_name?: string | null
+  customer_id?: string | null
   tax_number: string | null
   pickup_delivery: boolean
   pickup_delivery_fee_huf: number | null
   valid_until: string | null
   notes: string | null
-  prices: { tier: ContractTier; size: ContractSize; price_huf: number }[]
+  prices: { package_id: string; size: ContractSize; kind: ContractKind; price_huf: number }[]
 }
 
 /** Egy mennyiséges tétel a foglaláson — a munkalistán szerkeszthető. */
@@ -536,6 +655,8 @@ export interface CustomerSummary {
   atlag: number | null
   atlag_napok: number | null
   kedvenc_csomag: string | null
+  /** Az ügyfél autóinak rendszámai. */
+  rendszamok: string[]
 }
 
 export interface VehicleSummary {
@@ -554,16 +675,111 @@ export interface VehicleSummary {
   latogatas: number
   utolso: string | null
   utolso_csomag: string | null
+  company_id: string | null
+  /** Az autó szerződéses fajtája (Céges / Magán), ha a cégnek van szerződése. */
+  contract_kind: ContractKind | null
+  /** Van-e a cégnek élő szerződése. */
+  szerzodes: boolean
+}
+
+/** Egy autó a Cég szerinti nézetben. */
+export interface CompanyCar {
+  id: string
+  plate_raw: string
+  brand: string | null
+  model: string | null
+  category: VehicleCategory
+  customer_id: string
+  customer_name: string
+  customer_phone: string
+  contract_kind: ContractKind | null
+  latogatas: number
+  utolso: string | null
+}
+
+/** Egy cég az összes autójával (Ügyfelek → Cég szerint). */
+export interface CompanySummary {
+  id: string
+  name: string
+  tax_number: string | null
+  szerzodes: boolean
+  szerzodes_vege: string | null
+  hozom_viszem: boolean
+  ugyfelek: number
+  jarmuvek: number
+  latogatas: number
+  utolso: string | null
+  autok: CompanyCar[]
 }
 
 // --- Áttekintés ---------------------------------------------------------------
+
+/** Egy figyelmeztetés: mit mond, és kattintásra mit kell megnyitni. */
+export interface Gond {
+  cimke: string
+  szoveg: string
+  suly: number
+  /**
+   *  telefon        → a munkalap, a telefonszám mezővel nyitva
+   *  munkalap       → a munkalap
+   *  szolgaltatasok → a Szolgáltatások oldal
+   *  partnerek      → a Cégek és bérletesek oldal
+   */
+  cel: 'telefon' | 'munkalap' | 'szolgaltatasok' | 'partnerek' | null
+  /** Az érintett foglalások — ezekre lehet egyenként kattintani. */
+  foglalasok: { id: string; plate_raw: string; service_date: string }[] | null
+}
 
 export interface DashboardSummary {
   nap: string
   ma: { db: number; kesz: number; percek: number; bevetel: number }
   het: { db: number; bevetel: number }
   nepszeru: { nev: string; db: number }[]
-  gondok: { cimke: string; szoveg: string; suly: number }[]
+  gondok: Gond[]
+}
+
+/** Mit nyisson meg a munkalap rögtön: a telefonszám mezőt. */
+export type MunkalapFokusz = 'telefon'
+
+// --- Munkaidő-változás --------------------------------------------------------
+
+export type AbsenceKind = 'KESOBB_ERKEZIK' | 'KORABBAN_TAVOZIK' | 'TAVOL' | 'EGESZ_NAP'
+
+/** Egy alkalmazott munkaidő-változása egy napon (később jön, korábban megy…). */
+export interface Absence {
+  id: string
+  staff_id: string
+  day: string
+  kind: AbsenceKind
+  /** "16:00" — KORABBAN_TAVOZIK: mikor megy; TAVOL: mettől. */
+  starts: string | null
+  /** "10:00" — KESOBB_ERKEZIK: mikor jön; TAVOL: meddig. */
+  ends: string | null
+  note: string | null
+}
+
+/** A Profilom listájában: egy munkaidő-változás, kiével együtt. */
+export interface AbsenceRow extends Absence {
+  staff_name: string
+  /** Az enyém-e (a tulajdonos mindenkiét látja). */
+  sajat: boolean
+}
+
+/** A napi kártyára: kinek mi változik aznap. */
+export interface DayAbsence extends Omit<Absence, 'day'> {
+  staff_name: string
+  /** Beleszámít-e a kapacitásba (csak az alkalmazottaké). */
+  szamit: boolean
+}
+
+export interface AbsenceInput {
+  id?: string | null
+  staff_id?: string | null
+  day: string
+  kind: AbsenceKind
+  starts?: string | null
+  ends?: string | null
+  note?: string | null
 }
 
 export interface WeekDay {

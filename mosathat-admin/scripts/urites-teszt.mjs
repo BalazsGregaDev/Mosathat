@@ -54,7 +54,7 @@ await db.exec(`
 const q = async (s, p = []) => (await db.query(s, p)).rows
 const TABLAK = ['customers', 'vehicles', 'bookings', 'booking_items', 'booking_tasks',
   'multiday_allocations', 'passes', 'pass_items', 'pass_usages', 'contracts',
-  'contract_prices', 'audit_log']
+  'contract_prices', 'audit_log', 'companies', 'day_order']
 const MARAD = ['packages', 'package_items', 'package_pricing', 'full_service_pricing',
   'extras', 'surcharges', 'business_hours', 'working_hours', 'break_windows',
   'shop_settings', 'day_overrides', 'staff']
@@ -82,8 +82,11 @@ update public.bookings set moved_to_booking_id = null;
 -- foglaltsága és a felhasznált bérletalkalma is.
 delete from public.bookings;
 
--- Az ügyféllel megy a járműve, a bérlete és a szerződéses ára is.
+-- Az ügyféllel megy a járműve és a bérlete is.
 delete from public.customers;
+
+-- A céggel megy a szerződése és a szerződéses ára is.
+delete from public.companies;
 
 -- A napló a próbaidőszak műveleteiről szól, annak sincs értelme tovább.
 delete from public.audit_log;
