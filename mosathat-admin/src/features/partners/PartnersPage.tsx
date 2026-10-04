@@ -11,6 +11,8 @@ import KartyaFej from '../common/KartyaFej'
 import { useKerdes } from '../common/Kerdes'
 import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../common/Ceg'
 import SzerzodesArak, { AFA, FAJTAK, MERETEK } from './SzerzodesArak'
+import IgazoloLap from '../igazolo/IgazoloLap'
+import KetallasuCsuszka from '../common/KetallasuCsuszka'
 
 // ---------------------------------------------------------------------------
 //  Cégek és bérletesek.
@@ -31,7 +33,9 @@ export default function PartnersPage() {
   // kivezetni nem tudja. Az adatbázis is így tartja be: create_pass,
   // save_contract, deactivate_pass.
   const szerkesztheto = user?.canEditCustomers === true
-  const [ful, setFul] = useState<'berletek' | 'cegek'>('berletek')
+  // A szerződéses cégek az alapértelmezett, első fül: ezt nyitják meg a
+  // leggyakrabban (igazolólap, árak). A bérletekre át kell kattintani.
+  const [ful, setFul] = useState<'berletek' | 'cegek'>('cegek')
   const [passes, setPasses] = useState<PassBalanceRow[]>([])
   const [contracts, setContracts] = useState<ContractRow[]>([])
   const [tolt, setTolt] = useState(true)
@@ -71,13 +75,13 @@ export default function PartnersPage() {
       <div className="oldal-fej">
         <h2>Cégek és bérletesek</h2>
         <div className="fulek">
-          <button className={ful === 'berletek' ? 'aktiv' : ''} onClick={() => setFul('berletek')}>
-            Bérletek
-            {berletek.length > 0 && <span className="jelzo">{berletek.length}</span>}
-          </button>
           <button className={ful === 'cegek' ? 'aktiv' : ''} onClick={() => setFul('cegek')}>
             Szerződéses cégek
             {contracts.length > 0 && <span className="jelzo">{contracts.length}</span>}
+          </button>
+          <button className={ful === 'berletek' ? 'aktiv' : ''} onClick={() => setFul('berletek')}>
+            Bérletek
+            {berletek.length > 0 && <span className="jelzo">{berletek.length}</span>}
           </button>
         </div>
       </div>
@@ -178,6 +182,7 @@ export default function PartnersPage() {
           <div className="panelek panelek-ugyfel">
             {contracts.map((c) => (
               <CegKartya key={c.id} cim={c.company_name ?? c.customer_name}
+                         cegId={c.company_id}
                          nev={c.customer_name} hozomViszem={c.pickup_delivery}
                          arDb={c.prices.length} autok={c.jarmuvek}>
                   {c.tax_number && (
@@ -463,6 +468,38 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
 /** Egy ár kulcsa az űrlapban: csomag + méret + fajta. */
 const arKulcs = (pk: string, m: ContractSize, f: ContractKind) => `${pk}_${m}_${f}`
 
+// ---------------------------------------------------------------------------
+//  Bruttó vagy nettó ár megadása
+//
+//  A cégekkel nettóban egyeznek meg, a pultnál bruttót mondunk — ezért a
+//  szerződés árai mindkét módon beírhatók. A csúszka az ÖSSZES ármezőt
+//  átváltja (a fuvar árát is); minden mező alatt a másik szerinti ár áll.
+//
+//  Az adatbázisba mindig a BRUTTÓ ár kerül (ezzel számol a foglalás).
+//  Nettóból: bruttó = nettó × 1,27, egész forintra kerekítve. Ez visszafelé
+//  pontosan ugyanazt a nettót adja (a kerekítés hibája fél forint alatt
+//  marad), így a beírt nettó nem „ugrik el" gépelés közben, és az
+//  igazolólapon is pont ez a nettó jelenik meg.
+//
+//  Melyik módban dolgoznak, azt a böngésző megjegyzi: aki nettóban szokott,
+//  annak legközelebb is nettóban nyílik.
+// ---------------------------------------------------------------------------
+
+const AR_MOD_KULCS = 'mosathat.szerzodes.armod'
+
+function nettoModOlvas(): boolean {
+  try { return localStorage.getItem(AR_MOD_KULCS) === 'netto' } catch { return false }
+}
+
+function nettoModMent(netto: boolean) {
+  try { localStorage.setItem(AR_MOD_KULCS, netto ? 'netto' : 'brutto') } catch { /* nem baj */ }
+}
+
+/** Bruttó → nettó, egész forintra. */
+const nettobol = (brutto: number) => Math.round(brutto / (1 + AFA))
+/** Nettó → bruttó, egész forintra. */
+const bruttobol = (netto: number) => Math.round(netto * (1 + AFA))
+
 function ContractForm({
   contract, onBezar, onKesz,
 }: {
@@ -490,6 +527,24 @@ function ContractForm({
     [...new Set((contract?.prices ?? []).map((p) => p.package_id))])
   const [ment, setMent] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
+  // Nettó árakat írnak-e be (különben bruttót). Az állapotban mindig a
+  // bruttó szöveg van; a mező a módtól függően azt vagy a nettóját mutatja.
+  const [nettoMod, setNettoMod] = useState(nettoModOlvas)
+
+  function modValt(netto: boolean) {
+    setNettoMod(netto)
+    nettoModMent(netto)
+  }
+
+  /** A mezőben látszó szöveg a tárolt bruttóból. */
+  const mezoErtek = (brutto: string | undefined) =>
+    !brutto ? '' : nettoMod ? String(nettobol(Number(brutto))) : brutto
+  /** A beírt szövegből a tárolt bruttó. */
+  const beirt = (szoveg: string) =>
+    szoveg === '' ? '' : nettoMod ? String(bruttobol(Number(szoveg))) : szoveg
+  /** A mező alatti sor: a másik szerinti ár. */
+  const masikAr = (brutto: number) =>
+    nettoMod ? `bruttó ${ft(brutto)}` : `nettó ${ft(nettobol(brutto))}`
 
   const aktivCsomagok = katalogus.packages.filter((p) => p.active)
 
@@ -552,6 +607,18 @@ function ContractForm({
         </div>
 
         <div className="lap-torzs">
+          {/* Fent, minden ár előtt: bruttóban vagy nettóban írják be. */}
+          <div className="armod-sor">
+            <span className="halk">Árak megadása:</span>
+            <KetallasuCsuszka bal="Bruttó" jobb="Nettó" jobbra={nettoMod}
+                              cimke="Nettó árak megadása" onValt={modValt} />
+            <small className="halk">
+              {nettoMod
+                ? 'Nettó árakat írsz be; alattuk a bruttó (+27% ÁFA).'
+                : 'Bruttó árakat írsz be; alattuk a nettó.'}
+            </small>
+          </div>
+
           <div className="szakasz">
             <div className="fej">Cég</div>
             {contract ? (
@@ -590,10 +657,12 @@ function ContractForm({
                 foglalás típusa mondja meg (Hozom-viszem), nem ez a mező. */}
             {hozomViszem && (
               <div className="mezo">
-                <span>Fuvar ára alkalmanként</span>
+                <span>Fuvar ára alkalmanként ({nettoMod ? 'nettó' : 'bruttó'})</span>
                 <input className="beviteli" type="number" inputMode="numeric" min={0}
-                       value={fuvardij} placeholder="pl. 4000"
-                       onChange={(e) => setFuvardij(e.target.value)} />
+                       aria-label="Fuvar ára alkalmanként"
+                       value={mezoErtek(fuvardij)} placeholder={nettoMod ? 'pl. 3150' : 'pl. 4000'}
+                       onChange={(e) => setFuvardij(beirt(e.target.value))} />
+                {Number(fuvardij) > 0 && <small className="halk">{masikAr(Number(fuvardij))}</small>}
                 <small>
                   A munka árán FELÜL, egy útra. Üresen hagyva nincs külön
                   megállapodva.
@@ -613,7 +682,7 @@ function ContractForm({
               ))}
             </div>
             <p className="halk" style={{ fontSize: 'var(--m-xs)' }}>
-              Bruttó árak. <strong>Céges</strong>: a cég autói. <strong>Magán</strong>: a cég
+              {nettoMod ? 'Nettó árak.' : 'Bruttó árak.'} <strong>Céges</strong>: a cég autói. <strong>Magán</strong>: a cég
               dolgozóinak saját autója (a foglalásnál „Saját"). Amit üresen hagysz, arra
               nincs megállapodás — az listaáron megy.
             </p>
@@ -632,13 +701,14 @@ function ContractForm({
                       return (
                         <span key={kulcs} className="szerz-mezo">
                           <input className="beviteli szam" type="number" inputMode="numeric"
-                                 step={500} min={0}
+                                 step={nettoMod ? 100 : 500} min={0}
                                  aria-label={`${p.name} · ${SIZE_LABEL[m]} · ${KIND_LABEL[f]} ár`}
-                                 value={arak[kulcs] ?? ''}
-                                 onChange={(e) => setArak((a) => ({ ...a, [kulcs]: e.target.value }))} />
-                          {brutto > 0 && (
-                            <small className="halk">nettó {ft(Math.round(brutto / (1 + AFA)))}</small>
-                          )}
+                                 value={mezoErtek(arak[kulcs])}
+                                 onChange={(e) => {
+                                   const v = beirt(e.target.value)
+                                   setArak((a) => ({ ...a, [kulcs]: v }))
+                                 }} />
+                          {brutto > 0 && <small className="halk">{masikAr(brutto)}</small>}
                         </span>
                       )
                     }),
@@ -705,8 +775,10 @@ function BerletKartya({ cim, maradt, osszes, lejart, children }: {
   )
 }
 
-function CegKartya({ cim, nev, hozomViszem, arDb, autok, children }: {
+function CegKartya({ cim, cegId, nev, hozomViszem, arDb, autok, children }: {
   cim: string
+  /** A cég: ehhez tartozik az igazolólap. */
+  cegId: string | null
   nev: string
   hozomViszem: boolean
   arDb: number
@@ -714,12 +786,26 @@ function CegKartya({ cim, nev, hozomViszem, arDb, autok, children }: {
   children: React.ReactNode
 }) {
   const [nyitva, setNyitva] = useState(false)
+  // Az igazolólap ablaka. Innen is megnyitható (nem csak az Ügyfelek → Cég
+  // szerint nézetből): itt kezelik a szerződést, itt keresik a lapját is —
+  // kitöltés, oszlopok és lábléc, lezárás, Word letöltés.
+  const [lapNyitva, setLapNyitva] = useState(false)
   return (
     <div className="panel" data-nyitva={nyitva}>
       <KartyaFej nyitva={nyitva} onValt={() => setNyitva(!nyitva)}>
         {cim}
       </KartyaFej>
       <div className="panel-torzs">
+        {/* Csukott kártyán is látszik: egy mozdulat legyen megnyitni. */}
+        {cegId && (
+          <div className="ceg-lap-sor">
+            <button className="btn" onClick={() => setLapNyitva(true)}>Igazolólap</button>
+            <span className="halk">havi lap, beállítás, Word letöltés</span>
+          </div>
+        )}
+        {lapNyitva && cegId && (
+          <IgazoloLap cegId={cegId} cegNev={cim} onBezar={() => setLapNyitva(false)} />
+        )}
         {cim !== nev && (
           <div className="adatsor">
             <span>Kapcsolattartó</span><span className="ertek">{nev}</span>

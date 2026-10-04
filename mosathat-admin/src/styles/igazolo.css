@@ -20,6 +20,14 @@
 
 .igazolo-eszkozok { display: flex; flex-wrap: wrap; gap: var(--t2); }
 
+/* Másik hónap: év (szabadon) + hónap. */
+.honap-ugras {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--t2);
+  font-size: var(--m-sm);
+}
+.honap-ugras .ev-mezo { width: 5.5em; font-family: var(--betu-szam); text-align: center; }
+.honap-ugras select.beviteli { width: auto; min-width: 9em; }
+
 /* Szövegszerű gomb (link helyett: nem visz el sehova, csak lép). */
 .link-gomb {
   border: none; background: none; padding: 0;

@@ -29,6 +29,11 @@ import LapBeallitas from './LapBeallitas'
 //  lib/igazoloWord.ts) — a lezárt és a nyitott hónapé is.
 // ---------------------------------------------------------------------------
 
+/** A hónapok nevei a választóhoz: január … december. */
+const HONAP_NEVEK = Array.from({ length: 12 }, (_, i) =>
+  new Intl.DateTimeFormat('hu-HU', { month: 'long', timeZone: 'UTC' })
+    .format(new Date(Date.UTC(2026, i, 15))))
+
 export default function IgazoloLap({
   cegId,
   cegNev,
@@ -42,6 +47,9 @@ export default function IgazoloLap({
   const tulaj = user?.canEditCustomers === true
   const [kerdesAblak, kerdez] = useKerdes()
   const [honap, setHonap] = useState(() => honapElseje(maStr()))
+  // Az év mezőjének szövege. Külön állapot, mert gépelés közben („20…")
+  // még nem érvényes év — csak a teljes, négyjegyű évre lépünk.
+  const [evSzoveg, setEvSzoveg] = useState(() => maStr().slice(0, 4))
   const [lap, setLap] = useState<SheetDetail | null>(null)
   const [hiba, setHiba] = useState<string | null>(null)
   // A megnyitott sor (szerkesztés vagy új), és a beállítások ablaka.
@@ -69,6 +77,24 @@ export default function IgazoloLap({
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
   }, [onBezar, sor, beallit])
+
+  /**
+   * Egy másik hónapra lép (nyíl, választó, a lapok listája). A régi hónap
+   * adata azonnal eltűnik — különben a betöltés alatt egy pillanatra az előző
+   * hónap sorai és állapota látszana az új hónap neve alatt.
+   */
+  function lep(uj: string) {
+    if (uj === honap) return
+    setHonap(uj)
+    setEvSzoveg(uj.slice(0, 4))
+    setLap(null)
+  }
+
+  /** A választó: év (bármelyik, korlát nélkül) és hónap. */
+  function evValt(szoveg: string) {
+    setEvSzoveg(szoveg)
+    if (/^\d{4}$/.test(szoveg)) lep(`${szoveg}${honap.slice(4)}`)
+  }
 
   const zarva = Boolean(lap?.sheet?.closed_at)
   const oszlopok = (lap?.columns ?? []).filter((o) => o.visible)
@@ -160,14 +186,28 @@ export default function IgazoloLap({
           <div className="igazolo-fejsor">
             <div className="honap-lepteto">
               <button className="btn btn-kicsi" aria-label="Előző hónap"
-                      onClick={() => setHonap(honapPlusz(honap, -1))}>‹</button>
+                      onClick={() => lep(honapPlusz(honap, -1))}>‹</button>
               <strong className="honap-nev">{honapCim(honap)}</strong>
               <button className="btn btn-kicsi" aria-label="Következő hónap"
-                      onClick={() => setHonap(honapPlusz(honap, 1))}>›</button>
+                      onClick={() => lep(honapPlusz(honap, 1))}>›</button>
             </div>
             {allapot && (
               <span className="cimke-pill igazolo-allapot" data-zarva={zarva}>{allapot}</span>
             )}
+          </div>
+
+          {/* Bármelyik korábbi (vagy későbbi) hónap, korlát nélkül: az év
+              szabadon beírható, a hónap választható. A nyilakkal egyesével
+              lehet lépni, a lap alján pedig ott vannak a cég eddigi lapjai. */}
+          <div className="honap-ugras">
+            <span className="halk">Másik hónap:</span>
+            <input className="beviteli ev-mezo" inputMode="numeric" aria-label="Év"
+                   value={evSzoveg} maxLength={4}
+                   onChange={(e) => evValt(e.target.value.replace(/[^0-9]/g, ''))} />
+            <select className="beviteli" aria-label="Hónap" value={Number(honap.slice(5, 7))}
+                    onChange={(e) => lep(`${honap.slice(0, 4)}-${String(e.target.value).padStart(2, '0')}-01`)}>
+              {HONAP_NEVEK.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
+            </select>
           </div>
 
           {hiba && <div className="hibauzenet">{hiba}</div>}
@@ -177,7 +217,8 @@ export default function IgazoloLap({
             {!zarva && (
               <button className="btn btn-fo" onClick={() => setSor(ujSor())}>+ Új sor</button>
             )}
-            {tulaj && (
+            {/* Lezárt hónapnál nincs: annak a kinézete a lezáráskor rögzült. */}
+            {tulaj && !zarva && (
               <button className="btn" onClick={() => setBeallit(true)}>Oszlopok és lábléc</button>
             )}
             {tulaj && !zarva && sorok.length > 0 && (
@@ -191,9 +232,11 @@ export default function IgazoloLap({
           {zarva && (
             <div className="figyelmeztet">
               <span>
-                <strong>Ez a hónap le van zárva.</strong> A következő hónap lapja az
-                első sorral magától megnyílik.{' '}
-                <button className="link-gomb" onClick={() => setHonap(honapPlusz(honap, 1))}>
+                <strong>Ez a hónap le van zárva:</strong> csak megnézni és letölteni lehet.
+                Az oszlopai, a lábléce és az árai a lezáráskori állapotban maradnak —
+                akkor is, ha azóta a cég beállítása vagy szerződése változott.
+                A következő hónap lapja az első sorral magától megnyílik.{' '}
+                <button className="link-gomb" onClick={() => lep(honapPlusz(honap, 1))}>
                   Tovább: {honapCim(honapPlusz(honap, 1))}
                 </button>
               </span>
@@ -264,7 +307,7 @@ export default function IgazoloLap({
                 {lap.months.map((m) => (
                   <button key={m.month} className="btn btn-kicsi"
                           data-aktiv={m.month.slice(0, 10) === honap}
-                          onClick={() => setHonap(m.month.slice(0, 10))}>
+                          onClick={() => lep(m.month.slice(0, 10))}>
                     {honapCim(m.month.slice(0, 10))}
                     <span className="halk"> · {m.rows} sor{m.closed ? ' · lezárva' : ''}</span>
                   </button>

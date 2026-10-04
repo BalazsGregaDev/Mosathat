@@ -7,6 +7,7 @@ import {
   type ContractRow, type PassBalanceRow,
 } from '../../lib/types'
 import SzerzodesArak from './SzerzodesArak'
+import IgazoloLap from '../igazolo/IgazoloLap'
 
 // ---------------------------------------------------------------------------
 //  Cégek és bérletesek — alkalmazotti nézet
@@ -27,6 +28,8 @@ export default function PartnersView() {
   const [cegek, setCegek] = useState<ContractRow[] | null>(null)
   const [hiba, setHiba] = useState<string | null>(null)
   const [q, setQ] = useState('')
+  // A megnyitott igazolólap (melyik cégé).
+  const [lap, setLap] = useState<{ id: string; nev: string } | null>(null)
 
   useEffect(() => {
     Promise.all([data.listPasses(), data.listContracts()])
@@ -67,7 +70,47 @@ export default function PartnersView() {
         aria-label="Keresés"
       />
 
+      {/* A szerződéses cégek elöl — mint a tulajdonosi nézetben, ahol ez az
+          első fül. */}
       <div className="panel panelek-szeles">
+        <h3>Szerződéses cégek</h3>
+        <div className="panel-torzs">
+          {szurtCegek.length === 0 ? (
+            <div className="ures">Nincs szerződéses cég.</div>
+          ) : (
+            szurtCegek.map((c) => (
+              <div key={c.id} className="ceg-kartya">
+                <div className="ceg-fej">
+                  <strong>{c.company_name || c.customer_name}</strong>
+                  {c.pickup_delivery && (
+                    <span className="cimke-pill" data-r="hozomviszem">
+                      Hozom-viszem
+                      {/* Az ár is ott van a címkén: az alkalmazott ezt a
+                          képernyőt telefon közben nézi, és ilyenkor pont ez a
+                          kérdés — „és a fuvar mennyi?". */}
+                      {c.pickup_delivery_fee_huf != null
+                        && ` · ${ft(c.pickup_delivery_fee_huf)} / út`}
+                    </span>
+                  )}
+                </div>
+                {/* Az igazolólap: az alkalmazott is kitölti, aláíratja és
+                    letölti (oszlopot állítani és lezárni a tulajdonos tud). */}
+                <div className="ceg-lap-sor">
+                  <button className="btn btn-kicsi"
+                          onClick={() => setLap({ id: c.company_id, nev: c.company_name || c.customer_name })}>
+                    Igazolólap
+                  </button>
+                </div>
+                {/* Csomagonként: normál és nagy méret, Céges (a cég autói) és
+                    Magán (a dolgozók saját autója) ár. */}
+                <SzerzodesArak prices={c.prices} />
+                {c.notes && <p className="halk" style={{ fontSize: 'var(--m-xs)' }}>{c.notes}</p>}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+      <div className="panel panelek-szeles" style={{ marginTop: 'var(--t4)' }}>
         <h3>Érvényes bérletek</h3>
         <div className="panel-torzs">
           {bCsoport.size === 0 ? (
@@ -120,36 +163,7 @@ export default function PartnersView() {
         </div>
       </div>
 
-      <div className="panel panelek-szeles" style={{ marginTop: 'var(--t4)' }}>
-        <h3>Szerződéses cégek</h3>
-        <div className="panel-torzs">
-          {szurtCegek.length === 0 ? (
-            <div className="ures">Nincs szerződéses cég.</div>
-          ) : (
-            szurtCegek.map((c) => (
-              <div key={c.id} className="ceg-kartya">
-                <div className="ceg-fej">
-                  <strong>{c.company_name || c.customer_name}</strong>
-                  {c.pickup_delivery && (
-                    <span className="cimke-pill" data-r="hozomviszem">
-                      Hozom-viszem
-                      {/* Az ár is ott van a címkén: az alkalmazott ezt a
-                          képernyőt telefon közben nézi, és ilyenkor pont ez a
-                          kérdés — „és a fuvar mennyi?". */}
-                      {c.pickup_delivery_fee_huf != null
-                        && ` · ${ft(c.pickup_delivery_fee_huf)} / út`}
-                    </span>
-                  )}
-                </div>
-                {/* Csomagonként: normál és nagy méret, Céges (a cég autói) és
-                    Magán (a dolgozók saját autója) ár. */}
-                <SzerzodesArak prices={c.prices} />
-                {c.notes && <p className="halk" style={{ fontSize: 'var(--m-xs)' }}>{c.notes}</p>}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+      {lap && <IgazoloLap cegId={lap.id} cegNev={lap.nev} onBezar={() => setLap(null)} />}
     </div>
   )
 }

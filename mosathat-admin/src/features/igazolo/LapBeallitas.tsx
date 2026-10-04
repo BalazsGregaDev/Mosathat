@@ -22,8 +22,9 @@ import { useKerdes } from '../common/Kerdes'
 //  a szerződésből számoljuk, itt nem kell beírni. Alájuk jön a saját szöveg
 //  (pl. „Fizetés havonta, átutalással.").
 //
-//  A beállítás az összes hónapra érvényes, a régiekre is: a lap csak adat,
-//  a Word fájl mindig a mostani oszlopokkal készül.
+//  A beállítás a NYITOTT hónapokra érvényes. A lezárt hónap a lezáráskori
+//  oszlopokkal, lábléccel és árakkal marad (az adatbázis rögzíti) — így egy
+//  régi lap Word fájlja akkor is ugyanaz, ha azóta itt bármi változott.
 // ---------------------------------------------------------------------------
 
 export default function LapBeallitas({
@@ -155,6 +156,8 @@ export default function LapBeallitas({
             <small className="halk">
               Az alap oszlopokat a program tölti ki a foglalásból; átnevezhetők és
               elrejthetők. A saját oszlopokba szöveget írtok a sor kitöltésekor.
+              A változás a nyitott hónapokra érvényes; a lezártak úgy maradnak,
+              ahogy lezáráskor voltak.
             </small>
           </div>
 

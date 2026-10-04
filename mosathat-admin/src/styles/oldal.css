@@ -419,6 +419,22 @@
   margin-bottom: var(--t3);
 }
 
+/* --- szerződés: bruttó / nettó csúszka az űrlap tetején ------------------------ */
+.armod-sor {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--t2) var(--t3);
+  padding: var(--t2) var(--t3);
+  background: var(--lap-2); border: 1px solid var(--keret); border-radius: var(--r);
+  font-size: var(--m-sm);
+}
+.armod-sor small { flex-basis: 100%; font-size: var(--m-xs); }
+
+/* Kétállású csúszka: a sáv mindig színes, a két szó közül az érvényes vastag. */
+.csuszka.ketallasu .csuszka-sav { background: var(--zold); }
+.csuszka.ketallasu .oldal { color: var(--szoveg-halk); }
+.csuszka.ketallasu .oldal[data-aktiv='true'] {
+  color: var(--szoveg); font-weight: var(--vastag-eros);
+}
+
 /* --- szerződés: árak csomagonként ----------------------------------------------
    Egy csomag egy kis rács: fent a két méret, balra a két fajta (Céges,
    Magán). Telefonon is három oszlop marad — a mezők keskenyek, de egy
