@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { honapCim, honapElseje, honapPlusz, maStr } from '../../lib/format'
+import { honapCim, honapPlusz, maStr } from '../../lib/format'
 import type { SheetCompany } from '../../lib/types'
+import { idoszakNapok, naptariHonap } from '../../lib/igazolo'
 import IgazoloLap from './IgazoloLap'
 import HonapUgras from './HonapUgras'
 
@@ -27,7 +28,10 @@ import HonapUgras from './HonapUgras'
 
 export default function IgazoloOldal() {
   const { data } = useApp()
-  const [honap, setHonap] = useState(() => honapElseje(maStr()))
+  // Alapból a mai nap: minden cégnél a mostani időszak látszik (a fordulónapos
+  // cégnél is az, amelyikbe a mai nap esik). A nyilak és a választó
+  // hónapokra lépnek (hónap elseje).
+  const [honap, setHonap] = useState(() => maStr())
   const [cegek, setCegek] = useState<SheetCompany[] | null>(null)
   const [hiba, setHiba] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -102,6 +106,12 @@ export default function IgazoloOldal() {
                   {c.berletes && <span className="cimke-pill szerzodes-pill">bérlet</span>}
                   {!c.kell && <span className="cimke-pill">már nem kell lap</span>}
                 </span>
+                {/* Fordulónapos cég: a pontos időszak. */}
+                {!naptariHonap(c.period_start) && (
+                  <span className="idoszak halk">
+                    időszak: {idoszakNapok(c.period_start, c.period_end)}
+                  </span>
+                )}
                 <span className="allas">
                   {c.rows === 0
                     ? <span className="halvany">nincs sora</span>

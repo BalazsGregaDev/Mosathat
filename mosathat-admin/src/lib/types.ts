@@ -604,6 +604,8 @@ export interface ContractRow {
   /** Hány ügyfél (sofőr) és hány autó tartozik a céghez. */
   ugyfelek: number
   jarmuvek: number
+  /** Az igazolólap fordulónapja (1–28; 1 = naptári hónap). */
+  cycle_day: number
 }
 
 /**
@@ -622,6 +624,8 @@ export interface ContractInput {
   valid_until: string | null
   notes: string | null
   prices: { package_id: string; size: ContractSize; kind: ContractKind; price_huf: number }[]
+  /** Az igazolólap fordulónapja (1–28). Ha hiányzik: új szerződésnél 1, szerkesztésnél marad. */
+  cycle_day?: number
 }
 
 /** Egy mennyiséges tétel a foglaláson — a munkalistán szerkeszthető. */
@@ -752,8 +756,14 @@ export interface SheetRow {
 /** Egy cég egy havi lapja, mindennel, ami a szerkesztőhöz és a Wordhöz kell. */
 export interface SheetDetail {
   company: { id: string; name: string; tax_number: string | null }
-  /** A hónap első napja: "2026-10-01". */
+  /** A választó hónapja (az időszak kezdő hónapja): "2026-10-01". */
   month: string
+  /**
+   * Az időszak első és utolsó napja. Naptári hónapnál 1-jétől a hónap
+   * végéig; 15-i fordulónapnál pl. "2026-10-15" … "2026-11-14".
+   */
+  period_start: string
+  period_end: string
   /** Null, ha erre a hónapra még nincs lap (nincs sora, és nem zárták le). */
   sheet: { id: string; closed_at: string | null; closed_by_name: string | null } | null
   columns: SheetColumn[]
@@ -762,7 +772,7 @@ export interface SheetDetail {
   prices: ContractPrice[]
   rows: SheetRow[]
   /** A cég eddigi lapjai, a legújabb elöl. */
-  months: { month: string; closed: boolean; rows: number }[]
+  months: { month: string; start: string; end: string; closed: boolean; rows: number }[]
 }
 
 /** Az Igazolólap menüpont listájának egy sora: egy cég egy hónapja. */
@@ -779,6 +789,9 @@ export interface SheetCompany {
   closed: boolean
   /** Hány korábbi hónap maradt lezáratlanul. */
   open_before: number
+  /** A cég időszaka erre a hónapra (fordulónap szerint). */
+  period_start: string
+  period_end: string
 }
 
 /** A napi nézet gombjához: a foglalás sora, előre kitöltve (vagy a meglévő). */

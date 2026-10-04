@@ -1,4 +1,4 @@
-import { ft } from './format'
+import { ft, honapCim } from './format'
 import {
   KIND_LABEL, SIZE_LABEL,
   type ContractPrice, type SheetColumn, type SheetRow,
@@ -89,4 +89,33 @@ export function lablecArak(arak: ContractPrice[]): string[] {
 /** Új saját oszlop kulcsa: "E_" és pár véletlen kisbetű/szám. */
 export function ujOszlopKulcs(): string {
   return `E_${Math.random().toString(36).slice(2, 8)}`
+}
+
+// --- az időszak neve -------------------------------------------------------------
+//
+//  Naptári hónapnál (fordulónap 1) a hónap neve: „2026. október".
+//  Más fordulónapnál a két szélső nap: „2026. okt. 15. – nov. 14."
+//  (évváltásnál mindkét oldalon az év: „2026. dec. 15. – 2027. jan. 14.").
+
+const ROVID = new Intl.DateTimeFormat('hu-HU', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+const nap = (d: string) => ROVID.format(new Date(`${d.slice(0, 10)}T12:00:00Z`))
+
+/** Naptári hónap-e az időszak (1-jétől indul). */
+export function naptariHonap(kezdet: string): boolean {
+  return kezdet.slice(8, 10) === '01'
+}
+
+/** „okt. 15. – nov. 14." — csak a napok, év nélkül. */
+export function idoszakNapok(kezdet: string, veg: string): string {
+  return `${nap(kezdet)} – ${nap(veg)}`
+}
+
+/** Az időszak teljes neve (lásd fent). */
+export function idoszakCim(kezdet: string, veg: string): string {
+  if (naptariHonap(kezdet)) return honapCim(kezdet.slice(0, 10))
+  const ev1 = kezdet.slice(0, 4)
+  const ev2 = veg.slice(0, 4)
+  return ev1 === ev2
+    ? `${ev1}. ${nap(kezdet)} – ${nap(veg)}`
+    : `${ev1}. ${nap(kezdet)} – ${ev2}. ${nap(veg)}`
 }

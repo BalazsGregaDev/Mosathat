@@ -34,12 +34,12 @@ export default function HonapUgras({ honap, onLep }: {
   function evIrva(s: string) {
     const tiszta = s.replace(/[^0-9]/g, '')
     setSzoveg(tiszta)
-    if (/^\d{4}$/.test(tiszta)) onLep(`${tiszta}${honap.slice(4)}`)
+    if (/^\d{4}$/.test(tiszta)) onLep(`${tiszta}-${honap.slice(5, 7)}-01`)
   }
 
   /** Egy évvel előre (+1) vagy vissza (-1). */
   function evLep(irany: 1 | -1) {
-    onLep(`${Number(ev) + irany}${honap.slice(4)}`)
+    onLep(`${Number(ev) + irany}-${honap.slice(5, 7)}-01`)
   }
 
   return (

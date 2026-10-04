@@ -197,6 +197,15 @@ export default function PartnersPage() {
                     </div>
                   )}
 
+                  <div className="adatsor">
+                    <span>Igazolólap időszaka</span>
+                    <span className="ertek">
+                      {c.cycle_day > 1
+                        ? `${c.cycle_day}. naptól a következő hónap ${c.cycle_day - 1}. napjáig`
+                        : 'naptári hónap'}
+                    </span>
+                  </div>
+
                   {c.valid_until && (
                     <div className="adatsor">
                       <span>Szerződés vége</span>
@@ -500,6 +509,15 @@ const nettobol = (brutto: number) => Math.round(brutto / (1 + AFA))
 /** Nettó → bruttó, egész forintra. */
 const bruttobol = (netto: number) => Math.round(netto * (1 + AFA))
 
+/** Egy mondat a fordulónap alá: meddig tart egy igazolólap. */
+function fordulonapSzoveg(n: number): string {
+  return n === 1
+    ? 'Egy igazolólap a naptári hónapot fedi (1-jétől a hónap végéig).'
+    : `Egy igazolólap minden hónap ${n}. napjától a következő hónap ${n - 1}. napjáig tart `
+      + '(a lap annak a hónapnak a nevét viseli, amelyikben kezdődik). Ha a cégnek van '
+      + 'nyitott, kitöltött lapja, a fordulónap csak annak lezárása után változtatható.'
+}
+
 function ContractForm({
   contract, onBezar, onKesz,
 }: {
@@ -517,6 +535,8 @@ function ContractForm({
   const [fuvardij, setFuvardij] = useState(
     contract?.pickup_delivery_fee_huf != null ? String(contract.pickup_delivery_fee_huf) : '')
   const [lejarat, setLejarat] = useState(contract?.valid_until?.slice(0, 10) ?? '')
+  // Az igazolólap fordulónapja: hányadikán kezdődik egy lap (1 = naptári hónap).
+  const [fordulo, setFordulo] = useState(contract?.cycle_day ?? 1)
   const [arak, setArak] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       (contract?.prices ?? []).map((p) => [arKulcs(p.package_id, p.size, p.kind), String(p.price_huf)]),
@@ -583,6 +603,7 @@ function ContractForm({
           ? Number(fuvardij) : null,
         valid_until: lejarat || null,
         notes: contract?.notes ?? null,
+        cycle_day: fordulo,
         // Csak a kiválasztott csomagok árai mennek: ha egy csomagot
         // kivettél, az árai is törlődnek.
         prices: valasztott.flatMap((p) => MERETEK.flatMap((m) => FAJTAK.map((f) => ({
@@ -646,6 +667,21 @@ function ContractForm({
                 <small>Üresen hagyva határozatlan.</small>
               </div>
             </div>
+            {/* A fordulónap: az igazolólap időszaka. 28-ig, hogy minden
+                hónapban (februárban is) legyen ilyen nap. */}
+            <div className="mezo">
+              <label htmlFor="fordulo">Igazolólap fordulónapja</label>
+              <select id="fordulo" className="beviteli" value={fordulo}
+                      onChange={(e) => setFordulo(Number(e.target.value))}>
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n === 1 ? '1. (naptári hónap)' : `${n}.`}
+                  </option>
+                ))}
+              </select>
+              <small>{fordulonapSzoveg(fordulo)}</small>
+            </div>
+
             <label className="jelolo" data-aktiv={hozomViszem}>
               <input type="checkbox" checked={hozomViszem}
                      onChange={(e) => setHozomViszem(e.target.checked)} />

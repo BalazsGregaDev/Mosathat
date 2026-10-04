@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
 import { ft, honapCim, honapElseje, honapPlusz, maStr } from '../../lib/format'
-import { cellaSzoveg, lablecArak } from '../../lib/igazolo'
+import { cellaSzoveg, idoszakCim, idoszakNapok, lablecArak, naptariHonap } from '../../lib/igazolo'
 import { igazoloLetolt } from '../../lib/igazoloWord'
 import type { SheetDetail, SheetRow } from '../../lib/types'
 import { useKerdes } from '../common/Kerdes'
@@ -30,12 +30,15 @@ import HonapUgras from './HonapUgras'
 //  lib/igazoloWord.ts) — a lezárt és a nyitott hónapé is.
 // ---------------------------------------------------------------------------
 
-/** Új, üres sor: a mostani hónapban a mai nappal, máskor a hónap elsejével. */
-function uresSor(honap: string): SheetRow {
+/**
+ * Új, üres sor: ha a mai nap az időszakba esik, a mai nappal, különben az
+ * időszak első napjával (15-i fordulónál pl. okt. 15.).
+ */
+function uresSor(kezdet: string, veg: string): SheetRow {
   const ma = maStr()
   return {
     id: null, booking_id: null,
-    day: honapElseje(ma) === honap ? ma : honap,
+    day: ma >= kezdet && ma <= veg ? ma : kezdet,
     plate: null, km: null, net_huf: null, name: null,
     extra: {}, signature: null, signed_at: null,
   }
@@ -59,7 +62,11 @@ export default function IgazoloLap({
   const { data, user } = useApp()
   const tulaj = user?.canEditCustomers === true
   const [kerdesAblak, kerdez] = useKerdes()
-  const [honap, setHonap] = useState(() => honapElseje(kezdoHonap ?? maStr()))
+  // Amit az adatbázistól kérünk: egy hónap elseje (a választó hónapja), vagy
+  // egy nap (akkor az az időszak jön, amelyikbe esik). Alapból a MAI nap: így
+  // 15-i fordulónál okt. 4-én a szept. 15. – okt. 14. lap nyílik, nem a
+  // még el sem kezdődött októberi.
+  const [kert, setKert] = useState(() => kezdoHonap ?? maStr())
   const [lap, setLap] = useState<SheetDetail | null>(null)
   const [hiba, setHiba] = useState<string | null>(null)
   // A megnyitott sor (szerkesztés vagy új), és a beállítások ablaka.
@@ -73,17 +80,17 @@ export default function IgazoloLap({
 
   const betolt = useCallback(async () => {
     try {
-      const d = await data.getSheet(cegId, honap)
+      const d = await data.getSheet(cegId, kert)
       setLap(d)
       setHiba(null)
       if (ujSorKell.current) {
         ujSorKell.current = false
-        if (!d.sheet?.closed_at) setSor(uresSor(honap))
+        if (!d.sheet?.closed_at) setSor(uresSor(d.period_start, d.period_end))
       }
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
     }
-  }, [data, cegId, honap])
+  }, [data, cegId, kert])
 
   useEffect(() => { void betolt() }, [betolt])
   // Ha a tableten aláírnak, a pultnál nyitott lap is frissül.
@@ -102,10 +109,14 @@ export default function IgazoloLap({
    * hónap sorai és állapota látszana az új hónap neve alatt.
    */
   function lep(uj: string) {
-    if (uj === honap) return
-    setHonap(uj)
+    if (uj === kert) return
+    setKert(uj)
     setLap(null)
   }
+
+  // A látott hónap (a nyilak és a választó ebből lépnek): a betöltött lap
+  // választó-hónapja; betöltés közben a kért dátum hónapja.
+  const honap = lap ? lap.month.slice(0, 10) : honapElseje(kert)
 
   const zarva = Boolean(lap?.sheet?.closed_at)
   const oszlopok = (lap?.columns ?? []).filter((o) => o.visible)
@@ -115,7 +126,12 @@ export default function IgazoloLap({
   const nettoLatszik = oszlopok.some((o) => o.key === 'NETTO')
   const arSorok = lablecArak(lap?.prices ?? [])
 
-  function ujSor(): SheetRow { return uresSor(honap) }
+  function ujSor(): SheetRow {
+    return lap ? uresSor(lap.period_start, lap.period_end) : uresSor(honap, honap)
+  }
+  // Az időszak neve: naptári hónapnál „2026. október", 15-i fordulónál
+  // „2026. okt. 15. – nov. 14.".
+  const idoszak = lap ? idoszakCim(lap.period_start, lap.period_end) : honapCim(honap)
 
   /** A Word fájl: a böngésző állítja össze a lap mostani állapotából. */
   async function word() {
@@ -136,13 +152,14 @@ export default function IgazoloLap({
       ? ` ${alairasNelkul} sorról hiányzik az aláírás — a kinyomtatott lapon még aláírható.`
       : ''
     if (!(await kerdez({
-      cim: `Lezárod a ${honapCim(honap)} lapot?`,
-      szoveg: 'Lezárás után a sorok nem módosíthatók, és erre a hónapra új sor sem vehető fel. '
+      cim: `Lezárod a(z) ${idoszak} lapot?`,
+      szoveg: 'Lezárás után a sorok nem módosíthatók, és erre az időszakra új sor sem vehető fel. '
         + 'Ha javítani kell, újranyitható.' + hianyzik,
       igen: 'Lezárás', nem: 'Mégse',
     }))) return
     try {
-      await data.closeSheet(cegId, honap)
+      // Az időszak első napját küldjük: így pontosan ez a lap zárul le.
+      await data.closeSheet(cegId, lap?.period_start ?? honap)
       await betolt()
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
@@ -151,12 +168,12 @@ export default function IgazoloLap({
 
   async function ujranyit() {
     if (!(await kerdez({
-      cim: `Újranyitod a ${honapCim(honap)} lapot?`,
+      cim: `Újranyitod a(z) ${idoszak} lapot?`,
       szoveg: 'A sorok újra módosíthatók lesznek. A javítás után érdemes újra lezárni.',
       igen: 'Újranyitás', nem: 'Mégse',
     }))) return
     try {
-      await data.reopenSheet(cegId, honap)
+      await data.reopenSheet(cegId, lap?.period_start ?? honap)
       await betolt()
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
@@ -197,6 +214,13 @@ export default function IgazoloLap({
               <span className="cimke-pill igazolo-allapot" data-zarva={zarva}>{allapot}</span>
             )}
           </div>
+          {/* Nem naptári hónap (fordulónap): a pontos időszak a hónap alatt. */}
+          {lap && !naptariHonap(lap.period_start) && (
+            <div className="igazolo-idoszak">
+              Időszak: <strong>{idoszakNapok(lap.period_start, lap.period_end)}</strong>
+              <span className="halk"> (a szerződés fordulónapja szerint)</span>
+            </div>
+          )}
 
           {/* Bármelyik korábbi (vagy későbbi) hónap, korlát nélkül: az év
               szabadon beírható, a hónap választható. A nyilakkal egyesével
@@ -225,7 +249,7 @@ export default function IgazoloLap({
           {zarva && (
             <div className="figyelmeztet">
               <span>
-                <strong>Ez a hónap le van zárva:</strong> csak megnézni és letölteni lehet.
+                <strong>Ez az időszak le van zárva:</strong> csak megnézni és letölteni lehet.
                 Az oszlopai, a lábléce és az árai a lezáráskori állapotban maradnak —
                 akkor is, ha azóta a cég beállítása vagy szerződése változott.
                 A következő hónap lapja az első sorral magától megnyílik.{' '}
@@ -240,7 +264,7 @@ export default function IgazoloLap({
           {!lap && !hiba && <div className="betolt">Betöltés…</div>}
           {lap && sorok.length === 0 && (
             <div className="ures">
-              Ebben a hónapban még nincs sora. A napi nézetben a cég autójánál az
+              Ebben az időszakban még nincs sor. A napi nézetben a cég autójánál az
               „Igazolólap" gombbal, vagy itt a „+ Új sor" gombbal kerül rá.
             </div>
           )}
@@ -298,10 +322,12 @@ export default function IgazoloLap({
               <div className="szakasz-cim">Lapok</div>
               <div className="honap-gombok">
                 {lap.months.map((m) => (
-                  <button key={m.month} className="btn btn-kicsi"
-                          data-aktiv={m.month.slice(0, 10) === honap}
-                          onClick={() => lep(m.month.slice(0, 10))}>
-                    {honapCim(m.month.slice(0, 10))}
+                  // Az időszak első napjára lépünk: ha a fordulónap közben
+                  // változott, így is pontosan ez a lap nyílik meg.
+                  <button key={m.start} className="btn btn-kicsi"
+                          data-aktiv={m.start.slice(0, 10) === lap.period_start.slice(0, 10)}
+                          onClick={() => lep(m.start.slice(0, 10))}>
+                    {idoszakCim(m.start.slice(0, 10), m.end.slice(0, 10))}
                     <span className="halk"> · {m.rows} sor{m.closed ? ' · lezárva' : ''}</span>
                   </button>
                 ))}

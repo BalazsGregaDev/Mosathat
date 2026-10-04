@@ -1,5 +1,4 @@
-import { honapCim } from './format'
-import { cellaSzoveg, lablecArak } from './igazolo'
+import { cellaSzoveg, idoszakCim, lablecArak, naptariHonap } from './igazolo'
 import type { SheetColumn, SheetDetail, SheetRow } from './types'
 
 // ---------------------------------------------------------------------------
@@ -77,7 +76,11 @@ export function wordFajlnev(lap: SheetDetail): string {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // á → a, ő → o, ...
     .replace(/[^A-Za-z0-9-]+/g, '_')                        // minden más → _
     .replace(/^_+|_+$/g, '')
-  return `Igazololap_${ceg || 'ceg'}_${lap.month.slice(0, 7)}.docx`
+  // Naptári hónapnál „2026-10"; fordulónapnál az első nap: „2026-10-15".
+  const mikor = naptariHonap(lap.period_start)
+    ? lap.period_start.slice(0, 7)
+    : lap.period_start.slice(0, 10)
+  return `Igazololap_${ceg || 'ceg'}_${mikor}.docx`
 }
 
 /** Összeállítja a Word fájlt. */
@@ -188,7 +191,7 @@ export async function igazoloWord(lap: SheetDetail): Promise<Blob> {
   })
 
   // --- fejléc a lap tetején --------------------------------------------------
-  const alcim = [honapCim(lap.month.slice(0, 10))]
+  const alcim = [idoszakCim(lap.period_start, lap.period_end)]
   if (lap.company.tax_number) alcim.push(`Adószám: ${lap.company.tax_number}`)
   const fej = [
     new Paragraph({
@@ -214,7 +217,7 @@ export async function igazoloWord(lap: SheetDetail): Promise<Blob> {
 
   const doc = new Document({
     creator: 'Mosathat',
-    title: `${lap.company.name} – igazolólap – ${honapCim(lap.month.slice(0, 10))}`,
+    title: `${lap.company.name} – igazolólap – ${idoszakCim(lap.period_start, lap.period_end)}`,
     styles: { default: { document: { run: { font: 'Calibri', size: 20 } } } },
     sections: [{
       properties: {

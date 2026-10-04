@@ -230,3 +230,7 @@
   border: 1px solid var(--zold); border-radius: var(--r);
   padding: var(--t3); font-size: var(--m-sm);
 }
+
+/* Fordulónapos cég: az időszak a hónap alatt / a listában. */
+.igazolo-idoszak { font-size: var(--m-sm); margin-top: calc(-1 * var(--t2)); }
+.igazolo-ceg-nyit .idoszak { font-size: var(--m-xs); }
