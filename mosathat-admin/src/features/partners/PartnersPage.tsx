@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useApp, useCatalog } from '../../state/AppContext'
 import { ft } from '../../lib/format'
@@ -25,7 +25,13 @@ import KetallasuCsuszka from '../common/KetallasuCsuszka'
 //  is kikényszeríti, nem csak ez a képernyő.
 // ---------------------------------------------------------------------------
 
-export default function PartnersPage() {
+export default function PartnersPage({ fokuszCeg }: {
+  /**
+   * Ennek a cégnek a szerződése legyen nyitva (az Igazolólap menü „Szerződés
+   * részletei" gombja küldi): a Szerződéses cégek fülön, kinyitva, odagörgetve.
+   */
+  fokuszCeg?: string | null
+} = {}) {
   const { data, user } = useApp()
   // Ugyanaz a kapcsoló, mint az Ügyfelek képernyőn: itt is törzsadatról van
   // szó, csak a megállapodás oldaláról. Az alkalmazott a bérletet HASZNÁLJA
@@ -183,6 +189,7 @@ export default function PartnersPage() {
             {contracts.map((c) => (
               <CegKartya key={c.id} cim={c.company_name ?? c.customer_name}
                          cegId={c.company_id}
+                         kiemelt={fokuszCeg === c.company_id}
                          nev={c.customer_name} hozomViszem={c.pickup_delivery}
                          arDb={c.prices.length} autok={c.jarmuvek}>
                   {c.tax_number && (
@@ -811,8 +818,10 @@ function BerletKartya({ cim, maradt, osszes, lejart, children }: {
   )
 }
 
-function CegKartya({ cim, cegId, nev, hozomViszem, arDb, autok, children }: {
+function CegKartya({ cim, cegId, kiemelt, nev, hozomViszem, arDb, autok, children }: {
   cim: string
+  /** Erre a cégre érkeztünk (Szerződés részletei): nyitva, odagörgetve, kiemelve. */
+  kiemelt?: boolean
   /** A cég: ehhez tartozik az igazolólap. */
   cegId: string | null
   nev: string
@@ -821,13 +830,22 @@ function CegKartya({ cim, cegId, nev, hozomViszem, arDb, autok, children }: {
   autok: number
   children: React.ReactNode
 }) {
-  const [nyitva, setNyitva] = useState(false)
+  const [nyitva, setNyitva] = useState(kiemelt === true)
+  const doboz = useRef<HTMLDivElement>(null)
+  // A kiemelés pár másodperc után elhalványul: csak azt mutatja, hova érkeztünk.
+  const [villan, setVillan] = useState(kiemelt === true)
+  useEffect(() => {
+    if (!kiemelt) return
+    doboz.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    const t = window.setTimeout(() => setVillan(false), 2500)
+    return () => window.clearTimeout(t)
+  }, [kiemelt])
   // Az igazolólap ablaka. Innen is megnyitható (nem csak az Ügyfelek → Cég
   // szerint nézetből): itt kezelik a szerződést, itt keresik a lapját is —
   // kitöltés, oszlopok és lábléc, lezárás, Word letöltés.
   const [lapNyitva, setLapNyitva] = useState(false)
   return (
-    <div className="panel" data-nyitva={nyitva}>
+    <div className="panel" data-nyitva={nyitva} data-kiemelt={villan || undefined} ref={doboz}>
       <KartyaFej nyitva={nyitva} onValt={() => setNyitva(!nyitva)}>
         {cim}
       </KartyaFej>

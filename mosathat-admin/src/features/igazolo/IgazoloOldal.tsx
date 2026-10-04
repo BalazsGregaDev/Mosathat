@@ -26,7 +26,10 @@ import HonapUgras from './HonapUgras'
 //  A szétválasztás az ablakban és az adatbázisban is megvan, nem csak itt.
 // ---------------------------------------------------------------------------
 
-export default function IgazoloOldal() {
+export default function IgazoloOldal({ onSzerzodes }: {
+  /** „Szerződés részletei": átvált a Cégek és bérletesek oldalra, erre a cégre. */
+  onSzerzodes?: (cegId: string) => void
+}) {
   const { data } = useApp()
   // Alapból a mai nap: minden cégnél a mostani időszak látszik (a fordulónapos
   // cégnél is az, amelyikbe a mai nap esik). A nyilak és a választó
@@ -128,6 +131,13 @@ export default function IgazoloOldal() {
                 </span>
               </button>
               <div className="igazolo-ceg-gombok">
+                {/* Csak akinek van élő szerződése: a bérletes cégnek nincs mit
+                    megnyitni a szerződések között. */}
+                {c.szerzodes && onSzerzodes && (
+                  <button className="btn btn-kicsi" onClick={() => onSzerzodes(c.id)}>
+                    Szerződés részletei
+                  </button>
+                )}
                 {!c.closed && (
                   <button className="btn btn-kicsi" onClick={() => setNyitott({ ceg: c, ujSor: true })}>
                     + Sor

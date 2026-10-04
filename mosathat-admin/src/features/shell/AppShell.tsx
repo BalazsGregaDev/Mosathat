@@ -69,6 +69,10 @@ export default function AppShell() {
   const menu = MENU.filter((m) => !m.tulaj || teljesJogu)
 
   const [oldal, setOldal] = useState<Oldal>(teljesJogu ? 'attekintes' : 'nap')
+  // Az Igazolólap menü „Szerződés részletei" gombja: ennek a cégnek a
+  // szerződését kell megnyitni a Cégek és bérletesek oldalon. A menüből
+  // odalépve nincs ilyen (null) — akkor a lista a szokott módon nyílik.
+  const [szerzodesCeg, setSzerzodesCeg] = useState<string | null>(null)
   const [nap, setNap] = useState(maStr())
   // Nap, hét vagy hónap. A nyilak ehhez igazodnak: napi nézetben egy napot,
   // hetiben egy hetet, haviban egy hónapot lépnek. Ugyanaz a gomb, más lépés.
@@ -116,7 +120,7 @@ export default function AppShell() {
           <button
             key={m.id}
             aria-current={m.id === oldal ? 'page' : undefined}
-            onClick={() => { setOldal(m.id); setFiok(false) }}
+            onClick={() => { setOldal(m.id); setFiok(false); setSzerzodesCeg(null) }}
           >
             <span className="pont" />
             {m.cimke}
@@ -300,9 +304,13 @@ export default function AppShell() {
           {/* Az alkalmazott ugyanezt az adatot látja, de nem szerkesztőben:
               árlista és bérletlista. Nem ugyanaz a képernyő letiltva. */}
           {oldal === 'szolgaltatasok' && (teljesJogu ? <ServicesPage /> : <ServicesView />)}
-          {oldal === 'partnerek' && (teljesJogu ? <PartnersPage /> : <PartnersView />)}
+          {oldal === 'partnerek' && (teljesJogu
+            ? <PartnersPage fokuszCeg={szerzodesCeg} />
+            : <PartnersView fokuszCeg={szerzodesCeg} />)}
 
-          {oldal === 'igazolo' && <IgazoloOldal />}
+          {oldal === 'igazolo' && (
+            <IgazoloOldal onSzerzodes={(cegId) => { setSzerzodesCeg(cegId); setOldal('partnerek') }} />
+          )}
           {oldal === 'ugyfelek' && <CustomersPage />}
           {oldal === 'felhasznalok' && <UsersPage />}
           {oldal === 'beallitasok' && <SettingsPage />}

@@ -234,3 +234,11 @@
 /* Fordulónapos cég: az időszak a hónap alatt / a listában. */
 .igazolo-idoszak { font-size: var(--m-sm); margin-top: calc(-1 * var(--t2)); }
 .igazolo-ceg-nyit .idoszak { font-size: var(--m-xs); }
+
+/* „Szerződés részletei": a cég kártyája, ahova érkeztünk — egy rövid
+   kiemelés, ami elhalványul. */
+.panel[data-kiemelt], .ceg-kartya[data-kiemelt] {
+  box-shadow: 0 0 0 3px var(--zold);
+  transition: box-shadow .6s;
+}
+.panel, .ceg-kartya { transition: box-shadow .6s; }

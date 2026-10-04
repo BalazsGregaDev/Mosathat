@@ -22,7 +22,10 @@ import IgazoloLap from '../igazolo/IgazoloLap'
 //  Ezért itt ezek nem letiltott gombok, hanem egyszerűen nincsenek.
 // ---------------------------------------------------------------------------
 
-export default function PartnersView() {
+export default function PartnersView({ fokuszCeg }: {
+  /** Ennek a cégnek a szerződésére görgetünk (Igazolólap → Szerződés részletei). */
+  fokuszCeg?: string | null
+} = {}) {
   const { data } = useApp()
   const [berletek, setBerletek] = useState<PassBalanceRow[] | null>(null)
   const [cegek, setCegek] = useState<ContractRow[] | null>(null)
@@ -30,6 +33,16 @@ export default function PartnersView() {
   const [q, setQ] = useState('')
   // A megnyitott igazolólap (melyik cégé).
   const [lap, setLap] = useState<{ id: string; nev: string } | null>(null)
+
+  // A kiemelés pár másodperc után elhalványul.
+  const [villan, setVillan] = useState(Boolean(fokuszCeg))
+  useEffect(() => {
+    if (!fokuszCeg || !cegek) return
+    document.querySelector(`[data-ceg="${fokuszCeg}"]`)
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    const t = window.setTimeout(() => setVillan(false), 2500)
+    return () => window.clearTimeout(t)
+  }, [fokuszCeg, cegek])
 
   useEffect(() => {
     Promise.all([data.listPasses(), data.listContracts()])
@@ -79,7 +92,8 @@ export default function PartnersView() {
             <div className="ures">Nincs szerződéses cég.</div>
           ) : (
             szurtCegek.map((c) => (
-              <div key={c.id} className="ceg-kartya">
+              <div key={c.id} className="ceg-kartya" data-ceg={c.company_id}
+                   data-kiemelt={(villan && fokuszCeg === c.company_id) || undefined}>
                 <div className="ceg-fej">
                   <strong>{c.company_name || c.customer_name}</strong>
                   {c.pickup_delivery && (
