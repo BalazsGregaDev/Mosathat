@@ -9,6 +9,7 @@ import {
 import Szerkesztheto, { type Valaszthato } from '../common/Szerkesztheto'
 import { urlapMegnyilt } from '../../lib/kepernyo'
 import KartyaFej from '../common/KartyaFej'
+import IgazoloLap from '../igazolo/IgazoloLap'
 
 // ---------------------------------------------------------------------------
 //  Ügyfelek — egy oldal, három rendezés: jármű, ügyfél és cég szerint.
@@ -640,11 +641,14 @@ function UgyfelKartya({ c, onValtozas, szerkesztheto }: {
 
 function CegKartya({ c }: { c: CompanySummary }) {
   const [nyitva, setNyitva] = useState(false)
+  // Az igazolólap ablaka (csak szerződéses / bérletes cégnél).
+  const [lapNyitva, setLapNyitva] = useState(false)
   return (
     <div className="panel" data-nyitva={nyitva}>
       <KartyaFej nyitva={nyitva} onValt={() => setNyitva(!nyitva)}>
         {c.name}
         {c.szerzodes && <span className="cimke-pill szerzodes-pill">szerződés</span>}
+        {c.berletes && <span className="cimke-pill szerzodes-pill">bérlet</span>}
       </KartyaFej>
       <div className="panel-torzs">
         <div className="adatsor">
@@ -655,6 +659,19 @@ function CegKartya({ c }: { c: CompanySummary }) {
               : <span className="halvany">nincs</span>}
           </span>
         </div>
+
+        {/* Az igazolólap: a szerződéses és bérletes cégek havi lapja. Ezek a
+            cégek a lista elején állnak — őket keresik a leggyakrabban. A
+            gomb csukott kártyán is látszik: egy mozdulat legyen megnyitni. */}
+        {c.lapos && (
+          <div className="ceg-lap-sor">
+            <button className="btn" onClick={() => setLapNyitva(true)}>Igazolólap</button>
+            <span className="halk">havi lap: km, név, aláírás — Word letöltés</span>
+          </div>
+        )}
+        {lapNyitva && (
+          <IgazoloLap cegId={c.id} cegNev={c.name} onBezar={() => setLapNyitva(false)} />
+        )}
 
         {nyitva && (
           <>

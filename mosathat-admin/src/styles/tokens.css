@@ -46,6 +46,16 @@
   --narancs-halvany: #fdeedd;
   --narancs-sotet:   #9a4d0b;
 
+  /* --- többnapos munka ----------------------------------------------------
+     Lila: egyik állapotszínnel (zöld, borostyán, kék, piros) és az egyéb
+     szolgáltatás narancsával sem keverhető. A havi és a heti naptár sávja,
+     és a napi kártya „N napos" sora is ezt kapja — ugyanaz a jelentés,
+     ugyanaz a szín. */
+  --tobbnap:         #6b4fbb;
+  --tobbnap-halvany: #f1ecfb;
+  --tobbnap-keret:   #d6c8f2;
+  --tobbnap-sotet:   #4a3388;
+
   /* --- állapotszínek ------------------------------------------------------ */
   --v-varjuk:      #9aa39c;   /* CONFIRMED  — még nem jött meg */
   --v-erkezett:    #c9821f;   /* ARRIVED    — itt van, nem kezdtük el */

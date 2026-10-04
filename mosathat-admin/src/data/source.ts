@@ -4,7 +4,7 @@ import type {
   Extra, FullServicePrice,
   LatestStart, NewBookingInput, PackageMatrixRow, PackageExtraRow, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
   PlateLookup, Quote, CompanyHit, CompanyCandidate, AbsenceInput, AbsenceRow, DayAbsence,
-  CompanySummary, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
+  CompanySummary, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow,
 } from '../lib/types'
 
@@ -152,6 +152,17 @@ export interface DataSource {
   listVehicles(q?: string): Promise<VehicleSummary[]>
   /** Cégenként az összes autó (Ügyfelek → Cég szerint). */
   listCompanies(q?: string): Promise<CompanySummary[]>
+
+  // --- igazolólap ---
+  /** Egy cég egy havi lapja (month: bármelyik nap a hónapból). */
+  getSheet(companyId: string, month: string): Promise<SheetDetail>
+  /** Egy foglalás sora: a meglévő, vagy előre kitöltve. */
+  sheetForBooking(bookingId: string): Promise<SheetForBooking>
+  saveSheetRow(input: SheetRowInput): Promise<string>
+  deleteSheetRow(id: string): Promise<void>
+  closeSheet(companyId: string, month: string): Promise<void>
+  reopenSheet(companyId: string, month: string): Promise<void>
+  saveSheetSettings(companyId: string, s: { columns: SheetColumn[]; footer_text: string | null }): Promise<void>
   saveCustomer(patch: Record<string, unknown>): Promise<void>
   saveVehicle(patch: Record<string, unknown>): Promise<void>
   /** További autó egy meglévő ügyfélhez. A rendszám ütközését az adatbázis szűri. */
@@ -225,6 +236,8 @@ export interface DataSource {
   createPass(input: NewPassInput): Promise<string>
   deactivatePass(passId: string): Promise<void>
   listContracts(): Promise<ContractRow[]>
+  /** Szerződés törlése: a cég ügyfelei listaárra kerülnek, a foglalások ára marad. */
+  deleteContract(id: string): Promise<void>
   saveContract(input: ContractInput): Promise<string>
 
   /**

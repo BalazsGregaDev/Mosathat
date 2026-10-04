@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { azonosHonap, hetHetfoje, hetSzam, honapElseje, maE, napPlusz } from '../../lib/format'
-import type { DayBooking } from '../../lib/types'
-import MiniKartya from './MiniKartya'
+import { azonosHonap, hetHetfoje, hetSzam, honapElseje, maE, napPlusz, ora } from '../../lib/format'
+import { STATUS_LABEL, type DayBooking } from '../../lib/types'
+import { hetiSavok, tobbnaposE } from '../../lib/savok'
+import MiniKartya, { azonosito } from './MiniKartya'
 
 // ---------------------------------------------------------------------------
 //  Havi naptár
@@ -23,6 +24,12 @@ import MiniKartya from './MiniKartya'
 //
 //  Naponta öt tétel fér el, a maradék „+3 további"-ként látszik. Minden
 //  tételen elöl a rendszám, utána az idő — ugyanúgy, mint a napi nézetben.
+//
+//  A TÖBBNAPOS munkák, mint a heti nézetben, sávként futnak végig a napokon:
+//  a hét sorában, a napszám alatt, minden olyan napon, amikor az autó nálunk
+//  van. Ha a munka átnyúlik a következő hétre, a következő sorban folytatódik
+//  (a sáv vége nyitott, szaggatott). A sáv nem külön gomb: rákattintva —
+//  mint a cella bármely részén — arra a napra visz.
 //
 //  Miért nem hat sor fix magassággal: mert a hónapok 4–6 hetet ölelnek fel,
 //  és az üres sor csak helyet foglal. A rács annyi sorból áll, amennyi kell.
@@ -77,14 +84,19 @@ export default function MonthView({ nap, onNapra, onHetre }: {
   const napok = useMemo(() => {
     const m = new Map<string, DayBooking[]>()
     for (let i = 0; i < hetek * 7; i++) m.set(napPlusz(elso, i), [])
-    // Minden foglalás a kezdőnapján áll (a többnapos is, „6-ig" felirattal).
-    // Ami a rács előtt kezdődött, de belelóg, az a rács első napjára kerül.
+    // Az egynaposak a napjukon; a többnaposak sávként (lent, hetenként).
     for (const b of sorok ?? []) {
-      const kezd = b.service_date.slice(0, 10)
-      m.get(kezd < elso ? elso : kezd)?.push(b)
+      if (tobbnaposE(b)) continue
+      m.get(b.service_date.slice(0, 10))?.push(b)
     }
     return m
   }, [sorok, elso, hetek])
+
+  // Hetenként a többnapos sávok (hét oszlop: hétfő–vasárnap).
+  const hetiSav = useMemo(
+    () => Array.from({ length: hetek }, (_, sor) => hetiSavok(sorok ?? [], napPlusz(elso, sor * 7), 7)),
+    [sorok, elso, hetek],
+  )
 
   if (hiba) return <div className="hibauzenet">{hiba}</div>
   if (!sorok) return <div className="betolt">Betöltés…</div>
@@ -99,9 +111,13 @@ export default function MonthView({ nap, onNapra, onHetre }: {
       <div className="honapracs">
         {Array.from({ length: hetek }, (_, sor) => {
           const hetfo = napPlusz(elso, sor * 7)
+          const { savok, sorok: savSorok } = hetiSav[sor]
 
           return (
-            <div className="honapsor" key={hetfo}>
+            // A sávsorok száma CSS-változóként megy le: a napszám alatt ennyi
+            // sornyi helyet hagyunk, hogy a sávok ne takarják a tételeket.
+            <div className="honapsor" key={hetfo}
+                 style={{ '--savsor': savSorok } as React.CSSProperties}>
               <button className="hetszam" onClick={() => onHetre(hetfo)}
                       title={`A ${hetSzam(hetfo)}. hét megnyitása heti nézetben`}>
                 <span className="szam">{hetSzam(hetfo)}</span>
@@ -111,7 +127,11 @@ export default function MonthView({ nap, onNapra, onHetre }: {
               {Array.from({ length: 7 }, (__, i) => {
                 const d = napPlusz(hetfo, i)
                 const lista = napok.get(d) ?? []
-                const latszik = lista.slice(0, MAX)
+                // A több napon át itt álló autók is számítanak a napba.
+                const atfuto = savok.filter((s) => s.tol <= i && i <= s.ig).length
+                const osszes = lista.length + atfuto
+                // Ahány sávsor, annyival kevesebb kártya fér a cellába.
+                const latszik = lista.slice(0, Math.max(1, MAX - savSorok))
                 const tobb = lista.length - latszik.length
 
                 return (
@@ -121,11 +141,11 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                     onClick={() => onNapra(d)}
                     data-kivul={!azonosHonap(d, elseje) || undefined}
                     data-ma={maE(d) || undefined}
-                    aria-label={`${d} — ${lista.length} foglalás`}
+                    aria-label={`${d} — ${osszes} foglalás`}
                   >
                     <span className="napszam">
                       <span>{Number(d.slice(8, 10))}</span>
-                      {lista.length > 0 && <span className="db">{lista.length}</span>}
+                      {osszes > 0 && <span className="db">{osszes}</span>}
                     </span>
 
                     {latszik.map((b) => (
@@ -136,6 +156,33 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                   </button>
                 )
               })}
+
+              {/* A többnapos sávok a cellák FÖLÖTT, ugyanabban a rácsban: a
+                  hét oszlopában pontosan azokon a napokon futnak végig, amikor
+                  az autó nálunk van. Nem fogják el a kattintást — a cella
+                  visz a napra, ahogy eddig. */}
+              {savok.length > 0 && (
+                <div className="honap-savok" aria-hidden="true">
+                  {savok.map((s) => {
+                    const viszi = s.b.pick_up_at ?? s.b.deadline_at
+                    return (
+                      <span key={s.b.id} className="honap-sav" data-a={s.b.status}
+                            data-korabbrol={s.korabbrol || undefined}
+                            data-tovabb={s.tovabb || undefined}
+                            title={`${azonosito(s.b)} · ${STATUS_LABEL[s.b.status]}`}
+                            style={{ gridColumn: `${s.tol + 2} / ${s.ig + 3}`, gridRow: s.sor + 1 }}>
+                        {/* A rendszám után rögtön: meddig marad („4-ig,
+                            17:00") — minden szakaszon, a következő hétre
+                            átnyúlón is. */}
+                        <span className="azon">{azonosito(s.b)}</span>
+                        <span className="ido">
+                          {Number(s.b.last_day.slice(8, 10))}-ig{viszi ? `, ${ora(viszi)}` : ''}
+                        </span>
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )
         })}

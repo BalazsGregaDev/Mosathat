@@ -54,7 +54,8 @@ await db.exec(`
 const q = async (s, p = []) => (await db.query(s, p)).rows
 const TABLAK = ['customers', 'vehicles', 'bookings', 'booking_items', 'booking_tasks',
   'multiday_allocations', 'passes', 'pass_items', 'pass_usages', 'contracts',
-  'contract_prices', 'audit_log', 'companies', 'day_order']
+  'contract_prices', 'audit_log', 'companies', 'day_order',
+  'company_sheets', 'company_sheet_rows', 'company_sheet_settings']
 const MARAD = ['packages', 'package_items', 'package_pricing', 'full_service_pricing',
   'extras', 'surcharges', 'business_hours', 'working_hours', 'break_windows',
   'shop_settings', 'day_overrides', 'staff']

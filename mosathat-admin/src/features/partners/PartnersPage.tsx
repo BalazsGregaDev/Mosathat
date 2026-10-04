@@ -206,10 +206,31 @@ export default function PartnersPage() {
                   </div>
 
                   {szerkesztheto && (
-                    <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }}
-                            onClick={() => setSzerkContract(c)}>
-                      Szerkesztés
-                    </button>
+                    <div className="sor-gombok" style={{ marginTop: 'var(--t3)' }}>
+                      <button className="btn btn-kicsi" onClick={() => setSzerkContract(c)}>
+                        Szerkesztés
+                      </button>
+                      {/* Törlés rákérdezéssel. A cég és az autói megmaradnak,
+                          csak a megállapodás tűnik el: onnantól listaáron
+                          mennek. A már felvett foglalások ára nem változik. */}
+                      <button className="btn btn-kicsi btn-veszelyes"
+                              onClick={async () => {
+                                if (!(await kerdez({
+                                  cim: `Biztosan törlöd a szerződést? ${c.company_name ?? c.customer_name}`,
+                                  szoveg: 'A cég autói ezután listaáron mennek. A cég, az autói és a '
+                                    + 'már felvett foglalások ára megmarad.',
+                                  igen: 'Törlés', nem: 'Mégse', veszelyes: true,
+                                }))) return
+                                try {
+                                  await data.deleteContract(c.id)
+                                  await ujra()
+                                } catch (e) {
+                                  setHiba(e instanceof Error ? e.message : String(e))
+                                }
+                              }}>
+                        Törlés
+                      </button>
+                    </div>
                   )}
               </CegKartya>
             ))}

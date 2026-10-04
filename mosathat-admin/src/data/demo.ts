@@ -21,6 +21,7 @@ import demoAdatok from '../../../supabase/demo/demo_adatok.sql?raw'
 
 import type {
   AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
+  SheetColumn, SheetDetail, SheetForBooking, SheetRowInput,
   BookingStatus, BookingTask, CalcInput, CalcResult, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
@@ -483,6 +484,42 @@ export class DemoSource implements DataSource {
     return r.map((x) => x.c)
   }
 
+  // --- igazolólap ---------------------------------------------------------------
+
+  async getSheet(companyId: string, month: string): Promise<SheetDetail> {
+    const [r] = await this.rows<{ d: SheetDetail }>(
+      `select sheet_detail($1::uuid, $2::date) as d`, [companyId, month])
+    return r.d
+  }
+
+  async sheetForBooking(bookingId: string): Promise<SheetForBooking> {
+    const [r] = await this.rows<{ d: SheetForBooking }>(
+      `select sheet_for_booking($1::uuid) as d`, [bookingId])
+    return r.d
+  }
+
+  async saveSheetRow(input: SheetRowInput): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select sheet_row_save($1::jsonb) as id`,
+      [JSON.stringify(input)])
+    return r.id
+  }
+
+  async deleteSheetRow(id: string): Promise<void> {
+    await this.pg.query(`select sheet_row_delete($1::uuid)`, [id])
+  }
+
+  async closeSheet(companyId: string, month: string): Promise<void> {
+    await this.pg.query(`select sheet_close($1::uuid, $2::date)`, [companyId, month])
+  }
+
+  async reopenSheet(companyId: string, month: string): Promise<void> {
+    await this.pg.query(`select sheet_reopen($1::uuid, $2::date)`, [companyId, month])
+  }
+
+  async saveSheetSettings(companyId: string, s: { columns: SheetColumn[]; footer_text: string | null }): Promise<void> {
+    await this.pg.query(`select sheet_settings_save($1::uuid, $2::jsonb)`, [companyId, JSON.stringify(s)])
+  }
+
   // --- áttekintés -------------------------------------------------------------
 
   async getDashboard(date: string): Promise<DashboardSummary> {
@@ -616,6 +653,10 @@ export class DemoSource implements DataSource {
 
   async listContracts(): Promise<ContractRow[]> {
     return this.rows<ContractRow>(`select * from v_contracts order by company_name, customer_name`)
+  }
+
+  async deleteContract(id: string): Promise<void> {
+    await this.pg.query(`select delete_contract($1::uuid)`, [id])
   }
 
   async saveContract(input: ContractInput): Promise<string> {

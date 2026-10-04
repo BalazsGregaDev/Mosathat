@@ -9,6 +9,7 @@ import {
   type BookingStatus, type DayBooking,
 } from '../../lib/types'
 import { azonosito } from './MiniKartya'
+import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
 
 // ---------------------------------------------------------------------------
 //  Egy kártya a napi listában.
@@ -91,6 +92,8 @@ export default function BookingCard({
   const tobbnapos = napok > 1
   const viszi = b.pick_up_at ?? b.deadline_at
   const megjegyzes = (b.notes ?? '').trim()
+  // Szerződéses / bérletes cég autója: a cég havi igazolólapjára kerül.
+  const igazolo = igazoloKell(b)
 
   // Állapotváltás. A kártya AZONNAL átvált (helyben, a listában), a mentés
   // utána megy. Nincs újratöltés, nincs „Betöltés…", és a kártya a helyén
@@ -195,8 +198,10 @@ export default function BookingCard({
           )}
         </div>
 
-        {(kovetkezo || torolheto || lemondott) && (
+        {(kovetkezo || torolheto || lemondott || igazolo) && (
           <div className="kartya-muvelet">
+            {/* Az igazolólap sora: átadáskor km, név, aláírás. */}
+            {igazolo && <IgazoloGomb bookingId={b.id} />}
             {torolheto && (
               <button className="btn btn-veszelyes" disabled={megy}
                       onClick={() => void kerdesUtan(TORLES_KERDES(b), 'CANCELLED_BY_CUSTOMER')}>

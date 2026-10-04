@@ -44,7 +44,7 @@ console.log('=== 1) napi lista: egy lista, kártya tartalma ===\n')
   ok('nincsenek órasávok', 0, r.orasav)
   ok('minden kártyának van fogója', r.lista, r.fogo)
   ok('az ügyfél neve nincs a kártyán', false, r.nevVan)
-  ok('a rendszám kétszer akkora (32 px)', 32, r.rendszamMeret)
+  ok('a rendszám asztalon nagyobb a régi 16 px-nél (22 px)', 22, r.rendszamMeret)
   ok('nincs külön „A nap" kártya', false, r.aNapPanel)
 
   const abc = p.locator('.napi-lista .kartya').filter({ hasText: 'ABC-123' }).first()

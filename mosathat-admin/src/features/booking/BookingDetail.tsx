@@ -14,6 +14,7 @@ import { useKerdes, type KerdesBeallitas } from '../common/Kerdes'
 import { ALLAPOT_KERDES, TORLES_KERDES } from '../common/kerdesek'
 import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../common/Ceg'
 import { EGYSEG } from '../services/Arlista'
+import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
 
 // A legördülők tartalma. A feliratok ugyanabból a szótárból jönnek, mint
 // mindenhol máshol — így nem lehet két különböző neve ugyanannak.
@@ -444,6 +445,18 @@ export default function BookingDetail({
                   )} />
 
                 <CegSor b={b} zarolt={lezart} onMent={mezoMent} />
+
+                {/* Szerződéses / bérletes cég autója: a cég havi igazolólapjának
+                    sora (km, név, aláírás). A cég mellett áll, mert a céghez
+                    tartozik — a munkalap lábába nem fért volna el egy sorban. */}
+                {igazoloKell(b) && (
+                  <div className="adatsor">
+                    <span>Igazolólap</span>
+                    <span className="ertek">
+                      <IgazoloGomb bookingId={b.id} className="btn btn-kicsi" felirat="Kitöltés, aláírás" />
+                    </span>
+                  </div>
+                )}
 
                 <Szerkesztheto
                   cimke="Rendszám" ertek={b.plate_raw} tipus="rendszam" zarolt={lezart}

@@ -4,6 +4,7 @@ import { useApp } from '../../state/AppContext'
 import { hetHetfoje, maE, napPlusz, napRovidCim, ora } from '../../lib/format'
 import { STATUS_LABEL, type DayBooking } from '../../lib/types'
 import MiniKartya, { azonosito } from './MiniKartya'
+import { hetiSavok, tobbnaposE } from '../../lib/savok'
 
 // ---------------------------------------------------------------------------
 //  Heti nézet
@@ -27,25 +28,6 @@ import MiniKartya, { azonosito } from './MiniKartya'
 
 const NAPOK = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
 const MAX = 10
-
-/** Hány nap telt el a hétfő óta (a hét előtti napnál negatív). */
-function napIndex(hetfo: string, nap: string): number {
-  return Math.round((Date.parse(`${nap}T12:00:00Z`) - Date.parse(`${hetfo}T12:00:00Z`)) / 86_400_000)
-}
-
-const tobbnaposE = (b: DayBooking) => b.last_day.slice(0, 10) > b.service_date.slice(0, 10)
-
-interface Sav {
-  b: DayBooking
-  /** Az első és az utolsó oszlop (0 = hétfő … 4 = péntek), a hétre vágva. */
-  tol: number
-  ig: number
-  /** Melyik sorba került (0 = legfelső). */
-  sor: number
-  /** Belelóg-e a hét elé / mögé — ilyenkor a sáv vége nyitott. */
-  korabbrol: boolean
-  tovabb: boolean
-}
 
 export default function WeekView({ nap, onMegnyit, onNapra }: {
   /** Bármelyik nap a hétből — a hétfőt magunk számoljuk ki belőle. */
@@ -91,22 +73,9 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
       else m.get(b.service_date.slice(0, 10))?.push(b)
     }
 
-    // A sávok elhelyezése: időrendben, mindegyik az első olyan sorba, ahol
-    // még nem fedi semmi. (Egy sorban több sáv is lehet egymás után.)
-    const foglalt: number[][] = []          // soronként: mely oszlopok foglaltak
-    const ki: Sav[] = []
-    for (const b of tobb.sort((a, z) => a.service_date.localeCompare(z.service_date))) {
-      const a = napIndex(hetfo, b.service_date.slice(0, 10))
-      const z = napIndex(hetfo, b.last_day.slice(0, 10))
-      const tol = Math.max(0, a)
-      const ig = Math.min(4, z)
-      if (ig < tol) continue                  // csak a hétvégét érinti: alul látszik
-      let sor = foglalt.findIndex((s) => s.every((o) => o < tol || o > ig))
-      if (sor === -1) { foglalt.push([]); sor = foglalt.length - 1 }
-      for (let o = tol; o <= ig; o++) foglalt[sor].push(o)
-      ki.push({ b, tol, ig, sor, korabbrol: a < 0, tovabb: z > 4 })
-    }
-    return { napok: m, savok: ki, savSorok: foglalt.length }
+    // A sávok elhelyezése a közös számítással (lib/savok.ts): öt oszlop.
+    const { savok: ki, sorok: savSor } = hetiSavok(tobb, hetfo, 5)
+    return { napok: m, savok: ki, savSorok: savSor }
   }, [sorok, hetfo])
 
   if (hiba) return <div className="hibauzenet">{hiba}</div>

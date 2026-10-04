@@ -710,6 +710,88 @@ export interface CompanySummary {
   latogatas: number
   utolso: string | null
   autok: CompanyCar[]
+  /** Van-e bérletes ügyfele. */
+  berletes: boolean
+  /** Kell-e neki igazolólap (szerződéses vagy bérletes). */
+  lapos: boolean
+}
+
+// --- Igazolólap ---------------------------------------------------------------
+//
+//  A szerződéses és bérletes cégek havi lapja: dátum, rendszám, km óra állás,
+//  nettó ár, név, aláírás — és a cég saját oszlopai. Az adatbázisban az adat
+//  él; a Word fájlt a böngésző készíti el belőle letöltéskor.
+
+/** Az alap oszlopok kulcsai. Átnevezhetők és elrejthetők, de nem törölhetők. */
+export type SheetAlapKulcs = 'DATUM' | 'RENDSZAM' | 'KM' | 'NETTO' | 'NEV' | 'ALAIRAS'
+export const SHEET_ALAP: SheetAlapKulcs[] = ['DATUM', 'RENDSZAM', 'KM', 'NETTO', 'NEV', 'ALAIRAS']
+
+/** Egy oszlop: alap (a fenti kulcsok egyike) vagy saját (E_ kezdetű kulcs). */
+export interface SheetColumn {
+  key: string
+  label: string
+  visible: boolean
+}
+
+/** A lap egy sora: egy átadott autó. */
+export interface SheetRow {
+  id: string | null
+  booking_id: string | null
+  day: string
+  plate: string | null
+  km: number | null
+  net_huf: number | null
+  name: string | null
+  /** A saját oszlopok értékei, kulcs szerint. */
+  extra: Record<string, string>
+  /** Az aláírás képe (PNG data URL), vagy null. */
+  signature: string | null
+  signed_at: string | null
+}
+
+/** Egy cég egy havi lapja, mindennel, ami a szerkesztőhöz és a Wordhöz kell. */
+export interface SheetDetail {
+  company: { id: string; name: string; tax_number: string | null }
+  /** A hónap első napja: "2026-10-01". */
+  month: string
+  /** Null, ha erre a hónapra még nincs lap (nincs sora, és nem zárták le). */
+  sheet: { id: string; closed_at: string | null; closed_by_name: string | null } | null
+  columns: SheetColumn[]
+  footer_text: string | null
+  /** A szerződés árai a lábléchez (bruttó; a nettót a felület számolja). */
+  prices: ContractPrice[]
+  rows: SheetRow[]
+  /** A cég eddigi lapjai, a legújabb elöl. */
+  months: { month: string; closed: boolean; rows: number }[]
+}
+
+/** A napi nézet gombjához: a foglalás sora, előre kitöltve (vagy a meglévő). */
+export interface SheetForBooking {
+  company_id: string | null
+  company_name: string | null
+  /** Kell-e a cégnek lap (szerződéses / bérletes). */
+  kell: boolean
+  columns: SheetColumn[]
+  /** A sor hónapjának lapja le van-e zárva. */
+  closed: boolean
+  row: SheetRow
+}
+
+export interface SheetRowInput {
+  id?: string | null
+  booking_id?: string | null
+  company_id?: string | null
+  day: string
+  plate: string | null
+  km: number | null
+  net_huf: number | null
+  name: string | null
+  extra: Record<string, string>
+  /**
+   * Csak akkor kell megadni, ha az aláírás változott: új kép, vagy '' (törlés).
+   * Ha a kulcs hiányzik, a mentett aláírás marad.
+   */
+  signature?: string
 }
 
 // --- Áttekintés ---------------------------------------------------------------

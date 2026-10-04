@@ -129,14 +129,15 @@
   display: flex; align-items: center; gap: 8px;
   min-width: 0;
   text-align: left;
-  background: var(--lap);
-  border: 1px solid var(--keret);
+  background: var(--tobbnap-halvany);
+  border: 1px solid var(--tobbnap-keret);
   border-left: 4px solid var(--v-varjuk);
+  color: var(--tobbnap-sotet);
   border-radius: var(--r-sm);
   padding: 6px 10px;
   line-height: 1.25;
 }
-.hetsav:hover { background: var(--lap-2); border-color: var(--keret-eros); }
+.hetsav:hover { background: #e8e0f8; border-color: var(--tobbnap); }
 .hetsav .rendszam {
   font-family: var(--betu-szam);
   font-size: var(--m-sm);
@@ -150,10 +151,9 @@
   padding: 0 6px; color: var(--szoveg-halk);
 }
 .hetsav .idotav {
-  margin-left: auto;
   font-family: var(--betu-szam);
   font-size: var(--m-xs);
-  color: var(--szoveg-halk);
+  color: var(--tobbnap);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   min-width: 0;
 }
@@ -240,6 +240,74 @@
 .honapfej .hetoszlop-fej { text-align: center; padding-left: 0; }
 
 .honapracs { display: flex; flex-direction: column; gap: var(--t2); }
+
+/* A hét sora a sávok viszonyítási pontja: a sávréteg ugyanazt a rácsot
+   kapja, mint a cellák, és a napszám alatt fut végig. */
+.honapsor { position: relative; }
+
+/* A napszám alatt annyi sornyi hely, ahány sávsor van ezen a héten — hogy a
+   sávok ne takarják a cella tételeit. */
+.honapsor .napszam { margin-bottom: calc(var(--savsor, 0) * 20px); }
+
+.honap-savok {
+  position: absolute;
+  left: 0; right: 0;
+  top: 29px;                      /* a cella felső térköze + a napszám sora */
+  display: grid;
+  grid-template-columns: 46px repeat(7, minmax(0, 1fr));
+  grid-auto-rows: 18px;
+  column-gap: var(--t2);
+  row-gap: 2px;
+  pointer-events: none;           /* a kattintás a cellára megy: arra a napra visz */
+}
+.honap-sav {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 0;
+  margin: 0 5px;                  /* a cella belső térközével egy vonalban */
+  padding: 0 6px;
+  /* Lila háttér: a többnapos munka egy pillantásra elválik az egynaposaktól.
+     A bal szél színe továbbra is az állapotot mondja. */
+  background: var(--tobbnap-halvany);
+  border: 1px solid var(--tobbnap-keret);
+  border-left: 3px solid var(--v-varjuk);
+  color: var(--tobbnap-sotet);
+  border-radius: var(--r-sm);
+  font-size: var(--m-xs);
+  line-height: 16px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.honap-sav .azon {
+  font-family: var(--betu-szam);
+  font-weight: var(--vastag-eros);
+  letter-spacing: .04em;
+}
+/* Az utolsó nap és óra KÖZVETLENÜL a rendszám után: „KER-100 4-ig, 17:00".
+   A sáv végén (a negyedike alatt) a „4-ig" csak azt ismételné, amit a sáv
+   vége már mutat. */
+.honap-sav .ido {
+  font-family: var(--betu-szam);
+  font-size: 10px;
+  color: var(--tobbnap);
+  overflow: hidden; text-overflow: ellipsis;
+}
+/* A hét elé / mögé nyúló sáv vége nyitott: a munka az előző / következő
+   sorban folytatódik. */
+.honap-sav[data-korabbrol] {
+  margin-left: 0; border-left-style: dashed;
+  border-top-left-radius: 0; border-bottom-left-radius: 0;
+}
+.honap-sav[data-tovabb] {
+  margin-right: 0; border-right: 2px dashed var(--keret-eros);
+  border-top-right-radius: 0; border-bottom-right-radius: 0;
+}
+.honap-sav[data-a='ARRIVED']     { border-left-color: var(--v-erkezett); }
+.honap-sav[data-a='IN_PROGRESS'] { border-left-color: var(--v-dolgozunk); }
+.honap-sav[data-a='READY']       { border-left-color: var(--v-kesz); }
+.honap-sav[data-a='COMPLETED']   { border-left-color: var(--v-lezart); opacity: .7; }
+.honap-sav[data-a='NO_SHOW'],
+.honap-sav[data-a='CANCELLED_BY_CUSTOMER'],
+.honap-sav[data-a='CANCELLED_BY_SHOP'] { border-left-color: var(--v-baj); opacity: .6; text-decoration: line-through; }
 
 .hetszam {
   display: flex; flex-direction: column; align-items: center; justify-content: center;

@@ -144,7 +144,8 @@ await p.waitForTimeout(1500)
     [...document.querySelector('.lap-torzs .szakasz').querySelectorAll(':scope > .adatsor')]
       .map((e) => e.firstElementChild.textContent.trim()))
   console.log(`         ${JSON.stringify(cimkek)}`)
-  ok('a sorok sorrendje', ['Név', 'Telefon', 'Cég', 'Rendszám', 'Autó', 'Hozza', 'Viszi', 'Méret',
+  // v38: szerződéses cégnél a Cég alatt ott az Igazolólap sora is.
+  ok('a sorok sorrendje', ['Név', 'Telefon', 'Cég', 'Igazolólap', 'Rendszám', 'Autó', 'Hozza', 'Viszi', 'Méret',
     'Jármű típus', 'Csomag', 'Egyéb szolgáltatás', 'Terjedelem', 'Típus', 'Munkaóra'], cimkek)
   const ceg = await p.locator('.adatsor').filter({ hasText: /^Cég/ }).first().innerText()
   ok('a cég rögzült elsőre is', true, ceg.includes('Autó Trans'))

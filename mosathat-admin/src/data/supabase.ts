@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import type {
   AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
+  SheetColumn, SheetDetail, SheetForBooking, SheetRowInput,
   BookingStatus, BookingTask, CalcInput, CalcResult, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
@@ -59,6 +60,11 @@ function emberiHiba(uzenet: string): string {
 /** Hogy a valós idejű kapcsolat hibáját egyszer írjuk ki, ne minden
  *  újrapróbálkozásnál. */
 let elojelzesVolt = false
+// Minden feliratkozás saját csatornanevet kap. Ugyanazzal a névvel a
+// Supabase kliense a MEGLÉVŐ csatornát adná vissza, amire feliratkozás után
+// már nem lehet új figyelőt tenni — két egyszerre nyitott figyelő (pl. a
+// napi nézet és egy nyitott igazolólap) így hibára futna.
+let csatornaSzam = 0
 
 function fail(op: string, error: { message: string } | null): never {
   throw new Error(`${op}: ${emberiHiba(error?.message ?? 'ismeretlen hiba')}`)
@@ -419,6 +425,46 @@ export class SupabaseSource implements DataSource {
     return (data ?? []) as CompanySummary[]
   }
 
+  // --- igazolólap ---------------------------------------------------------------
+
+  async getSheet(companyId: string, month: string): Promise<SheetDetail> {
+    const { data, error } = await this.sb.rpc('sheet_detail', { p_company: companyId, p_month: month })
+    if (error) fail('Igazolólap', error)
+    return data as SheetDetail
+  }
+
+  async sheetForBooking(bookingId: string): Promise<SheetForBooking> {
+    const { data, error } = await this.sb.rpc('sheet_for_booking', { p_booking_id: bookingId })
+    if (error) fail('Igazolólap', error)
+    return data as SheetForBooking
+  }
+
+  async saveSheetRow(input: SheetRowInput): Promise<string> {
+    const { data, error } = await this.sb.rpc('sheet_row_save', { p: input })
+    if (error) fail('Igazolólap mentése', error)
+    return data as string
+  }
+
+  async deleteSheetRow(id: string): Promise<void> {
+    const { error } = await this.sb.rpc('sheet_row_delete', { p_id: id })
+    if (error) fail('Sor törlése', error)
+  }
+
+  async closeSheet(companyId: string, month: string): Promise<void> {
+    const { error } = await this.sb.rpc('sheet_close', { p_company: companyId, p_month: month })
+    if (error) fail('Lezárás', error)
+  }
+
+  async reopenSheet(companyId: string, month: string): Promise<void> {
+    const { error } = await this.sb.rpc('sheet_reopen', { p_company: companyId, p_month: month })
+    if (error) fail('Újranyitás', error)
+  }
+
+  async saveSheetSettings(companyId: string, s: { columns: SheetColumn[]; footer_text: string | null }): Promise<void> {
+    const { error } = await this.sb.rpc('sheet_settings_save', { p_company: companyId, p: s })
+    if (error) fail('Oszlopok mentése', error)
+  }
+
   // --- áttekintés -------------------------------------------------------------
 
   async getDashboard(date: string): Promise<DashboardSummary> {
@@ -616,6 +662,11 @@ export class SupabaseSource implements DataSource {
     return (data ?? []) as ContractRow[]
   }
 
+  async deleteContract(id: string): Promise<void> {
+    const { error } = await this.sb.rpc('delete_contract', { p_id: id })
+    if (error) fail('Szerződés törlése', error)
+  }
+
   async saveContract(input: ContractInput): Promise<string> {
     const { data, error } = await this.sb.rpc('save_contract', { p: input })
     if (error) fail('Szerződés mentése', error)
@@ -644,11 +695,14 @@ export class SupabaseSource implements DataSource {
     // hogy újra kell tölteni. Így nem kell a kliensben újraépíteni azt,
     // amit az adatbázis nézetei már összeraknak.
     const csatorna = this.sb
-      .channel('mosathat-elo')
+      .channel(`mosathat-elo-${++csatornaSzam}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, onValtozas)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_tasks' }, onValtozas)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'day_order' }, onValtozas)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_absences' }, onValtozas)
+      // Az igazolólap: ha a tableten aláírnak, a pultnál nyitott lap is frissül.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_sheet_rows' }, onValtozas)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_sheets' }, onValtozas)
       // Ha a kapcsolat nem épül fel, a Supabase kliense a végtelenségig
       // újrapróbálkozik, és a böngésző konzolja megtelik WebSocket hibával —
       // magyarázat nélkül. Egyszer kiírjuk, mit jelent, és mit NEM jelent.

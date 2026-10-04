@@ -1,0 +1,171 @@
+/* Igazolólap: a cég havi lapja, egy sor kitöltése, az aláírás és a
+   beállítások ablaka. */
+
+/* --- a lap ablaka -------------------------------------------------------------
+   Szélesebb, mint a többi: a táblázat hat-nyolc oszlopa elférjen. */
+.lap-igazolo { width: min(1000px, 100%); }
+.lap-igazolo .lap-torzs { gap: var(--t4); }
+
+.igazolo-fejsor {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--t3);
+}
+.honap-lepteto { display: flex; align-items: center; gap: var(--t2); }
+.honap-lepteto .btn { min-width: 34px; justify-content: center; font-size: var(--m-md); }
+.honap-lepteto .honap-nev {
+  font-size: var(--m-lg); font-weight: var(--vastag-fej);
+  min-width: 10em; text-align: center;
+}
+.igazolo-allapot { background: var(--zold-halvany); color: var(--zold-sotet); }
+.igazolo-allapot[data-zarva='true'] { background: var(--lap-2); color: var(--szoveg-halk); }
+
+.igazolo-eszkozok { display: flex; flex-wrap: wrap; gap: var(--t2); }
+
+/* Szövegszerű gomb (link helyett: nem visz el sehova, csak lép). */
+.link-gomb {
+  border: none; background: none; padding: 0;
+  color: var(--zold-sotet); font: inherit; font-weight: var(--vastag-eros);
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+
+/* --- a táblázat --------------------------------------------------------------- */
+.igazolo-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--m-sm);
+}
+.igazolo-tabla th {
+  text-align: left;
+  font-size: var(--m-xs); letter-spacing: .04em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--keret-eros);
+}
+.igazolo-tabla td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--keret);
+  vertical-align: middle;
+}
+.igazolo-tabla tbody tr { cursor: pointer; }
+.igazolo-tabla tbody tr:hover { background: var(--lap-2); }
+.igazolo-tabla td[data-kulcs='KM'],
+.igazolo-tabla td[data-kulcs='NETTO'],
+.igazolo-tabla th[data-kulcs='KM'],
+.igazolo-tabla th[data-kulcs='NETTO'] { text-align: right; font-family: var(--betu-szam); }
+.igazolo-tabla td[data-kulcs='RENDSZAM'] { font-weight: var(--vastag-eros); letter-spacing: .03em; }
+.igazolo-tabla td .link-gomb { color: inherit; text-decoration: none; font-weight: inherit; }
+
+/* Az aláírás kicsiben: annyi, hogy látsszon, alá van-e írva. */
+.alairas-mini { height: 30px; max-width: 120px; object-fit: contain; display: block; }
+
+.igazolo-osszeg {
+  display: flex; flex-wrap: wrap; gap: var(--t2) var(--t5);
+  font-size: var(--m-sm); color: var(--szoveg-halk);
+}
+.igazolo-osszeg strong { color: var(--szoveg); font-family: var(--betu-szam); }
+.igazolo-osszeg .figyel { color: #7a5a14; }
+
+.igazolo-lablec {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: var(--m-sm);
+}
+.igazolo-lablec .szakasz-cim { margin-top: 0; }
+.igazolo-lablec .sajat-szoveg { margin-top: var(--t2); white-space: pre-wrap; }
+
+.honap-gombok { display: flex; flex-wrap: wrap; gap: var(--t2); margin-top: var(--t2); }
+.honap-gombok .btn[data-aktiv='true'] { border-color: var(--zold); background: var(--zold-halvany); }
+
+/* Telefonon a táblázat helyett soronként egy kis kártya: a cella elé a
+   felirat (data-cimke) kerül. Így nem kell oldalra görgetni — az ablak csak
+   fel-le húzható. */
+@media (max-width: 700px) {
+  .igazolo-tabla thead { display: none; }
+  .igazolo-tabla, .igazolo-tabla tbody, .igazolo-tabla tr, .igazolo-tabla td { display: block; }
+  .igazolo-tabla tr {
+    border: 1px solid var(--keret); border-radius: var(--r);
+    padding: 6px 10px; margin-bottom: var(--t2);
+  }
+  .igazolo-tabla td {
+    border: none; padding: 2px 0;
+    display: flex; justify-content: space-between; gap: var(--t3);
+    text-align: right !important;
+  }
+  .igazolo-tabla td::before {
+    content: attr(data-cimke);
+    color: var(--szoveg-halk); font-size: var(--m-xs);
+    text-align: left; font-family: var(--betu); font-weight: normal; letter-spacing: 0;
+  }
+  .honap-lepteto .honap-nev { min-width: 0; }
+}
+
+/* A lap lába: balra egy mondat a letöltésről, jobbra a gombok. */
+.igazolo-lab-szoveg { font-size: var(--m-xs); }
+@media (max-width: 560px) {
+  .lap-igazolo .lap-lab { flex-wrap: wrap; }
+  .igazolo-lab-szoveg { width: 100%; }
+  .lap-igazolo .lap-lab .gombok { width: 100%; }
+  .lap-igazolo .lap-lab .gombok .btn { flex: 1; justify-content: center; }
+}
+
+/* --- egy sor kitöltése -------------------------------------------------------- */
+.sorurlap .beviteli.szam { font-family: var(--betu-szam); }
+
+/* --- aláírás ------------------------------------------------------------------ */
+.alairas { display: flex; flex-direction: column; gap: var(--t2); }
+.alairas-vaszon {
+  display: block;
+  width: 100%;
+  background: #fff;
+  border: 1px dashed var(--keret-eros);
+  border-radius: var(--r);
+  /* Az ujj a mezőn rajzol, nem görget — különben aláírás közben az egész
+     ablak elcsúszna. */
+  touch-action: none;
+  cursor: crosshair;
+}
+.alairas-kep {
+  background: #fff;
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+  padding: var(--t2);
+  display: flex; justify-content: center;
+}
+.alairas-kep img { max-height: 110px; max-width: 100%; }
+.alairas-gombok { display: flex; align-items: center; gap: var(--t2); }
+.alairas-gombok .halk { margin-right: auto; }
+.alairas-ures {
+  padding: var(--t3); border: 1px dashed var(--keret); border-radius: var(--r);
+  text-align: center; font-size: var(--m-sm);
+}
+
+/* --- a gomb hibája (napi kártya, munkalap) ------------------------------------ */
+.igazolo-hiba { color: var(--v-baj); font-size: var(--m-xs); align-self: center; }
+
+/* --- beállítások: oszlopok ---------------------------------------------------- */
+.oszlop-lista { display: flex; flex-direction: column; gap: var(--t2); }
+.oszlop-sor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center; gap: var(--t3);
+}
+.oszlop-sor[data-rejtett='true'] .beviteli { color: var(--szoveg-halvany); }
+.oszlop-sor .latszik {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--m-sm); white-space: nowrap;
+}
+.oszlop-sor .latszik input { width: 17px; height: 17px; accent-color: var(--zold); }
+.oszlop-gombok { display: flex; align-items: center; gap: 6px; }
+.oszlop-gombok .alap-jel {
+  font-size: var(--m-xs); color: var(--szoveg-halvany);
+  min-width: 52px; text-align: center;
+}
+@media (max-width: 560px) {
+  .oszlop-sor { grid-template-columns: minmax(0, 1fr) auto; }
+  .oszlop-gombok { grid-column: 1 / -1; justify-content: flex-end; }
+}
+
+/* --- a cég kártyáján ---------------------------------------------------------- */
+.ceg-lap-sor {
+  display: flex; align-items: center; gap: var(--t3);
+  margin-top: var(--t2);
+}
+.ceg-lap-sor .halk { font-size: var(--m-xs); }
