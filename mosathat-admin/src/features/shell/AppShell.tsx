@@ -18,6 +18,7 @@ import DashboardPage from '../dashboard/DashboardPage'
 import SettingsPage from '../settings/SettingsPage'
 import ServicesView from '../services/ServicesView'
 import PartnersView from '../partners/PartnersView'
+import IgazoloOldal from '../igazolo/IgazoloOldal'
 import UsersPage from '../users/UsersPage'
 import ProfilPage from '../profil/ProfilPage'
 import ArlistaPanel, { PANEL_ALAP, type PanelAllapot } from '../services/ArlistaPanel'
@@ -29,7 +30,7 @@ import JelszoModal from '../common/JelszoModal'
 // tűnjön elveszettnek egy funkció, ami csak később jön.
 type Oldal =
   | 'attekintes' | 'nap' | 'szolgaltatasok' | 'partnerek' | 'ugyfelek'
-  | 'beallitasok' | 'felhasznalok' | 'profilom'
+  | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo'
 
 // A `tulaj: true` menüpontok az alkalmazottnak MEG SEM JELENNEK. Nem
 // szürkén, nem "nincs jogosultság" üzenettel — nincsenek ott. Egy szürke
@@ -41,6 +42,9 @@ type Oldal =
 const MENU: { id: Oldal; cimke: string; tulaj?: boolean }[] = [
   { id: 'attekintes', cimke: 'Áttekintés', tulaj: true },
   { id: 'nap', cimke: 'Időpontok' },
+  // Mindenkinek: a szerződéses / bérletes cégek havi lapja. Az alkalmazott
+  // kitölti és aláíratja, a tulajdonos ezen felül beállítja és lezárja.
+  { id: 'igazolo', cimke: 'Igazolólap' },
   { id: 'szolgaltatasok', cimke: 'Szolgáltatások' },
   { id: 'partnerek', cimke: 'Cégek és bérletesek' },
   { id: 'ugyfelek', cimke: 'Ügyfelek' },
@@ -298,6 +302,7 @@ export default function AppShell() {
           {oldal === 'szolgaltatasok' && (teljesJogu ? <ServicesPage /> : <ServicesView />)}
           {oldal === 'partnerek' && (teljesJogu ? <PartnersPage /> : <PartnersView />)}
 
+          {oldal === 'igazolo' && <IgazoloOldal />}
           {oldal === 'ugyfelek' && <CustomersPage />}
           {oldal === 'felhasznalok' && <UsersPage />}
           {oldal === 'beallitasok' && <SettingsPage />}

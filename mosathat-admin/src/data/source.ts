@@ -4,7 +4,7 @@ import type {
   Extra, FullServicePrice,
   LatestStart, NewBookingInput, PackageMatrixRow, PackageExtraRow, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
   PlateLookup, Quote, CompanyHit, CompanyCandidate, AbsenceInput, AbsenceRow, DayAbsence,
-  CompanySummary, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
+  CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow,
 } from '../lib/types'
 
@@ -155,6 +155,8 @@ export interface DataSource {
 
   // --- igazolólap ---
   /** Egy cég egy havi lapja (month: bármelyik nap a hónapból). */
+  /** Az Igazolólap menüpont: a lapos cégek egy hónap állásával. */
+  listSheetCompanies(month: string): Promise<SheetCompany[]>
   getSheet(companyId: string, month: string): Promise<SheetDetail>
   /** Egy foglalás sora: a meglévő, vagy előre kitöltve. */
   sheetForBooking(bookingId: string): Promise<SheetForBooking>

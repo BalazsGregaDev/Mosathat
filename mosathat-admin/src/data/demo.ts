@@ -21,7 +21,7 @@ import demoAdatok from '../../../supabase/demo/demo_adatok.sql?raw'
 
 import type {
   AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
-  SheetColumn, SheetDetail, SheetForBooking, SheetRowInput,
+  SheetColumn, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput,
   BookingStatus, BookingTask, CalcInput, CalcResult, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
@@ -485,6 +485,11 @@ export class DemoSource implements DataSource {
   }
 
   // --- igazolólap ---------------------------------------------------------------
+
+  async listSheetCompanies(month: string): Promise<SheetCompany[]> {
+    const [r] = await this.rows<{ d: SheetCompany[] }>(`select sheet_cegek($1::date) as d`, [month])
+    return r.d ?? []
+  }
 
   async getSheet(companyId: string, month: string): Promise<SheetDetail> {
     const [r] = await this.rows<{ d: SheetDetail }>(

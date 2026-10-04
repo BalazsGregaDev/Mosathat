@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
@@ -9,6 +9,7 @@ import type { SheetDetail, SheetRow } from '../../lib/types'
 import { useKerdes } from '../common/Kerdes'
 import SorUrlap from './SorUrlap'
 import LapBeallitas from './LapBeallitas'
+import HonapUgras from './HonapUgras'
 
 // ---------------------------------------------------------------------------
 //  Egy cég igazolólapja — havonta egy
@@ -29,27 +30,36 @@ import LapBeallitas from './LapBeallitas'
 //  lib/igazoloWord.ts) — a lezárt és a nyitott hónapé is.
 // ---------------------------------------------------------------------------
 
-/** A hónapok nevei a választóhoz: január … december. */
-const HONAP_NEVEK = Array.from({ length: 12 }, (_, i) =>
-  new Intl.DateTimeFormat('hu-HU', { month: 'long', timeZone: 'UTC' })
-    .format(new Date(Date.UTC(2026, i, 15))))
+/** Új, üres sor: a mostani hónapban a mai nappal, máskor a hónap elsejével. */
+function uresSor(honap: string): SheetRow {
+  const ma = maStr()
+  return {
+    id: null, booking_id: null,
+    day: honapElseje(ma) === honap ? ma : honap,
+    plate: null, km: null, net_huf: null, name: null,
+    extra: {}, signature: null, signed_at: null,
+  }
+}
 
 export default function IgazoloLap({
   cegId,
   cegNev,
+  kezdoHonap,
+  ujSorral,
   onBezar,
 }: {
   cegId: string
   cegNev: string
+  /** Melyik hónappal nyíljon (alapból a mostani). */
+  kezdoHonap?: string
+  /** Betöltés után rögtön egy új sor nyíljon (az Igazolólap menü „+ Sor" gombja). */
+  ujSorral?: boolean
   onBezar: () => void
 }) {
   const { data, user } = useApp()
   const tulaj = user?.canEditCustomers === true
   const [kerdesAblak, kerdez] = useKerdes()
-  const [honap, setHonap] = useState(() => honapElseje(maStr()))
-  // Az év mezőjének szövege. Külön állapot, mert gépelés közben („20…")
-  // még nem érvényes év — csak a teljes, négyjegyű évre lépünk.
-  const [evSzoveg, setEvSzoveg] = useState(() => maStr().slice(0, 4))
+  const [honap, setHonap] = useState(() => honapElseje(kezdoHonap ?? maStr()))
   const [lap, setLap] = useState<SheetDetail | null>(null)
   const [hiba, setHiba] = useState<string | null>(null)
   // A megnyitott sor (szerkesztés vagy új), és a beállítások ablaka.
@@ -58,10 +68,18 @@ export default function IgazoloLap({
   // A Word fájl készül (pár tized másodperc, nagy lapnál egy-két másodperc).
   const [wordKeszul, setWordKeszul] = useState(false)
 
+  // Az új sor csak az ELSŐ betöltés után nyílik meg magától, később nem.
+  const ujSorKell = useRef(ujSorral === true)
+
   const betolt = useCallback(async () => {
     try {
-      setLap(await data.getSheet(cegId, honap))
+      const d = await data.getSheet(cegId, honap)
+      setLap(d)
       setHiba(null)
+      if (ujSorKell.current) {
+        ujSorKell.current = false
+        if (!d.sheet?.closed_at) setSor(uresSor(honap))
+      }
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
     }
@@ -86,14 +104,7 @@ export default function IgazoloLap({
   function lep(uj: string) {
     if (uj === honap) return
     setHonap(uj)
-    setEvSzoveg(uj.slice(0, 4))
     setLap(null)
-  }
-
-  /** A választó: év (bármelyik, korlát nélkül) és hónap. */
-  function evValt(szoveg: string) {
-    setEvSzoveg(szoveg)
-    if (/^\d{4}$/.test(szoveg)) lep(`${szoveg}${honap.slice(4)}`)
   }
 
   const zarva = Boolean(lap?.sheet?.closed_at)
@@ -104,16 +115,7 @@ export default function IgazoloLap({
   const nettoLatszik = oszlopok.some((o) => o.key === 'NETTO')
   const arSorok = lablecArak(lap?.prices ?? [])
 
-  /** Új, üres sor: ebben a hónapban a mai nappal, máskor a hónap elsejével. */
-  function ujSor(): SheetRow {
-    const ma = maStr()
-    return {
-      id: null, booking_id: null,
-      day: honapElseje(ma) === honap ? ma : honap,
-      plate: null, km: null, net_huf: null, name: null,
-      extra: {}, signature: null, signed_at: null,
-    }
-  }
+  function ujSor(): SheetRow { return uresSor(honap) }
 
   /** A Word fájl: a böngésző állítja össze a lap mostani állapotából. */
   async function word() {
@@ -199,16 +201,7 @@ export default function IgazoloLap({
           {/* Bármelyik korábbi (vagy későbbi) hónap, korlát nélkül: az év
               szabadon beírható, a hónap választható. A nyilakkal egyesével
               lehet lépni, a lap alján pedig ott vannak a cég eddigi lapjai. */}
-          <div className="honap-ugras">
-            <span className="halk">Másik hónap:</span>
-            <input className="beviteli ev-mezo" inputMode="numeric" aria-label="Év"
-                   value={evSzoveg} maxLength={4}
-                   onChange={(e) => evValt(e.target.value.replace(/[^0-9]/g, ''))} />
-            <select className="beviteli" aria-label="Hónap" value={Number(honap.slice(5, 7))}
-                    onChange={(e) => lep(`${honap.slice(0, 4)}-${String(e.target.value).padStart(2, '0')}-01`)}>
-              {HONAP_NEVEK.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
-            </select>
-          </div>
+          <HonapUgras honap={honap} onLep={lep} />
 
           {hiba && <div className="hibauzenet">{hiba}</div>}
 

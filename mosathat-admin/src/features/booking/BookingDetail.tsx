@@ -15,6 +15,7 @@ import { ALLAPOT_KERDES, TORLES_KERDES } from '../common/kerdesek'
 import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../common/Ceg'
 import { EGYSEG } from '../services/Arlista'
 import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
+import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
 
 // A legördülők tartalma. A feliratok ugyanabból a szótárból jönnek, mint
 // mindenhol máshol — így nem lehet két különböző neve ugyanannak.
@@ -91,6 +92,7 @@ export default function BookingDetail({
 }) {
   const { data, catalog, refresh } = useApp()
   const [kerdesAblak, kerdez] = useKerdes()
+  const [kapuAblak, kapu] = useIgazoloKapu()
   const [b, setB] = useState<DayBooking | null>(null)
   const [lista, setLista] = useState<BookingTask[]>([])
   const [mennyisegek, setMennyisegek] = useState<BookingExtraRow[]>([])
@@ -227,6 +229,32 @@ export default function BookingDetail({
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
       await betolt()
+    }
+  }
+
+  // A következő lépés. Igazolólapos cég autójánál (mint a napi kártyán):
+  //   Kész van  → utána rögtön megnyílik a lap sora, aláíratni;
+  //   Átvette   → csak ha a sor már ki van töltve (különben előbb azt nyitja).
+  async function kovetkezoLepes(cel: Parameters<typeof data.setStatus>[1]) {
+    if (!b) return
+    const lapos = igazoloKell(b)
+    try {
+      if (lapos && cel === 'COMPLETED' && !(await kapu.atadhato(b.id))) return
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+      return
+    }
+    const k = ALLAPOT_KERDES[cel]
+    if (k && !(await kerdez(k))) return
+    await allapot(cel)
+    if (lapos && cel === 'READY') {
+      try {
+        await kapu.alairat(b.id,
+          'Az autó elkészült. Átadáskor írasd alá az igazolólapot (km, név, aláírás). '
+          + 'Ha most nem, az Átvette gombnál újra előjön.')
+      } catch (e) {
+        setHiba(e instanceof Error ? e.message : String(e))
+      }
     }
   }
 
@@ -921,7 +949,7 @@ export default function BookingDetail({
                 )}
                 {kovetkezo && (
                   <button className="btn btn-fo"
-                          onClick={() => void allapot(kovetkezo.to, ALLAPOT_KERDES[kovetkezo.to])}>
+                          onClick={() => void kovetkezoLepes(kovetkezo.to)}>
                     {kovetkezo.label}
                   </button>
                 )}
@@ -934,6 +962,7 @@ export default function BookingDetail({
         )}
       </div>
       {kerdesAblak}
+      {kapuAblak}
     </div>
   )
 }

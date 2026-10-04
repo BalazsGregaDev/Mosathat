@@ -36,6 +36,7 @@ export default function SorUrlap({
   oszlopok,
   sor,
   zarva,
+  uzenet,
   onBezar,
   onMentve,
 }: {
@@ -46,6 +47,8 @@ export default function SorUrlap({
   sor: SheetRow
   /** A sor hónapjának lapja le van zárva: csak olvasható. */
   zarva: boolean
+  /** Egy mondat felül (pl. „Az autó kész: írasd alá átadáskor."). */
+  uzenet?: string
   onBezar: () => void
   /** Mentés vagy törlés után (a hívó újratölt). */
   onMentve?: () => void
@@ -148,6 +151,7 @@ export default function SorUrlap({
               </span>
             </div>
           )}
+          {uzenet && !zarva && <div className="igazolo-uzenet">{uzenet}</div>}
           {hiba && <div className="hibauzenet">{hiba}</div>}
 
           <div className="sor-2">

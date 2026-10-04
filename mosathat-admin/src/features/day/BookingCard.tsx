@@ -10,6 +10,7 @@ import {
 } from '../../lib/types'
 import { azonosito } from './MiniKartya'
 import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
+import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
 
 // ---------------------------------------------------------------------------
 //  Egy kártya a napi listában.
@@ -81,6 +82,7 @@ export default function BookingCard({
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
   const [kerdesAblak, kerdez] = useKerdes()
+  const [kapuAblak, kapu] = useIgazoloKapu()
   const arany = b.tasks_total > 0 ? (b.tasks_done / b.tasks_total) * 100 : 0
 
   const kovetkezo = NEXT_STATUS[b.status]
@@ -124,6 +126,32 @@ export default function BookingCard({
   async function kerdesUtan(k: KerdesBeallitas, cel: BookingStatus) {
     if (!(await kerdez(k))) return
     await allapot(cel)
+  }
+
+  // A következő lépés gombja. Igazolólapos cég autójánál:
+  //   Kész van  → utána rögtön megnyílik a lap sora, aláíratni;
+  //   Átvette   → csak ha a sor már ki van töltve (különben előbb azt nyitja).
+  async function kovetkezoLepes() {
+    if (!kovetkezo || megy) return
+    const cel = kovetkezo.to
+    try {
+      if (igazolo && cel === 'COMPLETED' && !(await kapu.atadhato(b.id))) return
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+      return
+    }
+    const k = ALLAPOT_KERDES[cel]
+    if (k && !(await kerdez(k))) return
+    await allapot(cel)
+    if (igazolo && cel === 'READY') {
+      try {
+        await kapu.alairat(b.id,
+          'Az autó elkészült. Átadáskor írasd alá az igazolólapot (km, név, aláírás). '
+          + 'Ha most nem, az Átvette gombnál újra előjön.')
+      } catch (e) {
+        setHiba(e instanceof Error ? e.message : String(e))
+      }
+    }
   }
 
   return (
@@ -216,10 +244,7 @@ export default function BookingCard({
             )}
             {kovetkezo && (
               <button className="btn btn-fo" disabled={megy}
-                      onClick={() => {
-                        const k = ALLAPOT_KERDES[kovetkezo.to]
-                        void (k ? kerdesUtan(k, kovetkezo.to) : allapot(kovetkezo.to))
-                      }}>
+                      onClick={() => void kovetkezoLepes()}>
                 {kovetkezo.label}
               </button>
             )}
@@ -227,6 +252,7 @@ export default function BookingCard({
         )}
       </div>
       {kerdesAblak}
+      {kapuAblak}
     </div>
   )
 }

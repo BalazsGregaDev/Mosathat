@@ -198,6 +198,10 @@ console.log('\n=== 5) „Kész van": rákérdez, nem tölt újra ===\n')
   await p.locator('.kerdes-gombok button').filter({ hasText: 'Igen' }).click()
   await p.waitForTimeout(1200)
   ok('az Igen után: Átvette a következő', 1, await lab.getByRole('button', { name: 'Átvette' }).count())
+  // v40: szerződéses cég autója — Kész van után megnyílik az igazolólap sora.
+  ok('szerződéses cégnél megnyílt az igazolólap sora', 1, await p.locator('[aria-label="Igazolólap sora"]').count())
+  await p.locator('[aria-label="Igazolólap sora"]').getByRole('button', { name: 'Mégse' }).click()
+  await p.waitForTimeout(400)
 }
 await p.locator('.lap-fej .bezar').click(); await p.waitForTimeout(1200)
 
@@ -226,6 +230,11 @@ await p.locator('.lap-fej .bezar').click(); await p.waitForTimeout(1200)
     await k2.getAttribute('data-allapot'))
   ok('a sorrend nem változott', elotte, utana)
   ok('nem jelent meg a „Betöltés…"', 0, await p.evaluate(() => window.__betolt))
+  // v40: ha szerződéses cég autója volt, megnyílt az igazolólap sora — bezárjuk.
+  if (await p.locator('[aria-label="Igazolólap sora"]').count()) {
+    await p.locator('[aria-label="Igazolólap sora"]').getByRole('button', { name: 'Mégse' }).click()
+    await p.waitForTimeout(400)
+  }
 }
 
 console.log('\n=== 6) telefon: az ablak a látható képernyőn belül ===\n')

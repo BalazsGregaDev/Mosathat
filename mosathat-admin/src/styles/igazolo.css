@@ -26,6 +26,16 @@
   font-size: var(--m-sm);
 }
 .honap-ugras .ev-mezo { width: 5.5em; font-family: var(--betu-szam); text-align: center; }
+/* Az év mező mellett fel-le nyíl: egy évet lép. */
+.ev-valaszto { display: inline-flex; align-items: stretch; gap: 2px; }
+.ev-nyilak { display: flex; flex-direction: column; gap: 2px; }
+.ev-nyil {
+  flex: 1; min-height: 20px; width: 30px; padding: 0;
+  border: 1px solid var(--keret-eros); border-radius: var(--r-sm);
+  background: var(--lap); color: var(--szoveg-halk);
+  font-size: 10px; line-height: 1; cursor: pointer;
+}
+.ev-nyil:hover { background: var(--lap-2); color: var(--szoveg); }
 .honap-ugras select.beviteli { width: auto; min-width: 9em; }
 
 /* Szövegszerű gomb (link helyett: nem visz el sehova, csak lép). */
@@ -177,3 +187,46 @@
   margin-top: var(--t2);
 }
 .ceg-lap-sor .halk { font-size: var(--m-xs); }
+
+/* --- Igazolólap menüpont: a cégek listája -------------------------------------- */
+.igazolo-oldal-fej {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--t3) var(--t5);
+}
+.igazolo-cegek { padding: 0; }
+.igazolo-ceg {
+  display: flex; align-items: center; gap: var(--t3);
+  padding: var(--t3) var(--t4);
+  border-bottom: 1px solid var(--keret);
+}
+.igazolo-ceg:last-child { border-bottom: none; }
+/* Akinek már nem kell lap (lejárt szerződés), halványabban, a lista végén. */
+.igazolo-ceg[data-kell='false'] { opacity: .7; }
+.igazolo-ceg-nyit {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+  background: none; border: none; padding: 0; text-align: left;
+  font: inherit; color: inherit; cursor: pointer;
+}
+.igazolo-ceg-nyit .nev {
+  font-weight: var(--vastag-eros); font-size: var(--m-md);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--t2);
+}
+.igazolo-ceg-nyit .allas {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--t2) var(--t3);
+  font-size: var(--m-sm); color: var(--szoveg-halk);
+}
+.igazolo-ceg-nyit .figyel { color: #7a5a14; }
+.igazolo-ceg-nyit:hover .nev { text-decoration: underline; text-underline-offset: 3px; }
+.igazolo-ceg-gombok { display: flex; gap: var(--t2); flex: none; }
+@media (max-width: 560px) {
+  .igazolo-ceg { flex-wrap: wrap; }
+  .igazolo-ceg-gombok { width: 100%; }
+  .igazolo-ceg-gombok .btn { flex: 1; justify-content: center; }
+}
+
+/* Egy mondat a sor ablakának tetején (Kész van / Átvette után). */
+.igazolo-uzenet {
+  background: var(--zold-halvany); color: var(--zold-sotet);
+  border: 1px solid var(--zold); border-radius: var(--r);
+  padding: var(--t3); font-size: var(--m-sm);
+}

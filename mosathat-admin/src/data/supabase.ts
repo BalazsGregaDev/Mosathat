@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import type {
   AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
-  SheetColumn, SheetDetail, SheetForBooking, SheetRowInput,
+  SheetColumn, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput,
   BookingStatus, BookingTask, CalcInput, CalcResult, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
@@ -426,6 +426,12 @@ export class SupabaseSource implements DataSource {
   }
 
   // --- igazolólap ---------------------------------------------------------------
+
+  async listSheetCompanies(month: string): Promise<SheetCompany[]> {
+    const { data, error } = await this.sb.rpc('sheet_cegek', { p_month: month })
+    if (error) fail('Igazolólapok', error)
+    return (data ?? []) as SheetCompany[]
+  }
 
   async getSheet(companyId: string, month: string): Promise<SheetDetail> {
     const { data, error } = await this.sb.rpc('sheet_detail', { p_company: companyId, p_month: month })

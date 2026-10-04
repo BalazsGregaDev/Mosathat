@@ -765,6 +765,22 @@ export interface SheetDetail {
   months: { month: string; closed: boolean; rows: number }[]
 }
 
+/** Az Igazolólap menüpont listájának egy sora: egy cég egy hónapja. */
+export interface SheetCompany {
+  id: string
+  name: string
+  /** Kell-e most lap (élő szerződés vagy bérletes ügyfél). */
+  kell: boolean
+  szerzodes: boolean
+  berletes: boolean
+  /** A választott hónap sorai, ebből az aláíratlanok. */
+  rows: number
+  unsigned: number
+  closed: boolean
+  /** Hány korábbi hónap maradt lezáratlanul. */
+  open_before: number
+}
+
 /** A napi nézet gombjához: a foglalás sora, előre kitöltve (vagy a meglévő). */
 export interface SheetForBooking {
   company_id: string | null
