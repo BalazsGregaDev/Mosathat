@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { useApp } from '../../state/AppContext'
 import { ft, napRovidCim, ora } from '../../lib/format'
 import { useKerdes, type KerdesBeallitas } from '../common/Kerdes'
-import { ALLAPOT_KERDES, TORLES_KERDES } from '../common/kerdesek'
+import { ALLAPOT_KERDES, NEM_FERT_BE_KERDES, TORLES_KERDES } from '../common/kerdesek'
+import Kerdojel from './Kerdojel'
 import {
   NEXT_STATUS, SCOPE_LABEL, STATUS_LABEL,
   type BookingStatus, type DayBooking,
@@ -21,7 +22,7 @@ import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
 //  ami összetartozik, egy sorba került. Csak az van rajta, ami a MUNKÁHOZ
 //  kell:
 //
-//    1. sor   RENDSZÁM  [H-V]  időpont  Csomag + egyéb szolgáltatások
+//    1. sor   RENDSZÁM  [???] [H-V]  Cég  időpont  Csomag + egyéb szolgáltatások
 //    2. sor   (többnapos) hányadik nap, mikor viszi
 //    3. sor   megjegyzés
 //    alul     ár és a munkalista állása — mellette a következő lépés gombja
@@ -89,6 +90,8 @@ export default function BookingCard({
   const lemondott = ['CANCELLED_BY_CUSTOMER', 'CANCELLED_BY_SHOP'].includes(b.status)
   const lezart = b.status === 'COMPLETED'
   const torolheto = !lezart && !lemondott && b.status !== 'NO_SHOW'
+  // Kérdőjeles autó, ami még nincs lezárva: „Nem fért be" gombbal 0 Ft-tal zárható.
+  const nemFertBeHato = b.tentative && torolheto
 
   const napok = b.napok_szama ?? 1
   const tobbnapos = napok > 1
@@ -126,6 +129,23 @@ export default function BookingCard({
   async function kerdesUtan(k: KerdesBeallitas, cel: BookingStatus) {
     if (!(await kerdez(k))) return
     await allapot(cel)
+  }
+
+  // „Nem fért be": lezárás 0 Ft-tal (az adatbázis jelöli meg, és ott zárja).
+  async function nemFertBe() {
+    if (megy || !(await kerdez(NEM_FERT_BE_KERDES(b)))) return
+    setMegy(true)
+    setHiba(null)
+    onModosit?.(b.id, { status: 'COMPLETED', not_fitted: true, final_price_huf: 0 })
+    try {
+      await data.notFitted(b.id)
+      refresh()
+    } catch (e) {
+      onModosit?.(b.id, { status: b.status, not_fitted: false, final_price_huf: b.final_price_huf })
+      setHiba(e instanceof Error ? e.message : String(e))
+    } finally {
+      setMegy(false)
+    }
   }
 
   // A következő lépés gombja. Igazolólapos cég autójánál:
@@ -166,10 +186,17 @@ export default function BookingCard({
             csomag nevébe. */}
         <div className="kartya-felso">
           <span className="rendszam">{azonosito(b)}</span>
+          {/* Kérdőjeles („???") vagy „nem fért be" — közvetlenül a rendszám mellett. */}
+          <Kerdojel b={b} />
           {/* Hozom-viszem: mi megyünk az autóért. Ez a nap beosztását
               érinti (valakinek el kell mennie), ezért a kártyán is látszik. */}
           {b.booking_type === 'HOZOMVISZEM' && (
             <span className="cimke-pill" data-r="hozomviszem" title="Hozom-viszem">H-V</span>
+          )}
+          {/* A cég: céges autónál a rendszám mellett, hogy a pultnál és a
+              mosóállásban is lássák, kinek a flottájából jött. */}
+          {b.company_name && (
+            <span className="kartya-ceg" title={`Cég: ${b.company_name}`}>{b.company_name}</span>
           )}
           <span className="ido">{napiIdo(b)}</span>
           {/* A csomag és az extrák külön elemek a sorban: ha az extrák
@@ -226,10 +253,16 @@ export default function BookingCard({
           )}
         </div>
 
-        {(kovetkezo || torolheto || lemondott || igazolo) && (
+        {(kovetkezo || torolheto || lemondott || igazolo || nemFertBeHato) && (
           <div className="kartya-muvelet">
             {/* Az igazolólap sora: átadáskor km, név, aláírás. */}
             {igazolo && <IgazoloGomb bookingId={b.id} />}
+            {nemFertBeHato && (
+              <button className="btn btn-kerdojel" disabled={megy}
+                      onClick={() => void nemFertBe()}>
+                Nem fért be
+              </button>
+            )}
             {torolheto && (
               <button className="btn btn-veszelyes" disabled={megy}
                       onClick={() => void kerdesUtan(TORLES_KERDES(b), 'CANCELLED_BY_CUSTOMER')}>

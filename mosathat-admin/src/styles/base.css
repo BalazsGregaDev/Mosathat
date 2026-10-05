@@ -299,3 +299,24 @@ hr.valaszto-vonal { border: none; border-top: 1px solid var(--keret); margin: va
 }
 .szoveg-gomb:hover:not(:disabled) { color: var(--szoveg); }
 .szoveg-gomb:disabled { cursor: default; opacity: .5; }
+
+/* --- Kérdőjeles („???") és „nem fért be" --------------------------------------
+   A rendszám mellett, minden nézetben. A „???" sárgás (figyelem: feltételes),
+   a „nem fért be" szürke (lezárva, nem csináltuk meg). */
+.cimke-pill.kerdojel {
+  background: #fff3cd; color: #7a5a14; border: 1px solid #f0d58a;
+  font-weight: var(--vastag-fej); letter-spacing: .08em;
+}
+.cimke-pill.nem-fert-be { background: var(--lap-2); color: var(--szoveg-halk); border: 1px solid var(--keret); }
+/* A gomb: nem veszélyes (nem töröl), de nem is a fő lépés. */
+.btn-kerdojel { border-color: #f0d58a; color: #7a5a14; background: #fffaf0; }
+.btn-kerdojel:hover { background: #fff3cd; }
+.kerdojel-sor { display: inline-flex; align-items: center; gap: var(--t3); flex-wrap: wrap; }
+/* A kis kártyákon és sávokon kisebb. */
+.minikartya .cimke-pill.kerdojel, .minikartya .cimke-pill.nem-fert-be,
+.hetsav .cimke-pill, .honap-sav .cimke-pill {
+  font-size: 9px; padding: 0 4px; line-height: 1.4; flex: none;
+}
+.valaszto button.kerdojel-gomb[aria-pressed='true'] {
+  background: #fff3cd; border-color: #e0b84a; color: #7a5a14;
+}

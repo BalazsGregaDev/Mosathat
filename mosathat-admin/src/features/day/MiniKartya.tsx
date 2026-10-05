@@ -1,4 +1,5 @@
 import { idosav, ora } from '../../lib/format'
+import Kerdojel from './Kerdojel'
 import { STATUS_LABEL, type DayBooking } from '../../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -69,7 +70,8 @@ export function idoRovidSzoveg(b: DayBooking): string {
  * ahol még nem tudták), akkor a név — mert üres kártyát mutatni értelmetlen.
  */
 export function azonosito(b: DayBooking): string {
-  const r = (b.plate_raw ?? '').trim()
+  // A rendszám mindig nagybetűvel (az adatbázis is így tárolja).
+  const r = (b.plate_raw ?? '').trim().toUpperCase()
   if (r) return r
   return b.company_name || b.customer_name || 'névtelen'
 }
@@ -92,6 +94,7 @@ export default function MiniKartya({ b, onMegnyit, egysoros }: {
   const tartalom = (
     <>
       <span className={rendszamE ? 'azon rendszam' : 'azon nev'}>{azonosito(b)}</span>
+      <Kerdojel b={b} />
       <span className="ido">{egysoros ? idoRovidSzoveg(b) : idoSzoveg(b)}</span>
     </>
   )

@@ -10,8 +10,11 @@ import {
 } from '../../lib/types'
 import Szerkesztheto, { type Valaszthato } from '../common/Szerkesztheto'
 import Sugo from '../common/Sugo'
+import IdoMezo from '../common/IdoMezo'
 import { useKerdes, type KerdesBeallitas } from '../common/Kerdes'
-import { ALLAPOT_KERDES, TORLES_KERDES } from '../common/kerdesek'
+import { ALLAPOT_KERDES, NEM_FERT_BE_KERDES, TORLES_KERDES } from '../common/kerdesek'
+import Csuszka from '../common/Csuszka'
+import Kerdojel from '../day/Kerdojel'
 import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../common/Ceg'
 import { EGYSEG } from '../services/Arlista'
 import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
@@ -258,6 +261,31 @@ export default function BookingDetail({
     }
   }
 
+  // Kérdőjeles be/ki: azonnal átvált, a mentés utána megy.
+  async function kerdojelValt(uj: boolean) {
+    if (!b) return
+    valtozott.current = true
+    setB((x) => (x ? { ...x, tentative: uj } : x))
+    try {
+      await data.setTentative(b.id, uj)
+    } catch (e) {
+      setB((x) => (x ? { ...x, tentative: !uj } : x))
+      setHiba(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  // „Nem fért be": a kérdőjeles autó lezárása 0 Ft-tal.
+  async function nemFertBe() {
+    if (!b || !(await kerdez(NEM_FERT_BE_KERDES(b)))) return
+    valtozott.current = true
+    try {
+      await data.notFitted(b.id)
+      await betolt()
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+    }
+  }
+
   async function lemond() {
     if (!b) return
     await allapot('CANCELLED_BY_CUSTOMER', TORLES_KERDES(b))
@@ -417,7 +445,7 @@ export default function BookingDetail({
             <div className="lap-fej">
               <div>
                 <h2 style={{ fontFamily: 'var(--betu-szam)', letterSpacing: '.06em' }}>
-                  {b.plate_raw}
+                  {b.plate_raw?.toUpperCase()} <Kerdojel b={b} />
                 </h2>
                 <div className="halk" style={{ fontSize: 'var(--m-sm)' }}>
                   {b.customer_name}
@@ -540,6 +568,17 @@ export default function BookingDetail({
                       ...(m.ora !== undefined ? { pick_up_time: m.ora } : {}),
                     })} />
                 )}
+
+                {/* Kérdőjeles: itt hagyják, de csak feltételesen vállaltuk el
+                    (ha befér, megcsináljuk). Utólag is be- és kikapcsolható. */}
+                <div className="adatsor">
+                  <span>Kérdőjeles</span>
+                  <span className="ertek kerdojel-sor">
+                    <Csuszka be={b.tentative} cimke="Kérdőjeles (feltételesen vállalt)"
+                             tiltva={lezart} onValt={(uj) => void kerdojelValt(uj)} />
+                    <span className="halk">ha befér, megcsináljuk, ha nem, nem</span>
+                  </span>
+                </div>
 
                 <Szerkesztheto
                   cimke="Méret" ertek={b.category} zarolt={lezart}
@@ -931,6 +970,11 @@ export default function BookingDetail({
                     azonnal kiesik, tehát az időpont újra kiadható.
                     Az ügyfél és az autó adata sem vész el: azok külön sorok,
                     és akkor is megmaradnak, ha ez volt az első foglalása. */}
+                {lemondhato && b.tentative && (
+                  <button className="btn btn-kerdojel" onClick={() => void nemFertBe()}>
+                    Nem fért be
+                  </button>
+                )}
                 {lemondhato && (
                   <button className="btn btn-veszelyes"
                           onClick={() => void lemond()}>
@@ -1066,10 +1110,10 @@ function NapOraSor({
                  value={napP} min={minNap}
                  onChange={(e) => { setNapP(e.target.value); kesobb(e.target.value, oraP) }}
                  onBlur={() => void ment(napP, oraP)} />
-          <input type="time" className="beviteli szam" step={300} aria-label={`${cimke} órája`}
-                 value={oraP} placeholder={oraUres}
-                 onChange={(e) => { setOraP(e.target.value); kesobb(napP, e.target.value) }}
-                 onBlur={() => void ment(napP, oraP)} />
+          <IdoMezo ariaLabel={`${cimke} órája`} cim={`${cimke} — óra`}
+                   value={oraP} placeholder={oraUres} torolheto={Boolean(oraUres)}
+                   onChange={(v) => { setOraP(v); kesobb(napP, v) }}
+                   onKesz={(v) => void ment(napP, v)} />
           {utotag}
         </span>
         {hiba && <div className="szerk-hiba">{hiba}</div>}

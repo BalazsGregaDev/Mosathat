@@ -371,6 +371,14 @@ export class DemoSource implements DataSource {
     return r?.d ?? null
   }
 
+  async setTentative(bookingId: string, value: boolean): Promise<void> {
+    await this.rows(`select set_booking_tentative($1::uuid, $2::boolean)`, [bookingId, value])
+  }
+
+  async notFitted(bookingId: string): Promise<void> {
+    await this.rows(`select booking_not_fitted($1::uuid)`, [bookingId])
+  }
+
   async setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void> {
     await this.pg.query(`select set_booking_status($1::uuid, $2::booking_status, $3)`, [
       bookingId, status, note ?? null,

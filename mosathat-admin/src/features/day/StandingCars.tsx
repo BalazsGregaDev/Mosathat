@@ -33,7 +33,7 @@ export default function StandingCars({
         {lista.map((s) => (
           <button className="allo" key={s.id} data-surgos={s.urgent} onClick={() => onMegnyit(s.id)}>
             <div style={{ minWidth: 0 }}>
-              <div className="rendszam">{s.plate_raw}</div>
+              <div className="rendszam">{s.plate_raw?.toUpperCase()}</div>
               <div className="halk" style={{ fontSize: 'var(--m-xs)' }}>
                 {[s.brand, s.model].filter(Boolean).join(' ')}
                 {s.company_name && ` · ${s.company_name}`}

@@ -63,6 +63,8 @@ export interface FormState {
   /** A Viszi napja. Üres: ugyanaz a nap. */
   pickUpDate: string
   pickUpTime: string
+  /** Kérdőjeles: itt hagyja, de csak feltételesen vállaltuk (ha befér). */
+  tentative: boolean
   // egyéb
   notes: string
 }
@@ -87,6 +89,7 @@ export const URES_URLAP: FormState = {
   dropOffTime: '08:00',
   pickUpDate: '',
   pickUpTime: '',
+  tentative: false,
   notes: '',
 }
 
@@ -135,9 +138,9 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
     }
 
     setTolt(true)
-    data
-      .getBookingFormData(bookingId)
-      .then((d) => {
+    // A kérdőjelet a nap nézetéből olvassuk (a szerkesztő adatai közt nincs).
+    Promise.all([data.getBookingFormData(bookingId), data.getBooking(bookingId)])
+      .then(([d, nap]) => {
         if (!d) return
         const b = d.booking
         // A Viszi: az átvétel, régi „Több napos" foglalásnál a határidő.
@@ -169,6 +172,7 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
           dropOffTime: helyiOra(b.drop_off_at) || '08:00',
           pickUpDate: vissziNap && vissziNap !== b.service_date.slice(0, 10) ? vissziNap : '',
           pickUpTime: helyiOra(viszi),
+          tentative: nap?.tentative ?? false,
           notes: b.notes ?? '',
         })
       })
@@ -376,11 +380,16 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
         notes: f.notes.trim() || null,
       }
 
+      // A kérdőjel külön hívással megy (a foglalás mentése után): új
+      // foglalásnál csak ha be van kapcsolva, módosításnál mindig.
       if (bookingId) {
         await data.updateBooking(bookingId, input)
+        await data.setTentative(bookingId, f.tentative)
         return bookingId
       }
-      return await data.createBooking(input)
+      const id = await data.createBooking(input)
+      if (f.tentative) await data.setTentative(id, true)
+      return id
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
       return null

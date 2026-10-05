@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import Kerdojel from './Kerdojel'
 
 import { useApp } from '../../state/AppContext'
 import { azonosHonap, hetHetfoje, hetSzam, honapElseje, maE, napPlusz, ora } from '../../lib/format'
@@ -175,6 +176,7 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                             17:00") — minden szakaszon, a következő hétre
                             átnyúlón is. */}
                         <span className="azon">{azonosito(s.b)}</span>
+                        <Kerdojel b={s.b} />
                         <span className="ido">
                           {Number(s.b.last_day.slice(8, 10))}-ig{viszi ? `, ${ora(viszi)}` : ''}
                         </span>

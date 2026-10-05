@@ -268,6 +268,10 @@ export interface DayBooking {
   /** Az egyéb szolgáltatások nevei vesszővel: „Motorkozmetika, Ózonos kezelés". */
   extras_summary: string | null
   extras_count: number
+  /** Kérdőjeles: itt hagyják, de csak feltételesen vállaltuk (ha befér). „???" */
+  tentative: boolean
+  /** Nem fért be: a kérdőjeles autó 0 Ft-tal lezárva. */
+  not_fitted: boolean
 
   // A napi listában (day_bookings) ezek is jönnek:
   /** Hányadik a nap listájában. */

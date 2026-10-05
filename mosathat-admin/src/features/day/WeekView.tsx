@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import Kerdojel from './Kerdojel'
 
 import { useApp } from '../../state/AppContext'
 import { hetHetfoje, maE, napPlusz, napRovidCim, ora } from '../../lib/format'
@@ -130,6 +131,7 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
                 title={`${azonosito(s.b)} · ${STATUS_LABEL[s.b.status]}`}
               >
                 <span className="rendszam">{azonosito(s.b)}</span>
+                <Kerdojel b={s.b} />
                 {s.b.booking_type === 'HOZOMVISZEM' && <span className="hv">H-V</span>}
                 <span className="idotav">
                   {napRovidCim(s.b.service_date.slice(0, 10))}

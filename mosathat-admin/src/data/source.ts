@@ -131,6 +131,10 @@ export interface DataSource {
    */
   patchBooking(bookingId: string, patch: Record<string, unknown>): Promise<void>
   setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void>
+  /** Kérdőjeles be/ki (feltételesen vállalt autó). */
+  setTentative(bookingId: string, value: boolean): Promise<void>
+  /** Nem fért be: a kérdőjeles foglalás lezárása 0 Ft-tal. */
+  notFitted(bookingId: string): Promise<void>
   setFinalPrice(bookingId: string, price: number, reason?: string): Promise<void>
 
   // --- szolgáltatások szerkesztése ---

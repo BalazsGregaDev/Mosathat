@@ -16,6 +16,17 @@ export const ALLAPOT_KERDES: Partial<Record<BookingStatus, KerdesBeallitas>> = {
   },
 }
 
+/** „Nem fért be": a kérdőjeles autó lezárása 0 Ft-tal. */
+export function NEM_FERT_BE_KERDES(b: Pick<DayBooking, 'plate_raw'>): KerdesBeallitas {
+  return {
+    cim: `Nem fért be? ${(b.plate_raw ?? '').toUpperCase()}`,
+    szoveg: 'A foglalás lezárul 0 Ft-tal, „nem fért be" jelöléssel. '
+      + 'Ha mégis megcsináljátok, a munkalapon visszanyitható.',
+    igen: 'Nem fért be',
+    nem: 'Mégse',
+  }
+}
+
 export function TORLES_KERDES(b: Pick<DayBooking, 'plate_raw'>): KerdesBeallitas {
   return {
     cim: `Biztosan törlöd? ${b.plate_raw}`,

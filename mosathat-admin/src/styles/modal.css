@@ -486,3 +486,55 @@
 .szerzodes-pill { background: #eaf2fa; color: #1f5285; flex: none; }
 .ceg-jeloltek { display: flex; flex-direction: column; gap: var(--t2); margin-top: var(--t2); }
 .ceg-jeloltek .btn { justify-content: flex-start; text-align: left; padding: 12px 14px; }
+
+/* --- időválasztó (érintőképernyőn) -------------------------------------------
+   A mező egy gomb, ami ezt a panelt nyitja: nagy gombokban az órák és a
+   percek. Kesztyűben, vizes kézzel is eltalálható. A többi ablak FÖLÖTT. */
+.ido-gomb {
+  text-align: left; cursor: pointer;
+  min-height: 40px;
+}
+.ido-gomb[data-ures] { color: var(--szoveg-halvany); }
+
+.fedo.ido-fedo { z-index: 95; align-items: center; }
+.ido-ablak {
+  background: var(--lap);
+  border-radius: var(--r-lg);
+  box-shadow: var(--arnyek-lg);
+  width: min(520px, 100%);
+  padding: var(--t4);
+  display: flex; flex-direction: column; gap: var(--t4);
+}
+.ido-fej { display: flex; align-items: baseline; gap: var(--t3); }
+.ido-cim { font-weight: var(--vastag-eros); }
+.ido-ertek {
+  margin-left: auto;
+  font-family: var(--betu-szam); font-size: 28px; font-weight: var(--vastag-fej);
+}
+.ido-csoport { display: flex; flex-direction: column; gap: var(--t2); }
+.ido-csoport-cim {
+  font-size: var(--m-xs); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+}
+.ido-racs { display: grid; gap: 6px; }
+.ido-orak   { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.ido-percek { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.ido-racs button {
+  min-height: 48px;
+  border: 1px solid var(--keret-eros); border-radius: var(--r);
+  background: var(--lap); color: var(--szoveg);
+  font-family: var(--betu-szam); font-size: 18px; font-weight: var(--vastag-eros);
+  touch-action: manipulation;
+}
+/* A negyedórák (:00, :15, :30, :45) a leggyakoribbak: kicsit hangsúlyosabbak. */
+.ido-percek button[data-negyed] { background: var(--lap-2); }
+.ido-racs button[aria-pressed='true'] {
+  background: var(--zold); border-color: var(--zold); color: #fff;
+}
+.ido-lab { display: flex; justify-content: flex-end; gap: var(--t2); }
+
+@media (max-width: 700px) {
+  .fedo.ido-fedo { padding: var(--t3); align-items: center; }
+  .ido-orak { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ido-percek { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

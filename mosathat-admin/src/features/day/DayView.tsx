@@ -198,7 +198,7 @@ export default function DayView({
                                     title={g.fokusz === 'telefon'
                                       ? 'Megnyitás, a telefonszám rögtön beírható'
                                       : 'A munkalap megnyitása'}>
-                              {b.plate_raw}
+                              {b.plate_raw?.toUpperCase()}
                             </button>
                           ))}
                         </span>
@@ -219,7 +219,7 @@ export default function DayView({
             <div className="panel-torzs">
               {idonKivul.map((b) => (
                 <div className="adatsor" key={b.id}>
-                  <span className="szam">{b.plate_raw}</span>
+                  <span className="szam">{b.plate_raw?.toUpperCase()}</span>
                   <span className="ertek">
                     {ora(b.first_done_at)}–{ora(b.last_done_at)}
                   </span>

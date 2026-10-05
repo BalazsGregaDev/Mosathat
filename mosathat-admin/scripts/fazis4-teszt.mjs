@@ -48,7 +48,11 @@ await menu(p, 'Profilom')
   await p.waitForTimeout(300)
 
   await p.locator('.valaszto button').filter({ hasText: 'Korábban megy el' }).click()
-  await p.locator('#mv-tol').fill('15:00')
+  // v43: telefonon az időmező gomb, a saját választóval (óra, majd perc).
+  await p.locator('#mv-tol').click()
+  await p.locator('.ido-ablak .ido-orak button').filter({ hasText: /^15$/ }).click()
+  await p.locator('.ido-ablak .ido-percek button').filter({ hasText: ':00' }).click()
+  await p.waitForTimeout(200)
   await p.locator('#mv-megj').fill('teszt-korábban')
   await p.getByRole('button', { name: 'Bejelentés' }).click()
   await p.waitForTimeout(1200)

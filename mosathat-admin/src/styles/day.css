@@ -422,3 +422,22 @@ body.huzas-folyik { user-select: none; -webkit-user-select: none; cursor: grabbi
   .kartya { padding: 6px 10px; }
   .kartya .rendszam { border-width: 1px; padding: 0 7px; border-radius: var(--r-sm); }
 }
+
+/* A napi kártyán a „???" és a „nem fért be" akkora, mint az idő: pár lépésről
+   is látszódjon. */
+.kartya-felso .cimke-pill.kerdojel,
+.kartya-felso .cimke-pill.nem-fert-be { font-size: var(--k-ido); padding: 1px 8px; }
+
+/* A cég neve a kártyán, a rendszám mellett: keretes, halványzöld — más,
+   mint a csomag (vastag) és az idő (szürke szám). Hosszú cégnév nem tolja
+   szét a sort: levágva, a teljes név a súgóban. */
+.kartya-ceg {
+  font-size: var(--k-ido);
+  font-weight: var(--vastag-eros);
+  color: var(--zold-sotet);
+  background: var(--zold-halvany);
+  border-radius: var(--r-sm);
+  padding: 1px 8px;
+  max-width: 18em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

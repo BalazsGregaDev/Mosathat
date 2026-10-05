@@ -323,6 +323,16 @@ export class SupabaseSource implements DataSource {
     return (data as BookingFormData | null) ?? null
   }
 
+  async setTentative(bookingId: string, value: boolean): Promise<void> {
+    const { error } = await this.sb.rpc('set_booking_tentative', { p_booking_id: bookingId, p_value: value })
+    if (error) fail('Kérdőjeles', error)
+  }
+
+  async notFitted(bookingId: string): Promise<void> {
+    const { error } = await this.sb.rpc('booking_not_fitted', { p_booking_id: bookingId })
+    if (error) fail('Nem fért be', error)
+  }
+
   async setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void> {
     const { error } = await this.sb.rpc('set_booking_status', {
       p_booking_id: bookingId, p_status: status, p_note: note ?? null,

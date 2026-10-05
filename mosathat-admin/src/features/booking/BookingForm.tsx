@@ -9,6 +9,7 @@ import {
   type Extra, type LatestStart, type VehicleCategory,
 } from '../../lib/types'
 import Sugo from '../common/Sugo'
+import IdoMezo from '../common/IdoMezo'
 import { CegValaszto, useCegEgyeztetes } from '../common/Ceg'
 
 const MERETEK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
@@ -264,6 +265,110 @@ export default function BookingForm({
             </div>
           )}
 
+          {/* ---------- MIKOR ----------
+              Közvetlenül az ügyfél (telefonszám, cég) alatt: telefonon ez a
+              második kérdés — „mikor hozná?" —, a jármű részletei ráérnek.
+              Hozza és Viszi, mindkettő nappal. Ha a Viszi későbbi napra esik,
+              a foglalás többnapos — és minden napján megjelenik a napi
+              nézetben. Megvárja esetén nincs Viszi: akkor viszi, amikor kész. */}
+          <div className="szakasz">
+            <div className="fej">Mikor</div>
+
+            <div className="valaszto">
+              {TIPUSOK.map((t) => (
+                <button key={t.id} type="button" aria-pressed={f.bookingType === t.id}
+                        onClick={() => set('bookingType', t.id)}>
+                  {t.cimke}
+                </button>
+              ))}
+            </div>
+
+            {f.bookingType === 'VAROS' ? (
+              <div className="sor-2">
+                <div className="mezo">
+                  <label htmlFor="datum">Nap</label>
+                  <input id="datum" className="beviteli" type="date" value={f.date}
+                         onChange={(e) => set('date', e.target.value)} />
+                </div>
+                <div className="mezo">
+                  <label htmlFor="kezdes">Kezdés</label>
+                  <IdoMezo id="kezdes" value={f.startTime} cim="Kezdés"
+                           onChange={(v) => set('startTime', v)} />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="napora-sor">
+                  <span className="napora-cim">Hozza</span>
+                  <div className="sor-2">
+                    <div className="mezo">
+                      <label htmlFor="datum">Nap</label>
+                      <input id="datum" className="beviteli" type="date" value={f.date}
+                             onChange={(e) => set('date', e.target.value)} />
+                    </div>
+                    <div className="mezo">
+                      <label htmlFor="leadas">Óra</label>
+                      <IdoMezo id="leadas" value={f.dropOffTime} cim="Hozza — óra"
+                               onChange={(v) => set('dropOffTime', v)} />
+                    </div>
+                  </div>
+                </div>
+                <div className="napora-sor">
+                  <span className="napora-cim">Viszi</span>
+                  <div className="sor-2">
+                    <div className="mezo">
+                      <label htmlFor="viszinap">Nap</label>
+                      <input id="viszinap" className="beviteli" type="date" min={f.date}
+                             value={f.pickUpDate || f.date}
+                             onChange={(e) => set('pickUpDate',
+                               e.target.value && e.target.value !== f.date ? e.target.value : '')} />
+                    </div>
+                    <div className="mezo">
+                      <label htmlFor="atvetel">Óra</label>
+                      <IdoMezo id="atvetel" value={f.pickUpTime} cim="Viszi — óra" torolheto
+                               placeholder="nincs megbeszélve"
+                               onChange={(v) => set('pickUpTime', v)} />
+                    </div>
+                  </div>
+                </div>
+                {viszi && (
+                  <div className="tobbnapos-jelzes">
+                    Többnapos ({napRovidCim(f.date)} – {napRovidCim(f.pickUpDate)}): minden
+                    napján megjelenik a napi nézetben.
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Kérdőjeles: extra, külön választható. Az autót itt hagyják, de
+                csak feltételesen vállaltuk el — ha befér, megcsináljuk, ha
+                nem, nem. A nézetekben „???" jelzi a rendszám mellett. */}
+            <div className="valaszto">
+              <button type="button" className="kerdojel-gomb" aria-pressed={f.tentative}
+                      onClick={() => set('tentative', !f.tentative)}>
+                Kérdőjeles (???)
+              </button>
+            </div>
+            {f.tentative && (
+              <div className="figyelmeztet">
+                <span>
+                  <strong>Feltételesen vállalva:</strong> ha befér, megcsináljuk, ha nem,
+                  nem. Ha nem fér be, a napi nézetben a „Nem fért be" gombbal 0 Ft-tal
+                  lezárható.
+                </span>
+              </div>
+            )}
+
+            {belefer && (
+              <div className={belefer.ok ? '' : 'figyelmeztet'}
+                   style={belefer.ok
+                     ? { fontSize: 'var(--m-sm)', color: 'var(--zold)', fontWeight: 500 }
+                     : undefined}>
+                {belefer.uzenet}
+              </div>
+            )}
+          </div>
+
           {/* ---------- JÁRMŰ ---------- */}
           <div className="szakasz">
             <div className="fej">Jármű</div>
@@ -314,90 +419,6 @@ export default function BookingForm({
                        onChange={(e) => set('model', e.target.value)} />
               </div>
             </div>
-          </div>
-
-          {/* ---------- MIKOR ----------
-              Hozza és Viszi, mindkettő nappal. Ha a Viszi későbbi napra esik,
-              a foglalás többnapos — és minden napján megjelenik a napi
-              nézetben. Megvárja esetén nincs Viszi: akkor viszi, amikor kész. */}
-          <div className="szakasz">
-            <div className="fej">Mikor</div>
-
-            <div className="valaszto">
-              {TIPUSOK.map((t) => (
-                <button key={t.id} type="button" aria-pressed={f.bookingType === t.id}
-                        onClick={() => set('bookingType', t.id)}>
-                  {t.cimke}
-                </button>
-              ))}
-            </div>
-
-            {f.bookingType === 'VAROS' ? (
-              <div className="sor-2">
-                <div className="mezo">
-                  <label htmlFor="datum">Nap</label>
-                  <input id="datum" className="beviteli" type="date" value={f.date}
-                         onChange={(e) => set('date', e.target.value)} />
-                </div>
-                <div className="mezo">
-                  <label htmlFor="kezdes">Kezdés</label>
-                  <input id="kezdes" className="beviteli szam" type="time" step={300}
-                         value={f.startTime} onChange={(e) => set('startTime', e.target.value)} />
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="napora-sor">
-                  <span className="napora-cim">Hozza</span>
-                  <div className="sor-2">
-                    <div className="mezo">
-                      <label htmlFor="datum">Nap</label>
-                      <input id="datum" className="beviteli" type="date" value={f.date}
-                             onChange={(e) => set('date', e.target.value)} />
-                    </div>
-                    <div className="mezo">
-                      <label htmlFor="leadas">Óra</label>
-                      <input id="leadas" className="beviteli szam" type="time" step={300}
-                             value={f.dropOffTime}
-                             onChange={(e) => set('dropOffTime', e.target.value)} />
-                    </div>
-                  </div>
-                </div>
-                <div className="napora-sor">
-                  <span className="napora-cim">Viszi</span>
-                  <div className="sor-2">
-                    <div className="mezo">
-                      <label htmlFor="viszinap">Nap</label>
-                      <input id="viszinap" className="beviteli" type="date" min={f.date}
-                             value={f.pickUpDate || f.date}
-                             onChange={(e) => set('pickUpDate',
-                               e.target.value && e.target.value !== f.date ? e.target.value : '')} />
-                    </div>
-                    <div className="mezo">
-                      <label htmlFor="atvetel">Óra</label>
-                      <input id="atvetel" className="beviteli szam" type="time" step={300}
-                             value={f.pickUpTime}
-                             onChange={(e) => set('pickUpTime', e.target.value)} />
-                    </div>
-                  </div>
-                </div>
-                {viszi && (
-                  <div className="tobbnapos-jelzes">
-                    Többnapos ({napRovidCim(f.date)} – {napRovidCim(f.pickUpDate)}): minden
-                    napján megjelenik a napi nézetben.
-                  </div>
-                )}
-              </>
-            )}
-
-            {belefer && (
-              <div className={belefer.ok ? '' : 'figyelmeztet'}
-                   style={belefer.ok
-                     ? { fontSize: 'var(--m-sm)', color: 'var(--zold)', fontWeight: 500 }
-                     : undefined}>
-                {belefer.uzenet}
-              </div>
-            )}
           </div>
 
           {/* ---------- CSOMAG ---------- */}

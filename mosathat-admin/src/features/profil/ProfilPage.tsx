@@ -8,6 +8,7 @@ import {
   type AbsenceKind, type AbsenceRow, type StaffRow,
 } from '../../lib/types'
 import { useKerdes } from '../common/Kerdes'
+import IdoMezo from '../common/IdoMezo'
 
 // ---------------------------------------------------------------------------
 //  Profilom
@@ -209,8 +210,8 @@ export default function ProfilPage({ onJelszo }: {
                     <label htmlFor="mv-tol">
                       {f.kind === 'KORABBAN_TAVOZIK' ? 'Mikor megy el?' : 'Mettől'}
                     </label>
-                    <input id="mv-tol" className="beviteli szam" type="time" step={300}
-                           value={f.starts} onChange={(e) => set('starts', e.target.value)} />
+                    <IdoMezo id="mv-tol" value={f.starts} cim="Mettől"
+                             onChange={(v) => set('starts', v)} />
                   </div>
                 )}
                 {kellIg && (
@@ -218,8 +219,8 @@ export default function ProfilPage({ onJelszo }: {
                     <label htmlFor="mv-ig">
                       {f.kind === 'KESOBB_ERKEZIK' ? 'Mikor érkezik?' : 'Meddig'}
                     </label>
-                    <input id="mv-ig" className="beviteli szam" type="time" step={300}
-                           value={f.ends} onChange={(e) => set('ends', e.target.value)} />
+                    <IdoMezo id="mv-ig" value={f.ends} cim="Meddig"
+                             onChange={(v) => set('ends', v)} />
                   </div>
                 )}
               </div>

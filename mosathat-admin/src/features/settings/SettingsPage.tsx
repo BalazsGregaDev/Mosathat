@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
 import { idoMezo, maStr, napRovidCim } from '../../lib/format'
+import IdoMezo from '../common/IdoMezo'
 import type { DayOverride, OpeningDay, ShopSettings, ValidityKind } from '../../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -189,39 +190,39 @@ function Nyitvatartas() {
                     ) : (
                       <>
                         <td>
-                          <input type="time" className="beviteli ido"
+                          <IdoMezo className="beviteli ido"
                                  value={idoMezo(d.opens)}
-                                 onChange={(e) => modosit(d.weekday, { opens: e.target.value })}
-                                 aria-label={`${d.nev} nyitás`} />
+                                 onChange={(v) => modosit(d.weekday, { opens: v })}
+                                 ariaLabel={`${d.nev} nyitás`} />
                         </td>
                         <td>
-                          <input type="time" className="beviteli ido"
+                          <IdoMezo className="beviteli ido"
                                  value={idoMezo(d.closes)}
-                                 onChange={(e) => modosit(d.weekday, { closes: e.target.value })}
-                                 aria-label={`${d.nev} zárás`} />
+                                 onChange={(v) => modosit(d.weekday, { closes: v })}
+                                 ariaLabel={`${d.nev} zárás`} />
                         </td>
                         <td>
-                          <input type="time" className="beviteli ido"
+                          <IdoMezo className="beviteli ido"
                                  value={idoMezo(d.starts)}
-                                 onChange={(e) => modosit(d.weekday, { starts: e.target.value })}
-                                 aria-label={`${d.nev} munka kezdés`} />
+                                 onChange={(v) => modosit(d.weekday, { starts: v })}
+                                 ariaLabel={`${d.nev} munka kezdés`} />
                         </td>
                         <td>
-                          <input type="time" className="beviteli ido"
+                          <IdoMezo className="beviteli ido"
                                  value={idoMezo(d.ends)}
-                                 onChange={(e) => modosit(d.weekday, { ends: e.target.value })}
-                                 aria-label={`${d.nev} munka vége`} />
+                                 onChange={(v) => modosit(d.weekday, { ends: v })}
+                                 ariaLabel={`${d.nev} munka vége`} />
                         </td>
                         <td>
                           <div className="szunetek">
                             {d.breaks.map((b, i) => (
                               <div className="szunet" key={i}>
-                                <input type="time" className="beviteli ido" value={idoMezo(b.starts)}
-                                       onChange={(e) => szunetModosit(d.weekday, i, { starts: e.target.value })}
-                                       aria-label="Szünet kezdete" />
-                                <input type="time" className="beviteli ido" value={idoMezo(b.ends)}
-                                       onChange={(e) => szunetModosit(d.weekday, i, { ends: e.target.value })}
-                                       aria-label="Szünet vége" />
+                                <IdoMezo className="beviteli ido" value={idoMezo(b.starts)}
+                                       onChange={(v) => szunetModosit(d.weekday, i, { starts: v })}
+                                       ariaLabel="Szünet kezdete" />
+                                <IdoMezo className="beviteli ido" value={idoMezo(b.ends)}
+                                       onChange={(v) => szunetModosit(d.weekday, i, { ends: v })}
+                                       ariaLabel="Szünet vége" />
                                 <input className="beviteli szunet-nev" value={b.label}
                                        onChange={(e) => szunetModosit(d.weekday, i, { label: e.target.value })}
                                        aria-label="Szünet neve" />
@@ -288,15 +289,15 @@ function Altalanos() {
       <div className="panel">
         <h3>Munkarend</h3>
         <div className="panel-torzs">
-          <label className="mezo">
+          <div className="mezo">
             <span>Leadás legkorábban</span>
-            <input type="time" className="beviteli" value={idoMezo(s.drop_off_from)}
-                   onChange={(e) => mod({ drop_off_from: e.target.value })} />
+            <IdoMezo ariaLabel="Leadás legkorábban" className="beviteli" value={idoMezo(s.drop_off_from)}
+                   onChange={(v) => mod({ drop_off_from: v })} />
             <small>
               Nem a nyitás — ennél korábbra a rendszer nem ígér leadást. 7:15 azért
               van, mert 7:00-ra nem mindig sikerült beérni.
             </small>
-          </label>
+          </div>
 
           <label className="mezo">
             <span>Párhuzamosan mosott autók</span>
@@ -430,26 +431,26 @@ function Kivetelnapok() {
 
           {!uj.closed && (
             <div className="mezo-sor">
-              <label className="mezo">
+              <div className="mezo">
                 <span>Nyitás</span>
-                <input type="time" className="beviteli" value={idoMezo(uj.opens)}
-                       onChange={(e) => mod({ opens: e.target.value })} />
-              </label>
-              <label className="mezo">
+                <IdoMezo ariaLabel="Nyitás" className="beviteli" value={idoMezo(uj.opens)}
+                       onChange={(v) => mod({ opens: v })} />
+              </div>
+              <div className="mezo">
                 <span>Zárás</span>
-                <input type="time" className="beviteli" value={idoMezo(uj.closes)}
-                       onChange={(e) => mod({ closes: e.target.value })} />
-              </label>
-              <label className="mezo">
+                <IdoMezo ariaLabel="Zárás" className="beviteli" value={idoMezo(uj.closes)}
+                       onChange={(v) => mod({ closes: v })} />
+              </div>
+              <div className="mezo">
                 <span>Munka kezdés</span>
-                <input type="time" className="beviteli" value={idoMezo(uj.work_starts)}
-                       onChange={(e) => mod({ work_starts: e.target.value })} />
-              </label>
-              <label className="mezo">
+                <IdoMezo ariaLabel="Munka kezdés" className="beviteli" value={idoMezo(uj.work_starts)}
+                       onChange={(v) => mod({ work_starts: v })} />
+              </div>
+              <div className="mezo">
                 <span>Munka vége</span>
-                <input type="time" className="beviteli" value={idoMezo(uj.work_ends)}
-                       onChange={(e) => mod({ work_ends: e.target.value })} />
-              </label>
+                <IdoMezo ariaLabel="Munka vége" className="beviteli" value={idoMezo(uj.work_ends)}
+                       onChange={(v) => mod({ work_ends: v })} />
+              </div>
               <label className="mezo">
                 <span>Párhuzamos autók</span>
                 <input type="number" min={1} max={6} className="beviteli"

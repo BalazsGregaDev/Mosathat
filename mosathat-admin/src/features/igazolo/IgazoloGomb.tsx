@@ -19,7 +19,8 @@ import SorUrlap from './SorUrlap'
 /** Kell-e a foglaláshoz igazolólap gomb. */
 export function igazoloKell(b: DayBooking): boolean {
   const lemondott = ['CANCELLED_BY_CUSTOMER', 'CANCELLED_BY_SHOP', 'NO_SHOW'].includes(b.status)
-  return Boolean(b.company_id) && b.billing_kind !== 'NORMAL' && !lemondott
+  // A „nem fért be" autót nem csináltuk meg: nincs mit igazolni.
+  return Boolean(b.company_id) && b.billing_kind !== 'NORMAL' && !lemondott && !b.not_fitted
 }
 
 export default function IgazoloGomb({

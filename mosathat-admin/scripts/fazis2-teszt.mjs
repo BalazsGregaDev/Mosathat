@@ -145,7 +145,8 @@ await p.waitForTimeout(1500)
       .map((e) => e.firstElementChild.textContent.trim()))
   console.log(`         ${JSON.stringify(cimkek)}`)
   // v38: szerződéses cégnél a Cég alatt ott az Igazolólap sora is.
-  ok('a sorok sorrendje', ['Név', 'Telefon', 'Cég', 'Igazolólap', 'Rendszám', 'Autó', 'Hozza', 'Viszi', 'Méret',
+  // v43: a Viszi alatt a Kérdőjeles kapcsoló.
+  ok('a sorok sorrendje', ['Név', 'Telefon', 'Cég', 'Igazolólap', 'Rendszám', 'Autó', 'Hozza', 'Viszi', 'Kérdőjeles', 'Méret',
     'Jármű típus', 'Csomag', 'Egyéb szolgáltatás', 'Terjedelem', 'Típus', 'Munkaóra'], cimkek)
   const ceg = await p.locator('.adatsor').filter({ hasText: /^Cég/ }).first().innerText()
   ok('a cég rögzült elsőre is', true, ceg.includes('Autó Trans'))
@@ -155,11 +156,12 @@ await p.waitForTimeout(1500)
   const viszi = await p.locator('input[aria-label="Viszi napja"]').inputValue()
   ok('a Viszi napja a beírt nap', VISZI, viszi)
 
-  // Viszi órája: átírás, kilépés → mentés
-  await p.locator('input[aria-label="Viszi órája"]').fill('16:30')
-  await p.locator('input[aria-label="Viszi órája"]').blur()
+  // Viszi órája: telefonon a saját időválasztóval (v43) — óra, majd perc → mentés
+  await p.locator('button[aria-label="Viszi órája"]').click()
+  await p.locator('.ido-ablak .ido-orak button').filter({ hasText: /^16$/ }).click()
+  await p.locator('.ido-ablak .ido-percek button').filter({ hasText: ':30' }).click()
   await p.waitForTimeout(1500)
-  ok('a Viszi órája elment', '16:30', await p.locator('input[aria-label="Viszi órája"]').inputValue())
+  ok('a Viszi órája elment', '16:30', (await p.locator('button[aria-label="Viszi órája"]').innerText()).trim())
 }
 await p.locator('.lap-fej .bezar').click(); await p.waitForTimeout(800)
 
