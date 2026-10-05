@@ -1,0 +1,73 @@
+// v48: „Kész van" kipipálja a munkalistát (napi kártyán és munkalapon is);
+// a Visszanyit a Kész van előtti állapotba és pipákba állít vissza.
+import { chromium } from 'playwright'
+
+const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
+let baj = 0
+const ok = (mit, v, k) => {
+  const jo = JSON.stringify(v) === JSON.stringify(k)
+  if (!jo) baj++
+  console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
+}
+const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } })
+const p = await ctx.newPage()
+p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
+await p.goto('http://localhost:5180/')
+await p.waitForSelector('input[type="email"]', { timeout: 60000 })
+await p.fill('input[type="email"]', 'tulaj@mosathat.hu')
+await p.fill('input[type="password"]', 'x')
+await p.getByRole('button', { name: /Belépés/ }).click()
+await p.waitForTimeout(2500)
+await p.locator('aside.oldalsav button').filter({ hasText: 'Időpontok' }).first().click()
+await p.waitForTimeout(1500)
+
+// Egy magánautó, ami már bent van (ABC-123, folyamatban): a kártyáról Kész van
+const k = p.locator('.napi-lista .kartya').filter({ hasText: 'ABC-123' }).first()
+const allas = async () => (await k.locator('.lista-jelzo').innerText()).trim()
+const elotte = await allas()
+const elotteAllapot = await k.getAttribute('data-allapot')
+console.log(`         előtte: ${elotte}, ${elotteAllapot}`)
+
+console.log('=== 1) Kész van a napi kártyán ===\n')
+await k.getByRole('button', { name: 'Kész van' }).click()
+await p.waitForTimeout(800)
+await p.locator('.kesz-ablak').getByRole('button', { name: 'Minden kész' }).click()   // v49: az ablakban
+await p.locator('.kerdes-gombok .btn-fo').click()
+await p.waitForTimeout(1800)
+const [kesz, osszes] = (await allas()).split('/').map(Number)
+ok('minden munkapont kipipálva', true, kesz === osszes && osszes > 0)
+ok('az állapot: Kész', 'READY', await k.getAttribute('data-allapot'))
+
+console.log('\n=== 2) Visszanyit a munkalapon ===\n')
+await k.locator('.kartya-nyit').click()
+await p.waitForTimeout(1200)
+const lab = p.locator('.munkalap-lab')
+ok('Kész állapotban is van Visszanyit', 1, await lab.getByRole('button', { name: 'Visszanyit' }).count())
+await lab.getByRole('button', { name: 'Visszanyit' }).click()
+await p.waitForTimeout(1500)
+ok('a Kész van gomb újra ott (a korábbi állapot)', 1, await lab.getByRole('button', { name: 'Kész van' }).count())
+await p.keyboard.press('Escape'); await p.waitForTimeout(1000)
+ok('a pipák visszaálltak a korábbira (a kártya számlálója)', elotte, await allas())
+await k.locator('.kartya-nyit').click()
+await p.waitForTimeout(1200)
+
+console.log('\n=== 3) Kész van a munkalapon, Átvette, Visszanyit ===\n')
+await lab.getByRole('button', { name: 'Kész van' }).click()
+await p.waitForTimeout(800)
+await p.locator('.kesz-ablak').getByRole('button', { name: 'Minden kész' }).click()   // v49: az ablakban
+await p.locator('.kerdes-gombok .btn-fo').click()
+await p.waitForTimeout(1500)
+ok('a munkalapon is: Átvette a következő lépés', 1, await lab.getByRole('button', { name: 'Átvette' }).count())
+await lab.getByRole('button', { name: 'Átvette' }).click()
+await p.waitForTimeout(300)
+await p.locator('.kerdes-gombok .btn-fo').click()
+await p.waitForTimeout(1500)
+await lab.getByRole('button', { name: 'Visszanyit' }).click()
+await p.waitForTimeout(1500)
+ok('lezártból is a Kész van előtti állapotba', 1, await lab.getByRole('button', { name: 'Kész van' }).count())
+await p.keyboard.press('Escape'); await p.waitForTimeout(800)
+ok('a kártyán is a régi állás', [elotte, elotteAllapot], [await allas(), await k.getAttribute('data-allapot')])
+
+await b.close()
+console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)
+process.exit(baj === 0 ? 0 : 1)

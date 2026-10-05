@@ -5,7 +5,7 @@ import type {
   LatestStart, NewBookingInput, PackageMatrixRow, PackageExtraRow, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
   PlateLookup, Quote, CompanyHit, CompanyCandidate, AbsenceInput, AbsenceRow, DayAbsence,
   CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
-  WeekDay, WorkWindow,
+  WeekDay, WorkWindow, FinishPreview,
 } from '../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -131,6 +131,21 @@ export interface DataSource {
    */
   patchBooking(bookingId: string, patch: Record<string, unknown>): Promise<void>
   setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void>
+  /**
+   * Visszanyitás a „Kész van" előtti állapotba (Kész van-ból és lezártból):
+   * a magától kipipált munkapontok pipája is lekerül. Az új állapotot adja.
+   */
+  reopenBooking(bookingId: string): Promise<BookingStatus>
+  /**
+   * „Kész van" ablak: mi maradna ki és mennyi lenne az ár, ha a `done`
+   * pontokkal (és a már eddig kész pontokkal) zárnánk.
+   */
+  finishPreview(bookingId: string, done: string[]): Promise<FinishPreview>
+  /**
+   * „Kész van" a kiválasztás szerint: a `done` pontok kipipálva, ami
+   * kimaradt, nem számít bele a végleges árba. A foglalás maga nem változik.
+   */
+  finishBooking(bookingId: string, done: string[]): Promise<FinishPreview>
   // --- flottás autók ---
   /** A szerződés „Flottás autók" kapcsolója (tulajdonos). */
   setContractFleet(contractId: string, value: boolean): Promise<void>

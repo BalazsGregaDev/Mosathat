@@ -24,6 +24,8 @@ console.log('=== Léptető ===\n')
 const a1 = (await egy(`select fleet_step($1, 1) as id`, [g])).id
 t.ok('+1: az 1. autó kész (lezárva)', ['COMPLETED', 'CONFIRMED', 'CONFIRMED'], await allapot())
 t.ok('a lépés az 1. autót adja vissza', 1, (await egy(`select fleet_index from bookings where id = $1`, [a1])).fleet_index)
+t.ok('a kész autó lezárási ideje beíródik', true, Boolean((await egy(
+  `select actual_finished_at from bookings where id = $1`, [a1])).actual_finished_at))
 // a 2. törölve: kihagyja
 const masodik = (await egy(`select id from bookings where fleet_group = $1 and fleet_index = 2`, [g])).id
 await q(`select set_booking_status($1, 'CANCELLED_BY_CUSTOMER')`, [masodik])
@@ -35,7 +37,8 @@ t.ok('−1: az utolsó kész (3.) visszanyílik', ['COMPLETED', 'CANCELLED_BY_CU
 await q(`select fleet_step($1, -1)`, [g])
 await q(`select fleet_step($1, -1)`, [g])
 t.ok('−1 többször: mind visszanyílik, többet nem lép', ['CONFIRMED', 'CANCELLED_BY_CUSTOMER', 'CONFIRMED'], await allapot())
-t.ok('a kész autó lezárási ideje beíródik', true, Boolean((await egy(
-  `select actual_finished_at from bookings where id = $1`, [a1])).actual_finished_at))
+// v48: visszalépéskor a befejezés ideje is törlődik (a munka nincs kész).
+t.ok('visszalépve a befejezés ideje törölve', null, (await egy(
+  `select actual_finished_at from bookings where id = $1`, [a1])).actual_finished_at)
 
 t.vege()

@@ -276,6 +276,10 @@ export interface DayBooking {
   fleet_group: string | null
   /** Az autó sorszáma a csoportban (1, 2, 3 …). */
   fleet_index: number | null
+  /** Kész van-kor kimaradt tételek, szövegesen („Belső terület, Ózonos kezelés"). */
+  skip_note?: string | null
+  /** Ennyivel lett kevesebb a végleges ár a kimaradt tételek miatt. */
+  skip_huf?: number | null
   /**
    * Csak a felületen: ha ez a foglalás egy flottás csoport KÉPVISELŐJE a
    * listában, itt a csoport összes autója (sorszám szerint). Lásd lib/flotta.ts.
@@ -810,6 +814,25 @@ export interface SheetCompany {
 }
 
 /** A napi nézet gombjához: a foglalás sora, előre kitöltve (vagy a meglévő). */
+/**
+ * A „Kész van" ablak előnézete: ha a kipipált pontokkal zárjuk, mi marad ki,
+ * és mennyi lesz az ár. Lásd booking_finish_preview az adatbázisban.
+ */
+export interface FinishPreview {
+  /** Az ár, ha minden kész (a tervezett tételek szerint). */
+  base: number
+  /** Az ár a kimaradt tételek nélkül. */
+  adjusted: number
+  /** A kettő különbsége: ennyivel lesz kevesebb. */
+  skip_huf: number
+  /** Ami kimaradt, szövegesen — null, ha semmi. */
+  skip_note: string | null
+  /** A csomag teljesen kimaradt területei. */
+  skipped_areas: ServiceArea[]
+  /** A kimaradt egyéb szolgáltatások nevei. */
+  skipped_items: string[]
+}
+
 export interface SheetForBooking {
   company_id: string | null
   company_name: string | null

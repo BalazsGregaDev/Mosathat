@@ -8,7 +8,7 @@ import type {
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
-  Quote, CompanyHit, CompanyCandidate,
+  Quote, CompanyHit, CompanyCandidate, FinishPreview,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { calcArgs, idoRovidit, num, numOrNull, toCalcResult, toQuote } from './source'
@@ -322,6 +322,24 @@ export class SupabaseSource implements DataSource {
     if (error) fail('Foglalás betöltése', error)
     return (data as BookingFormData | null) ?? null
   }
+
+  async reopenBooking(bookingId: string): Promise<BookingStatus> {
+    const { data, error } = await this.sb.rpc('booking_reopen', { p_booking_id: bookingId })
+    if (error) fail('Visszanyitás', error)
+    return data as BookingStatus
+  }
+  async finishPreview(bookingId: string, done: string[]): Promise<FinishPreview> {
+    const { data, error } = await this.sb.rpc('booking_finish_preview', { p_booking_id: bookingId, p_done: done })
+    if (error) fail('Kész van előnézet', error)
+    return data as FinishPreview
+  }
+
+  async finishBooking(bookingId: string, done: string[]): Promise<FinishPreview> {
+    const { data, error } = await this.sb.rpc('booking_finish', { p_booking_id: bookingId, p_done: done })
+    if (error) fail('Kész van', error)
+    return data as FinishPreview
+  }
+
 
   async setContractFleet(contractId: string, value: boolean): Promise<void> {
     const { error } = await this.sb.rpc('set_contract_fleet', { p_contract: contractId, p_value: value })

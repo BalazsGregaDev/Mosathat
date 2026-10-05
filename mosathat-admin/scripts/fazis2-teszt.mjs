@@ -11,7 +11,7 @@
 //      Flotta / Saját, és az ár a választással együtt változik.
 //   3. Elírt cégnév mentéskor: „Erre a cégre gondoltál?"
 //   4. Munkalap: a sorok sorrendje, a Cég átírása, a Hozza / Viszi.
-//   5. „Kész van": rákérdez, a Nem nem csinál semmit, az Igen csak az
+//   5. „Kész van": a munkalistás ablak; a Mégse nem csinál semmit, a Kész van csak az
 //      állapotot váltja — a lista nem tölt újra és nem rendeződik át.
 //   6. Telefonon és tableten az ablak a látható képernyőn belül marad.
 import { chromium } from 'playwright'
@@ -189,15 +189,19 @@ console.log('\n=== 5) „Kész van": rákérdez, nem tölt újra ===\n')
   ok('a Megérkezett nem kérdez', 0, await p.locator('.kerdes-ablak').count())
   await lab.getByRole('button', { name: 'Kész van' }).click()
   await p.waitForTimeout(400)
-  ok('„Biztosan elkészült?"', 'Biztosan elkészült?', await p.locator('.kerdes-ablak h2').innerText())
-  ok('Igen / Nem gomb', ['Nem', 'Igen'], await p.locator('.kerdes-gombok button').allInnerTexts())
-  await p.locator('.kerdes-gombok button').filter({ hasText: 'Nem' }).click()
+  // v49: a kérdés a munkalistás „Kész van?" ablak
+  ok('„Kész van?" ablak', true, (await p.locator('.kesz-ablak h2').innerText()).startsWith('Kész van?'))
+  ok('Mégse / Kész van gomb', 'Mégse', (await p.locator('.kerdes-gombok button').allInnerTexts())[0])
+  await p.locator('.kerdes-gombok button').filter({ hasText: 'Mégse' }).click()
   await p.waitForTimeout(600)
-  ok('a Nem után marad a Kész van', 1, await lab.getByRole('button', { name: 'Kész van' }).count())
+  ok('a Mégse után marad a Kész van', 1, await lab.getByRole('button', { name: 'Kész van' }).count())
   ok('és a munkalap nyitva marad', 1, await p.locator('.munkalap-lab').count())
   await lab.getByRole('button', { name: 'Kész van' }).click()
-  await p.waitForTimeout(300)
-  await p.locator('.kerdes-gombok button').filter({ hasText: 'Igen' }).click()
+  await p.waitForTimeout(800)
+  if (await p.locator('.kesz-ablak').getByRole('button', { name: 'Minden kész' }).count()) {
+    await p.locator('.kesz-ablak').getByRole('button', { name: 'Minden kész' }).click()
+  }
+  await p.locator('.kerdes-gombok .btn-fo').click()
   await p.waitForTimeout(1200)
   ok('az Igen után: Átvette a következő', 1, await lab.getByRole('button', { name: 'Átvette' }).count())
   // v40: szerződéses cég autója — Kész van után megnyílik az igazolólap sora.
@@ -223,8 +227,12 @@ await p.locator('.lap-fej .bezar').click(); await p.waitForTimeout(1200)
   const k2 = p.locator('.kartya').filter({ hasText: rsz }).first()
   await k2.locator('.kartya-muvelet button', { hasText: 'Kész van' }).click()
   await p.waitForTimeout(300)
-  ok('a kártyán is rákérdez', 'Biztosan elkészült?', await p.locator('.kerdes-ablak h2').innerText())
-  await p.locator('.kerdes-gombok button').filter({ hasText: 'Igen' }).click()
+  ok('a kártyán is rákérdez', true, (await p.locator('.kesz-ablak h2').innerText()).startsWith('Kész van?'))
+  await p.waitForTimeout(500)
+  if (await p.locator('.kesz-ablak').getByRole('button', { name: 'Minden kész' }).count()) {
+    await p.locator('.kesz-ablak').getByRole('button', { name: 'Minden kész' }).click()
+  }
+  await p.locator('.kerdes-gombok .btn-fo').click()
   await p.waitForTimeout(1500)
   const utana = await p.locator('.kartya .rendszam').allInnerTexts()
   // Az állapot felirata nincs a kártyán: a kártya bal szélének színe mondja.

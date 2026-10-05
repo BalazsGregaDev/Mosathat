@@ -7,9 +7,9 @@ import type { KerdesBeallitas } from './Kerdes'
 // ---------------------------------------------------------------------------
 
 /** Melyik lépés előtt kérdezünk rá. A „Megérkezett" nem: az a nap leggyakoribb
- *  mozdulata, és ha téves, a munkalista egyszerűen még üres. */
+ *  mozdulata, és ha téves, a munkalista egyszerűen még üres. A „Kész van"
+ *  sem itt van: az a munkalistás ablakot nyitja (booking/KeszAblak.tsx). */
 export const ALLAPOT_KERDES: Partial<Record<BookingStatus, KerdesBeallitas>> = {
-  READY: { cim: 'Biztosan elkészült?' },
   COMPLETED: {
     cim: 'Biztosan átvette?',
     szoveg: 'Átvétel után a munkalap lezárul: a munkalista és az ár már nem módosítható.',

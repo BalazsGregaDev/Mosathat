@@ -12,6 +12,7 @@ import {
 import { azonosito } from './MiniKartya'
 import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
 import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
+import { useKeszAblak } from '../booking/KeszAblak'
 
 // ---------------------------------------------------------------------------
 //  Egy kártya a napi listában.
@@ -84,6 +85,7 @@ export default function BookingCard({
   const [hiba, setHiba] = useState<string | null>(null)
   const [kerdesAblak, kerdez] = useKerdes()
   const [kapuAblak, kapu] = useIgazoloKapu()
+  const [keszAblak, keszVan] = useKeszAblak()
   const arany = b.tasks_total > 0 ? (b.tasks_done / b.tasks_total) * 100 : 0
 
   const kovetkezo = NEXT_STATUS[b.status]
@@ -160,9 +162,22 @@ export default function BookingCard({
       setHiba(e instanceof Error ? e.message : String(e))
       return
     }
-    const k = ALLAPOT_KERDES[cel]
-    if (k && !(await kerdez(k))) return
-    await allapot(cel)
+    if (cel === 'READY') {
+      // „Kész van": a munkalistás ablak kérdez és ment (ami kimaradt, nem
+      // számít bele az árba). Mégse esetén nem történt semmi.
+      const eredmeny = await keszVan(b.id, azonosito(b))
+      if (!eredmeny) return
+      onModosit?.(b.id, {
+        status: 'READY',
+        skip_note: eredmeny.skip_note,
+        skip_huf: eredmeny.skip_huf || null,
+      })
+      refresh()
+    } else {
+      const k = ALLAPOT_KERDES[cel]
+      if (k && !(await kerdez(k))) return
+      await allapot(cel)
+    }
     if (igazolo && cel === 'READY') {
       try {
         await kapu.alairat(b.id,
@@ -285,6 +300,7 @@ export default function BookingCard({
         )}
       </div>
       {kerdesAblak}
+      {keszAblak}
       {kapuAblak}
     </div>
   )

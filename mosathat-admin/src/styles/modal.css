@@ -578,3 +578,36 @@
 @media (max-width: 560px) {
   .kartya-muvelet .flotta-lepteto { width: 100%; }
 }
+
+/* --- „Kész van" ablak a munkalistával (v49) -----------------------------------
+   Szélesebb, mint egy sima kérdés: benne a munkalista. Ha hosszú, a lista
+   görget, a cím és a gombok helyben maradnak. */
+.kerdes-ablak.kesz-ablak {
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 2 * var(--t4));
+}
+.kesz-fej { display: flex; align-items: center; gap: var(--t3); }
+.kesz-fej h2 { flex: 1; }
+.kesz-fej .rendszam { font-size: var(--m-md); margin-left: var(--t2); }
+.kesz-lista { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.kesz-lista .munkacsoport { margin-bottom: var(--t2); }
+.kesz-lista .munka { padding: 7px var(--t2); }         /* ujjal is eltalálható */
+.kesz-lista .munka input { width: 22px; height: 22px; }
+.kimaradt-cimke {
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--v-baj); font-weight: var(--vastag-eros); flex: none;
+}
+.kesz-ar {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--t2);
+  padding: var(--t3); border-radius: var(--r); background: var(--lap-2);
+  font-size: var(--m-sm);
+}
+.kesz-ar strong { font-size: var(--m-md); }
+.kesz-ar[data-csokken='true'] { background: var(--narancs-halvany); }
+.kesz-ar-ok { flex-basis: 100%; }
+
+/* A munkalapon, kész autónál: ami kimaradt (üres négyzet, piros felirat). */
+.kimaradt-sor {
+  font-size: var(--m-sm); padding: var(--t2) var(--t3); border-radius: var(--r);
+  background: var(--narancs-halvany); margin-bottom: var(--t2);
+}

@@ -27,7 +27,7 @@ import type {
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
-  Quote, CompanyHit, CompanyCandidate,
+  Quote, CompanyHit, CompanyCandidate, FinishPreview,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { calcArgs, idoRovidit, num, numOrNull, toCalcResult, toQuote } from './source'
@@ -370,6 +370,23 @@ export class DemoSource implements DataSource {
       `select booking_form_data($1::uuid) as d`, [bookingId])
     return r?.d ?? null
   }
+
+  async reopenBooking(bookingId: string): Promise<BookingStatus> {
+    const [r] = await this.rows<{ s: BookingStatus }>(`select booking_reopen($1::uuid) as s`, [bookingId])
+    return r.s
+  }
+  async finishPreview(bookingId: string, done: string[]): Promise<FinishPreview> {
+    const [r] = await this.rows<{ p: FinishPreview }>(
+      `select booking_finish_preview($1::uuid, $2::uuid[]) as p`, [bookingId, done])
+    return r.p
+  }
+
+  async finishBooking(bookingId: string, done: string[]): Promise<FinishPreview> {
+    const [r] = await this.rows<{ p: FinishPreview }>(
+      `select booking_finish($1::uuid, $2::uuid[]) as p`, [bookingId, done])
+    return r.p
+  }
+
 
   async setContractFleet(contractId: string, value: boolean): Promise<void> {
     await this.rows(`select set_contract_fleet($1::uuid, $2::boolean)`, [contractId, value])

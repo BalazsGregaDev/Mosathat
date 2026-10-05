@@ -20,6 +20,7 @@ import { EGYSEG } from '../services/Arlista'
 import FlottaMunkalap from './FlottaMunkalap'
 import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
 import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
+import { useKeszAblak } from './KeszAblak'
 
 // A legördülők tartalma. A feliratok ugyanabból a szótárból jönnek, mint
 // mindenhol máshol — így nem lehet két különböző neve ugyanannak.
@@ -104,6 +105,7 @@ export default function BookingDetail({
   const { data, catalog, refresh } = useApp()
   const [kerdesAblak, kerdez] = useKerdes()
   const [kapuAblak, kapu] = useIgazoloKapu()
+  const [keszAblak, keszVan] = useKeszAblak()
   const [b, setB] = useState<DayBooking | null>(null)
   const [lista, setLista] = useState<BookingTask[]>([])
   const [mennyisegek, setMennyisegek] = useState<BookingExtraRow[]>([])
@@ -169,7 +171,13 @@ export default function BookingDetail({
 
   const lezart = b?.status === 'COMPLETED'
   const megerkezett = b ? ['ARRIVED', 'IN_PROGRESS', 'READY'].includes(b.status) : false
-  const listaNyitva = megerkezett && !lezart
+  // Kész van után a lista áll: ami üresen maradt, az KIMARADT (és nem számít
+  // bele az árba). Javítani a Visszanyit gombbal lehet.
+  const keszVolt = b ? ['READY', 'COMPLETED'].includes(b.status) : false
+  const listaNyitva = megerkezett && !keszVolt
+  // A „kimaradt" jelölés a pontokon (nem fért be autónál nincs: ott semmi
+  // sem készült el, az a lényeg).
+  const kimaradtJel = keszVolt && !b?.not_fitted
 
   // --- a lista csoportosítva --------------------------------------------------
 
@@ -185,12 +193,14 @@ export default function BookingDetail({
         extra: sorok.filter((t) => t.source === 'EXTRA'),
       }
     }
+    // Kész autónál a Kívül is pontonként látszik, ha valami kimaradt belőle.
+    const kulsoKimaradt = keszVolt && lista.some((t) => t.area === 'KULSO' && t.source === 'PACKAGE' && !t.done)
     return [
-      mk('KULSO', 'Kívül', 'KULSO', false),
+      mk('KULSO', 'Kívül', 'KULSO', kulsoKimaradt),
       mk('BELSO', 'Belül', 'BELSO', true),
       mk('EGYEB', 'Csomagon kívül', null, true),
     ].filter((cs) => cs.csomag.length + cs.extra.length > 0)
-  }, [lista])
+  }, [lista, keszVolt])
 
   // --- pipálás ----------------------------------------------------------------
 
@@ -259,9 +269,18 @@ export default function BookingDetail({
       setHiba(e instanceof Error ? e.message : String(e))
       return
     }
-    const k = ALLAPOT_KERDES[cel]
-    if (k && !(await kerdez(k))) return
-    await allapot(cel)
+    if (cel === 'READY') {
+      // „Kész van": a munkalistás ablak kérdez és ment (ami kimaradt, nem
+      // számít bele az árba). Mégse esetén nem történt semmi.
+      const eredmeny = await keszVan(b.id, (b.plate_raw ?? '').toUpperCase())
+      if (!eredmeny) return
+      valtozott.current = true
+      await betolt()
+    } else {
+      const k = ALLAPOT_KERDES[cel]
+      if (k && !(await kerdez(k))) return
+      await allapot(cel)
+    }
     if (lapos && cel === 'READY') {
       try {
         await kapu.alairat(b.id,
@@ -296,6 +315,17 @@ export default function BookingDetail({
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
     }
+  }
+
+  async function visszanyit() {
+    if (!b) return
+    valtozott.current = true
+    try {
+      await data.reopenBooking(b.id)
+    } catch (e) {
+      setHiba(e instanceof Error ? e.message : String(e))
+    }
+    await betolt()
   }
 
   async function lemond() {
@@ -767,6 +797,14 @@ export default function BookingDetail({
                   </span>
                 </div>
 
+                {/* Kész van után: ami kimaradt, és mennyivel lett kevesebb az ár. */}
+                {keszVolt && b.skip_note && (
+                  <div className="kimaradt-sor" data-teszt="kimaradt">
+                    <strong>Kimaradt:</strong> {b.skip_note}
+                    {b.skip_huf ? <> — {ft(b.skip_huf)}-tal kevesebb az ár.</> : <> — az ár nem változott.</>}
+                  </div>
+                )}
+
                 {!megerkezett && !lezart && (
                   <div className="figyelmeztet">
                     <span>
@@ -820,6 +858,7 @@ export default function BookingDetail({
                               onChange={() => void pipal(t)}
                             />
                             <span className="nev">{t.name}</span>
+                            {kimaradtJel && !t.done && <span className="kimaradt-cimke">kimaradt</span>}
                           </label>
                         ))}
                       </div>
@@ -839,6 +878,7 @@ export default function BookingDetail({
                                   onChange={() => void pipal(t)}
                                 />
                                 <span className="nev">{t.name}</span>
+                                {kimaradtJel && !t.done && <span className="kimaradt-cimke">kimaradt</span>}
                               </label>
                             ))}
                           </div>
@@ -1013,8 +1053,12 @@ export default function BookingDetail({
                     Mégis jön
                   </button>
                 )}
-                {lezart && (
-                  <button className="btn" onClick={() => void allapot('READY')}>
+                {/* Visszanyit: Kész van-ból és lezártból is a Kész van ELŐTTI
+                    állapotba (pl. Dolgozunk), és a „Kész van"-kor magától
+                    kipipált munkapontok pipája is lekerül — a kézzel
+                    kipipáltak maradnak. */}
+                {(lezart || b.status === 'READY') && (
+                  <button className="btn" onClick={() => void visszanyit()}>
                     Visszanyit
                   </button>
                 )}
@@ -1033,6 +1077,7 @@ export default function BookingDetail({
         )}
       </div>
       {kerdesAblak}
+      {keszAblak}
       {kapuAblak}
     </div>
   )
