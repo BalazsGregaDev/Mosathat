@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Kerdojel from './Kerdojel'
+import { flottaCsoportosit } from '../../lib/flotta'
 
 import { useApp } from '../../state/AppContext'
 import { hetHetfoje, maE, napPlusz, napRovidCim, ora } from '../../lib/format'
@@ -50,7 +51,8 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
       try {
         const r = await data.getRange(hetfo, napPlusz(hetfo, 6))
         if (!el) return
-        setSorok(r)
+        // Flottás csoport: egy kártya („Raiffeisen 3 db"), nem három.
+        setSorok(flottaCsoportosit(r))
         setHiba(null)
       } catch (e) {
         if (!el) return

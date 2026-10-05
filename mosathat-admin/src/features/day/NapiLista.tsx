@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useApp } from '../../state/AppContext'
 import type { DayBooking } from '../../lib/types'
 import BookingCard from './BookingCard'
+import FlottaKartya from './FlottaKartya'
 
 // ---------------------------------------------------------------------------
 //  A nap egyetlen listája, kézzel rendezhető sorrendben
@@ -243,7 +244,9 @@ export default function NapiLista({
               >
                 <span aria-hidden="true" />
               </button>
-              <BookingCard b={b} onMegnyit={() => onMegnyit(b.id)} onModosit={onModosit} />
+              {b.flotta
+                ? <FlottaKartya b={b} onMegnyit={() => onMegnyit(b.id)} />
+                : <BookingCard b={b} onMegnyit={() => onMegnyit(b.id)} onModosit={onModosit} />}
             </div>
           )
         })}

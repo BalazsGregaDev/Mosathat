@@ -13,6 +13,7 @@ import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../commo
 import SzerzodesArak, { AFA, FAJTAK, MERETEK } from './SzerzodesArak'
 import IgazoloLap from '../igazolo/IgazoloLap'
 import KetallasuCsuszka from '../common/KetallasuCsuszka'
+import Csuszka from '../common/Csuszka'
 
 // ---------------------------------------------------------------------------
 //  Cégek és bérletesek.
@@ -203,6 +204,11 @@ export default function PartnersPage({ fokuszCeg }: {
                       <span className="ertek">{ft(c.pickup_delivery_fee_huf)} / út</span>
                     </div>
                   )}
+
+                  <div className="adatsor">
+                    <span>Flottás autók</span>
+                    <span className="ertek">{c.fleet_cars ? 'igen' : 'nem'}</span>
+                  </div>
 
                   <div className="adatsor">
                     <span>Igazolólap időszaka</span>
@@ -544,6 +550,9 @@ function ContractForm({
   const [lejarat, setLejarat] = useState(contract?.valid_until?.slice(0, 10) ?? '')
   // Az igazolólap fordulónapja: hányadikán kezdődik egy lap (1 = naptári hónap).
   const [fordulo, setFordulo] = useState(contract?.cycle_day ?? 1)
+  // Flottás autók: az új időpontnál „Autó hozzáadása" — több autó egyszerre,
+  // rendszám nélkül is (a flottakezelő reggel csak a darabszámot tudja).
+  const [flottas, setFlottas] = useState(contract?.fleet_cars ?? false)
   const [arak, setArak] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       (contract?.prices ?? []).map((p) => [arKulcs(p.package_id, p.size, p.kind), String(p.price_huf)]),
@@ -600,7 +609,7 @@ function ContractForm({
 
     setMent(true)
     try {
-      await data.saveContract({
+      const id = await data.saveContract({
         id: contract?.id ?? null,
         company_id: c.id,
         company_name: c.id ? null : c.nev.trim(),
@@ -618,6 +627,8 @@ function ContractForm({
           price_huf: Number(arak[arKulcs(p.id, m, f)]) || 0,
         })))).filter((x) => x.price_huf > 0),
       })
+      // A kapcsoló külön hívás: csak ha változott (új szerződésnél ha be van kapcsolva).
+      if (flottas !== (contract?.fleet_cars ?? false)) await data.setContractFleet(id, flottas)
       onKesz()
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
@@ -687,6 +698,19 @@ function ContractForm({
                 ))}
               </select>
               <small>{fordulonapSzoveg(fordulo)}</small>
+            </div>
+
+            <div className="mezo">
+              <span className="csuszka-sor">
+                <span>Flottás autók</span>
+                <Csuszka be={flottas} cimke="Flottás autók" onValt={setFlottas} />
+              </span>
+              <small>
+                Bekapcsolva az új időpontnál a cég mellett megjelenik az „Autó
+                hozzáadása" gomb: több autó vehető fel egyszerre, rendszám nélkül is
+                (pl. „Raiffeisen 4 darab"), egy végső időponttal. A rendszámok utólag
+                írhatók be.
+              </small>
             </div>
 
             <label className="jelolo" data-aktiv={hozomViszem}>

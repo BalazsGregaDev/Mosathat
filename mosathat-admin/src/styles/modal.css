@@ -538,3 +538,43 @@
   .ido-orak { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .ido-percek { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* --- Új időpont: flottás autók („+ Autó hozzáadása") --------------------------- */
+.flotta-hozzaad {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--t2) var(--t3);
+}
+.flotta-hozzaad .flotta-osszeg { display: inline-flex; align-items: center; gap: var(--t2); }
+.flotta-hozzaad .halk { font-size: var(--m-xs); flex-basis: 100%; }
+
+/* --- Flottás csoport munkalapja: autónként egy sor ------------------------------ */
+.flotta-sorok { display: flex; flex-direction: column; gap: var(--t2); }
+.flotta-sor {
+  display: grid;
+  grid-template-columns: 28px minmax(110px, 1fr) minmax(120px, 1fr) auto auto;
+  align-items: center; gap: var(--t2) var(--t3);
+  padding: var(--t2); border: 1px solid var(--keret); border-radius: var(--r);
+  border-left: 6px solid var(--v-varjuk);
+}
+.flotta-sor[data-allapot='ARRIVED']     { border-left-color: var(--v-erkezett); }
+.flotta-sor[data-allapot='READY']       { border-left-color: var(--v-kesz); }
+.flotta-sor[data-allapot='COMPLETED']   { border-left-color: var(--v-lezart); }
+.flotta-sor[data-lemondott] { opacity: .55; }
+.flotta-sor .beviteli { width: 100%; min-width: 0; }
+.flotta-sorszam { font-weight: var(--vastag-fej); color: var(--szoveg-halk); }
+.flotta-ar { font-weight: var(--vastag-eros); white-space: nowrap; }
+.flotta-allapot { font-size: var(--m-xs); color: var(--szoveg-halk); white-space: nowrap; }
+.flotta-gombok {
+  grid-column: 1 / -1;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px;
+}
+@media (max-width: 700px) {
+  .flotta-sor { grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr); }
+  .flotta-ar, .flotta-allapot { grid-column: 2 / -1; }
+}
+/* A soron lévő autó (a léptető szerint) kiemelve. */
+.flotta-sor[data-soron] { border-color: var(--zold); box-shadow: 0 0 0 1px var(--zold); }
+.flotta-sor[data-allapot='COMPLETED'] .flotta-allapot { color: var(--zold-sotet); font-weight: var(--vastag-eros); }
+.flotta-munkalap .flotta-lepteto { margin: var(--t2) 0; }
+@media (max-width: 560px) {
+  .kartya-muvelet .flotta-lepteto { width: 100%; }
+}

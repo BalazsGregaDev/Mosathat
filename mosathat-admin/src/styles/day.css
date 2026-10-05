@@ -441,3 +441,32 @@ body.huzas-folyik { user-select: none; -webkit-user-select: none; cursor: grabbi
   max-width: 18em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+
+/* --- Flottás csoport ------------------------------------------------------------
+   Egy kártya, több autó: „RAIFFEISEN BANK [3 darab] 17:00-ig Premium", alatta
+   autónként egy kis címke (rendszám, vagy „2. autó"), az állapot színével. */
+.flotta-kartya .flotta-nev { letter-spacing: .02em; }
+.cimke-pill.flotta-db {
+  background: var(--zold-halvany); color: var(--zold-sotet);
+  font-weight: var(--vastag-fej);
+}
+.kartya-felso .cimke-pill.flotta-db { font-size: var(--k-ido); padding: 1px 8px; }
+.flotta-autok { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.flotta-auto {
+  font-family: var(--betu-szam); font-size: var(--k-also); font-weight: var(--vastag-eros);
+  padding: 1px 8px; border-radius: var(--r-sm);
+  border: 1px solid var(--keret-eros); border-left: 5px solid var(--v-varjuk);
+  background: var(--lap);
+}
+.flotta-auto[data-allapot='ARRIVED']     { border-left-color: var(--v-erkezett); }
+.flotta-auto[data-allapot='IN_PROGRESS'] { border-left-color: var(--v-dolgozunk, var(--zold)); }
+.flotta-auto[data-allapot='READY']       { border-left-color: var(--v-kesz); }
+.flotta-auto[data-allapot='COMPLETED']   { border-left-color: var(--v-lezart); opacity: .6; }
+
+/* Flottás léptető: [−] 2 / 4 kész · most: 3. autó [Kész, jöhet a következő] */
+.flotta-lepteto {
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px var(--t2);
+}
+.flotta-lepteto .lepteto-allas { font-size: var(--k-also, var(--m-sm)); white-space: nowrap; }
+.flotta-lepteto .lepteto-allas strong { font-size: 1.15em; }
+.kartya-muvelet .flotta-lepteto .btn { min-height: var(--k-gomb-mag); }

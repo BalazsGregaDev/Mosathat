@@ -65,6 +65,11 @@ export interface FormState {
   pickUpTime: string
   /** Kérdőjeles: itt hagyja, de csak feltételesen vállaltuk (ha befér). */
   tentative: boolean
+  /**
+   * Flottás csoport: hány autó (0 = rendes, egy autós foglalás). Csak
+   * „Flottás autók" szerződésű cégnél, az „Autó hozzáadása" gombbal nő.
+   */
+  flottaDarab: number
   // egyéb
   notes: string
 }
@@ -90,6 +95,7 @@ export const URES_URLAP: FormState = {
   pickUpDate: '',
   pickUpTime: '',
   tentative: false,
+  flottaDarab: 0,
   notes: '',
 }
 
@@ -173,6 +179,7 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
           pickUpDate: vissziNap && vissziNap !== b.service_date.slice(0, 10) ? vissziNap : '',
           pickUpTime: helyiOra(viszi),
           tentative: nap?.tentative ?? false,
+          flottaDarab: 0,
           notes: b.notes ?? '',
         })
       })
@@ -326,6 +333,22 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
   /** Van-e a cégnek élő szerződése — csak ilyenkor kell Flotta / Saját. */
   const szerzodeses = Boolean(calc?.contract_id)
 
+  // „Flottás autók" a cég szerződésében: ekkor jelenik meg az „Autó
+  // hozzáadása" gomb (csak új foglalásnál). A szerződés azonosítója az
+  // árajánlatból jön, a kapcsolót külön kérdezzük le.
+  const [flottas, setFlottas] = useState(false)
+  const szerzodesId = calc?.contract_id ?? null
+  useEffect(() => {
+    let el = true
+    if (!szerzodesId || bookingId) { setFlottas(false); return }
+    data.contractIsFleet(szerzodesId)
+      .then((v) => { if (el) setFlottas(v) })
+      .catch(() => { if (el) setFlottas(false) })
+    return () => { el = false }
+  }, [data, szerzodesId, bookingId])
+  // Ha a cég már nem flottás (pl. másik céget írtak be), a darabszám nullázódik.
+  const flottaDarab = flottas ? f.flottaDarab : 0
+
   // --- 3. mentés -------------------------------------------------------------
 
   // A csomag kötelező (a Start az alap); ezen felül elég, ha valamiről
@@ -382,6 +405,21 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
 
       // A kérdőjel külön hívással megy (a foglalás mentése után): új
       // foglalásnál csak ha be van kapcsolva, módosításnál mindig.
+      // Flottás csoport: N autó, rendszám és Hozza óra nélkül, egy végső
+      // időponttal (pick_up_time) — az adatbázis bontja autókra.
+      if (!bookingId && flottaDarab > 0) {
+        return await data.createFleetBooking({
+          ...input,
+          booking_type: f.bookingType === 'VAROS' ? 'LEADOS' : f.bookingType,
+          plate_raw: '',
+          vehicle_id: null,
+          start_time: null,
+          drop_off_time: null,
+          pick_up_date: null,
+          pick_up_time: f.pickUpTime || null,
+        }, flottaDarab)
+      }
+
       if (bookingId) {
         await data.updateBooking(bookingId, input)
         await data.setTentative(bookingId, f.tentative)
@@ -396,10 +434,11 @@ export function useBookingForm(nyitottE: boolean, kezdoNap: string, bookingId?: 
     } finally {
       setMentes(false)
     }
-  }, [data, f, extrakLista, valasztott, bookingId, szerzodeses])
+  }, [data, f, extrakLista, valasztott, bookingId, szerzodeses, flottaDarab])
 
   return {
     f, set, calc, menthetE, ment, mentes, hiba, setHiba, tolt, szerkesztes, szerzodeses,
+    flottas, flottaDarab,
     talalatok, keres, keresMezo, keresoIras, keresoZar,
     valasztott, talalatValaszt, ezcKeri,
     percIdo, // a komponensnek is kell

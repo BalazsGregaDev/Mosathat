@@ -17,6 +17,7 @@ import Csuszka from '../common/Csuszka'
 import Kerdojel from '../day/Kerdojel'
 import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../common/Ceg'
 import { EGYSEG } from '../services/Arlista'
+import FlottaMunkalap from './FlottaMunkalap'
 import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
 import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
 
@@ -81,6 +82,7 @@ export default function BookingDetail({
   arlistaGombok,
   osztott,
   fokusz,
+  egyedi,
 }: {
   bookingId: string
   onBezar: () => void
@@ -92,6 +94,12 @@ export default function BookingDetail({
   osztott?: boolean
   /** A „Figyelmet igényel" listából: melyik mező nyíljon rögtön írásra. */
   fokusz?: MunkalapFokusz
+  /**
+   * Flottás autónál is ennek az EGY autónak a munkalapja (a csoport
+   * munkalapjának „Részletek" gombja nyitja így). Nélküle flottás autónál a
+   * csoport munkalapja nyílik.
+   */
+  egyedi?: boolean
 }) {
   const { data, catalog, refresh } = useApp()
   const [kerdesAblak, kerdez] = useKerdes()
@@ -147,11 +155,15 @@ export default function BookingDetail({
     onBezar()
   }, [onBezar, refresh])
 
+  // Flottás csoportnál a csoport munkalapja kezeli az Escape-et (és a
+  // „Részletek" ablakét) — ez az ablak ilyenkor nem zár be magától.
+  const csoportNezet = Boolean(b?.fleet_group) && !egyedi
   useEffect(() => {
+    if (csoportNezet) return
     const k = (e: KeyboardEvent) => e.key === 'Escape' && bezar()
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
-  }, [bezar])
+  }, [bezar, csoportNezet])
 
   // --- állapotból adódó zárolás ----------------------------------------------
 
@@ -412,6 +424,21 @@ export default function BookingDetail({
   // autó, az nem lemondás — az egy elvégzett munka.
   const lemondhato = b ? !lezart && !lemondott && b.status !== 'NO_SHOW' : false
   const keszLista = lista.filter((t) => t.done).length
+
+  // Flottás autó: a csoport munkalapja nyílik (egy cég, egy idő, több autó).
+  // Onnan a „Részletek" gomb ennek az ablaknak az egyedi változatát nyitja.
+  if (b?.fleet_group && !egyedi) {
+    return (
+      <FlottaMunkalap
+        groupId={b.fleet_group}
+        onBezar={onBezar}
+        reszletek={(id, bezarReszlet) => (
+          <BookingDetail key={id} bookingId={id} egyedi onBezar={bezarReszlet}
+                         onSzerkeszt={onSzerkeszt} arlistaGombok={arlistaGombok} />
+        )}
+      />
+    )
+  }
 
   return (
     // A háttérre kattintás bezárja az ablakot — de ha épp beírnak valamit,

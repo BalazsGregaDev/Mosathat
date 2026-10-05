@@ -272,6 +272,15 @@ export interface DayBooking {
   tentative: boolean
   /** Nem fért be: a kérdőjeles autó 0 Ft-tal lezárva. */
   not_fitted: boolean
+  /** Flottás csoport: az egy hívásra felvett autók közös azonosítója. */
+  fleet_group: string | null
+  /** Az autó sorszáma a csoportban (1, 2, 3 …). */
+  fleet_index: number | null
+  /**
+   * Csak a felületen: ha ez a foglalás egy flottás csoport KÉPVISELŐJE a
+   * listában, itt a csoport összes autója (sorszám szerint). Lásd lib/flotta.ts.
+   */
+  flotta?: DayBooking[]
 
   // A napi listában (day_bookings) ezek is jönnek:
   /** Hányadik a nap listájában. */
@@ -610,6 +619,8 @@ export interface ContractRow {
   jarmuvek: number
   /** Az igazolólap fordulónapja (1–28; 1 = naptári hónap). */
   cycle_day: number
+  /** Flottás autók: az új időpontnál több autó vehető fel, rendszám nélkül is. */
+  fleet_cars: boolean
 }
 
 /**

@@ -7,6 +7,7 @@ import { billentyuzetElore } from '../../lib/billentyuzet'
 import type { DayBooking, MunkalapFokusz } from '../../lib/types'
 import CapacityPanel from './CapacityPanel'
 import NapiLista from './NapiLista'
+import { flottaCsoportosit } from '../../lib/flotta'
 import StandingCars from './StandingCars'
 
 // ---------------------------------------------------------------------------
@@ -169,7 +170,7 @@ export default function DayView({
             </div>
           </div>
         ) : (
-          <NapiLista nap={nap} bookings={bookings}
+          <NapiLista nap={nap} bookings={flottaCsoportosit(bookings)}
                      onMegnyit={(id) => onMegnyit(id)}
                      onModosit={modosit} onAtrendez={atrendez} />
         )}

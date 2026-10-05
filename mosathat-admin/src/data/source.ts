@@ -131,6 +131,24 @@ export interface DataSource {
    */
   patchBooking(bookingId: string, patch: Record<string, unknown>): Promise<void>
   setStatus(bookingId: string, status: BookingStatus, note?: string): Promise<void>
+  // --- flottás autók ---
+  /** A szerződés „Flottás autók" kapcsolója (tulajdonos). */
+  setContractFleet(contractId: string, value: boolean): Promise<void>
+  /** Flottás-e a szerződés (az új időpont űrlapja kérdezi). */
+  contractIsFleet(contractId: string): Promise<boolean>
+  /** Új flottás csoport: `count` autó, rendszám nélkül. A csoport azonosítója. */
+  createFleetBooking(input: NewBookingInput, count: number): Promise<string>
+  /** Még egy autó a csoportba. */
+  fleetAddCar(groupId: string): Promise<string>
+  /** A csoport közös adatai (nap, végső idő, csomag …) minden élő autón. */
+  fleetPatch(groupId: string, patch: Record<string, unknown>): Promise<void>
+  /** Rendszám egy autóhoz (ismert rendszámnál a meglévő autóhoz köti). */
+  fleetSetPlate(bookingId: string, plate: string): Promise<void>
+  /** Léptető: +1 a következő autó kész, −1 az utolsó kész visszanyílik. Az autó azonosítója. */
+  fleetStep(groupId: string, delta: 1 | -1): Promise<string | null>
+  /** A csoport autói, sorszám szerint. */
+  getFleetGroup(groupId: string): Promise<DayBooking[]>
+
   /** Kérdőjeles be/ki (feltételesen vállalt autó). */
   setTentative(bookingId: string, value: boolean): Promise<void>
   /** Nem fért be: a kérdőjeles foglalás lezárása 0 Ft-tal. */

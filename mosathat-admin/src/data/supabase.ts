@@ -323,6 +323,52 @@ export class SupabaseSource implements DataSource {
     return (data as BookingFormData | null) ?? null
   }
 
+  async setContractFleet(contractId: string, value: boolean): Promise<void> {
+    const { error } = await this.sb.rpc('set_contract_fleet', { p_contract: contractId, p_value: value })
+    if (error) fail('Flottás autók', error)
+  }
+
+  async contractIsFleet(contractId: string): Promise<boolean> {
+    const { data, error } = await this.sb.rpc('szerzodes_flottas', { p_contract: contractId })
+    if (error) fail('Flottás autók', error)
+    return data === true
+  }
+
+  async createFleetBooking(input: NewBookingInput, count: number): Promise<string> {
+    const { data, error } = await this.sb.rpc('create_fleet_booking', { p: input, p_count: count })
+    if (error) fail('Flottás foglalás', error)
+    return data as string
+  }
+
+  async fleetAddCar(groupId: string): Promise<string> {
+    const { data, error } = await this.sb.rpc('fleet_add_car', { p_group: groupId })
+    if (error) fail('Autó hozzáadása', error)
+    return data as string
+  }
+
+  async fleetPatch(groupId: string, patch: Record<string, unknown>): Promise<void> {
+    const { error } = await this.sb.rpc('fleet_patch', { p_group: groupId, p_patch: patch })
+    if (error) fail('Flottás csoport', error)
+  }
+
+  async fleetSetPlate(bookingId: string, plate: string): Promise<void> {
+    const { error } = await this.sb.rpc('fleet_set_plate', { p_booking_id: bookingId, p_plate: plate })
+    if (error) fail('Rendszám', error)
+  }
+
+  async fleetStep(groupId: string, delta: 1 | -1): Promise<string | null> {
+    const { data, error } = await this.sb.rpc('fleet_step', { p_group: groupId, p_delta: delta })
+    if (error) fail('Léptető', error)
+    return (data as string | null) ?? null
+  }
+
+  async getFleetGroup(groupId: string): Promise<DayBooking[]> {
+    const { data, error } = await this.sb.from('v_day_bookings').select('*')
+      .eq('fleet_group', groupId).order('fleet_index')
+    if (error) fail('Flottás csoport', error)
+    return (data ?? []) as DayBooking[]
+  }
+
   async setTentative(bookingId: string, value: boolean): Promise<void> {
     const { error } = await this.sb.rpc('set_booking_tentative', { p_booking_id: bookingId, p_value: value })
     if (error) fail('Kérdőjeles', error)

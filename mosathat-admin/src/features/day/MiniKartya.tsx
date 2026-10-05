@@ -1,5 +1,6 @@
 import { idosav, ora } from '../../lib/format'
 import Kerdojel from './Kerdojel'
+import { csoportNev, csoportOsszeg, HELYORZO, vanRendszam, vegsoIdo } from '../../lib/flotta'
 import { STATUS_LABEL, type DayBooking } from '../../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -32,6 +33,8 @@ function utolsoNapIg(b: DayBooking): string {
  *   többnapos    – napokig áll nálunk: az utolsó nap számít („6-ig")
  */
 export function idoSzoveg(b: DayBooking): string {
+  // Flottás autó: csak a végső időpont van („17:00-ig").
+  if (b.fleet_group && !tobbnapos(b)) return vegsoIdo(b)
   if (tobbnapos(b)) {
     const viszi = b.pick_up_at ?? b.deadline_at
     return viszi ? `${utolsoNapIg(b)}, ${ora(viszi)}` : utolsoNapIg(b)
@@ -60,6 +63,7 @@ export function idoSzoveg(b: DayBooking): string {
  * ott az a kérdés, MIKOR jön, nem az, hogy meddig tart.
  */
 export function idoRovidSzoveg(b: DayBooking): string {
+  if (b.fleet_group && !tobbnapos(b)) return vegsoIdo(b)
   if (tobbnapos(b)) return utolsoNapIg(b)
   const kezdes = b.start_at ?? b.drop_off_at
   return kezdes ? ora(kezdes) : '—'
@@ -70,9 +74,12 @@ export function idoRovidSzoveg(b: DayBooking): string {
  * ahol még nem tudták), akkor a név — mert üres kártyát mutatni értelmetlen.
  */
 export function azonosito(b: DayBooking): string {
-  // A rendszám mindig nagybetűvel (az adatbázis is így tárolja).
+  // Flottás csoport (képviselő): „Raiffeisen 3 db".
+  if (b.flotta) return `${csoportNev(b)} ${csoportOsszeg(b.flotta).darab} db`
+  // A rendszám mindig nagybetűvel (az adatbázis is így tárolja). A „—"
+  // helyőrző (flottás autó, még nincs rendszáma): helyette a cég neve.
   const r = (b.plate_raw ?? '').trim().toUpperCase()
-  if (r) return r
+  if (r && r !== HELYORZO) return r
   return b.company_name || b.customer_name || 'névtelen'
 }
 
@@ -87,7 +94,7 @@ export default function MiniKartya({ b, onMegnyit, egysoros }: {
   /** Havi nézetben egy sorba fér: rendszám és idő egymás mellett. */
   egysoros?: boolean
 }) {
-  const rendszamE = Boolean((b.plate_raw ?? '').trim())
+  const rendszamE = vanRendszam(b) && !b.flotta
   // A teljes idősáv a buboréksúgóban mindig megmarad, akkor is, ha a
   // kártyán csak a kezdés fér el.
   const cim = `${azonosito(b)} · ${idoSzoveg(b)} · ${STATUS_LABEL[b.status]}`

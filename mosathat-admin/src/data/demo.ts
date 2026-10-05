@@ -371,6 +371,45 @@ export class DemoSource implements DataSource {
     return r?.d ?? null
   }
 
+  async setContractFleet(contractId: string, value: boolean): Promise<void> {
+    await this.rows(`select set_contract_fleet($1::uuid, $2::boolean)`, [contractId, value])
+  }
+
+  async contractIsFleet(contractId: string): Promise<boolean> {
+    const [r] = await this.rows<{ f: boolean }>(`select szerzodes_flottas($1::uuid) as f`, [contractId])
+    return r?.f === true
+  }
+
+  async createFleetBooking(input: NewBookingInput, count: number): Promise<string> {
+    const [r] = await this.rows<{ g: string }>(`select create_fleet_booking($1::jsonb, $2::int) as g`,
+      [JSON.stringify(input), count])
+    return r.g
+  }
+
+  async fleetAddCar(groupId: string): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select fleet_add_car($1::uuid) as id`, [groupId])
+    return r.id
+  }
+
+  async fleetPatch(groupId: string, patch: Record<string, unknown>): Promise<void> {
+    await this.rows(`select fleet_patch($1::uuid, $2::jsonb)`, [groupId, JSON.stringify(patch)])
+  }
+
+  async fleetSetPlate(bookingId: string, plate: string): Promise<void> {
+    await this.rows(`select fleet_set_plate($1::uuid, $2)`, [bookingId, plate])
+  }
+
+  async fleetStep(groupId: string, delta: 1 | -1): Promise<string | null> {
+    const [r] = await this.rows<{ id: string | null }>(`select fleet_step($1::uuid, $2::int) as id`,
+      [groupId, delta])
+    return r?.id ?? null
+  }
+
+  async getFleetGroup(groupId: string): Promise<DayBooking[]> {
+    return this.rows<DayBooking>(
+      `select * from v_day_bookings where fleet_group = $1::uuid order by fleet_index`, [groupId])
+  }
+
   async setTentative(bookingId: string, value: boolean): Promise<void> {
     await this.rows(`select set_booking_tentative($1::uuid, $2::boolean)`, [bookingId, value])
   }

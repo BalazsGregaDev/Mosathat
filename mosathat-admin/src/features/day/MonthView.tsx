@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Kerdojel from './Kerdojel'
+import { flottaCsoportosit } from '../../lib/flotta'
 
 import { useApp } from '../../state/AppContext'
 import { azonosHonap, hetHetfoje, hetSzam, honapElseje, maE, napPlusz, ora } from '../../lib/format'
@@ -70,7 +71,8 @@ export default function MonthView({ nap, onNapra, onHetre }: {
       try {
         const r = await data.getRange(elso, utolso)
         if (!el) return
-        setSorok(r)
+        // Flottás csoport: egy kártya („Raiffeisen 3 db"), nem három.
+        setSorok(flottaCsoportosit(r))
         setHiba(null)
       } catch (e) {
         if (!el) return

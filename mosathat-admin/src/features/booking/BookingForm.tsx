@@ -62,6 +62,7 @@ export default function BookingForm({
   const katalogus = useCatalog()
   const {
     f, set, calc, menthetE, ment, mentes, hiba, setHiba, tolt, szerkesztes, szerzodeses,
+    flottas, flottaDarab,
     talalatok, keres, keresMezo, keresoIras, keresoZar,
     valasztott, talalatValaszt, ezcKeri,
   } = useBookingForm(true, nap, bookingId)
@@ -213,7 +214,10 @@ export default function BookingForm({
             <div className="sor-2">
               <div className="mezo kereso">
                 <label htmlFor="rendszam">Rendszám</label>
-                <input id="rendszam" className="beviteli beviteli-rendszam" value={f.plate}
+                <input id="rendszam" className="beviteli beviteli-rendszam"
+                       value={flottaDarab > 0 ? '' : f.plate}
+                       disabled={flottaDarab > 0}
+                       placeholder={flottaDarab > 0 ? 'utólag, autónként' : undefined}
                        onChange={(e) => keresoIras('RENDSZAM', e.target.value)}
                        onKeyDown={(e) => e.key === 'Escape' && keresoZar()}
                        autoFocus={!szerkesztes}
@@ -241,6 +245,29 @@ export default function BookingForm({
                 <CegValaszto inputId="ceg" ertek={f.ceg} onValt={(c) => set('ceg', c)} />
               </div>
             </div>
+
+            {/* Flottás cég (a szerződésben „Flottás autók"): több autó egyszerre,
+                rendszám nélkül. Minden nyomással eggyel több autó aznapra. */}
+            {flottas && !szerkesztes && (
+              <div className="flotta-hozzaad">
+                <button type="button" className="btn" onClick={() => set('flottaDarab', flottaDarab + 1)}>
+                  + Autó hozzáadása
+                </button>
+                {flottaDarab > 0 && (
+                  <>
+                    <span className="flotta-osszeg">
+                      <strong>{f.ceg.nev}</strong>
+                      <span className="cimke-pill flotta-db">{flottaDarab} darab</span>
+                    </span>
+                    <button type="button" className="btn btn-kicsi" aria-label="Eggyel kevesebb autó"
+                            onClick={() => set('flottaDarab', flottaDarab - 1)}>−</button>
+                    <span className="halk">
+                      Rendszám most nem kell: a munkalapon autónként utólag beírható.
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ---------- KORÁBBI VÁSÁRLÁS ---------- */}
@@ -271,6 +298,40 @@ export default function BookingForm({
               Hozza és Viszi, mindkettő nappal. Ha a Viszi későbbi napra esik,
               a foglalás többnapos — és minden napján megjelenik a napi
               nézetben. Megvárja esetén nincs Viszi: akkor viszi, amikor kész. */}
+          {flottaDarab > 0 ? (
+          <div className="szakasz">
+            <div className="fej">Mikor</div>
+            {/* Flottás csoport: nap, típus, és EGY végső időpont — amikorra az
+                utolsó autónak is el kell készülnie (hozom-viszemnél vissza kell
+                érni vele). Hozza óra nincs: a csoport a nap elején áll. */}
+            <div className="valaszto">
+              {TIPUSOK.filter((t) => t.id !== 'VAROS').map((t) => (
+                <button key={t.id} type="button"
+                        aria-pressed={(f.bookingType === 'VAROS' ? 'LEADOS' : f.bookingType) === t.id}
+                        onClick={() => set('bookingType', t.id)}>
+                  {t.cimke}
+                </button>
+              ))}
+            </div>
+            <div className="sor-2">
+              <div className="mezo">
+                <label htmlFor="datum">Nap</label>
+                <input id="datum" className="beviteli" type="date" value={f.date}
+                       onChange={(e) => set('date', e.target.value)} />
+              </div>
+              <div className="mezo">
+                <label htmlFor="vegso">
+                  {f.bookingType === 'HOZOMVISZEM' ? 'Visszaérni' : 'Kész legyen'}
+                </label>
+                <IdoMezo id="vegso" value={f.pickUpTime} torolheto placeholder="nap végéig"
+                         cim={f.bookingType === 'HOZOMVISZEM' ? 'Visszaérni' : 'Kész legyen'}
+                         onChange={(v) => set('pickUpTime', v)} />
+                <small>Amikorra az utolsó autónak is {f.bookingType === 'HOZOMVISZEM'
+                  ? 'vissza kell érnie' : 'el kell készülnie'}.</small>
+              </div>
+            </div>
+          </div>
+          ) : (
           <div className="szakasz">
             <div className="fej">Mikor</div>
 
@@ -368,6 +429,7 @@ export default function BookingForm({
               </div>
             )}
           </div>
+          )}
 
           {/* ---------- JÁRMŰ ---------- */}
           <div className="szakasz">
@@ -584,11 +646,16 @@ export default function BookingForm({
 
         <div className="lap-lab">
           <div className="osszeg">
-            <span className="ertek">{calc ? ft(calc.price_huf) : '—'}</span>
+            <span className="ertek">
+              {calc ? ft(calc.price_huf * Math.max(1, flottaDarab)) : '—'}
+            </span>
             <span className="alatta">
               {calc
                 ? [
-                    calc.work_minutes ? idotartam(calc.work_minutes) + ' munka' : 'idő ismeretlen',
+                    flottaDarab > 0 ? `${flottaDarab} autó × ${ft(calc.price_huf)}` : null,
+                    calc.work_minutes
+                      ? idotartam(calc.work_minutes * Math.max(1, flottaDarab)) + ' munka'
+                      : 'idő ismeretlen',
                     calc.rest_minutes ? idotartam(calc.rest_minutes) + ' száradás' : null,
                     calc.contract_price ? 'szerződéses ár' : null,
                     (() => {
@@ -604,7 +671,8 @@ export default function BookingForm({
             <button className="btn" onClick={onBezar} disabled={mentes}>Mégse</button>
             <button className="btn btn-fo" onClick={() => void mentesGomb()}
                     disabled={!menthetE || mentes}>
-              {mentes ? 'Mentés…' : szerkesztes ? 'Módosítás mentése' : 'Foglalás rögzítése'}
+              {mentes ? 'Mentés…' : szerkesztes ? 'Módosítás mentése'
+                : flottaDarab > 0 ? `${flottaDarab} autó rögzítése` : 'Foglalás rögzítése'}
             </button>
           </div>
         </div>
