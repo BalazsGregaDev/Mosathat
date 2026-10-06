@@ -31,7 +31,11 @@ import { azonosito } from './MiniKartya'
 //      12                         11   ← a nap, és összesen hány autó
 //      [KER-100 4-ig, 17:00   ]        ← többnapos sávok (mint eddig)
 //      [AABB-123 15-ig        ]
-//      + 8 autó                        ← aznapi (egynapos) foglalások
+//      +                               ← ha fölötte többnapos sáv van
+//      8 autó                          ← aznapi (egynapos) foglalások
+//
+//  A hét sora olyan magas, amennyit a legzsúfoltabb napja kér (ahány
+//  sávsor, plusz a szám) — nincs fix magasság, ami alá a szám becsúszna.
 //
 //  A TÖBBNAPOS munkák, mint a heti nézetben, sávként futnak végig a napokon:
 //  a hét sorában, a napszám alatt, minden olyan napon, amikor az autó nálunk
@@ -171,10 +175,14 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                     {/* Az aznapi (egynapos) autók száma, nagyban. Ha vannak
                         fölötte többnapos sávok, „+"-szal: azokon felül. */}
                     {lista.length > 0 && (
+                      // A „+" külön sorban, a szám FÖLÖTT: így keskeny
+                      // cellában (telefonon) is kifér a „12 autó".
                       <span className="honap-autok">
                         {atfuto > 0 && <span className="plusz">+</span>}
-                        <span className="szam">{lista.length}</span>
-                        <span className="szo">autó</span>
+                        <span className="sor">
+                          <span className="szam">{lista.length}</span>
+                          <span className="szo">autó</span>
+                        </span>
                       </span>
                     )}
                   </button>

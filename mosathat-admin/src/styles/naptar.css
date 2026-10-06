@@ -347,7 +347,9 @@
   border-radius: var(--r);
   padding: 5px;
   min-width: 0;
-  min-height: 118px;               /* v50: magasabb sor a nagy számnak */
+  /* v52: a sor magasságát a tartalom adja (a legzsúfoltabb nap: sávok +
+     a szám) — ez csak az üres hetek alsó határa. */
+  min-height: 104px;
   text-align: left;
 }
 .honapnap:hover { border-color: var(--keret-eros); background: var(--lap-2); }
@@ -380,20 +382,31 @@
 /* Az aznapi (egynapos) autók száma: „+ 8 autó", nagy számmal, a többnapos
    sávok alatt. A szám a cella alján áll, hogy a sávoknak mindig maradjon hely. */
 .honap-autok {
-  margin-top: auto;
-  display: flex; align-items: baseline; gap: 5px;
+  margin-top: auto;                /* a cella aljára, a sávok alá */
+  display: flex; flex-direction: column; align-items: flex-start;
   padding: 0 4px 2px;
+  min-width: 0; max-width: 100%;
   color: var(--szoveg);
 }
+/* A „+" a szám fölött, külön sorban: keskeny cellában is kifér a szám. */
 .honap-autok .plusz {
-  font-family: var(--betu-szam); font-size: var(--m-lg);
+  font-family: var(--betu-szam); font-size: var(--m-lg); line-height: 1;
   color: var(--szoveg-halk);
+}
+.honap-autok .sor {
+  display: flex; align-items: baseline; gap: 4px;
+  white-space: nowrap; max-width: 100%; overflow: hidden;
 }
 .honap-autok .szam {
   font-family: var(--betu-szam); font-size: 30px; line-height: 1;
   font-weight: var(--vastag-eros);
 }
 .honap-autok .szo { font-size: var(--m-sm); color: var(--szoveg-halk); }
+/* Telefonon a cella keskeny: kisebb szám, hogy az „autó" se lógjon ki. */
+@media (max-width: 700px) {
+  .honap-autok .szam { font-size: 24px; }
+  .honap-autok .szo { font-size: var(--m-xs); }
+}
 .honapnap[data-kivul] .honap-autok { opacity: .55; }
 
 /* --- mobil --------------------------------------------------------------------

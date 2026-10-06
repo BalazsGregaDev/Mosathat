@@ -23,7 +23,7 @@ import { useKeszAblak } from '../booking/KeszAblak'
 //  ami összetartozik, egy sorba került. Csak az van rajta, ami a MUNKÁHOZ
 //  kell:
 //
-//    1. sor   RENDSZÁM  [???] [H-V]  Cég  időpont  Csomag + egyéb szolgáltatások
+//    1. sor   RENDSZÁM  [???] [Megvárja] [H-V]  Cég  időpont  Csomag + egyéb szolgáltatások
 //    2. sor   (többnapos) hányadik nap, mikor viszi
 //    3. sor   megjegyzés
 //    alul     ár és a munkalista állása — mellette a következő lépés gombja
@@ -205,6 +205,11 @@ export default function BookingCard({
           <Kerdojel b={b} />
           {/* Hozom-viszem: mi megyünk az autóért. Ez a nap beosztását
               érinti (valakinek el kell mennie), ezért a kártyán is látszik. */}
+          {/* Megvárja: az ügyfél ott ül, amíg kész — ezt az autót RÖGTÖN
+              el kell kezdeni. Erős sárga, hogy messziről is kiugorjon. */}
+          {b.booking_type === 'VAROS' && (
+            <span className="cimke-pill" data-r="megvarja" title="Megvárja — rögtön kezdeni">Megvárja</span>
+          )}
           {b.booking_type === 'HOZOMVISZEM' && (
             <span className="cimke-pill" data-r="hozomviszem" title="Hozom-viszem">H-V</span>
           )}

@@ -60,7 +60,7 @@ ok('nincsenek egyenkénti kártyák', 0, await p.locator('.honapnap .minikartya'
 const meret = await ma.locator('.honap-autok .szam').evaluate((e) => parseFloat(getComputedStyle(e).fontSize))
 ok('a szám nagy (30 px)', 30, meret)
 const magas = await ma.evaluate((e) => e.getBoundingClientRect().height)
-ok('a sor magasabb a réginél (96 px)', true, magas >= 118)
+ok('a sor elég magas (legalább 104 px)', true, magas >= 104)
 await p.screenshot({ path: '/tmp/claude-0/-home-claude/0da2f43f-f114-54e0-8861-a3d34165c4b9/scratchpad/v50-honap.png' })
 
 await b.close()

@@ -200,6 +200,14 @@ body.huzas-folyik { user-select: none; -webkit-user-select: none; cursor: grabbi
 /* A H-V címke a rendszám mellé tapad: együtt olvassuk őket. */
 .kartya-felso .cimke-pill[data-r='hozomviszem'] { margin-left: 0; }
 
+/* Megvárja: az ügyfél ott ül — RÖGTÖN el kell kezdeni. Telt sárga háttér,
+   sötét betű: egyik állapotszínnel (bal szél) és a H-V kékjével sem
+   keverhető, és pár lépésről is kiugrik. */
+.kartya .cimke-pill[data-r='megvarja'] {
+  background: #ffd84d; color: #3d2c00;
+  font-weight: var(--vastag-eros);
+}
+
 /* Az 1. sorban, az idő után: a csomag, és utána narancsban, ami KÜLÖN
    kérve van. Ha az extrák nem férnek ki, csak ők törnek új sorba. */
 .kartya-felso .csomag,
