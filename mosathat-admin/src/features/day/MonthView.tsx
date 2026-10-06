@@ -4,9 +4,9 @@ import { flottaCsoportosit } from '../../lib/flotta'
 
 import { useApp } from '../../state/AppContext'
 import { azonosHonap, hetHetfoje, hetSzam, honapElseje, maE, napPlusz, ora } from '../../lib/format'
-import { STATUS_LABEL, type DayBooking } from '../../lib/types'
-import { hetiSavok, tobbnaposE } from '../../lib/savok'
-import MiniKartya, { azonosito } from './MiniKartya'
+import { STATUS_LABEL, type DayBooking, type VacationRow } from '../../lib/types'
+import { hetiSavok, hetiSzabadsagok, tobbnaposE } from '../../lib/savok'
+import { azonosito } from './MiniKartya'
 
 // ---------------------------------------------------------------------------
 //  Havi naptár
@@ -24,8 +24,14 @@ import MiniKartya, { azonosito } from './MiniKartya'
 //  Bal szélen a hétszám. Onnan egy kattintással át lehet váltani annak a
 //  hétnek a nézetére — a havi a tájékozódás, a heti a tervezés.
 //
-//  Naponta öt tétel fér el, a maradék „+3 további"-ként látszik. Minden
-//  tételen elöl a rendszám, utána az idő — ugyanúgy, mint a napi nézetben.
+//  Az EGYNAPOS foglalások nem egyenként látszanak, hanem egy nagy számmal:
+//  „+ 8 autó". A havi nézet arra való, hogy egy pillantással látszódjon,
+//  melyik nap mennyire teli — a rendszámok a heti és a napi nézetben vannak.
+//
+//      12                         11   ← a nap, és összesen hány autó
+//      [KER-100 4-ig, 17:00   ]        ← többnapos sávok (mint eddig)
+//      [AABB-123 15-ig        ]
+//      + 8 autó                        ← aznapi (egynapos) foglalások
 //
 //  A TÖBBNAPOS munkák, mint a heti nézetben, sávként futnak végig a napokon:
 //  a hét sorában, a napszám alatt, minden olyan napon, amikor az autó nálunk
@@ -33,12 +39,14 @@ import MiniKartya, { azonosito } from './MiniKartya'
 //  (a sáv vége nyitott, szaggatott). A sáv nem külön gomb: rákattintva —
 //  mint a cella bármely részén — arra a napra visz.
 //
+//  A SZABADSÁGOK (Profilom → Szabadság) ugyanígy sávként futnak, az autók
+//  sávjai alatt, rózsaszínnel: „Szabadság: Gábor".
+//
 //  Miért nem hat sor fix magassággal: mert a hónapok 4–6 hetet ölelnek fel,
 //  és az üres sor csak helyet foglal. A rács annyi sorból áll, amennyi kell.
 // ---------------------------------------------------------------------------
 
 const FEJ = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V']
-const MAX = 5
 
 export default function MonthView({ nap, onNapra, onHetre }: {
   /** Bármelyik nap a hónapból. */
@@ -63,14 +71,19 @@ export default function MonthView({ nap, onNapra, onHetre }: {
   const utolso = napPlusz(elso, hetek * 7 - 1)
 
   const [sorok, setSorok] = useState<DayBooking[] | null>(null)
+  const [szabadsagok, setSzabadsagok] = useState<VacationRow[]>([])
   const [hiba, setHiba] = useState<string | null>(null)
 
   useEffect(() => {
     let el = true
     ;(async () => {
       try {
-        const r = await data.getRange(elso, utolso)
+        const [r, sz] = await Promise.all([
+          data.getRange(elso, utolso),
+          data.getVacations(elso, utolso),
+        ])
         if (!el) return
+        setSzabadsagok(sz)
         // Flottás csoport: egy kártya („Raiffeisen 3 db"), nem három.
         setSorok(flottaCsoportosit(r))
         setHiba(null)
@@ -101,6 +114,12 @@ export default function MonthView({ nap, onNapra, onHetre }: {
     [sorok, elso, hetek],
   )
 
+  // Hetenként a szabadságok sávjai (az autók sávjai alatt).
+  const hetiSzab = useMemo(
+    () => Array.from({ length: hetek }, (_, sor) => hetiSzabadsagok(szabadsagok, napPlusz(elso, sor * 7), 7)),
+    [szabadsagok, elso, hetek],
+  )
+
   if (hiba) return <div className="hibauzenet">{hiba}</div>
   if (!sorok) return <div className="betolt">Betöltés…</div>
 
@@ -115,12 +134,13 @@ export default function MonthView({ nap, onNapra, onHetre }: {
         {Array.from({ length: hetek }, (_, sor) => {
           const hetfo = napPlusz(elso, sor * 7)
           const { savok, sorok: savSorok } = hetiSav[sor]
+          const { savok: szSavok, sorok: szSorok } = hetiSzab[sor]
 
           return (
             // A sávsorok száma CSS-változóként megy le: a napszám alatt ennyi
             // sornyi helyet hagyunk, hogy a sávok ne takarják a tételeket.
             <div className="honapsor" key={hetfo}
-                 style={{ '--savsor': savSorok } as React.CSSProperties}>
+                 style={{ '--savsor': savSorok + szSorok } as React.CSSProperties}>
               <button className="hetszam" onClick={() => onHetre(hetfo)}
                       title={`A ${hetSzam(hetfo)}. hét megnyitása heti nézetben`}>
                 <span className="szam">{hetSzam(hetfo)}</span>
@@ -133,9 +153,6 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                 // A több napon át itt álló autók is számítanak a napba.
                 const atfuto = savok.filter((s) => s.tol <= i && i <= s.ig).length
                 const osszes = lista.length + atfuto
-                // Ahány sávsor, annyival kevesebb kártya fér a cellába.
-                const latszik = lista.slice(0, Math.max(1, MAX - savSorok))
-                const tobb = lista.length - latszik.length
 
                 return (
                   <button
@@ -151,11 +168,15 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                       {osszes > 0 && <span className="db">{osszes}</span>}
                     </span>
 
-                    {latszik.map((b) => (
-                      <MiniKartya key={b.id} b={b} egysoros />
-                    ))}
-
-                    {tobb > 0 && <span className="tovabb">+ {tobb} további</span>}
+                    {/* Az aznapi (egynapos) autók száma, nagyban. Ha vannak
+                        fölötte többnapos sávok, „+"-szal: azokon felül. */}
+                    {lista.length > 0 && (
+                      <span className="honap-autok">
+                        {atfuto > 0 && <span className="plusz">+</span>}
+                        <span className="szam">{lista.length}</span>
+                        <span className="szo">autó</span>
+                      </span>
+                    )}
                   </button>
                 )
               })}
@@ -164,7 +185,7 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                   hét oszlopában pontosan azokon a napokon futnak végig, amikor
                   az autó nálunk van. Nem fogják el a kattintást — a cella
                   visz a napra, ahogy eddig. */}
-              {savok.length > 0 && (
+              {savok.length + szSavok.length > 0 && (
                 <div className="honap-savok" aria-hidden="true">
                   {savok.map((s) => {
                     const viszi = s.b.pick_up_at ?? s.b.deadline_at
@@ -185,6 +206,16 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                       </span>
                     )
                   })}
+                  {/* Szabadság: az autók sávjai alatt, rózsaszínnel. */}
+                  {szSavok.map((s) => (
+                    <span key={`sz-${s.v.id}`} className="honap-sav szabadsag-sav"
+                          data-korabbrol={s.korabbrol || undefined}
+                          data-tovabb={s.tovabb || undefined}
+                          title={`Szabadság: ${s.v.staff_name}${s.v.note ? ` · ${s.v.note}` : ''}`}
+                          style={{ gridColumn: `${s.tol + 2} / ${s.ig + 3}`, gridRow: savSorok + s.sor + 1 }}>
+                      <span className="azon">Szabadság: {s.v.staff_name}</span>
+                    </span>
+                  ))}
                 </div>
               )}
             </div>

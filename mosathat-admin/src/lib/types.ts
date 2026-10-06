@@ -921,6 +921,28 @@ export interface DayAbsence extends Omit<Absence, 'day'> {
   szamit: boolean
 }
 
+/** Szabadság: ki mettől meddig nincs bent (egész napokra). */
+export interface VacationRow {
+  id: string
+  staff_id: string
+  staff_name: string
+  /** Az első és az utolsó nap ("2026-11-10", "2026-11-13"); egy napnál ugyanaz. */
+  from_day: string
+  to_day: string
+  note: string | null
+  /** Az enyém-e (a tulajdonos mindenkiét látja). */
+  sajat: boolean
+}
+
+export interface VacationInput {
+  id?: string | null
+  /** null = én magam (a tulajdonos másnak is beírhatja). */
+  staff_id?: string | null
+  from_day: string
+  to_day: string
+  note?: string | null
+}
+
 export interface AbsenceInput {
   id?: string | null
   staff_id?: string | null

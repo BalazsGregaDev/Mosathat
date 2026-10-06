@@ -40,6 +40,10 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
   const { data, revision, refresh } = useApp()
   const hetfo = hetHetfoje(nap)
   const [sorok, setSorok] = useState<DayBooking[] | null>(null)
+  // A napi nézet sorrendje (nap|foglalás → sorszám): a heti oszlopok
+  // pontosan úgy állnak, mint a napi lista — ha ott áthúznak egy kártyát,
+  // itt is átkerül.
+  const [rend, setRend] = useState<Map<string, number>>(new Map())
   const [hiba, setHiba] = useState<string | null>(null)
 
   // A betöltés közvetlenül az effektben van, nem külön függvényben. Így van
@@ -49,10 +53,14 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
     let el = true
     ;(async () => {
       try {
-        const r = await data.getRange(hetfo, napPlusz(hetfo, 6))
+        const [r, o] = await Promise.all([
+          data.getRange(hetfo, napPlusz(hetfo, 6)),
+          data.getRangeOrder(hetfo, napPlusz(hetfo, 6)),
+        ])
         if (!el) return
         // Flottás csoport: egy kártya („Raiffeisen 3 db"), nem három.
         setSorok(flottaCsoportosit(r))
+        setRend(o)
         setHiba(null)
       } catch (e) {
         if (!el) return
@@ -76,10 +84,17 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
       else m.get(b.service_date.slice(0, 10))?.push(b)
     }
 
+    // Naponként a napi nézet sorrendjében. Ami nincs a sorrendben (nem
+    // várt eset), a nap végére kerül, az eddigi (idő szerinti) rendben.
+    for (const [nap, lista] of m) {
+      const hely = (b: DayBooking) => rend.get(`${nap}|${b.id}`) ?? Number.MAX_SAFE_INTEGER
+      lista.sort((a, z) => hely(a) - hely(z))
+    }
+
     // A sávok elhelyezése a közös számítással (lib/savok.ts): öt oszlop.
     const { savok: ki, sorok: savSor } = hetiSavok(tobb, hetfo, 5)
     return { napok: m, savok: ki, savSorok: savSor }
-  }, [sorok, hetfo])
+  }, [sorok, hetfo, rend])
 
   if (hiba) return <div className="hibauzenet">{hiba}</div>
   if (!sorok) return <div className="betolt">Betöltés…</div>

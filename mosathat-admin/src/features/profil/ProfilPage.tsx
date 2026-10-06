@@ -9,6 +9,7 @@ import {
 } from '../../lib/types'
 import { useKerdes } from '../common/Kerdes'
 import IdoMezo from '../common/IdoMezo'
+import SzabadsagPanel from './SzabadsagPanel'
 
 // ---------------------------------------------------------------------------
 //  Profilom
@@ -278,6 +279,9 @@ export default function ProfilPage({ onJelszo }: {
             </ul>
           </div>
         </section>
+
+        {/* ---------- szabadság ---------- */}
+        <SzabadsagPanel teljesJogu={teljesJogu} dolgozok={dolgozok} />
       </div>
       {kerdesAblak}
     </div>

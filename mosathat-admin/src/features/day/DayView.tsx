@@ -47,7 +47,7 @@ export default function DayView({
 }) {
   const { user } = useApp()
   const {
-    bookings, capacity, windows, standing, absences, loading, error, modosit, atrendez,
+    bookings, capacity, windows, standing, absences, vacations, loading, error, modosit, atrendez,
   } = useDay(nap)
 
   const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
@@ -179,6 +179,7 @@ export default function DayView({
       <div className="oszlop">
         {capacity && (
           <CapacityPanel c={capacity} windows={windows} valtozasok={absences}
+                         szabadsagok={vacations}
                          kesz={kesz} teljesJogu={teljesJogu} ma={maE(nap)} />
         )}
 

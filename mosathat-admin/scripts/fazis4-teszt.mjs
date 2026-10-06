@@ -56,7 +56,7 @@ await menu(p, 'Profilom')
   await p.locator('#mv-megj').fill('teszt-korábban')
   await p.getByRole('button', { name: 'Bejelentés' }).click()
   await p.waitForTimeout(1200)
-  const lista = await p.locator('.valtozas-lista').innerText()
+  const lista = await p.locator('.valtozas-lista').first().innerText()  // v51: a második a szabadságoké
   ok('a listában: 15:00-ig van bent', true, lista.includes('15:00-ig van bent') && lista.includes('teszt-korábban'))
 }
 await menu(p, 'Időpontok')

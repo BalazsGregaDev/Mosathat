@@ -1,4 +1,4 @@
-import type { DayBooking } from './types'
+import type { DayBooking, VacationRow } from './types'
 
 // ---------------------------------------------------------------------------
 //  Többnapos munkák sávjai — a heti és a havi nézet közös számítása
@@ -60,6 +60,42 @@ export function hetiSavok(foglalasok: DayBooking[], hetfo: string, oszlopok: num
     if (sor === -1) { foglalt.push([]); sor = foglalt.length - 1 }
     for (let o = tol; o <= ig; o++) foglalt[sor].push(o)
     savok.push({ b, tol, ig, sor, korabbrol: a < 0, tovabb: z > utolsoOszlop })
+  }
+  return { savok, sorok: foglalt.length }
+}
+
+/** A szabadság sávja egy héten (a havi naptárban, az autók sávjai alatt). */
+export interface SzabadsagSav {
+  v: VacationRow
+  tol: number
+  ig: number
+  sor: number
+  korabbrol: boolean
+  tovabb: boolean
+}
+
+/**
+ * Egy hét szabadság-sávjai — ugyanaz az elhelyezés, mint a többnapos
+ * autóknál, csak egynapos szabadság is sáv (egy nap széles).
+ */
+export function hetiSzabadsagok(lista: VacationRow[], hetfo: string, oszlopok: number):
+  { savok: SzabadsagSav[]; sorok: number } {
+  const utolsoOszlop = oszlopok - 1
+  const foglalt: number[][] = []
+  const savok: SzabadsagSav[] = []
+  const rendben = lista.slice()
+    .sort((a, z) => a.from_day.localeCompare(z.from_day) || a.staff_name.localeCompare(z.staff_name))
+
+  for (const v of rendben) {
+    const a = napIndex(hetfo, v.from_day.slice(0, 10))
+    const z = napIndex(hetfo, v.to_day.slice(0, 10))
+    const tol = Math.max(0, a)
+    const ig = Math.min(utolsoOszlop, z)
+    if (ig < tol) continue
+    let sor = foglalt.findIndex((s) => s.every((o) => o < tol || o > ig))
+    if (sor === -1) { foglalt.push([]); sor = foglalt.length - 1 }
+    for (let o = tol; o <= ig; o++) foglalt[sor].push(o)
+    savok.push({ v, tol, ig, sor, korabbrol: a < 0, tovabb: z > utolsoOszlop })
   }
   return { savok, sorok: foglalt.length }
 }

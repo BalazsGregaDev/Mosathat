@@ -8,10 +8,12 @@ import type {
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
-  Quote, CompanyHit, CompanyCandidate, FinishPreview,
+  Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { calcArgs, idoRovidit, num, numOrNull, toCalcResult, toQuote } from './source'
+import { EloFrissites } from './elo'
+import { tokenFetch } from './tokenFetch'
 
 // ---------------------------------------------------------------------------
 //  Éles mód — Supabase
@@ -51,20 +53,14 @@ function emberiHiba(uzenet: string): string {
   if (m.includes('password') && m.includes('6')) {
     return 'a jelszó túl rövid, legalább hat karakter kell.'
   }
+  if (m.includes('jwt')) {
+    return 'a belépés lejárt. Frissítsd az oldalt; ha így sem megy, lépj ki és be.'
+  }
   if (m.includes('invalid email')) {
     return 'az e-mail cím formátuma nem jó.'
   }
   return uzenet
 }
-
-/** Hogy a valós idejű kapcsolat hibáját egyszer írjuk ki, ne minden
- *  újrapróbálkozásnál. */
-let elojelzesVolt = false
-// Minden feliratkozás saját csatornanevet kap. Ugyanazzal a névvel a
-// Supabase kliense a MEGLÉVŐ csatornát adná vissza, amire feliratkozás után
-// már nem lehet új figyelőt tenni — két egyszerre nyitott figyelő (pl. a
-// napi nézet és egy nyitott igazolólap) így hibára futna.
-let csatornaSzam = 0
 
 function fail(op: string, error: { message: string } | null): never {
   throw new Error(`${op}: ${emberiHiba(error?.message ?? 'ismeretlen hiba')}`)
@@ -84,8 +80,14 @@ export class SupabaseSource implements DataSource {
     this.anonKey = anonKey
     this.sb = createClient(url, anonKey, {
       auth: { persistSession: true, autoRefreshToken: true },
+      // Lejárt token (alvó tablet után): egy csendes tokencsere és újrapróbálás.
+      global: { fetch: tokenFetch(() => this.sb) },
     })
+    this.elo = new EloFrissites(this.sb)
   }
+
+  /** Az élő frissítés közös csatornája (lásd elo.ts). */
+  private readonly elo: EloFrissites
 
   async init(): Promise<void> {
     /* a kliens azonnal használható */
@@ -203,6 +205,29 @@ export class SupabaseSource implements DataSource {
     const { error } = await this.sb.rpc('delete_absence', { p_id: id })
     if (error) fail('Munkaidő-változás törlése', error)
   }
+  async listVacations(): Promise<VacationRow[]> {
+    const { data, error } = await this.sb.rpc('vacation_list')
+    if (error) fail('Szabadságok', error)
+    return (data ?? []) as VacationRow[]
+  }
+
+  async getVacations(from: string, to: string): Promise<VacationRow[]> {
+    const { data, error } = await this.sb.rpc('vacations_range', { p_from: from, p_to: to })
+    if (error) fail('Szabadságok', error)
+    return (data ?? []) as VacationRow[]
+  }
+
+  async setVacation(input: VacationInput): Promise<string> {
+    const { data, error } = await this.sb.rpc('set_vacation', { p: input })
+    if (error) fail('Szabadság mentése', error)
+    return data as string
+  }
+
+  async deleteVacation(id: string): Promise<void> {
+    const { error } = await this.sb.rpc('delete_vacation', { p_id: id })
+    if (error) fail('Szabadság törlése', error)
+  }
+
 
   async getRange(from: string, to: string): Promise<DayBooking[]> {
     const { data, error } = await this.sb
@@ -217,6 +242,13 @@ export class SupabaseSource implements DataSource {
       .order('drop_off_at', { nullsFirst: false })
     if (error) fail('Foglalások', error)
     return (data ?? []) as DayBooking[]
+  }
+
+  async getRangeOrder(from: string, to: string): Promise<Map<string, number>> {
+    const { data, error } = await this.sb.rpc('range_order', { p_from: from, p_to: to })
+    if (error) fail('Sorrend', error)
+    return new Map(((data ?? []) as { day: string; booking_id: string; sorrend: number }[])
+      .map((r) => [`${String(r.day).slice(0, 10)}|${r.booking_id}`, Number(r.sorrend)]))
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {
@@ -766,47 +798,9 @@ export class SupabaseSource implements DataSource {
   }
 
   subscribe(onValtozas: () => void): () => void {
-    // Négy táblát figyelünk: a foglalásokat és a munkalistát (ez a kettő
-    // változik menet közben — az egyik a pultnál, a másik a mosóállásban),
-    // a nap kézi sorrendjét (ha a tableten átrendezik, a pultnál is úgy
-    // álljon), és a munkaidő-változásokat (a kapacitás azokból számol).
-    //
-    // A változás tartalmát szándékosan nem használjuk fel: csak jelezzük,
-    // hogy újra kell tölteni. Így nem kell a kliensben újraépíteni azt,
-    // amit az adatbázis nézetei már összeraknak.
-    const csatorna = this.sb
-      .channel(`mosathat-elo-${++csatornaSzam}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, onValtozas)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_tasks' }, onValtozas)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'day_order' }, onValtozas)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_absences' }, onValtozas)
-      // Az igazolólap: ha a tableten aláírnak, a pultnál nyitott lap is frissül.
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_sheet_rows' }, onValtozas)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_sheets' }, onValtozas)
-      // Ha a kapcsolat nem épül fel, a Supabase kliense a végtelenségig
-      // újrapróbálkozik, és a böngésző konzolja megtelik WebSocket hibával —
-      // magyarázat nélkül. Egyszer kiírjuk, mit jelent, és mit NEM jelent.
-      .subscribe((allapot) => {
-        if (allapot === 'SUBSCRIBED') { elojelzesVolt = false; return }
-        if (allapot !== 'CHANNEL_ERROR' && allapot !== 'TIMED_OUT') return
-        if (elojelzesVolt) return
-        elojelzesVolt = true
-        console.warn(
-          '[Mosathat] A valós idejű frissítés nem épült fel.\n'
-          + 'Ez NEM töri el a rendszert: minden adat betöltődik, csak nem '
-          + 'frissül magától, ha másik gépen változik valami.\n'
-          + 'A két szokásos ok:\n'
-          + '  1. A Supabase → Database → Replication alatt a bookings, a '
-          + 'booking_tasks, a day_order és a staff_absences táblán nincs '
-          + 'bekapcsolva a Realtime.\n'
-          + '  2. A VITE_SUPABASE_ANON_KEY értékébe szóköz vagy sortörés '
-          + 'került (a hibás címben %0A látszik a kulcs végén).',
-        )
-      })
-
-    return () => {
-      void this.sb.removeChannel(csatorna)
-    }
+    // Egy közös csatorna, összevont jelzésekkel, ébredéskor újranyitva —
+    // a részletek az elo.ts-ben.
+    return this.elo.feliratkoz(onValtozas)
   }
 
   async getTasks(bookingId: string): Promise<BookingTask[]> {

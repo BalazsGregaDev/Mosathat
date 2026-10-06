@@ -101,7 +101,8 @@ await p.waitForTimeout(1500)
   // A cella tételei a sávok ALATT kezdődnek (nem takarják egymást)
   const takar = await p.evaluate(() => [...document.querySelectorAll('.honapsor')].some((sor) => {
     const savok = [...sor.querySelectorAll('.honap-sav')].map((s) => s.getBoundingClientRect())
-    const tetelek = [...sor.querySelectorAll('.honapnap .minikartya')].map((m) => m.getBoundingClientRect())
+    // v50: a cellában a tételek helyett az autók száma („+ 8 autó") áll
+    const tetelek = [...sor.querySelectorAll('.honapnap .honap-autok')].map((m) => m.getBoundingClientRect())
     return savok.some((s) => tetelek.some((t) =>
       t.top < s.bottom - 1 && t.bottom > s.top + 1 && t.left < s.right && t.right > s.left))
   }))

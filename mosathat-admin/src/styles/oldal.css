@@ -498,15 +498,16 @@
 .ceg-auto-sofor { font-size: var(--m-sm); margin-top: 2px; }
 
 /* --- Profilom ------------------------------------------------------------------
-   Három panel: fiók, bejelentés, lista. Széles képernyőn a fiók és a
-   bejelentés egymás mellett, alattuk a lista; keskenyen egymás alatt. */
+   Négy panel: fiók, bejelentés, lista, szabadság. Széles képernyőn kettesével
+   egymás mellett (fiók + bejelentés, lista + szabadság); keskenyen egymás alatt. */
 .profil-racs {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
   gap: var(--t4);
   align-items: start;
 }
-.profil-racs > .panel:last-child { grid-column: 1 / -1; }
+/* Páratlan számú panelnél az utolsó a teljes szélességet kapja. */
+.profil-racs > .panel:last-child:nth-child(odd) { grid-column: 1 / -1; }
 @media (max-width: 900px) {
   .profil-racs { grid-template-columns: 1fr; }
 }

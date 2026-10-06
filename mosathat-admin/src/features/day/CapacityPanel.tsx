@@ -1,5 +1,5 @@
-import { ft, idoRovid, idotartam } from '../../lib/format'
-import type { DayAbsence, DayCapacity, WorkWindow } from '../../lib/types'
+import { ft, idoRovid, idotartam, napokRovid } from '../../lib/format'
+import type { DayAbsence, DayCapacity, VacationRow, WorkWindow } from '../../lib/types'
 import { valtozasSzoveg } from '../../lib/munkaido'
 
 // ---------------------------------------------------------------------------
@@ -18,6 +18,8 @@ import { valtozasSzoveg } from '../../lib/munkaido'
 //  Ki mit lát:
 //    - mindenki: a százalék, a szabad idő, a munkaidő, az autók száma, és
 //      kinek változik aznap a munkaideje („Gábor: 16:00-ig")
+//    - mindenki: a szabadságok a következő egy hónapban, emberenként
+//      összesítve („Gábor: nov. 10–13.")
 //    - csak a tulajdonos és a fejlesztő: a várható bevétel és a lekötött
 //      munka órában — ezek üzleti számok, az Áttekintésben is ott vannak
 // ---------------------------------------------------------------------------
@@ -26,6 +28,7 @@ export default function CapacityPanel({
   c,
   windows,
   valtozasok,
+  szabadsagok = [],
   kesz,
   teljesJogu,
   ma,
@@ -33,6 +36,8 @@ export default function CapacityPanel({
   c: DayCapacity
   windows: WorkWindow[]
   valtozasok: DayAbsence[]
+  /** Szabadságok a naptól egy hónapig (Profilomban írják be). */
+  szabadsagok?: VacationRow[]
   /** Hány autó készült el aznap (a lista állapotaiból). */
   kesz: number
   /** Tulajdonos vagy fejlesztő: látja a bevételt és a lekötött órákat. */
@@ -124,10 +129,36 @@ export default function CapacityPanel({
         </ul>
       )}
 
+      {/* Szabadság a következő egy hónapban, emberenként egy sor:
+            Gábor: nov. 10–13., nov. 24. */}
+      {szabadsagok.length > 0 && (
+        <div className="szabadsag-blokk">
+          <div className="cimke">Szabadság</div>
+          <ul>
+            {szabadsagSorok(szabadsagok).map((s) => (
+              <li key={s.nev}>
+                <strong>{s.nev}:</strong> {s.idoszakok.join(', ')}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="kapacitas-lab">
         <span>{c.parallel_slots} autó egyszerre</span>
         {c.staff_total > 0 && <span>{c.staff_total} alkalmazott</span>}
       </div>
     </div>
   )
+}
+
+/** Emberenként összesítve, az első szabadság szerinti sorrendben. */
+function szabadsagSorok(lista: VacationRow[]): { nev: string; idoszakok: string[] }[] {
+  const m = new Map<string, string[]>()
+  for (const v of lista) {
+    const sor = m.get(v.staff_name) ?? []
+    sor.push(napokRovid(v.from_day, v.to_day))
+    m.set(v.staff_name, sor)
+  }
+  return [...m].map(([nev, idoszakok]) => ({ nev, idoszakok }))
 }

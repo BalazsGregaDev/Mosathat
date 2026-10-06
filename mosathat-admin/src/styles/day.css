@@ -377,6 +377,19 @@ body.huzas-folyik { user-select: none; -webkit-user-select: none; cursor: grabbi
 /* Akinek a munkaideje nem számít a kapacitásba (tulajdonos), halványabb. */
 .munkaido-valtozasok li[data-szamit='false'] { color: var(--szoveg-halk); }
 
+/* Szabadság a következő hónapban — ugyanaz a szín, mint a havi naptár sávja. */
+.szabadsag-blokk {
+  margin-top: var(--t3); padding: var(--t2) var(--t3);
+  border-radius: var(--r); background: var(--szabadsag-halvany);
+  border-left: 3px solid var(--szabadsag);
+  font-size: var(--m-sm);
+}
+.szabadsag-blokk .cimke {
+  font-size: var(--m-xs); text-transform: uppercase; letter-spacing: .06em;
+  font-weight: var(--vastag-eros); color: var(--szabadsag-sotet); margin-bottom: 2px;
+}
+.szabadsag-blokk ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
 /* ---------------------------------------------------------------------------
    A kártya megnyitó felülete és a gyorsgombok
    ---------------------------------------------------------------------------
@@ -470,3 +483,10 @@ body.huzas-folyik { user-select: none; -webkit-user-select: none; cursor: grabbi
 .flotta-lepteto .lepteto-allas { font-size: var(--k-also, var(--m-sm)); white-space: nowrap; }
 .flotta-lepteto .lepteto-allas strong { font-size: 1.15em; }
 .kartya-muvelet .flotta-lepteto .btn { min-height: var(--k-gomb-mag); }
+
+/* Profilom → Szabadság: a lista címe az űrlap alatt. */
+.szabadsag-lista-cim {
+  margin-top: var(--t4); padding-top: var(--t3); border-top: 1px solid var(--keret);
+  font-size: var(--m-xs); text-transform: uppercase; letter-spacing: .06em;
+  font-weight: var(--vastag-eros); color: var(--szoveg-halk);
+}

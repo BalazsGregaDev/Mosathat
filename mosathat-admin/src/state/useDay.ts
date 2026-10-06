@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useApp } from './AppContext'
-import type { DayAbsence, DayBooking, DayCapacity, StandingCar, WorkWindow } from '../lib/types'
+import type { DayAbsence, DayBooking, DayCapacity, StandingCar, VacationRow, WorkWindow } from '../lib/types'
+import { napPlusz } from '../lib/format'
 
 // ---------------------------------------------------------------------------
 //  Egy nap minden adata egy hívásban.
@@ -31,12 +32,14 @@ export interface DayData {
   standing: StandingCar[]
   /** Aznap kinek változik a munkaideje — a kapacitás-kártyára. */
   absences: DayAbsence[]
+  /** Szabadságok a naptól egy hónapig előre (a kapacitás-kártyára). */
+  vacations: VacationRow[]
   loading: boolean
   error: string | null
 }
 
 const URES: DayData = {
-  bookings: [], capacity: null, windows: [], standing: [], absences: [], loading: true, error: null,
+  bookings: [], capacity: null, windows: [], standing: [], absences: [], vacations: [], loading: true, error: null,
 }
 
 export function useDay(datum: string): DayData & {
@@ -57,16 +60,17 @@ export function useDay(datum: string): DayData & {
     }
     ;(async () => {
       try {
-        const [bookings, capacity, windows, standing, absences] = await Promise.all([
+        const [bookings, capacity, windows, standing, absences, vacations] = await Promise.all([
           data.getDay(datum),
           data.getCapacity(datum),
           data.getWorkWindows(datum),
           data.getStandingCars(),
           data.getDayAbsences(datum),
+          data.getVacations(datum, napPlusz(datum, 30)),
         ])
         if (!el) return
         betoltottNap.current = datum
-        setState({ bookings, capacity, windows, standing, absences, loading: false, error: null })
+        setState({ bookings, capacity, windows, standing, absences, vacations, loading: false, error: null })
       } catch (e) {
         if (!el) return
         betoltottNap.current = null

@@ -152,6 +152,21 @@ export default function BookingDetail({
     void betolt()
   }, [betolt])
 
+  // Élő frissítés: ha a nyitott foglalást közben egy másik eszközön átírják
+  // (pl. a telefonon Start → Premium), a munkalap is frissül. De csak akkor,
+  // ha itt épp nem gépel senki: a meg nem mentett megjegyzést, vagy egy
+  // éppen kitöltött mezőt nem írjuk felül.
+  const megjMentveRef = useRef(megjMentve)
+  useEffect(() => { megjMentveRef.current = megjMentve }, [megjMentve])
+  useEffect(() => data.subscribe(() => {
+    const aktiv = document.activeElement
+    // (a pipa is „input", de az nem gépelés)
+    const gepel = (aktiv instanceof HTMLInputElement && !['checkbox', 'radio', 'button'].includes(aktiv.type))
+      || aktiv instanceof HTMLTextAreaElement
+      || aktiv instanceof HTMLSelectElement
+    if (megjMentveRef.current && !gepel) void betolt()
+  }), [data, betolt])
+
   const bezar = useCallback(() => {
     if (valtozott.current) refresh()
     onBezar()

@@ -157,15 +157,13 @@ await p.waitForTimeout(1500)
     savRsz.filter((x) => oszlopban.filter((y) => y === x).length > 1))
 }
 
-console.log('\n=== 6) havi nézet: elöl a rendszám ===\n')
+console.log('\n=== 6) havi nézet: az aznapi autók száma (v50) ===\n')
 await p.locator('.fejlec .nezetvalto button').filter({ hasText: 'Hónap' }).click()
 await p.waitForTimeout(1500)
 {
-  const r = await p.locator('.minikartya.egysoros').first().evaluate((e) => ({
-    azon: e.querySelector('.azon').getBoundingClientRect().left,
-    ido: e.querySelector('.ido').getBoundingClientRect().left,
-  }))
-  ok('a rendszám az idő előtt áll', true, r.azon < r.ido)
+  // v50 óta a cellában nem egyenként állnak az autók, hanem egy nagy szám.
+  ok('a cellákban nincs egyenkénti kártya', 0, await p.locator('.honapnap .minikartya').count())
+  ok('van „autó" szám', true, (await p.locator('.honap-autok').count()) > 0)
 }
 await p.locator('.fejlec .nezetvalto button').filter({ hasText: /^Nap$/ }).click()
 await p.waitForTimeout(1200)

@@ -5,7 +5,7 @@ import type {
   LatestStart, NewBookingInput, PackageMatrixRow, PackageExtraRow, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
   PlateLookup, Quote, CompanyHit, CompanyCandidate, AbsenceInput, AbsenceRow, DayAbsence,
   CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
-  WeekDay, WorkWindow, FinishPreview,
+  WeekDay, WorkWindow, FinishPreview, VacationRow, VacationInput,
 } from '../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -75,6 +75,11 @@ export interface DataSource {
    * szombaton hozott, kedden vitt autó is beletartozik.
    */
   getRange(from: string, to: string): Promise<DayBooking[]>
+  /**
+   * A napi nézet sorrendje napról napra, egy hívásban (a heti nézetnek):
+   * kulcs `nap|foglalás`, érték a sorszám a napi listában.
+   */
+  getRangeOrder(from: string, to: string): Promise<Map<string, number>>
   getBooking(id: string): Promise<DayBooking | null>
   getCapacity(date: string): Promise<DayCapacity>
   getWorkWindows(date: string): Promise<WorkWindow[]>
@@ -110,6 +115,14 @@ export interface DataSource {
   listAbsences(): Promise<AbsenceRow[]>
   setAbsence(input: AbsenceInput): Promise<string>
   deleteAbsence(id: string): Promise<void>
+
+  // --- szabadság ---
+  /** A Profilomba: ami ma vagy később ér véget (alkalmazott: a sajátja; tulajdonos: mindenkié). */
+  listVacations(): Promise<VacationRow[]>
+  /** Mindenki szabadsága, ami az időszakba belelóg (napi és havi nézet). */
+  getVacations(from: string, to: string): Promise<VacationRow[]>
+  setVacation(input: VacationInput): Promise<string>
+  deleteVacation(id: string): Promise<void>
 
   /** A Cég mező keresője: cégnév az első betűtől, ékezet és cégforma nélkül is. */
   searchCompanies(q: string, limit?: number): Promise<CompanyHit[]>

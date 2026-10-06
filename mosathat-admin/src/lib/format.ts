@@ -224,3 +224,26 @@ export function hetSzam(datum: string): number {
 
   return 1 + Math.round((d.getTime() - csutortok.getTime()) / (7 * 86_400_000))
 }
+
+/** A hónapok rövid neve, a magyar helyesírás szerinti rövidítéssel. */
+const HONAP_ROVID = ['jan.', 'febr.', 'márc.', 'ápr.', 'máj.', 'jún.',
+  'júl.', 'aug.', 'szept.', 'okt.', 'nov.', 'dec.']
+
+/**
+ * Egy napokból álló időszak röviden (szabadság):
+ *
+ *   ugyanaz a nap        "nov. 10."
+ *   ugyanabban a hónapban "nov. 10–13."
+ *   hónapon át            "okt. 30. – nov. 2."
+ *
+ * Az évet csak akkor írja ki, ha nem az idei („2027. jan. 4–8.").
+ */
+export function napokRovid(tol: string, ig: string): string {
+  const [ev1, ho1, nap1] = tol.slice(0, 10).split('-').map(Number)
+  const [ev2, ho2, nap2] = ig.slice(0, 10).split('-').map(Number)
+  const ev = ev1 !== Number(maStr().slice(0, 4)) ? `${ev1}. ` : ''
+  if (tol.slice(0, 10) === ig.slice(0, 10)) return `${ev}${HONAP_ROVID[ho1 - 1]} ${nap1}.`
+  if (ev1 === ev2 && ho1 === ho2) return `${ev}${HONAP_ROVID[ho1 - 1]} ${nap1}–${nap2}.`
+  const ev2s = ev2 !== ev1 ? `${ev2}. ` : ''
+  return `${ev}${HONAP_ROVID[ho1 - 1]} ${nap1}. – ${ev2s}${HONAP_ROVID[ho2 - 1]} ${nap2}.`
+}

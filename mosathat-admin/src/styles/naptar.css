@@ -301,6 +301,19 @@
   margin-right: 0; border-right: 2px dashed var(--keret-eros);
   border-top-right-radius: 0; border-bottom-right-radius: 0;
 }
+/* Szabadság: rózsaszín sáv (nem foglalás, nincs állapota). */
+.honap-sav.szabadsag-sav {
+  background: var(--szabadsag-halvany);
+  border-color: var(--szabadsag-keret);
+  border-left: 3px solid var(--szabadsag);
+  color: var(--szabadsag-sotet);
+}
+.honap-sav.szabadsag-sav .azon {
+  font-family: inherit; letter-spacing: 0;
+  overflow: hidden; text-overflow: ellipsis;   /* egynapos sávban a név vége „…" */
+}
+.honap-sav.szabadsag-sav[data-korabbrol] { border-left-style: dashed; }
+
 .honap-sav[data-a='ARRIVED']     { border-left-color: var(--v-erkezett); }
 .honap-sav[data-a='IN_PROGRESS'] { border-left-color: var(--v-dolgozunk); }
 .honap-sav[data-a='READY']       { border-left-color: var(--v-kesz); }
@@ -334,7 +347,7 @@
   border-radius: var(--r);
   padding: 5px;
   min-width: 0;
-  min-height: 96px;
+  min-height: 118px;               /* v50: magasabb sor a nagy számnak */
   text-align: left;
 }
 .honapnap:hover { border-color: var(--keret-eros); background: var(--lap-2); }
@@ -363,6 +376,25 @@
   color: var(--szoveg-halk);
 }
 .honapnap[data-ma] .napszam { color: var(--zold-sotet); }
+
+/* Az aznapi (egynapos) autók száma: „+ 8 autó", nagy számmal, a többnapos
+   sávok alatt. A szám a cella alján áll, hogy a sávoknak mindig maradjon hely. */
+.honap-autok {
+  margin-top: auto;
+  display: flex; align-items: baseline; gap: 5px;
+  padding: 0 4px 2px;
+  color: var(--szoveg);
+}
+.honap-autok .plusz {
+  font-family: var(--betu-szam); font-size: var(--m-lg);
+  color: var(--szoveg-halk);
+}
+.honap-autok .szam {
+  font-family: var(--betu-szam); font-size: 30px; line-height: 1;
+  font-weight: var(--vastag-eros);
+}
+.honap-autok .szo { font-size: var(--m-sm); color: var(--szoveg-halk); }
+.honapnap[data-kivul] .honap-autok { opacity: .55; }
 
 /* --- mobil --------------------------------------------------------------------
    Öt-hét oszlop telefonon olvashatatlan lenne. A heti nézet ilyenkor egymás

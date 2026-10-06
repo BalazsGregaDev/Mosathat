@@ -27,7 +27,7 @@ import type {
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
-  Quote, CompanyHit, CompanyCandidate, FinishPreview,
+  Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { calcArgs, idoRovidit, num, numOrNull, toCalcResult, toQuote } from './source'
@@ -144,6 +144,10 @@ export class DemoSource implements DataSource {
       insert into public.staff_absences (staff_id, day, kind, starts, note) values
         ('00000000-0000-4000-8000-000000000004', current_date, 'KORABBAN_TAVOZIK',
          '16:00', 'DEMO — korábban megy');
+      -- Péter két hét múlva négy napra szabadságra megy (a napi kártyán és a
+      -- havi naptárban is látszik).
+      insert into public.staff_vacations (staff_id, from_day, to_day, note) values
+        ('00000000-0000-4000-8000-000000000005', current_date + 14, current_date + 17, 'DEMO');
     `)
     this.db = db
   }
@@ -269,6 +273,24 @@ export class DemoSource implements DataSource {
   async deleteAbsence(id: string): Promise<void> {
     await this.pg.query(`select delete_absence($1::uuid)`, [id])
   }
+  async listVacations(): Promise<VacationRow[]> {
+    return this.rows<VacationRow>(`select * from vacation_list()`)
+  }
+
+  async getVacations(from: string, to: string): Promise<VacationRow[]> {
+    return this.rows<VacationRow>(`select * from vacations_range($1::date, $2::date)`, [from, to])
+  }
+
+  async setVacation(input: VacationInput): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select set_vacation($1::jsonb) as id`,
+      [JSON.stringify(input)])
+    return r.id
+  }
+
+  async deleteVacation(id: string): Promise<void> {
+    await this.pg.query(`select delete_vacation($1::uuid)`, [id])
+  }
+
 
   async getRange(from: string, to: string): Promise<DayBooking[]> {
     return this.rows<DayBooking>(
@@ -278,6 +300,13 @@ export class DemoSource implements DataSource {
         order by service_date, coalesce(start_at, drop_off_at) nulls last, plate_raw`,
       [from, to],
     )
+  }
+
+  async getRangeOrder(from: string, to: string): Promise<Map<string, number>> {
+    const r = await this.rows<{ day: string; booking_id: string; sorrend: number }>(
+      `select day::text as day, booking_id::text as booking_id, sorrend
+         from range_order($1::date, $2::date)`, [from, to])
+    return new Map(r.map((x) => [`${String(x.day).slice(0, 10)}|${x.booking_id}`, Number(x.sorrend)]))
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {

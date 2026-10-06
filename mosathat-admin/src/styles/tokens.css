@@ -56,6 +56,15 @@
   --tobbnap-keret:   #d6c8f2;
   --tobbnap-sotet:   #4a3388;
 
+  /* --- szabadság -------------------------------------------------------------
+     Rózsaszín: a havi naptárban a szabadság sávja a többnapos autók lila
+     sávja mellett áll — a kettő nem keveredhet. Az állapotszínektől (zöld,
+     borostyán, kék, piros) és a narancstól is elválik. */
+  --szabadsag:         #c2417a;
+  --szabadsag-halvany: #fbe8f0;
+  --szabadsag-keret:   #efc3d5;
+  --szabadsag-sotet:   #8a2353;
+
   /* --- állapotszínek ------------------------------------------------------ */
   --v-varjuk:      #9aa39c;   /* CONFIRMED  — még nem jött meg */
   --v-erkezett:    #c9821f;   /* ARRIVED    — itt van, nem kezdtük el */

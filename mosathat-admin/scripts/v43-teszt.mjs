@@ -90,7 +90,9 @@ await p.waitForTimeout(1500)
 ok('heti nézet: „???"', true, (await p.locator('.minikartya, .hetsav').filter({ hasText: 'KQ-001' }).first().innerText()).includes('???'))
 await p.locator('.fejlec .nezetvalto button').filter({ hasText: 'Hónap' }).click()
 await p.waitForTimeout(1500)
-ok('havi nézet: „???"', true, (await p.locator('.minikartya, .honap-sav').filter({ hasText: 'KQ-003' }).first().innerText()).includes('???'))
+// v50 óta a havi nézetben az egynapos autók csak számként látszanak
+// („+ 8 autó"); a „???" a napi és a heti nézetben, meg a többnapos sávon van.
+ok('havi nézet: az egynaposak számként', true, (await p.locator('.honap-autok').count()) > 0)
 await p.locator('.fejlec .nezetvalto button').filter({ hasText: /^Nap$/ }).click()
 await p.waitForTimeout(1500)
 
