@@ -35,7 +35,8 @@ const hetiMa = async () => p.evaluate(() => [...document.querySelectorAll('.napo
 console.log('=== 1) A heti nézet a napi sorrendben ===\n')
 const elotte = await napiSor()
 await nezet(/^Hét$/)
-ok('ma: a heti oszlop = a napi lista', elotte, await hetiMa())
+// (a heti oszlopban legfeljebb 10 kártya fér, a többi „+N további")
+ok('ma: a heti oszlop = a napi lista', elotte.slice(0, 10), await hetiMa())
 
 console.log('\n=== 2) Átrendezés a napiban → a heti követi ===\n')
 await nezet(/^Nap$/)
@@ -48,7 +49,7 @@ await p.keyboard.press('ArrowUp'); await p.waitForTimeout(1200)
 const utana = await napiSor()
 ok('a napi sorrend megváltozott', false, JSON.stringify(utana) === JSON.stringify(elotte))
 await nezet(/^Hét$/)
-ok('a heti ugyanígy áll', utana, await hetiMa())
+ok('a heti ugyanígy áll', utana.slice(0, 10), await hetiMa())
 
 console.log('\n=== 3) Havi nézet: nagy szám az aznapi autókkal ===\n')
 await nezet(/^Hónap$/)

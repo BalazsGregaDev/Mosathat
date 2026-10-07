@@ -247,3 +247,25 @@ export function napokRovid(tol: string, ig: string): string {
   const ev2s = ev2 !== ev1 ? `${ev2}. ` : ''
   return `${ev}${HONAP_ROVID[ho1 - 1]} ${nap1}. – ${ev2s}${HONAP_ROVID[ho2 - 1]} ${nap2}.`
 }
+
+const NAPNEVEK = ['Vasárnap', 'Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat']
+
+/**
+ * Egy nap a MAI naphoz képest, ahogy a műhelyben mondják:
+ *
+ *   -1 / 0 / +1 nap     "Tegnap" / "Ma" / "Holnap"
+ *   legfeljebb 6 nap    a nap neve: "Csütörtök", "Péntek"
+ *   ennél messzebb      a dátum röviden: "okt. 15."
+ *
+ * (Hat napon belül a nap neve egyértelmű: a múlt csütörtök és a jövő
+ * csütörtök közül csak az egyik esik ebbe a sávba.)
+ */
+export function relativNap(datum: string, ma: string = maStr()): string {
+  const kulonbseg = Math.round(
+    (Date.parse(`${datum.slice(0, 10)}T12:00:00Z`) - Date.parse(`${ma}T12:00:00Z`)) / 86_400_000)
+  if (kulonbseg === 0) return 'Ma'
+  if (kulonbseg === -1) return 'Tegnap'
+  if (kulonbseg === 1) return 'Holnap'
+  if (Math.abs(kulonbseg) <= 6) return NAPNEVEK[new Date(`${datum.slice(0, 10)}T12:00:00Z`).getUTCDay()]
+  return napokRovid(datum, datum)
+}

@@ -71,16 +71,22 @@ await p.waitForTimeout(1500)
 {
   const savok = await p.locator('.honap-sav').count()
   ok('vannak sávok', true, savok > 0)
-  const r = await p.locator('.honap-sav').first().evaluate((s) => {
-    const sor = s.closest('.honapsor')
-    const cellak = [...sor.querySelectorAll('.honapnap')]
-    const sr = s.getBoundingClientRect()
-    // hány nap-cellát fed vízszintesen
-    const fed = cellak.filter((c) => {
-      const cr = c.getBoundingClientRect()
-      return cr.right > sr.left + 2 && cr.left < sr.right - 2
-    }).length
-    return { fed, azon: s.querySelector('.azon').textContent }
+  // A leghosszabb sáv (az első lehet egy vasárnapi, egynapnyi szakasz is —
+  // a hét végén kezdődő munka a következő sorban folytatódik).
+  const r = await p.evaluate(() => {
+    let legjobb = { fed: 0, azon: '' }
+    for (const s of document.querySelectorAll('.honap-sav')) {
+      const sor = s.closest('.honapsor')
+      const cellak = [...sor.querySelectorAll('.honapnap')]
+      const sr = s.getBoundingClientRect()
+      // hány nap-cellát fed vízszintesen
+      const fed = cellak.filter((c) => {
+        const cr = c.getBoundingClientRect()
+        return cr.right > sr.left + 2 && cr.left < sr.right - 2
+      }).length
+      if (fed > legjobb.fed) legjobb = { fed, azon: s.querySelector('.azon').textContent }
+    }
+    return legjobb
   })
   ok(`${r.azon}: a sáv több napon fut végig`, true, r.fed >= 2)
   const szin = await p.locator('.honap-sav').first().evaluate((s) => {

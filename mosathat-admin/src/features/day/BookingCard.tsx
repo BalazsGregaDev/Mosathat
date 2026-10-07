@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { ft, napRovidCim, ora } from '../../lib/format'
+import { ft, helyiNap, maStr, napRovidCim, ora, relativNap } from '../../lib/format'
 import { useKerdes, type KerdesBeallitas } from '../common/Kerdes'
 import { ALLAPOT_KERDES, NEM_FERT_BE_KERDES, TORLES_KERDES } from '../common/kerdesek'
 import Kerdojel from './Kerdojel'
@@ -41,24 +41,32 @@ import { useKeszAblak } from '../booking/KeszAblak'
 // ---------------------------------------------------------------------------
 
 /**
- * Mettől meddig, AZON A NAPON, amelyiket nézzük.
+ * Mettől meddig.
  *
  *   egynapos, megvárja    08:00 – 11:30   (kezdés + a munka hossza)
  *   egynapos, itt hagyja  08:00 – 15:00   (hozza – viszi)
- *   többnapos, 1. nap     08:00-tól
- *   többnapos, közte      egész nap
- *   többnapos, utolsó     17:00-ig
+ *
+ *   Ha az autó nem ugyanazon a napon jön és megy (többnapos, vagy előző
+ *   este hozzák), a két végén a nap is ott áll, a MAI naphoz képest:
+ *
+ *     Tegnap – Holnap 11:00          (már itt van)
+ *     Ma 16:00 – Holnap 11:00        (ma hozzák: az érkezés órája is kell)
+ *     Csütörtök – Ma 17:00           (egy napnál régebben hozták)
+ *     Tegnap – Péntek 17:00          (egy napnál később viszik)
+ *
+ *   Egy napon belül Tegnap / Ma / Holnap, távolabb a nap neve, egy héten
+ *   túl a dátum (lásd relativNap).
  */
-export function napiIdo(b: DayBooking): string {
-  const napok = b.napok_szama ?? 1
-  const hanyadik = b.nap_szama ?? 1
-  const viszi = b.pick_up_at ?? b.deadline_at
+export function napiIdo(b: DayBooking, ma: string = maStr()): string {
   const hozza = b.drop_off_at ?? b.start_at
+  const viszi = b.pick_up_at ?? b.deadline_at
+  const hozzaNap = hozza ? helyiNap(hozza) : b.service_date.slice(0, 10)
+  const visziNap = viszi ? helyiNap(viszi) : b.last_day.slice(0, 10)
 
-  if (napok > 1) {
-    if (hanyadik === 1) return hozza ? `${ora(hozza)}-tól` : 'első nap'
-    if (hanyadik === napok) return viszi ? `${ora(viszi)}-ig` : 'utolsó nap'
-    return 'egész nap'
+  if (hozzaNap !== visziNap) {
+    const eleje = hozzaNap === ma && hozza ? `Ma ${ora(hozza)}` : relativNap(hozzaNap, ma)
+    const vege = `${relativNap(visziNap, ma)}${viszi ? ` ${ora(viszi)}` : ''}`
+    return `${eleje} – ${vege}`
   }
 
   if (b.booking_type === 'VAROS' && b.start_at) {
