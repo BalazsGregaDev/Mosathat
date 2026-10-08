@@ -611,3 +611,18 @@
   font-size: var(--m-sm); padding: var(--t2) var(--t3); border-radius: var(--r);
   background: var(--narancs-halvany); margin-bottom: var(--t2);
 }
+
+/* --- „Befér-e?" az Új időpont űrlapon (fejlesztői próba, v56) -------------- */
+.befer-sor {
+  padding: var(--t2) var(--t3); border-radius: var(--r);
+  font-size: var(--m-sm); background: var(--lap-2);
+}
+.befer-sor[data-ok='true']  { background: var(--zold-halvany); color: var(--zold-sotet); }
+.befer-sor[data-ok='false'] { background: #fbeaea; color: var(--v-baj); }
+.befer-fej { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+.befer-jel {
+  margin-left: auto; font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--szoveg-halk);
+}
+.befer-sor ul { margin: 4px 0 0; padding-left: 18px; }
+.befer-idok { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; color: var(--szoveg); }

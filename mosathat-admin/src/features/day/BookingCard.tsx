@@ -97,9 +97,11 @@ export default function BookingCard({
   const arany = b.tasks_total > 0 ? (b.tasks_done / b.tasks_total) * 100 : 0
 
   const kovetkezo = NEXT_STATUS[b.status]
-  const lemondott = ['CANCELLED_BY_CUSTOMER', 'CANCELLED_BY_SHOP'].includes(b.status)
+  const lemondott = ['CANCELLED_BY_CUSTOMER', 'CANCELLED_BY_SHOP', 'REJECTED'].includes(b.status)
   const lezart = b.status === 'COMPLETED'
-  const torolheto = !lezart && !lemondott && b.status !== 'NO_SHOW'
+  // Online foglalási kérés: Visszaigazol (a következő lépés) vagy Elutasít.
+  const keres = b.status === 'REQUESTED'
+  const torolheto = !lezart && !lemondott && b.status !== 'NO_SHOW' && !keres
   // Kérdőjeles autó, ami még nincs lezárva: „Nem fért be" gombbal 0 Ft-tal zárható.
   const nemFertBeHato = b.tentative && torolheto
 
@@ -211,6 +213,12 @@ export default function BookingCard({
           <span className="rendszam">{azonosito(b)}</span>
           {/* Kérdőjeles („???") vagy „nem fért be" — közvetlenül a rendszám mellett. */}
           <Kerdojel b={b} />
+          {/* Online foglalási kérés: még vissza kell igazolni. */}
+          {keres && (
+            <span className="cimke-pill" data-r="keres" title="Online foglalási kérés — vissza kell igazolni">
+              Online kérés
+            </span>
+          )}
           {/* Hozom-viszem: mi megyünk az autóért. Ez a nap beosztását
               érinti (valakinek el kell mennie), ezért a kártyán is látszik. */}
           {/* Megvárja: az ügyfél ott ül, amíg kész — ezt az autót RÖGTÖN
@@ -281,8 +289,18 @@ export default function BookingCard({
           )}
         </div>
 
-        {(kovetkezo || torolheto || lemondott || igazolo || nemFertBeHato) && (
+        {(kovetkezo || torolheto || lemondott || igazolo || nemFertBeHato || keres) && (
           <div className="kartya-muvelet">
+            {keres && (
+              <button className="btn btn-veszelyes" disabled={megy}
+                      onClick={() => void kerdesUtan({
+                        cim: `Elutasítod? ${azonosito(b)}`,
+                        szoveg: 'A kérés elutasítva kerül a napba; a „Mégis jön" gombbal visszavehető.',
+                        igen: 'Elutasít', nem: 'Mégse', veszelyes: true,
+                      }, 'REJECTED')}>
+                Elutasít
+              </button>
+            )}
             {/* Az igazolólap sora: átadáskor km, név, aláírás. */}
             {igazolo && <IgazoloGomb bookingId={b.id} />}
             {nemFertBeHato && (

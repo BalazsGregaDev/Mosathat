@@ -5,7 +5,7 @@ import type {
   LatestStart, NewBookingInput, PackageMatrixRow, PackageExtraRow, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
   PlateLookup, Quote, CompanyHit, CompanyCandidate, AbsenceInput, AbsenceRow, DayAbsence,
   CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
-  WeekDay, WorkWindow, FinishPreview, VacationRow, VacationInput,
+  WeekDay, WorkWindow, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
 } from '../lib/types'
 
 // ---------------------------------------------------------------------------
@@ -80,6 +80,15 @@ export interface DataSource {
    * kulcs `nap|foglalás`, érték a sorszám a napi listában.
    */
   getRangeOrder(from: string, to: string): Promise<Map<string, number>>
+  /** A nap negyedórái: hány autón dolgozhatunk egyszerre (az idővonalhoz). */
+  getDayLanes(date: string): Promise<DayLane[]>
+  /** Az alap Start csomag munkaideje (személyautó, teljes) — „hány fér még be". */
+  getStartMinutes(): Promise<number | null>
+  /**
+   * Online foglalási kérés (az Időpontfoglalás modulból): KÉRÉS állapotú,
+   * Online forrású foglalás lesz belőle. Lásd online_foglalas().
+   */
+  onlineBooking(input: OnlineBookingInput): Promise<string>
   getBooking(id: string): Promise<DayBooking | null>
   getCapacity(date: string): Promise<DayCapacity>
   getWorkWindows(date: string): Promise<WorkWindow[]>

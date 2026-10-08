@@ -8,7 +8,7 @@
 }
 
 @media (max-width: 1180px) {
-  .nap-racs { grid-template-columns: 1fr; }
+  .nap-racs { grid-template-columns: minmax(0, 1fr); }   /* minmax: a széles idővonal se tolja szét */
 }
 
 /* --- kapacitássáv ----------------------------------------------------------- */
@@ -498,3 +498,113 @@ body.huzas-folyik { user-select: none; -webkit-user-select: none; cursor: grabbi
   font-size: var(--m-xs); text-transform: uppercase; letter-spacing: .06em;
   font-weight: var(--vastag-eros); color: var(--szoveg-halk);
 }
+
+/* ===========================================================================
+   Idővonal a napi lista tetején (v55) — negyedórás bontás
+   ===========================================================================
+   Sárga: megvárja (fix idő) — ugyanaz, mint a kártya „Megvárja" címkéje.
+   Türkiz: itt hagyja (rugalmas). Lila: többnapos. Szürke: kész.
+   Sraffozva: ebédszünet, és ahol nincs ember erre a helyre. */
+.idovonal {
+  --iv-nev: 58px;
+  --iv-fix: #ffd84d;          --iv-fix-szoveg: #3d2c00;
+  --iv-rug: #cdeae6;          --iv-rug-keret: #2b8a7e;   --iv-rug-szoveg: #134e48;
+  background: var(--lap);
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+  padding: var(--t3);
+  margin-bottom: var(--t3);
+}
+.iv-fej { display: flex; align-items: center; gap: var(--t3); flex-wrap: wrap; margin-bottom: var(--t2); }
+.iv-cim {
+  font-size: var(--m-xs); font-weight: var(--vastag-eros);
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.iv-jelmagyarazat { display: flex; gap: var(--t2); flex-wrap: wrap; font-size: var(--m-xs); }
+.iv-jelmagyarazat span {
+  padding: 1px 8px; border-radius: var(--r-sm); border: 1px solid transparent;
+}
+
+.iv-test { display: flex; gap: var(--t3); align-items: stretch; }
+.iv-gorget { flex: 1; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.iv-tabla { min-width: 560px; }
+
+.iv-orak { position: relative; height: 16px; margin-left: var(--iv-nev); }
+.iv-orak span {
+  position: absolute; transform: translateX(-50%);
+  font-family: var(--betu-szam); font-size: 11px; color: var(--szoveg-halk);
+}
+.iv-orak span:first-child { transform: none; }
+.iv-orak span:last-child { transform: translateX(-100%); }   /* a zárás órája ne lógjon le */
+
+.iv-sorok { position: relative; display: flex; flex-direction: column; gap: 4px; }
+.iv-sor { display: flex; align-items: stretch; height: 34px; }
+.iv-sornev {
+  width: var(--iv-nev); flex: none;
+  font-size: 11px; color: var(--szoveg-halk); align-self: center;
+}
+.iv-savtart {
+  position: relative; flex: 1;
+  background: var(--lap-2); border-radius: var(--r-sm); overflow: hidden;
+}
+.iv-negyed { position: absolute; top: 0; bottom: 0; border-left: 1px solid #eef0ee; }
+.iv-negyed[data-ora] { border-left-color: var(--keret); }
+.iv-negyed[data-allapot] {
+  background: repeating-linear-gradient(135deg, #e6e8e5 0 4px, transparent 4px 8px);
+}
+
+.iv-darab {
+  position: absolute; top: 3px; bottom: 3px;
+  display: flex; align-items: center; justify-content: center;
+  min-width: 2px; padding: 0 4px; margin: 0;
+  border: 1px solid transparent; border-radius: 4px;
+  font: inherit; font-family: var(--betu-szam); font-size: 11px; font-weight: var(--vastag-eros);
+  overflow: hidden; white-space: nowrap; cursor: pointer;
+}
+.iv-darab span { overflow: hidden; text-overflow: ellipsis; }
+.iv-darab:hover { filter: brightness(.95); }
+
+/* a fajták színei — a sávon és a jelmagyarázatban ugyanaz */
+.iv-darab[data-fajta='FIX'],       .iv-jelmagyarazat [data-fajta='FIX']       { background: var(--iv-fix); color: var(--iv-fix-szoveg); border-color: #e0b400; }
+.iv-darab[data-fajta='RUGALMAS'],  .iv-jelmagyarazat [data-fajta='RUGALMAS']  { background: var(--iv-rug); color: var(--iv-rug-szoveg); border-color: var(--iv-rug-keret); }
+.iv-darab[data-fajta='TOBBNAPOS'], .iv-jelmagyarazat [data-fajta='TOBBNAPOS'] { background: var(--tobbnap-halvany); color: var(--tobbnap-sotet); border-color: var(--tobbnap-keret); }
+.iv-darab[data-fajta='KESZ'],      .iv-jelmagyarazat [data-fajta='KESZ']      { background: #eceeeb; color: var(--szoveg-halk); border-color: #d5d9d4; }
+.iv-darab[data-kerdojeles] { border-style: dashed; }
+/* ami csúszik vagy nem fér bele: piros keret */
+.iv-darab[data-gond] { box-shadow: 0 0 0 2px var(--v-baj); }
+
+.iv-most {
+  position: absolute; top: -4px; bottom: -2px; width: 2px;
+  background: var(--v-baj); pointer-events: none;
+}
+
+/* a sor végén: hány Start autó fér még be */
+.iv-befer {
+  flex: none; width: 104px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; text-align: center;
+  border-radius: var(--r); background: var(--zold-halvany); color: var(--zold-sotet);
+  padding: var(--t2);
+}
+.iv-befer .szam { font-family: var(--betu-szam); font-size: 32px; line-height: 1; font-weight: var(--vastag-eros); }
+.iv-befer .szo { font-size: var(--m-xs); font-weight: var(--vastag-eros); line-height: 1.2; }
+.iv-befer .halk { font-size: 10px; }
+.iv-befer[data-tele] { background: #fbeaea; color: var(--v-baj); }
+
+.iv-gondok {
+  list-style: none; margin: var(--t2) 0 0; padding: 0;
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: var(--m-sm); color: var(--v-baj);
+}
+
+@media (max-width: 700px) {
+  .iv-test { flex-direction: column; }
+  .iv-befer { width: auto; flex-direction: row; gap: var(--t3); }
+  .iv-befer .szo br { display: none; }
+}
+
+/* Online foglalási kérés (v56): a kártya szaggatott kerettel, és egy címke.
+   A beosztásban is szaggatott a darabja — a helyet már foglalja. */
+.kartya[data-allapot='REQUESTED'] { border-style: dashed; }
+.kartya .cimke-pill[data-r='keres'] { background: #e6ecfa; color: #24418a; font-weight: var(--vastag-eros); }
+.iv-darab[data-keres] { border-style: dashed; border-width: 2px; }

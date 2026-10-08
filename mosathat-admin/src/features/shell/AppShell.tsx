@@ -24,13 +24,14 @@ import ProfilPage from '../profil/ProfilPage'
 import ArlistaPanel, { PANEL_ALAP, type PanelAllapot } from '../services/ArlistaPanel'
 import ArlistaGombok, { type ArlistaFul } from '../services/ArlistaGombok'
 import JelszoModal from '../common/JelszoModal'
+import FoglalasModul from '../publikus/FoglalasModul'
 
 // Az oldalak. Ami még nincs megépítve, az szürke és nem kattintható — nem
 // azért, hogy szép legyen a lista, hanem hogy látszódjon a terv, és ne
 // tűnjön elveszettnek egy funkció, ami csak később jön.
 type Oldal =
   | 'attekintes' | 'nap' | 'szolgaltatasok' | 'partnerek' | 'ugyfelek'
-  | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo'
+  | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo' | 'foglalas'
 
 // A `tulaj: true` menüpontok az alkalmazottnak MEG SEM JELENNEK. Nem
 // szürkén, nem "nincs jogosultság" üzenettel — nincsenek ott. Egy szürke
@@ -39,7 +40,7 @@ type Oldal =
 //
 // Fontos: ez csak a kényelem. A tényleges tiltás az adatbázisban van, mert
 // ezt a listát bárki átírhatja a böngészőjében.
-const MENU: { id: Oldal; cimke: string; tulaj?: boolean }[] = [
+const MENU: { id: Oldal; cimke: string; tulaj?: boolean; fejleszto?: boolean }[] = [
   { id: 'attekintes', cimke: 'Áttekintés', tulaj: true },
   { id: 'nap', cimke: 'Időpontok' },
   // Mindenkinek: a szerződéses / bérletes cégek havi lapja. Az alkalmazott
@@ -52,6 +53,8 @@ const MENU: { id: Oldal; cimke: string; tulaj?: boolean }[] = [
   { id: 'beallitasok', cimke: 'Beállítások', tulaj: true },
   // Mindenkinek: jelszó, kilépés, és a munkaidő-változás bejelentése.
   { id: 'profilom', cimke: 'Profilom' },
+  // Csak a fejlesztői fióknak: a publikus oldal foglalási modulja, próbaüzemben.
+  { id: 'foglalas', cimke: 'Időpontfoglalás', fejleszto: true },
 ]
 
 const MENU_2 = [
@@ -66,7 +69,8 @@ export default function AppShell() {
   // Teljes jogú: fejlesztő vagy tulajdonos. Az alkalmazott a napi munkát
   // végzi, az üzleti számokhoz és a beállításokhoz nem fér hozzá.
   const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
-  const menu = MENU.filter((m) => !m.tulaj || teljesJogu)
+  const fejleszto = user?.role === 'SUPERADMIN'
+  const menu = MENU.filter((m) => (!m.tulaj || teljesJogu) && (!m.fejleszto || fejleszto))
 
   const [oldal, setOldal] = useState<Oldal>(teljesJogu ? 'attekintes' : 'nap')
   // Az Igazolólap menü „Szerződés részletei" gombja: ennek a cégnek a
@@ -315,6 +319,9 @@ export default function AppShell() {
           {oldal === 'felhasznalok' && <UsersPage />}
           {oldal === 'beallitasok' && <SettingsPage />}
           {oldal === 'profilom' && <ProfilPage onJelszo={() => setJelszoNyitva(true)} />}
+          {oldal === 'foglalas' && fejleszto && (
+            <FoglalasModul onNapiNezet={(d) => { setNap(d); setNezet('nap'); setOldal('nap') }} />
+          )}
         </main>
       </div>
 

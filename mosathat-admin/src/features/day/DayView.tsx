@@ -9,6 +9,7 @@ import CapacityPanel from './CapacityPanel'
 import NapiLista from './NapiLista'
 import { flottaCsoportosit } from '../../lib/flotta'
 import StandingCars from './StandingCars'
+import Idovonal from './Idovonal'
 
 // ---------------------------------------------------------------------------
 //  A nap.
@@ -47,7 +48,8 @@ export default function DayView({
 }) {
   const { user } = useApp()
   const {
-    bookings, capacity, windows, standing, absences, vacations, loading, error, modosit, atrendez,
+    bookings, capacity, windows, standing, absences, vacations, lanes, startPerc,
+    loading, error, modosit, atrendez,
   } = useDay(nap)
 
   const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
@@ -154,6 +156,11 @@ export default function DayView({
             </span>
           </div>
         )}
+
+        {/* Az első kártya helyén: a nap beosztása negyedórás bontásban, és
+            hogy hány Start autó fér még be (lásd Idovonal.tsx). */}
+        <Idovonal nap={nap} foglalasok={bookings} savok={lanes} startPerc={startPerc}
+                  onMegnyit={(id) => onMegnyit(id)} />
 
         {bookings.length === 0 ? (
           <div className="panel">

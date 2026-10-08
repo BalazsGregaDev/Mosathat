@@ -11,6 +11,7 @@ import './styles/attekintes.css'
 import './styles/naptar.css'
 import './styles/arpanel.css'
 import './styles/igazolo.css'
+import './styles/foglalas.css'
 
 import { AppProvider } from './state/AppContext'
 import { nagyitasTiltas } from './lib/nagyitas'

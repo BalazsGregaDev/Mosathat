@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useApp } from './AppContext'
-import type { DayAbsence, DayBooking, DayCapacity, StandingCar, VacationRow, WorkWindow } from '../lib/types'
+import type { DayAbsence, DayBooking, DayCapacity, DayLane, StandingCar, VacationRow, WorkWindow } from '../lib/types'
 import { napPlusz } from '../lib/format'
 
 // ---------------------------------------------------------------------------
@@ -34,12 +34,16 @@ export interface DayData {
   absences: DayAbsence[]
   /** Szabadságok a naptól egy hónapig előre (a kapacitás-kártyára). */
   vacations: VacationRow[]
+  /** Negyedóránként hány autón dolgozhatunk egyszerre (az idővonalhoz). */
+  lanes: DayLane[]
+  /** Az alap Start munkaideje („hány fér még be"). */
+  startPerc: number | null
   loading: boolean
   error: string | null
 }
 
 const URES: DayData = {
-  bookings: [], capacity: null, windows: [], standing: [], absences: [], vacations: [], loading: true, error: null,
+  bookings: [], capacity: null, windows: [], standing: [], absences: [], vacations: [], lanes: [], startPerc: null, loading: true, error: null,
 }
 
 export function useDay(datum: string): DayData & {
@@ -60,17 +64,19 @@ export function useDay(datum: string): DayData & {
     }
     ;(async () => {
       try {
-        const [bookings, capacity, windows, standing, absences, vacations] = await Promise.all([
+        const [bookings, capacity, windows, standing, absences, vacations, lanes, startPerc] = await Promise.all([
           data.getDay(datum),
           data.getCapacity(datum),
           data.getWorkWindows(datum),
           data.getStandingCars(),
           data.getDayAbsences(datum),
           data.getVacations(datum, napPlusz(datum, 30)),
+          data.getDayLanes(datum),
+          data.getStartMinutes(),
         ])
         if (!el) return
         betoltottNap.current = datum
-        setState({ bookings, capacity, windows, standing, absences, vacations, loading: false, error: null })
+        setState({ bookings, capacity, windows, standing, absences, vacations, lanes, startPerc, loading: false, error: null })
       } catch (e) {
         if (!el) return
         betoltottNap.current = null

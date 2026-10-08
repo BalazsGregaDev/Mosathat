@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { useApp, useCatalog } from '../../state/AppContext'
+import BeferSor from './BeferSor'
 import { useBookingForm } from '../../state/useBookingForm'
 import { useMentetlen } from '../../state/useMentetlen'
 import { ft, idotartam, napRovidCim } from '../../lib/format'
@@ -58,8 +59,10 @@ export default function BookingForm({
   /** Nyitva az árlista: ilyenkor ez az ablak a bal oldalra húzódik. */
   osztott?: boolean
 }) {
-  const { data } = useApp()
+  const { data, user } = useApp()
   const katalogus = useCatalog()
+  // A 'Befér-e?' sor egyelőre csak a fejlesztői fióknak (próba).
+  const fejleszto = user?.role === 'SUPERADMIN'
   const {
     f, set, calc, menthetE, ment, mentes, hiba, setHiba, tolt, szerkesztes, szerzodeses,
     flottas, flottaDarab,
@@ -418,6 +421,14 @@ export default function BookingForm({
                   lezárható.
                 </span>
               </div>
+            )}
+
+            {/* Befér-e a nap beosztásába (fejlesztői próba, lásd BeferSor.tsx) */}
+            {fejleszto && (
+              <BeferSor datum={f.date} tipus={f.bookingType} kezdes={f.startTime}
+                        hozza={f.dropOffTime} visziNap={f.pickUpDate} viszi={f.pickUpTime}
+                        perc={calc?.work_minutes} kihagy={bookingId ?? null}
+                        onIdo={(mezo, v) => set(mezo, v)} />
             )}
 
             {belefer && (

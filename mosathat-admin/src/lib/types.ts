@@ -88,6 +88,8 @@ export const ACTIVE_STATUSES: BookingStatus[] = [
  * azoknak is kell egy következő lépés.
  */
 export const NEXT_STATUS: Partial<Record<BookingStatus, { to: BookingStatus; label: string }>> = {
+  // Online foglalási kérés: visszaigazolva lesz belőle rendes foglalás.
+  REQUESTED: { to: 'CONFIRMED', label: 'Visszaigazol' },
   CONFIRMED: { to: 'ARRIVED', label: 'Megérkezett' },
   ARRIVED: { to: 'READY', label: 'Kész van' },
   IN_PROGRESS: { to: 'READY', label: 'Kész van' },
@@ -280,6 +282,11 @@ export interface DayBooking {
   skip_note?: string | null
   /** Ennyivel lett kevesebb a végleges ár a kimaradt tételek miatt. */
   skip_huf?: number | null
+  /** (Csak a napi listában) a foglalás munkapercei ezen a napon — többnaposnál a napi része. */
+  napi_perc?: number | null
+  /** (Csak a napi listában) mikor kezdtünk rajta dolgozni / mikor lett kész. */
+  kezdve?: string | null
+  befejezve?: string | null
   /**
    * Csak a felületen: ha ez a foglalás egy flottás csoport KÉPVISELŐJE a
    * listában, itt a csoport összes autója (sorszám szerint). Lásd lib/flotta.ts.
@@ -919,6 +926,35 @@ export interface DayAbsence extends Omit<Absence, 'day'> {
   staff_name: string
   /** Beleszámít-e a kapacitásba (csak az alkalmazottaké). */
   szamit: boolean
+}
+
+/** Az Időpontfoglalás modul (a leendő publikus oldal) kérése. */
+export interface OnlineBookingInput {
+  category: VehicleCategory
+  scope: BookingScope
+  package_id: string
+  full_service: boolean
+  extras: { extra_id: string; quantity: number }[]
+  booking_type: 'VAROS' | 'LEADOS'
+  service_date: string
+  /** Megvárja: kezdés ("09:00"). */
+  start_time: string | null
+  /** Itt hagyja: mikor hozza ("08:00"). */
+  drop_off_time: string | null
+  customer_name: string
+  customer_phone: string
+  customer_email: string | null
+  plate_raw: string
+  brand: string | null
+  model: string | null
+  notes: string | null
+}
+
+/** Negyedóra a napban: hány autón dolgozhatunk egyszerre (day_lanes). */
+export interface DayLane {
+  starts: string
+  ends: string
+  lanes: number
 }
 
 /** Szabadság: ki mettől meddig nincs bent (egész napokra). */

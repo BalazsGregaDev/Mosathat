@@ -8,7 +8,7 @@ import type {
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
-  Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput,
+  Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { calcArgs, idoRovidit, num, numOrNull, toCalcResult, toQuote } from './source'
@@ -249,6 +249,24 @@ export class SupabaseSource implements DataSource {
     if (error) fail('Sorrend', error)
     return new Map(((data ?? []) as { day: string; booking_id: string; sorrend: number }[])
       .map((r) => [`${String(r.day).slice(0, 10)}|${r.booking_id}`, Number(r.sorrend)]))
+  }
+
+  async getDayLanes(date: string): Promise<DayLane[]> {
+    const { data, error } = await this.sb.rpc('day_lanes', { p_day: date })
+    if (error) fail('Idővonal', error)
+    return ((data ?? []) as DayLane[]).map((x) => ({ ...x, lanes: Number(x.lanes) }))
+  }
+
+  async getStartMinutes(): Promise<number | null> {
+    const { data, error } = await this.sb.rpc('start_perc')
+    if (error) fail('Start munkaideje', error)
+    return data == null ? null : Number(data)
+  }
+
+  async onlineBooking(input: OnlineBookingInput): Promise<string> {
+    const { data, error } = await this.sb.rpc('online_foglalas', { p: input })
+    if (error) fail('Foglalási kérés', error)
+    return data as string
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {

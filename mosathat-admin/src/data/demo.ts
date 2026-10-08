@@ -27,7 +27,7 @@ import type {
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
-  Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput,
+  Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { calcArgs, idoRovidit, num, numOrNull, toCalcResult, toQuote } from './source'
@@ -307,6 +307,22 @@ export class DemoSource implements DataSource {
       `select day::text as day, booking_id::text as booking_id, sorrend
          from range_order($1::date, $2::date)`, [from, to])
     return new Map(r.map((x) => [`${String(x.day).slice(0, 10)}|${x.booking_id}`, Number(x.sorrend)]))
+  }
+
+  async getDayLanes(date: string): Promise<DayLane[]> {
+    const r = await this.rows<DayLane>(
+      `select starts::text as starts, ends::text as ends, lanes from day_lanes($1::date)`, [date])
+    return r.map((x) => ({ ...x, lanes: Number(x.lanes) }))
+  }
+
+  async getStartMinutes(): Promise<number | null> {
+    const [r] = await this.rows<{ p: number | null }>(`select start_perc() as p`)
+    return r?.p == null ? null : Number(r.p)
+  }
+
+  async onlineBooking(input: OnlineBookingInput): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select online_foglalas($1::jsonb) as id`, [JSON.stringify(input)])
+    return r.id
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {
