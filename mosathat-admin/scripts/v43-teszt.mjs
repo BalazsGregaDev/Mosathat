@@ -7,7 +7,7 @@
 //   1. Új időpont: „Kérdőjeles (???)" gomb a Mikor részben; kisbetűs rendszám
 //      nagybetűvel jelenik meg; a napi, heti és havi nézetben „???" a rendszám
 //      mellett.
-//   2. Napi kártya: „Nem fért be" gomb (csak kérdőjelesnél) → lezárva 0 Ft-tal,
+//   2. Napi kártya: „Nem fért be" gomb (v57 óta minden autónál) → lezárva 0 Ft-tal,
 //      „nem fért be" címke.
 //   3. Munkalap: Kérdőjeles kapcsoló, „Nem fért be" gomb a lábban.
 //   4. Érintőképernyő: a gyári időválasztó helyett saját gombos panel.
@@ -81,7 +81,8 @@ await ujFoglalas(p, 'kq-003', 'Kérdő Kornél', '+36301110045', true, hetMulva)
   ok('napi nézet: „???" a rendszám mellett', '???', (await k.locator('.cimke-pill.kerdojel').innerText()).trim())
   ok('a „???" közvetlenül a rendszám után', true, await k.evaluate((el) =>
     el.querySelector('.rendszam').nextElementSibling?.classList.contains('kerdojel')))
-  ok('nem kérdőjelesen nincs „Nem fért be" gomb', 0,
+  // v57: „Nem fért be" minden még nem lezárt autónál
+  ok('nem kérdőjelesnél is van „Nem fért be" gomb (v57)', 1,
     await p.locator('.napi-lista .kartya').filter({ hasText: 'ABC-123' })
       .getByRole('button', { name: 'Nem fért be' }).count())
 }

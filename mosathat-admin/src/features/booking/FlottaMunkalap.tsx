@@ -10,6 +10,7 @@ import {
 } from '../../lib/types'
 import Szerkesztheto from '../common/Szerkesztheto'
 import IdoMezo from '../common/IdoMezo'
+import { NEM_FERT_BE_KERDES } from '../common/kerdesek'
 import { useKerdes } from '../common/Kerdes'
 import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
 
@@ -119,6 +120,12 @@ export default function FlottaMunkalap({
     await muvelet(() => data.setStatus(t.id, 'CANCELLED_BY_CUSTOMER'))
   }
 
+  // „Nem fért be": ha túlvállaltuk magunkat — az autó 0 Ft-tal lezárva.
+  async function nemFert(t: DayBooking) {
+    if (!(await kerdez(NEM_FERT_BE_KERDES(t)))) return
+    await muvelet(() => data.notFitted(t.id))
+  }
+
   return (
     <div className="fedo" role="presentation"
          onMouseDown={(e) => e.target === e.currentTarget && !reszletId && bezar()}>
@@ -216,6 +223,7 @@ export default function FlottaMunkalap({
                          onRendszam={(r) => muvelet(() => data.fleetSetPlate(t.id, r))}
                          onMeret={(m) => muvelet(() => data.patchBooking(t.id, { category: m }))}
                          onTorol={() => void torol(t)}
+                         onNemFert={() => void nemFert(t)}
                          onMegisJon={() => void muvelet(() => data.setStatus(t.id, 'CONFIRMED'))}
                          onReszletek={() => setReszletId(t.id)} />
               ))}
@@ -254,7 +262,7 @@ function autoNev(t: DayBooking): string {
 // ---------------------------------------------------------------------------
 //  Egy autó sora
 // ---------------------------------------------------------------------------
-function AutoSor({ t, megy, soron, onRendszam, onMeret, onTorol, onMegisJon, onReszletek }: {
+function AutoSor({ t, megy, soron, onRendszam, onMeret, onTorol, onNemFert, onMegisJon, onReszletek }: {
   t: DayBooking
   megy: boolean
   /** Ennél az autónál tartunk most (a léptető szerint). */
@@ -262,6 +270,7 @@ function AutoSor({ t, megy, soron, onRendszam, onMeret, onTorol, onMegisJon, onR
   onRendszam: (r: string) => void
   onMeret: (m: VehicleCategory) => void
   onTorol: () => void
+  onNemFert: () => void
   onMegisJon: () => void
   onReszletek: () => void
 }) {
@@ -296,13 +305,16 @@ function AutoSor({ t, megy, soron, onRendszam, onMeret, onTorol, onMegisJon, onR
       </select>
       <span className="flotta-ar szam">{ft(t.final_price_huf ?? t.estimated_price_huf)}</span>
       <span className="flotta-allapot">
-        {lemondott ? 'törölve' : lezart ? 'kész' : soron ? 'most ez' : 'vár'}
+        {lemondott ? 'törölve' : t.not_fitted ? 'nem fért be' : lezart ? 'kész' : soron ? 'most ez' : 'vár'}
       </span>
       <span className="flotta-gombok">
         {!lemondott && igazoloKell(t) && <IgazoloGomb bookingId={t.id} className="btn btn-kicsi" />}
         <button className="btn btn-kicsi" onClick={onReszletek}>Részletek</button>
         {lemondott && (
           <button className="btn btn-kicsi" disabled={megy} onClick={onMegisJon}>Mégis jön</button>
+        )}
+        {!lemondott && !lezart && (
+          <button className="btn btn-kicsi btn-kerdojel" disabled={megy} onClick={onNemFert}>Nem fért be</button>
         )}
         {!lemondott && !lezart && (
           <button className="btn btn-kicsi btn-veszelyes" disabled={megy} onClick={onTorol}>Törlés</button>

@@ -50,9 +50,9 @@ ok('KER-100: „<nap> – Holnap 17:00"', true, new RegExp(`^${NAP} – Holnap \
 ok('egynapos marad: „08:00 – 10:00"', true, /^\d\d:\d\d – \d\d:\d\d$/.test(await ido('ABC-123')))
 console.log(`         KER-214: ${await ido('KER-214')} · KER-100: ${await ido('KER-100')}`)
 
-// Holnap: ott a KER-100 utolsó napja → „<nap> – Holnap"-ból „… – Holnap 17:00" marad (a MAI naphoz képest)
+// v57: a nézett naphoz képest. Holnap (a KER-100 utolsó napja) nézve: „… – Ma 17:00"
 await p.locator('.napvalto .nyil').last().click(); await p.waitForTimeout(1500)
-ok('másik napot nézve is a mai naphoz képest', true, /– Holnap \d\d:\d\d$/.test(await ido('KER-100')))
+ok('holnapot nézve: a holnap a „Ma"', true, /– Ma \d\d:\d\d$/.test(await ido('KER-100')))
 
 await b.close()
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)

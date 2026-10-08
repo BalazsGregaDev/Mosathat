@@ -649,6 +649,14 @@ export default function BookingDetail({
                     <Csuszka be={b.tentative} cimke="Kérdőjeles (feltételesen vállalt)"
                              tiltva={lezart} onValt={(uj) => void kerdojelValt(uj)} />
                     <span className="halk">ha befér, megcsináljuk, ha nem, nem</span>
+                    {/* „Nem fért be" bármelyik autónál (túlvállalás). Kérdőjelesnél
+                        a lábban is ott van; itt, hogy a láb gombsora ne nőjön. */}
+                    {lemondhato && !b.tentative && (
+                      <button type="button" className="btn btn-kicsi btn-kerdojel"
+                              onClick={() => void nemFertBe()}>
+                        Nem fért be
+                      </button>
+                    )}
                   </span>
                 </div>
 

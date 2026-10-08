@@ -310,14 +310,18 @@ t.ok('alkalmazott más munkaidejét nem állíthatja', true,
     [JSON.stringify({ staff_id: P, day: hetfo, kind: 'EGESZ_NAP' })]) ?? ''))
 await belep(TULAJ)
 
-// Többnapos: egyenlően a munkanapokon
+// Többnapos: v57 óta a még elérhető munkaidő arányában (kedd 16:00-tól,
+// csütörtök 10:00-ig — azokra a napokra kevesebb jut)
 {
   const perc = (await egy(`select planned_duration_minutes m from bookings where id=$1`, [t1])).m
   const terhek = []
+  const eler = []
   for (const d of [kedd, szerda, csutortok]) {
     terhek.push(Number((await egy(`select foglalas_napi_terhe(b, $2::date) t from bookings b where id=$1`, [t1, d])).t))
+    eler.push(Number((await egy(`select elerheto_perc(b, $2::date) e from bookings b where id=$1`, [t1, d])).e))
   }
-  t.ok('háromnapos munka: harmada jut egy napra', [perc / 3, perc / 3, perc / 3].map(Math.round), terhek.map(Math.round))
+  const ossz = eler.reduce((a, b) => a + b, 0)
+  t.ok('háromnapos munka: az elérhető idő arányában', eler.map((e) => Math.round(perc * e / ossz)), terhek.map(Math.round))
 }
 
 {

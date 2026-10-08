@@ -106,6 +106,12 @@
 .fogl-idok { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--t2); }
 .fogl-idok button { font-family: var(--betu-szam); }
 
+.fogl-erkezes {
+  margin: 0; padding: var(--t3); border-radius: var(--r);
+  background: #fff6d6; border-left: 4px solid #e0b400; color: #3d2c00;
+  font-size: var(--m-md); line-height: 1.45;
+}
+.fogl-erkezes a { color: inherit; font-weight: var(--vastag-eros); white-space: nowrap; }
 .fogl-figyel { margin: 0; padding: var(--t2) var(--t3); border-radius: var(--r); background: #fdf5e4; color: #7a4e0d; }
 
 /* adatok */

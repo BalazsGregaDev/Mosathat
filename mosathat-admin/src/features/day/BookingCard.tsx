@@ -47,7 +47,8 @@ import { useKeszAblak } from '../booking/KeszAblak'
  *   egynapos, itt hagyja  08:00 – 15:00   (hozza – viszi)
  *
  *   Ha az autó nem ugyanazon a napon jön és megy (többnapos, vagy előző
- *   este hozzák), a két végén a nap is ott áll, a MAI naphoz képest:
+ *   este hozzák), a két végén a nap is ott áll, a NÉZETT naphoz képest
+ *   (csütörtökön a pénteket nézve a péntek a „Ma", a csütörtök a „Tegnap"):
  *
  *     Tegnap – Holnap 11:00          (már itt van)
  *     Ma 16:00 – Holnap 11:00        (ma hozzák: az érkezés órája is kell)
@@ -58,6 +59,7 @@ import { useKeszAblak } from '../booking/KeszAblak'
  *   túl a dátum (lásd relativNap).
  */
 export function napiIdo(b: DayBooking, ma: string = maStr()): string {
+  // `ma`: a nézett nap (alapból a mai nap)
   const hozza = b.drop_off_at ?? b.start_at
   const viszi = b.pick_up_at ?? b.deadline_at
   const hozzaNap = hozza ? helyiNap(hozza) : b.service_date.slice(0, 10)
@@ -80,10 +82,13 @@ export function napiIdo(b: DayBooking, ma: string = maStr()): string {
 
 export default function BookingCard({
   b,
+  nap,
   onMegnyit,
   onModosit,
 }: {
   b: DayBooking
+  /** A nézett nap: a „Tegnap / Ma / Holnap" ehhez képest értendő. */
+  nap?: string
   onMegnyit: () => void
   /** A napi lista helyben átírja ezt az egy foglalást — a sorrendhez nem nyúl. */
   onModosit?: (id: string, valtozas: Partial<DayBooking>) => void
@@ -103,7 +108,9 @@ export default function BookingCard({
   const keres = b.status === 'REQUESTED'
   const torolheto = !lezart && !lemondott && b.status !== 'NO_SHOW' && !keres
   // Kérdőjeles autó, ami még nincs lezárva: „Nem fért be" gombbal 0 Ft-tal zárható.
-  const nemFertBeHato = b.tentative && torolheto
+  // „Nem fért be" (0 Ft-tal lezárva): bármelyik még nem lezárt autónál — ha
+  // túlvállaltuk magunkat. (Régen csak a kérdőjeleseknél volt.)
+  const nemFertBeHato = torolheto
 
   const napok = b.napok_szama ?? 1
   const tobbnapos = napok > 1
@@ -234,7 +241,7 @@ export default function BookingCard({
           {b.company_name && (
             <span className="kartya-ceg" title={`Cég: ${b.company_name}`}>{b.company_name}</span>
           )}
-          <span className="ido">{napiIdo(b)}</span>
+          <span className="ido">{napiIdo(b, nap)}</span>
           {/* A csomag és az extrák külön elemek a sorban: ha az extrák
               listája hosszú, csak AZ törik a következő sorba — a csomag
               neve fent marad a rendszám mellett. */}

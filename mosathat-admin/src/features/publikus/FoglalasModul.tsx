@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useApp, useCatalog } from '../../state/AppContext'
 import { napBeosztasBetolt, type NapBeosztas } from '../../state/napBeosztas'
-import { napAllapot, ora, type Lehetoseg, type NapAllapot } from '../../lib/befer'
+import { napAllapot, ora, type Lehetoseg, type NapAllapot, type TiltottSav } from '../../lib/befer'
 import { ft, hetHetfoje, idotartam, maStr, napCim, napokRovid, napPlusz } from '../../lib/format'
 import {
   CATEGORY_LABEL, SCOPE_LABEL,
@@ -37,6 +37,7 @@ import {
 //    - csak egynapos „megvárja" és „itt hagyja" (a többnapos és a
 //      hozom-viszem telefonon)
 //    - csak fix áras extrák (az árajánlatosak telefonon)
+//    - ebédszünet: 11:15 és 12:45 között nem kínálunk kezdést / hozást
 // ---------------------------------------------------------------------------
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
@@ -44,6 +45,16 @@ const TERJEDELMEK: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
 const HETEK_OLDALANKENT = 2
 const LEGTOBB_HET = 8
 const HET_NAPJAI = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo']
+/**
+ * Ebédszünet: 11:15 és 12:45 között (a két végével együtt) nem kínálunk
+ * kezdést és hozást. 11:00-ra még lehet, 13:00-tól újra.
+ */
+const EBED: TiltottSav[] = [{ tol: 11 * 60 + 15, ig: 12 * 60 + 45 }]
+/**
+ * A műhely telefonszáma (késés esetén ezt hívják). Ideiglenes: a valódi
+ * számot ide kell beírni — később a Beállításokból jön.
+ */
+const UZLET_TELEFON = '+36 __ ___ ____'
 
 type Tipus = 'VAROS' | 'LEADOS'
 
@@ -161,7 +172,7 @@ export default function FoglalasModul({ onNapiNezet }: {
     if (!perc || !tipus) return m
     for (const d of napok) {
       const a = napAdat.get(d)
-      if (a) m.set(d, napAllapot(a.negyedek, a.munkak, perc, tipus, a.most))
+      if (a) m.set(d, napAllapot(a.negyedek, a.munkak, perc, tipus, a.most, EBED))
     }
     return m
   }, [napok, napAdat, perc, tipus])
@@ -215,7 +226,7 @@ export default function FoglalasModul({ onNapiNezet }: {
         <section className="fogl-kartya fogl-siker">
           <h2>Köszönjük, megkaptuk a foglalási kérésed!</h2>
           <p>
-            {napCim(kesz.nap)}, {ido && (tipus === 'VAROS' ? `${ora(ido.tol)} kezdéssel` : `${ora(ido.tol)}-ra hozod`)}.
+            {napCim(kesz.nap)}, {ido && (tipus === 'VAROS' ? `kezdés: ${ora(ido.tol)}` : `hozás: ${ora(ido.tol)}`)}.
             Hamarosan visszaigazoljuk telefonon vagy e-mailben.
           </p>
           <div className="fogl-gombok">
@@ -387,13 +398,18 @@ export default function FoglalasModul({ onNapiNezet }: {
                     <div className="fogl-idok">
                       {lehetosegek.map((l) => (
                         <button key={l.tol} type="button" aria-pressed={ido?.tol === l.tol} onClick={() => setIdo(l)}>
-                          {tipus === 'VAROS'
-                            ? <>{ora(l.tol)} – {ora(l.tol + perc)}</>
-                            : <>{ora(l.tol)}-ra<small>kész kb. {l.kesz !== null ? ora(l.kesz) : '—'}</small></>}
+                          {/* csak az óra:perc (itt hagyásnál alatta kicsiben, mikorra kész) */}
+                          {ora(l.tol)}
+                          {tipus === 'LEADOS' && <small>kész kb. {l.kesz !== null ? ora(l.kesz) : '—'}</small>}
                         </button>
                       ))}
                     </div>
                   )}
+                  {/* érkezés: feltűnően, az időpontok alatt */}
+                  <p className="fogl-erkezes">
+                    Kérjük, ha lehet, a választott időpont előtt <strong>5–10 perccel</strong> érkezz.
+                    Ha késel, kérjük, telefonálj: <a href={`tel:${UZLET_TELEFON.replace(/\s/g, '')}`}>{UZLET_TELEFON}</a>
+                  </p>
                 </>
               )}
             </>
@@ -443,7 +459,7 @@ export default function FoglalasModul({ onNapiNezet }: {
               <div className="halk">+ {onlineExtrak.filter((e) => extrak.has(e.id)).map((e) => e.name).join(', ')}</div>
             )}
             {nap && ido && (
-              <div>{napCim(nap)} · {tipus === 'VAROS' ? `${ora(ido.tol)} kezdés` : `${ora(ido.tol)}-ra hozod`}</div>
+              <div>{napCim(nap)} · {tipus === 'VAROS' ? `kezdés: ${ora(ido.tol)}` : `hozás: ${ora(ido.tol)}`}</div>
             )}
           </div>
           <div className="osszeg">
@@ -455,7 +471,10 @@ export default function FoglalasModul({ onNapiNezet }: {
             <button type="button" className="btn btn-fo" disabled={!kuldheto} onClick={() => void kuldes()}>
               {kuld ? 'Küldés…' : 'Foglalási kérés küldése'}
             </button>
-            <small className="halk">A végleges ár az autó állapotától függően eltérhet.</small>
+            <small className="halk">
+              A végleges ár az autó állapotától függően eltérhet, erősen szennyezett autón
+              50% felárat számíthatunk fel.
+            </small>
           </div>
         </section>
       )}

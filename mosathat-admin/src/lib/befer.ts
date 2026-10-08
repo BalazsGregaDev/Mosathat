@@ -70,6 +70,17 @@ export function ujMunkaEllenoriz(negyedek: Negyed[], munkak: Munka[], uj: Munka,
   return { befer: gondok.length === 0, kesz: utana.kesz.get(uj.id) ?? null, gondok }
 }
 
+/**
+ * Időszak, amikor nem kínálunk kezdést / hozást (pl. ebédszünet: 11:15–12:45,
+ * a két végével együtt). Perc éjféltől.
+ */
+export interface TiltottSav {
+  tol: number
+  ig: number
+}
+
+const tiltottE = (t: number, tiltott: TiltottSav[]) => tiltott.some((s) => t >= s.tol && t <= s.ig)
+
 /** Egy választható időpont: kezdés (megvárja) vagy hozás (itt hagyja), és mikorra kész. */
 export interface Lehetoseg {
   tol: number
@@ -81,7 +92,8 @@ export interface Lehetoseg {
  * A kezdés nem lehet a múltban (ma), és a munkának zárásig végeznie kell.
  */
 export function varosKezdesek(negyedek: Negyed[], munkak: Munka[], perc: number,
-                              most: number | null = null, lepes = 30): Lehetoseg[] {
+                              most: number | null = null, lepes = 30,
+                              tiltott: TiltottSav[] = []): Lehetoseg[] {
   if (!perc || negyedek.length === 0) return []
   const nyit = negyedek[0].tol
   const zar = negyedek[negyedek.length - 1].ig
@@ -89,6 +101,7 @@ export function varosKezdesek(negyedek: Negyed[], munkak: Munka[], perc: number,
   const ki: Lehetoseg[] = []
   for (let t = nyit; t + perc <= zar; t += lepes) {
     if (most !== null && t < most) continue
+    if (tiltottE(t, tiltott)) continue
     const uj: Munka = { id: '__uj', cimke: 'Új', fajta: 'FIX', tol: t, hatarido: t + perc, perc }
     const e = ujMunkaEllenoriz(negyedek, munkak, uj, most, alap)
     if (e.befer) ki.push({ tol: t, kesz: t + perc })
@@ -101,7 +114,8 @@ export function varosKezdesek(negyedek: Negyed[], munkak: Munka[], perc: number,
  * mikorra várható, hogy kész.
  */
 export function leadosHozasok(negyedek: Negyed[], munkak: Munka[], perc: number,
-                              most: number | null = null, lepes = 30): Lehetoseg[] {
+                              most: number | null = null, lepes = 30,
+                              tiltott: TiltottSav[] = []): Lehetoseg[] {
   if (!perc || negyedek.length === 0) return []
   const nyit = negyedek[0].tol
   const zar = negyedek[negyedek.length - 1].ig
@@ -109,6 +123,7 @@ export function leadosHozasok(negyedek: Negyed[], munkak: Munka[], perc: number,
   const ki: Lehetoseg[] = []
   for (let t = nyit; t + perc <= zar; t += lepes) {
     if (most !== null && t < most) continue
+    if (tiltottE(t, tiltott)) continue
     const uj: Munka = { id: '__uj', cimke: 'Új', fajta: 'RUGALMAS', tol: t, hatarido: zar, perc }
     const e = ujMunkaEllenoriz(negyedek, munkak, uj, most, alap)
     if (e.befer) ki.push({ tol: t, kesz: e.kesz })
@@ -126,15 +141,16 @@ export type NapAllapot = 'szabad' | 'keves' | 'tele' | 'zarva'
  *   szabad   egyébként
  */
 export function napAllapot(negyedek: Negyed[], munkak: Munka[], perc: number,
-                           tipus: 'VAROS' | 'LEADOS', most: number | null = null): {
+                           tipus: 'VAROS' | 'LEADOS', most: number | null = null,
+                           tiltott: TiltottSav[] = []): {
   allapot: NapAllapot
   lehetosegek: Lehetoseg[]
   meg: number
 } {
   if (negyedek.length === 0) return { allapot: 'zarva', lehetosegek: [], meg: 0 }
   const lehetosegek = tipus === 'VAROS'
-    ? varosKezdesek(negyedek, munkak, perc, most)
-    : leadosHozasok(negyedek, munkak, perc, most)
+    ? varosKezdesek(negyedek, munkak, perc, most, 30, tiltott)
+    : leadosHozasok(negyedek, munkak, perc, most, 30, tiltott)
   const meg = beferMeg(negyedek, munkak, perc, most, 10)
   const allapot: NapAllapot = lehetosegek.length === 0 ? 'tele'
     : lehetosegek.length <= 2 || meg <= 1 ? 'keves' : 'szabad'

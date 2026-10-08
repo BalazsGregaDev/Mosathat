@@ -15,7 +15,8 @@ import { hetiSavok, tobbnaposE } from '../../lib/savok'
 //  magasság. Az a kérdés, hogy MELYIK NAPON MENNYI autó van, nem az, hogy
 //  pontosan hogyan helyezkednek el egymáshoz képest — arra ott a napi nézet.
 //
-//  A TÖBBNAPOS munkák külön, az oszlopok fölött állnak: egy-egy hosszú
+//  A TÖBBNAPOS munkák legfelül, a napok neve FÖLÖTT állnak (a napnevek sora
+//  választja el őket az aznapi foglalásoktól): egy-egy hosszú
 //  sávként, ami pontosan azokon a napokon fut végig, amikor az autó nálunk
 //  van. Így egy pillantással látszik, hogy a KER-100 hétfőtől csütörtökig
 //  itt áll — nem kell négy oszlopban négyszer megtalálni. A sávok egymás
@@ -115,22 +116,7 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
 
   return (
     <div className="hetnezet">
-      {/* ---------- a napok fejléce ---------- */}
-      <div className="hetracs hetfejsor">
-        {[0, 1, 2, 3, 4].map((i) => {
-          const d = napPlusz(hetfo, i)
-          return (
-            <button className="oszlopfej" key={d} onClick={() => onNapra(d)}
-                    data-ma={maE(d) || undefined}>
-              <span className="nev">{NAPOK[i]}</span>
-              <span className="datum">{napRovidCim(d)}</span>
-              <span className="db">{napiDb(i) || ''}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* ---------- többnapos munkák: egy-egy sáv a napokon át ---------- */}
+      {/* ---------- legfelül: többnapos munkák, egy-egy sáv a napokon át ---------- */}
       {savok.length > 0 && (
         <div className="hetsavok" style={{ gridTemplateRows: `repeat(${savSorok}, auto)` }}>
           {savok.map((s) => {
@@ -161,6 +147,21 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
           })}
         </div>
       )}
+
+      {/* ---------- a napok neve: elválasztja a többnaposakat az aznapiaktól ---------- */}
+      <div className="hetracs hetfejsor">
+        {[0, 1, 2, 3, 4].map((i) => {
+          const d = napPlusz(hetfo, i)
+          return (
+            <button className="oszlopfej" key={d} onClick={() => onNapra(d)}
+                    data-ma={maE(d) || undefined}>
+              <span className="nev">{NAPOK[i]}</span>
+              <span className="datum">{napRovidCim(d)}</span>
+              <span className="db">{napiDb(i) || ''}</span>
+            </button>
+          )
+        })}
+      </div>
 
       {/* ---------- egynapos munkák, naponként ---------- */}
       <div className="hetracs">

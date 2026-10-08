@@ -246,7 +246,7 @@ export default function NapiLista({
               </button>
               {b.flotta
                 ? <FlottaKartya b={b} onMegnyit={() => onMegnyit(b.id)} />
-                : <BookingCard b={b} onMegnyit={() => onMegnyit(b.id)} onModosit={onModosit} />}
+                : <BookingCard b={b} nap={nap} onMegnyit={() => onMegnyit(b.id)} onModosit={onModosit} />}
             </div>
           )
         })}

@@ -22,7 +22,10 @@ import type { BookingTask, FinishPreview } from '../../lib/types'
 //
 //      Ár: 32 600 Ft   (38 100 Ft helyett — kimaradt: Belső terület)
 //
-//      [Mégse]                       [Kész van, ezek kimaradtak]
+//      [Mégse]  [Mindennel elkészültünk]  [Kész van, a többi kimaradt]
+//
+//  A „Mindennel elkészültünk" minden még nyitott pontot kipipál (csomag,
+//  egyéb szolgáltatás), és úgy zár, mintha semmi sem maradt volna ki.
 //
 //  A már kész pontok pipája áll, és itt nem vehető le (azt a munkalapon
 //  lehet, a Kész van előtt). A többi üresen indul: ami elkészült, azt itt
@@ -160,12 +163,15 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
     })
   }
 
-  async function ment() {
+  // `mind`: „Mindennel elkészültünk" — minden még nyitott pont kipipálva
+  // (csomag és egyéb szolgáltatás is), semmi sem marad ki.
+  async function ment(mind = false) {
     if (megy) return
     setMegy(true)
     setHiba(null)
     try {
-      onVege(await data.finishBooking(k.bookingId, [...pipalt]))
+      const pipak = mind ? (lista ?? []).filter((t) => !t.done).map((t) => t.id) : [...pipalt]
+      onVege(await data.finishBooking(k.bookingId, pipak))
     } catch (e) {
       setHiba(e instanceof Error ? e.message : String(e))
       setMegy(false)
@@ -256,7 +262,14 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
 
         <div className="kerdes-gombok">
           <button type="button" className="btn" onClick={() => onVege(null)}>Mégse</button>
-          <button type="button" className="btn btn-fo" disabled={megy || lista === null}
+          {/* Ha még nincs minden kipipálva: egy gombbal minden pont kész. */}
+          {!mindKesz && (
+            <button type="button" className="btn btn-fo" disabled={megy || lista === null}
+                    onClick={() => void ment(true)}>
+              Mindennel elkészültünk
+            </button>
+          )}
+          <button type="button" className={`btn ${mindKesz ? 'btn-fo' : ''}`} disabled={megy || lista === null}
                   onClick={() => void ment()}>
             {mindKesz ? 'Kész van' : 'Kész van, a többi kimaradt'}
           </button>

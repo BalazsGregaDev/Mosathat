@@ -251,7 +251,7 @@ export function napokRovid(tol: string, ig: string): string {
 const NAPNEVEK = ['Vasárnap', 'Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat']
 
 /**
- * Egy nap a MAI naphoz képest, ahogy a műhelyben mondják:
+ * Egy nap a MAI (vagy a nézett) naphoz képest, ahogy a műhelyben mondják:
  *
  *   -1 / 0 / +1 nap     "Tegnap" / "Ma" / "Holnap"
  *   legfeljebb 6 nap    a nap neve: "Csütörtök", "Péntek"

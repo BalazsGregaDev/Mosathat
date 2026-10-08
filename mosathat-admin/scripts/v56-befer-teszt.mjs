@@ -47,5 +47,15 @@ ok('majdnem tele: kevés', 'keves', napAllapot(nap(o(8), o(12), 1), [M('A', 'RUG
 ok('tele', 'tele', napAllapot(nap(o(8), o(12), 1), [M('A', 'RUGALMAS', o(8), o(12), 210)], 90, 'LEADOS').allapot)
 ok('zárt nap', 'zarva', napAllapot([], [], 90, 'VAROS').allapot)
 
+console.log('\n=== 4) ebédszünet: 11:15–12:45 nem kínálunk időpontot (v57) ===\n')
+{
+  const ebed = [{ tol: o(11, 15), ig: o(12, 45) }]
+  const v = varosKezdesek(nap(o(8), o(17)), [], 60, null, 30, ebed).map((l) => l.tol)
+  ok('11:00 még igen, 11:30 / 12:00 / 12:30 nem, 13:00 igen', [true, false, false, false, true],
+    [o(11), o(11, 30), o(12), o(12, 30), o(13)].map((t) => v.includes(t)))
+  const l = leadosHozasok(nap(o(8), o(17)), [], 60, null, 30, ebed).map((x) => x.tol)
+  ok('itt hagyja: ugyanígy', [true, false, true], [o(11), o(12), o(13)].map((t) => l.includes(t)))
+}
+
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)
 process.exit(baj === 0 ? 0 : 1)

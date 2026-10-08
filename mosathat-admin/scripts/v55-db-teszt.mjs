@@ -13,6 +13,9 @@ const munkanap = async (d) => (await egy(`select munkanap($1::date) m`, [d])).m
 const terhe = async (id, d) => Number((await egy(
   `select foglalas_napi_terhe(b, $2::date) t from bookings b where b.id = $1`, [id, d])).t)
 const kozel = (a, b) => Math.abs(a - b) < 0.01
+// v57: a maradék a még elérhető munkaidő arányában oszlik el
+const eler = async (id, d) => Number((await egy(
+  `select elerheto_perc(b, $2::date) e from bookings b where b.id = $1`, [id, d])).e)
 
 async function tobbnapos(tol, ig, rsz) {
   return (await egy(`select create_booking($1::jsonb) as id`, [JSON.stringify({
@@ -28,12 +31,19 @@ const percek = await q(`select fp.task_id, fp.perc::float p, t.source::text s fr
 t.ok('a pontok ideje összesen = a foglalás munkaideje', true,
   kozel(percek.reduce((s, x) => s + x.p, 0), ossz))
 
-console.log('\n=== 2) pipa nélkül: egyenlően a munkanapokon ===\n')
+console.log('\n=== 2) pipa nélkül: a hátralévő munkaidő arányában (v57) ===\n')
 const napok = []
 for (let i = 0; i <= 6; i++) napok.push(await nap(i))
 const mn = []
 for (const d of napok) if (await munkanap(d)) mn.push(d)
-t.ok('minden munkanapra ugyanannyi', true, (await Promise.all(mn.map((d) => terhe(a, d)))).every((x) => kozel(x, ossz / mn.length)))
+{
+  const w = await Promise.all(mn.map((d) => eler(a, d)))
+  const sw = w.reduce((x, y) => x + y, 0)
+  const t2 = await Promise.all(mn.map((d) => terhe(a, d)))
+  t.ok('minden munkanapra az elérhető idő arányában', true,
+    sw > 0 ? t2.every((x, i) => kozel(x, ossz * w[i] / sw)) : true)
+  t.ok('összesen a teljes munka', true, sw > 0 ? kozel(t2.reduce((x, y) => x + y, 0), ossz) : true)
+}
 const zarva = napok.find((d) => !mn.includes(d))
 if (zarva) t.ok('zárt napra nulla', 0, await terhe(a, zarva))
 
@@ -45,8 +55,10 @@ const ma = p1.p + p2.p
 if (await munkanap(napok[0])) {
   t.ok('ma: a kipipált pontok ideje', true, kozel(await terhe(a, napok[0]), ma))
   const tobbi = mn.filter((d) => d !== napok[0])
-  t.ok('a többi munkanapon: a maradék egyenlően', true,
-    (await Promise.all(tobbi.map((d) => terhe(a, d)))).every((x) => kozel(x, (ossz - ma) / tobbi.length)))
+  const w = await Promise.all(tobbi.map((d) => eler(a, d)))
+  const sw = w.reduce((x, y) => x + y, 0)
+  t.ok('a többi munkanapon: a maradék az elérhető idő arányában', true,
+    (await Promise.all(tobbi.map((d) => terhe(a, d)))).every((x, i) => kozel(x, (ossz - ma) * w[i] / sw)))
 }
 
 console.log('\n=== 4) elmúlt napok: csak ami aznap pipálva lett ===\n')

@@ -415,7 +415,8 @@ body.huzas-folyik { user-select: none; -webkit-user-select: none; cursor: grabbi
 /* A gombok jobbra, a kártya alján. Balra tolva összefolynának a csomag
    nevével; jobbra a szem a hüvelykujj útjában találja őket. */
 .kartya-muvelet {
-  display: flex; justify-content: flex-end; gap: var(--t3);
+  display: flex; justify-content: flex-end; gap: 6px var(--t3);
+  flex-wrap: wrap;                /* v57: több gomb is lehet (Nem fért be) — törjön, ne lógjon ki */
   margin-left: auto;
 }
 /* A gombok is kétszer akkorák: vizes kézzel, kesztyűben is el kell találni. */
@@ -438,7 +439,7 @@ body.huzas-folyik { user-select: none; -webkit-user-select: none; cursor: grabbi
 
 @media (max-width: 560px) {
   .kartya-muvelet { justify-content: stretch; width: 100%; margin-left: 0; }
-  .kartya-muvelet .btn { flex: 1; justify-content: center; padding: 6px 10px; }
+  .kartya-muvelet .btn { flex: 1 1 auto; justify-content: center; padding: 6px 10px; }
   .sor-elem { grid-template-columns: 30px minmax(0, 1fr); gap: 6px; }
   .kartya { padding: 6px 10px; }
   .kartya .rendszam { border-width: 1px; padding: 0 7px; border-radius: var(--r-sm); }
@@ -561,7 +562,7 @@ body.huzas-folyik { user-select: none; -webkit-user-select: none; cursor: grabbi
   font: inherit; font-family: var(--betu-szam); font-size: 11px; font-weight: var(--vastag-eros);
   overflow: hidden; white-space: nowrap; cursor: pointer;
 }
-.iv-darab span { overflow: hidden; text-overflow: ellipsis; }
+.iv-darab span { overflow: hidden; text-overflow: clip; max-width: 100%; }   /* amennyi elfér, pontok nélkül */
 .iv-darab:hover { filter: brightness(.95); }
 
 /* a fajták színei — a sávon és a jelmagyarázatban ugyanaz */

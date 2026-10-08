@@ -28,8 +28,9 @@ t.ok('alapból nem kérdőjeles', false, (await nap(f1)).tentative)
 await q(`select set_booking_tentative($1, true)`, [f1])
 t.ok('bekapcsolva', true, (await nap(f1)).tentative)
 const nem = await foglal('NEM-001')
-t.ok('nem kérdőjelest nem lehet „nem fért be"-vel zárni', true,
-  (await hiba(`select booking_not_fitted($1)`, [nem]))?.includes('kérdőjeles'))
+// v57: „Nem fért be" bármelyik még nem lezárt autónál (túlvállalás)
+t.ok('nem kérdőjelest is lehet „nem fért be"-vel zárni (v57)', null,
+  await hiba(`select booking_not_fitted($1)`, [nem]))
 
 console.log('\n=== C) Nem fért be ===\n')
 await q(`select booking_not_fitted($1)`, [f1])
