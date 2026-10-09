@@ -15,8 +15,10 @@
 //               megvárós érkezik, félrerakjuk, és később folytatjuk.
 //    TOBBNAPOS  a többnapos autó MAI része (napi_perc): a nap hézagait tölti.
 //
-//  Ami már kész (Kész van / Átvette, és tudjuk, mikor dolgoztunk rajta),
-//  az a valós helyén áll, fix blokként.
+//    KESZ       ami már kész (Kész van / Átvette): a munkaidejével, az
+//               érkezés és a „Kész van" megnyomása között, mindenki más előtt.
+//               Nem fix blokk az érkezéstől a Kész vanig: az az idő várakozást,
+//               ebédet, telefont is tartalmaz, nem csak munkát (v59).
 //
 //  HOGYAN OSZTJUK BE
 //
@@ -54,7 +56,7 @@ export interface Munka {
   /** Rendszám (vagy cég / név), a sávon ez látszik. */
   cimke: string
   fajta: MunkaFajta
-  /** Percben éjféltől. FIX/KESZ: a kezdés; a többinél: legkorábban ekkor kezdhető. */
+  /** Percben éjféltől. FIX: a kezdés; a többinél: legkorábban ekkor kezdhető. */
   tol: number
   /** Percben éjféltől: eddigre legyen kész (FIX-nél nem használjuk). */
   hatarido: number
@@ -126,8 +128,14 @@ export function beoszt(negyedek: Negyed[], munkak: Munka[], most: number | null 
   const nyitott = new Map<string, Darab>()          // a most épülő darab munkánként
   let sorok = Math.max(0, ...negyedek.map((n) => n.helyek))
 
-  const fixek = munkak.filter((m) => m.fajta === 'FIX' || m.fajta === 'KESZ')
-  const rugalmasak = munkak.filter((m) => m.fajta !== 'FIX' && m.fajta !== 'KESZ')
+  // A kész (Kész van / Átvette) munkák NEM fix blokkok: az érkezéstől a
+  // „Kész van" megnyomásáig eltelt idő nem munkaidő (várakozás, ebéd,
+  // telefon is benne van). Ezért úgy osztjuk be őket, mint a rugalmasakat —
+  // a munkaidejükkel, legkorábban az érkezésüktől —, de csak a „Kész van"
+  // idejéig (utána már nem foglalnak helyet), és mindenki más előtt (velük
+  // tényleg dolgoztunk). Figyelmeztetést nem adnak.
+  const fixek = munkak.filter((m) => m.fajta === 'FIX')
+  const rugalmasak = munkak.filter((m) => m.fajta !== 'FIX')
 
   for (const n of negyedek) {
     const hossz = n.ig - n.tol
@@ -140,9 +148,12 @@ export function beoszt(negyedek: Negyed[], munkak: Munka[], most: number | null 
     const szabad = Math.max(0, n.helyek - fixMost.length)
     const jeloltek = rugalmasak
       .filter((m) => (maradek.get(m.id) ?? 0) > 0 && m.tol <= n.tol
+        // a kész munka csak a „Kész van" idejéig foglal helyet
+        && (m.fajta !== 'KESZ' || n.tol < m.hatarido)
         // a mai napon a még el nem kezdett munka nem kerülhet a múltba
         && (most === null || !m.probabeli || n.tol >= most))
-      .sort((a, b) => (rang(a) >= 3 ? 1 : 0) - (rang(b) >= 3 ? 1 : 0)
+      .sort((a, b) => (a.fajta === 'KESZ' ? 0 : 1) - (b.fajta === 'KESZ' ? 0 : 1)
+        || (rang(a) >= 3 ? 1 : 0) - (rang(b) >= 3 ? 1 : 0)
         || a.hatarido - b.hatarido || rang(a) - rang(b) || a.tol - b.tol)
       .slice(0, szabad)
 
@@ -170,7 +181,7 @@ export function beoszt(negyedek: Negyed[], munkak: Munka[], most: number | null 
       const s = sorKi.get(m.id)!
       elozoSor.set(m.id, s)
       let ig = n.ig
-      if (m.fajta !== 'FIX' && m.fajta !== 'KESZ') {
+      if (m.fajta !== 'FIX') {
         const r = maradek.get(m.id) ?? 0
         const dolgozik = Math.min(hossz, r)
         maradek.set(m.id, r - dolgozik)
@@ -180,7 +191,7 @@ export function beoszt(negyedek: Negyed[], munkak: Munka[], most: number | null 
         ig = Math.min(n.ig, m.tol + m.perc)
         if (m.tol + m.perc <= n.ig) kesz.set(m.id, m.tol + m.perc)
       }
-      const tol = Math.max(n.tol, m.fajta === 'FIX' || m.fajta === 'KESZ' ? m.tol : n.tol)
+      const tol = Math.max(n.tol, m.fajta === 'FIX' ? m.tol : n.tol)
       const d = nyitott.get(m.id)
       if (d && d.sor === s && d.ig === n.tol) {
         d.ig = ig
@@ -196,6 +207,7 @@ export function beoszt(negyedek: Negyed[], munkak: Munka[], most: number | null 
 
   const maradt = new Map<string, number>()
   for (const m of rugalmasak) {
+    if (m.fajta === 'KESZ') continue      // ami kész, az kész: nincs csúszás, nincs maradék
     const r = maradek.get(m.id) ?? 0
     if (r > 0) maradt.set(m.id, r)
     const k = kesz.get(m.id)
@@ -312,11 +324,17 @@ export function munkakNapra(foglalasok: FoglalasBeosztashoz[], nap: string, nyit
     const perc = tobbnapos ? Math.round(b.napi_perc ?? 0) : b.planned_duration_minutes
     const keszE = b.status === 'READY' || b.status === 'COMPLETED'
 
-    // Kész, és tudjuk, mikor dolgoztunk rajta (ma): a valós helyén.
-    if (keszE && b.kezdve && b.befejezve && budapestiNap(b.kezdve) === nap && budapestiNap(b.befejezve) === nap) {
-      const tol = percEjfeltol(b.kezdve)
-      const ig = percEjfeltol(b.befejezve)
-      if (ig > tol) munkak.push({ id: b.id, cimke: cimke(b), fajta: 'KESZ', tol, hatarido: ig, perc: ig - tol })
+    // Kész (Kész van / Átvette): a munkaidejével, az érkezés és a „Kész van"
+    // között (lásd beoszt: KESZ). Ha egy korábbi napon lett kész, ma már
+    // nem foglal helyet.
+    if (keszE) {
+      if (b.befejezve && budapestiNap(b.befejezve) < nap) continue
+      if (!perc || perc <= 0) continue
+      const hozza = b.drop_off_at ?? b.start_at
+      const tol = b.kezdve && budapestiNap(b.kezdve) === nap ? percEjfeltol(b.kezdve)
+        : hozza && budapestiNap(hozza) === nap ? percEjfeltol(hozza) : nyit
+      const ig = b.befejezve && budapestiNap(b.befejezve) === nap ? percEjfeltol(b.befejezve) : zar
+      munkak.push({ id: b.id, cimke: cimke(b), fajta: 'KESZ', tol: Math.min(tol, ig), hatarido: ig, perc })
       continue
     }
 

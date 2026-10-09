@@ -103,11 +103,19 @@ export default function Idovonal({ nap, foglalasok, savok, startPerc, onMegnyit 
     const m = munka.get(id)
     if (m && p > PUFFER_PERC) gondok.push(`${m.cimke}: ${idotartam(Math.round(p))}-cel később lesz kész, mint ahogy viszik`)
   }
+  // Zárás után (ma) nem soroljuk autónként, hogy „nem fér bele": egy sor
+  // mondja meg, mi nincs még Kész-nek jelölve.
+  const zarasUtan = maiNap && most >= zar
+  const nemKesz: string[] = []
   for (const [id, p] of e.maradt) {
     const m = munka.get(id)
     if (p <= PUFFER_PERC) continue
+    if (zarasUtan) { if (m) nemKesz.push(m.cimke); continue }
     if (m && !m.kerdojeles) gondok.push(`${m.cimke}: ${idotartam(Math.round(p))} munka ma már nem fér bele`)
     if (m && m.kerdojeles) gondok.push(`${m.cimke} (???): nem fér be — ${idotartam(Math.round(p))} hiányzik`)
+  }
+  if (nemKesz.length > 0) {
+    gondok.push(`A mai munkaidő véget ért. Még nincs Kész-nek jelölve: ${nemKesz.join(', ')}`)
   }
   if (e.tulfoglalt.length > 0) {
     gondok.push(`${ido(e.tulfoglalt[0])}–${ido(e.tulfoglalt[e.tulfoglalt.length - 1] + 15)} között több `

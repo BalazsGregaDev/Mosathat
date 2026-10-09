@@ -86,5 +86,31 @@ console.log('\n=== 6) szünet, foglalásokból munkák ===\n')
   ok('a lemondott kimarad, az idő nélküli jelezve', [3, ['Z']], [munkak.length, idoNelkul])
 }
 
+console.log('\n=== 7) kész autók (v59): nem fix blokk az érkezéstől a Kész vanig ===\n')
+{
+  // Öt autó reggel 8:30-kor érkezett, mind 16:00-kor lett „Kész van"-ra
+  // nyomva, mindegyik 90 perc munka. Két hely. Ez 7,5 óra munka 2 × 7,5 órán
+  // — befér; nem lehet belőle „8 hely" és túlfoglalás.
+  const n = nap(o(8), o(17))
+  const kesz = [1, 2, 3, 4, 5].map((i) => M(`K${i}`, 'KESZ', o(8, 30), o(16), 90))
+  const e = beoszt(n, [...kesz, M('R', 'RUGALMAS', o(8), o(17), 60)])
+  ok('két sor marad (nincs túlfoglalás)', [2, 0], [e.sorok, e.tulfoglalt.length])
+  ok('a kész autók nem adnak figyelmeztetést', 0,
+    [...e.keses.keys(), ...e.maradt.keys()].filter((id) => id.startsWith('K')).length)
+  ok('a kész autó darabjai a Kész van ideje előtt', true,
+    e.darabok.filter((d) => d.id.startsWith('K')).every((d) => d.ig <= o(16)))
+  ok('a rugalmas is elfér', false, e.maradt.has('R'))
+  const { munkak } = munkakNapra([
+    { id: 'X', status: 'COMPLETED', booking_type: 'LEADOS', service_date: '2026-10-07', last_day: '2026-10-08',
+      start_at: null, drop_off_at: '2026-10-07T14:00:00Z', pick_up_at: '2026-10-08T09:45:00Z', deadline_at: null,
+      planned_duration_minutes: 120, napi_perc: 60, kezdve: '2026-10-07T14:00:00Z', befejezve: '2026-10-08T08:00:00Z' },
+    { id: 'Y', status: 'READY', booking_type: 'LEADOS', service_date: '2026-10-06', last_day: '2026-10-08',
+      start_at: null, drop_off_at: null, pick_up_at: null, deadline_at: null,
+      planned_duration_minutes: 120, napi_perc: 0, kezdve: null, befejezve: '2026-10-07T12:00:00Z' },
+  ], '2026-10-08', o(8), o(17), (b) => b.id)
+  ok('tegnap kezdett, ma 10:00-kor kész többnapos: KESZ 8:00–10:00, 60 perc', [['KESZ', o(8), o(10), 60]],
+    munkak.map((m) => [m.fajta, m.tol, m.hatarido, m.perc]))
+}
+
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)
 process.exit(baj === 0 ? 0 : 1)
