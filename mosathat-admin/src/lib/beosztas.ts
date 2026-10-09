@@ -146,7 +146,7 @@ export function beoszt(negyedek: Negyed[], munkak: Munka[], most: number | null 
 
     // 2. a rugalmasak: akik már itt vannak, és van még munkájuk
     const szabad = Math.max(0, n.helyek - fixMost.length)
-    const jeloltek = rugalmasak
+    const sorrendben = rugalmasak
       .filter((m) => (maradek.get(m.id) ?? 0) > 0 && m.tol <= n.tol
         // a kész munka csak a „Kész van" idejéig foglal helyet
         && (m.fajta !== 'KESZ' || n.tol < m.hatarido)
@@ -155,7 +155,14 @@ export function beoszt(negyedek: Negyed[], munkak: Munka[], most: number | null 
       .sort((a, b) => (a.fajta === 'KESZ' ? 0 : 1) - (b.fajta === 'KESZ' ? 0 : 1)
         || (rang(a) >= 3 ? 1 : 0) - (rang(b) >= 3 ? 1 : 0)
         || a.hatarido - b.hatarido || rang(a) - rang(b) || a.tol - b.tol)
-      .slice(0, szabad)
+    const jeloltek = sorrendben.slice(0, szabad)
+    // A kész munka MEGTÖRTÉNT: ha a hátralévő ideje már csak annyi, amennyi a
+    // „Kész van"-ig hátravan, akkor most kell mennie — ha nincs szabad hely,
+    // egy plusz sorban (a valóságban gyorsabban ment, vagy többen csinálták).
+    // Így egy kész autó sosem tűnik el a beosztásból.
+    for (const m of sorrendben.slice(szabad)) {
+      if (m.fajta === 'KESZ' && (maradek.get(m.id) ?? 0) >= m.hatarido - n.tol) jeloltek.push(m)
+    }
 
     // 3. kiosztás sorokra: aki az előző negyedben is dolgozott, maradjon a
     //    saját során (a rajz így összefüggő)
@@ -330,11 +337,21 @@ export function munkakNapra(foglalasok: FoglalasBeosztashoz[], nap: string, nyit
     if (keszE) {
       if (b.befejezve && budapestiNap(b.befejezve) < nap) continue
       if (!perc || perc <= 0) continue
+      // Mettől: a hozás (tervezett) és a „Megérkezett" közül a korábbi — a
+      // gombokat sokszor utólag nyomják meg, ezért a tényleges idők nem
+      // pontosak. Meddig: a „Kész van" (ha ma volt), különben zárásig.
       const hozza = b.drop_off_at ?? b.start_at
-      const tol = b.kezdve && budapestiNap(b.kezdve) === nap ? percEjfeltol(b.kezdve)
-        : hozza && budapestiNap(hozza) === nap ? percEjfeltol(hozza) : nyit
-      const ig = b.befejezve && budapestiNap(b.befejezve) === nap ? percEjfeltol(b.befejezve) : zar
-      munkak.push({ id: b.id, cimke: cimke(b), fajta: 'KESZ', tol: Math.min(tol, ig), hatarido: ig, perc })
+      const lehet: number[] = []
+      if (hozza && budapestiNap(hozza) === nap) lehet.push(percEjfeltol(hozza))
+      if (b.kezdve && budapestiNap(b.kezdve) === nap) lehet.push(percEjfeltol(b.kezdve))
+      let tol = lehet.length > 0 ? Math.min(...lehet) : nyit
+      let ig = b.befejezve && budapestiNap(b.befejezve) === nap ? percEjfeltol(b.befejezve) : zar
+      // Ha a kettő közé nem fér a munkaidő (pl. a flottás léptető egy
+      // pillanat alatt zárta, vagy a Megérkezett és a Kész van egyszerre lett
+      // megnyomva), visszafelé számolunk a Kész vantól.
+      if (ig - tol < perc) tol = Math.max(nyit, ig - perc)
+      if (ig - tol < perc) ig = tol + perc
+      munkak.push({ id: b.id, cimke: cimke(b), fajta: 'KESZ', tol, hatarido: ig, perc })
       continue
     }
 

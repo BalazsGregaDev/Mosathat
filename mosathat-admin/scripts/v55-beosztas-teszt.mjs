@@ -112,5 +112,28 @@ console.log('\n=== 7) kész autók (v59): nem fix blokk az érkezéstől a Kész
     munkak.map((m) => [m.fajta, m.tol, m.hatarido, m.perc]))
 }
 
+console.log('\n=== 8) kész autó sosem tűnik el (v60) ===\n')
+{
+  // 12 kész autó, mind 90 perc, 8:30-tól 16:00-ig, két hely: ez 18 óra munka
+  // 15 óra helyen — több, mint ami „elférne", de megtörtént. Mind látszik.
+  const n = nap(o(8), o(17))
+  const kesz = Array.from({ length: 12 }, (_, i) => M(`K${i}`, 'KESZ', o(8, 30), o(16), 90))
+  const e = beoszt(n, kesz)
+  ok('mind a 12 kész autónak van darabja', 12, new Set(e.darabok.map((d) => d.id)).size)
+  ok('mindegyik teljes munkaideje beosztva, a Kész van előtt', true,
+    kesz.every((k) => e.darabok.filter((d) => d.id === k.id).reduce((s, d) => s + d.ig - d.tol, 0) === 90
+      && e.darabok.filter((d) => d.id === k.id).every((d) => d.ig <= o(16))))
+  ok('nincs figyelmeztetés', [0, 0, 0], [e.keses.size, e.maradt.size, e.tulfoglalt.length])
+  // a flottás léptető egy pillanat alatt zárta: Megérkezett = Kész van = 15:00
+  const { munkak } = munkakNapra([
+    { id: 'F', status: 'COMPLETED', booking_type: 'LEADOS', service_date: '2026-10-08', last_day: '2026-10-08',
+      start_at: null, drop_off_at: null, pick_up_at: null, deadline_at: null, planned_duration_minutes: 45,
+      kezdve: '2026-10-08T13:00:00Z', befejezve: '2026-10-08T13:00:00Z' },
+  ], '2026-10-08', o(8), o(17), (b) => b.id)
+  ok('egy pillanat alatt zárt: visszafelé a Kész vantól (14:15–15:00)', [o(14, 15), o(15), 45],
+    [munkak[0].tol, munkak[0].hatarido, munkak[0].perc])
+  ok('és látszik a beosztásban', true, beoszt(n, munkak).darabok.some((d) => d.id === 'F'))
+}
+
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)
 process.exit(baj === 0 ? 0 : 1)
