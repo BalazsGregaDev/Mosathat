@@ -151,7 +151,8 @@ export default function DayView({
         {zarva && bookings.length > 0 && (
           <div className="figyelmeztet" style={{ marginBottom: 'var(--t3)' }}>
             <span>
-              <strong>Ez a nap hivatalosan zárva van</strong>.
+              <strong>Ez a nap hivatalosan zárva van</strong>, de {bookings.length} foglalás
+              van rá. A kapacitás ezért nulla — a foglalások lent ott vannak.
             </span>
           </div>
         )}

@@ -37,6 +37,7 @@ import {
 //    - csak egynapos „megvárja" és „itt hagyja" (a többnapos és a
 //      hozom-viszem telefonon)
 //    - csak fix áras extrák (az árajánlatosak telefonon)
+//    - a legkorábbi felajánlott időpont 9:00
 //    - ebédszünet: 11:15 és 12:45 között nem kínálunk kezdést / hozást
 // ---------------------------------------------------------------------------
 
@@ -46,10 +47,13 @@ const HETEK_OLDALANKENT = 2
 const LEGTOBB_HET = 8
 const HET_NAPJAI = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo']
 /**
- * Ebédszünet: 11:15 és 12:45 között (a két végével együtt) nem kínálunk
- * kezdést és hozást. 11:00-ra még lehet, 13:00-tól újra.
+ * Nem kínált időpontok: 9:00 előtt (a legkorábbi felajánlott időpont 9:00),
+ * és az ebédszünet (11:15–12:45, a két végével együtt).
  */
-const EBED: TiltottSav[] = [{ tol: 11 * 60 + 15, ig: 12 * 60 + 45 }]
+const EBED: TiltottSav[] = [
+  { tol: 0, ig: 9 * 60 - 1 },
+  { tol: 11 * 60 + 15, ig: 12 * 60 + 45 },
+]
 /**
  * A műhely telefonszáma (késés esetén ezt hívják). Ideiglenes: a valódi
  * számot ide kell beírni — később a Beállításokból jön.

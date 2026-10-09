@@ -273,6 +273,8 @@ export interface DataSource {
     role?: StaffRole
     active?: boolean
     can_edit_customers?: boolean | null
+    /** Közös fiók (pl. tablet): nem számít a kapacitásba. */
+    kozos?: boolean
   }): Promise<void>
   deleteInvite(email: string): Promise<void>
 

@@ -1073,6 +1073,8 @@ export interface StaffRow {
   can_edit_customers: boolean
   /** Igaz, ha ez a fiókra szóló külön döntés — nem a szerepköre alapértéke. */
   can_edit_customers_sajat: boolean
+  /** Közös fiók (pl. a műhely tabletje): nem egy ember, nem számít a kapacitásba. */
+  kozos?: boolean
 }
 
 /** Egy szerepkör alapértelmezései. Amelyik fiókon nincs külön döntés, ezt követi. */

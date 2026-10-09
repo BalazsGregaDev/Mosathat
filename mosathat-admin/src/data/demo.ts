@@ -717,7 +717,7 @@ export class DemoSource implements DataSource {
 
   async updateStaff(
     id: string,
-    patch: { full_name?: string; role?: StaffRole; active?: boolean; can_edit_customers?: boolean | null },
+    patch: { full_name?: string; role?: StaffRole; active?: boolean; can_edit_customers?: boolean | null; kozos?: boolean },
   ): Promise<void> {
     await this.rows(`select set_staff($1::jsonb)`, [JSON.stringify({ id, ...patch })])
   }

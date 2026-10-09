@@ -57,5 +57,15 @@ console.log('\n=== 4) ebédszünet: 11:15–12:45 nem kínálunk időpontot (v57
   ok('itt hagyja: ugyanígy', [true, false, true], [o(11), o(12), o(13)].map((t) => l.includes(t)))
 }
 
+console.log('\n=== 5) tűréshatár: 10 percen belüli csúszás nem gond (v58) ===\n')
+{
+  // egy hely; az A 9:10-re kell (1 óra munka). Egy 15 perces megvárós 8:00-kor
+  // → az A 9:15-re lesz kész: 5 perc csúszás → még befér. 30 perces → 20 perc → nem.
+  const n = nap(o(8), o(12), 1)
+  const a = [M('A', 'RUGALMAS', o(8), o(9, 10), 60)]
+  ok('5 perces csúszás: befér', true, ujMunkaEllenoriz(n, a, M('UJ', 'FIX', o(8), o(8, 15), 15)).befer)
+  ok('20 perces csúszás: nem fér be', false, ujMunkaEllenoriz(n, a, M('UJ', 'FIX', o(8), o(8, 30), 30)).befer)
+}
+
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)
 process.exit(baj === 0 ? 0 : 1)

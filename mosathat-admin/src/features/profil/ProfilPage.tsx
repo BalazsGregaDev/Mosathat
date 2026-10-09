@@ -71,7 +71,8 @@ export default function ProfilPage({ onJelszo }: {
   useEffect(() => {
     if (!teljesJogu) return
     data.listStaff()
-      .then((l) => setDolgozok(l.filter((d) => d.active && d.id)))
+      // a közös fiók (pl. tablet) nem ember: neki nincs munkaideje, szabadsága
+      .then((l) => setDolgozok(l.filter((d) => d.active && d.id && !d.kozos)))
       .catch(() => setDolgozok([]))
   }, [data, teljesJogu])
 

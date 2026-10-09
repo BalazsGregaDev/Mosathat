@@ -43,6 +43,12 @@
 
 export type MunkaFajta = 'FIX' | 'RUGALMAS' | 'TOBBNAPOS' | 'KESZ'
 
+/**
+ * Tűréshatár percben: ennyi csúszás még nem gond. A munka a valóságban nem
+ * percre kiszámítható — egy 1 perces „csúszásért" nem szólunk.
+ */
+export const PUFFER_PERC = 10
+
 export interface Munka {
   id: string
   /** Rendszám (vagy cég / név), a sávon ez látszik. */

@@ -711,7 +711,7 @@ export class SupabaseSource implements DataSource {
 
   async updateStaff(
     id: string,
-    patch: { full_name?: string; role?: StaffRole; active?: boolean; can_edit_customers?: boolean | null },
+    patch: { full_name?: string; role?: StaffRole; active?: boolean; can_edit_customers?: boolean | null; kozos?: boolean },
   ): Promise<void> {
     const { error } = await this.sb.rpc('set_staff', { p: { id, ...patch } })
     if (error) fail('Felhasználó módosítása', error)

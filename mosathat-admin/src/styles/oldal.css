@@ -525,3 +525,7 @@
 .valtozas-lista li[data-szerk] { background: var(--zold-halvany); }
 .valtozas-szoveg { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; font-size: var(--m-sm); }
 .valtozas-gombok { display: flex; gap: var(--t2); }
+
+/* Felhasználók: közös fiók kapcsoló a szerepkör alatt (v58) */
+.kozos-fiok { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: var(--m-xs); cursor: pointer; }
+.kozos-fiok input { width: 16px; height: 16px; accent-color: var(--zold); }

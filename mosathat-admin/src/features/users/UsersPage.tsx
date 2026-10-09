@@ -247,7 +247,7 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
   const [jelszo, setJelszo] = useState(false)
 
   async function modosit(patch: {
-    role?: StaffRole; active?: boolean; can_edit_customers?: boolean | null
+    role?: StaffRole; active?: boolean; can_edit_customers?: boolean | null; kozos?: boolean
   }) {
     setDolgozik(true)
     try {
@@ -289,6 +289,15 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
         ) : (
           <span className="cimke-pill" data-r={s.role}>{ROLE_LABEL[s.role]}</span>
         )}
+        {/* Közös fiók (pl. a műhely tabletje): alkalmazotti belépés, de nem
+            egy ember — nem számít az alkalmazottak közé a kapacitásban. */}
+        {s.role === 'STAFF' && s.id && (kezelheto ? (
+          <label className="kozos-fiok">
+            <input type="checkbox" checked={Boolean(s.kozos)} disabled={dolgozik}
+                   onChange={(e) => void modosit({ kozos: e.target.checked })} />
+            Közös fiók (nem számít a kapacitásba)
+          </label>
+        ) : s.kozos ? <div className="halk kozos-fiok">közös fiók</div> : null)}
       </td>
 
       <td>

@@ -1,4 +1,4 @@
-import { beferMeg, beoszt, type Eredmeny, type Munka, type Negyed } from './beosztas'
+import { beferMeg, beoszt, PUFFER_PERC, type Eredmeny, type Munka, type Negyed } from './beosztas'
 
 // ---------------------------------------------------------------------------
 //  Befér-e egy új autó — a beosztásra építve (lib/beosztas.ts)
@@ -43,22 +43,27 @@ export function ujMunkaEllenoriz(negyedek: Negyed[], munkak: Munka[], uj: Munka,
   const nev = new Map(munkak.map((m) => [m.id, m.cimke]))
   const gondok: string[] = []
 
+  // Tűréshatár (PUFFER_PERC, 10 perc): ennyi csúszás még nem gond. Gond az,
+  // ami a határon túlra kerül, vagy ami már túl volt, és még ennél is többet romlik.
+  const rosszabb = (elotte_: number, utana_: number) =>
+    (utana_ > PUFFER_PERC && elotte_ <= PUFFER_PERC) || utana_ - elotte_ > PUFFER_PERC
+
   // az új autó maga
   const maradt = utana.maradt.get(uj.id)
-  if (maradt) gondok.push(`Ezen a napon nem készülne el: ${percSzoveg(maradt)} munka nem fér bele.`)
+  if (maradt && maradt > PUFFER_PERC) gondok.push(`Ezen a napon nem készülne el: ${percSzoveg(maradt)} munka nem fér bele.`)
   const keses = utana.keses.get(uj.id)
-  if (keses && uj.fajta !== 'FIX') gondok.push(`${percSzoveg(keses)}-cel később lenne kész, mint ${ora(uj.hatarido)}.`)
+  if (keses && keses > PUFFER_PERC && uj.fajta !== 'FIX') gondok.push(`${percSzoveg(keses)}-cel később lenne kész, mint ${ora(uj.hatarido)}.`)
 
   // a meglévők: ki csúszna miatta többet
   for (const [id, p] of utana.keses) {
     if (id === uj.id) continue
-    const tobb = p - (elotte.keses.get(id) ?? 0)
-    if (tobb > 0) gondok.push(`${nev.get(id) ?? 'Egy autó'} ${percSzoveg(tobb)}-cel később lenne kész.`)
+    const elotte_ = elotte.keses.get(id) ?? 0
+    if (rosszabb(elotte_, p)) gondok.push(`${nev.get(id) ?? 'Egy autó'} ${percSzoveg(p - elotte_)}-cel később lenne kész.`)
   }
   for (const [id, p] of utana.maradt) {
     if (id === uj.id) continue
-    const tobb = p - (elotte.maradt.get(id) ?? 0)
-    if (tobb > 0) gondok.push(`${nev.get(id) ?? 'Egy autó'}: ${percSzoveg(tobb)} munka nem férne bele a napba.`)
+    const elotte_ = elotte.maradt.get(id) ?? 0
+    if (rosszabb(elotte_, p)) gondok.push(`${nev.get(id) ?? 'Egy autó'}: ${percSzoveg(p - elotte_)} munka nem férne bele a napba.`)
   }
 
   // megvárós: nincs szabad hely az idejére

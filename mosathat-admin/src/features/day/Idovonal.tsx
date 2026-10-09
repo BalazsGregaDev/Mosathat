@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import {
-  beferMeg, beoszt, munkakNapra, negyedekbol, percEjfeltol,
+  beferMeg, beoszt, munkakNapra, negyedekbol, percEjfeltol, PUFFER_PERC,
   type Munka, type MunkaFajta,
 } from '../../lib/beosztas'
 import { idotartam, maStr } from '../../lib/format'
@@ -96,14 +96,16 @@ export default function Idovonal({ nap, foglalasok, savok, startPerc, onMegnyit 
   for (let t = Math.ceil(nyit / 60) * 60; t <= zar; t += 60) orak.push(t)
   const sorok = Array.from({ length: Math.max(1, e.sorok) }, (_, i) => i)
 
-  // Figyelmeztetések: ki csúszik, mi nem fér bele, hol túlfoglalt.
+  // Figyelmeztetések: ki csúszik, mi nem fér bele, hol túlfoglalt. Csak ha
+  // a csúszás több mint 10 perc (PUFFER_PERC) — a munka nem percre pontos.
   const gondok: string[] = []
   for (const [id, p] of e.keses) {
     const m = munka.get(id)
-    if (m) gondok.push(`${m.cimke}: ${idotartam(Math.round(p))}-cel később lesz kész, mint ahogy viszik`)
+    if (m && p > PUFFER_PERC) gondok.push(`${m.cimke}: ${idotartam(Math.round(p))}-cel később lesz kész, mint ahogy viszik`)
   }
   for (const [id, p] of e.maradt) {
     const m = munka.get(id)
+    if (p <= PUFFER_PERC) continue
     if (m && !m.kerdojeles) gondok.push(`${m.cimke}: ${idotartam(Math.round(p))} munka ma már nem fér bele`)
     if (m && m.kerdojeles) gondok.push(`${m.cimke} (???): nem fér be — ${idotartam(Math.round(p))} hiányzik`)
   }
@@ -151,7 +153,7 @@ export default function Idovonal({ nap, foglalasok, savok, startPerc, onMegnyit 
                     {e.darabok.filter((d) => d.sor === s).map((d, i) => {
                       const m = munka.get(d.id)
                       if (!m) return null
-                      const gond = e.keses.has(d.id) || e.maradt.has(d.id)
+                      const gond = (e.keses.get(d.id) ?? 0) > PUFFER_PERC || (e.maradt.get(d.id) ?? 0) > PUFFER_PERC
                       return (
                         <button key={`${d.id}-${i}`} type="button" className="iv-darab"
                                 data-fajta={m.fajta} data-kerdojeles={m.kerdojeles || undefined}
