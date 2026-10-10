@@ -53,12 +53,13 @@ await m.locator('.fogl-valaszto button').filter({ hasText: 'Személyautó' }).cl
 await csomag('Start')
 const startExtrak = await kinalt()
 ok('Startnál a gumiápolás választható', true, startExtrak.includes('Gumiápolás'))
-ok('magyarázó sor a lista fölött', 'Ami a Start csomagban már benne van, azt itt nem kínáljuk külön.',
-  sima(await m.locator('.fogl-al-szoveg').innerText()))
+ok('Startnál nincs mit kiszűrni, nincs magyarázó sor', 0, await m.locator('.fogl-al-szoveg').count())
 await csomag('Premium')
 const premiumExtrak = await kinalt()
 ok('Premiumnál nincs gumiápolás, minden más megmarad', [false, startExtrak.filter((n) => n !== 'Gumiápolás')],
   [premiumExtrak.includes('Gumiápolás'), premiumExtrak])
+ok('magyarázó sor a lista fölött', 'Ami a Premium csomagban már benne van, azt itt nem kínáljuk külön.',
+  sima(await m.locator('.fogl-al-szoveg').innerText()))
 await csomag('Elit')
 ok('Elitnél sincs gumiápolás', false, (await kinalt()).includes('Gumiápolás'))
 

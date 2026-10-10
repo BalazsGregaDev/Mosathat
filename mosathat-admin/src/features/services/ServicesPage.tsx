@@ -235,7 +235,7 @@ export default function ServicesPage() {
               <div className="panel">
                 <div className="extralista">
                   {k.extras.map((e) => (
-                    <ExtraSor key={e.id} e={e} onMent={async (patch) => {
+                    <ExtraSor key={e.id} e={e} csomagok={k.packages} onMent={async (patch) => {
                       await data.updateExtra(e.id, patch)
                       await ujra()
                     }} />
@@ -255,7 +255,7 @@ export default function ServicesPage() {
           <h3>Egyéb szolgáltatások</h3>
           <div className="extralista">
             {k.extras.map((e) => (
-              <ExtraSor key={e.id} e={e} onMent={async (patch) => {
+              <ExtraSor key={e.id} e={e} csomagok={k.packages} onMent={async (patch) => {
                 await data.updateExtra(e.id, patch)
                 await ujra()
               }} />
@@ -268,10 +268,32 @@ export default function ServicesPage() {
   )
 }
 
-function ExtraSor({ e, onMent }: { e: Extra; onMent: (patch: Partial<Extra>) => Promise<void> }) {
+function ExtraSor({ e, csomagok, onMent }: {
+  e: Extra
+  csomagok: Package[]
+  onMent: (patch: Partial<Extra>) => Promise<void>
+}) {
   const [leiras, setLeiras] = useState(e.description ?? '')
   const [nyitva, setNyitva] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
+  const [benne, setBenne] = useState(e.included_in_packages)
+  const [benneAlap, setBenneAlap] = useState(e.included_in_packages)
+
+  if (e.included_in_packages !== benneAlap) {
+    setBenneAlap(e.included_in_packages)
+    setBenne(e.included_in_packages)
+  }
+
+  const resze = [
+    ...csomagok.filter((p) => benne.includes(p.id)).map((p) => p.name),
+    ...(e.included_in_full_service ? ['Full Service'] : []),
+  ]
+
+  function csomagValt(id: string) {
+    const uj = benne.includes(id) ? benne.filter((x) => x !== id) : [...benne, id]
+    setBenne(uj)
+    ment({ included_in_packages: uj })
+  }
 
   const egyseg = ['ULES', 'AJTO', 'LITER'].includes(e.price_unit) ? `/ ${EGYSEG[e.price_unit]}` : ''
 
@@ -284,7 +306,10 @@ function ExtraSor({ e, onMent }: { e: Extra; onMent: (patch: Partial<Extra>) => 
     <div className="extrasor" data-aktiv={e.active}>
       <div className="fo">
         <button type="button" className="nev" onClick={() => setNyitva((v) => !v)}>
-          {e.name}
+          <span className="nev-szoveg">
+            {e.name}
+            {resze.length > 0 && <small className="resze">{resze.join(', ')} része</small>}
+          </span>
           <span className="nyil">{nyitva ? '−' : '+'}</span>
         </button>
 
@@ -316,6 +341,22 @@ function ExtraSor({ e, onMent }: { e: Extra; onMent: (patch: Partial<Extra>) => 
               onChange={(ev) => setLeiras(ev.target.value)}
               onBlur={() => { if (leiras !== (e.description ?? '')) ment({ description: leiras }) }}
             />
+          </div>
+          <div className="mezo">
+            <span className="cimke">Csomag része — az online foglalásnál ezek mellé nem kínáljuk külön</span>
+            <div className="resze-jelolok">
+              {csomagok.map((p) => (
+                <label key={p.id} className="jelolo" data-aktiv={benne.includes(p.id)}>
+                  <input type="checkbox" checked={benne.includes(p.id)} onChange={() => csomagValt(p.id)} />
+                  <span>{p.name}</span>
+                </label>
+              ))}
+              <label className="jelolo" data-aktiv={e.included_in_full_service}>
+                <input type="checkbox" checked={e.included_in_full_service}
+                       onChange={(ev) => ment({ included_in_full_service: ev.target.checked })} />
+                <span>Full Service</span>
+              </label>
+            </div>
           </div>
           <div className="sor-2">
             <label className="jelolo" data-aktiv={e.active}>

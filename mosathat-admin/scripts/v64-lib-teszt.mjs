@@ -13,56 +13,65 @@ const ok = (mit, v, k) => {
 const dir = await mkdtemp(join(tmpdir(), 'v64-'))
 const belepes = join(dir, 'be.ts')
 await writeFile(belepes, `
-export { nevKulcs, csomagTetelei, csomagbanBenne } from '${join(process.cwd(), 'src/lib/csomag.ts')}'
+export { csomagbanBenne } from '${join(process.cwd(), 'src/lib/csomag.ts')}'
+export { toExtra } from '${join(process.cwd(), 'src/data/source.ts')}'
+export { munkakNapra } from '${join(process.cwd(), 'src/lib/beosztas.ts')}'
 `)
 await build({ entryPoints: [belepes], outfile: join(dir, 'b.mjs'), format: 'esm', bundle: true, logLevel: 'error' })
 const L = await import(join(dir, 'b.mjs'))
 
-const sor = (csomag, slot, nev, terulet) => ({
-  package_id: csomag, package_code: csomag.toUpperCase(), package_name: csomag, package_sort: 1,
-  slot_id: `${csomag}-${slot}`, slot_name: slot, name: nev, area: terulet, sort_order: 1,
+const extra = (terulet, csomagok = [], fs = false) => ({
+  area: terulet, included_in_packages: csomagok, included_in_full_service: fs,
 })
-const MATRIX = [
-  sor('start', 'Kézi mosás', 'Kézi mosás samponnal', 'KULSO'),
-  sor('start', 'Porszívózás', 'Porszívózás', 'BELSO'),
-  sor('premium', 'Kézi mosás', 'Kézi mosás samponnal', 'KULSO'),
-  sor('premium', 'Gumiápolás', 'Gumiápolás', 'KULSO'),
-  sor('premium', 'Wax', 'Gyors viasz', 'KULSO'),
-  sor('premium', 'Porszívózás', 'Porszívózás', 'BELSO'),
-  sor('premium', 'Illatosítás', 'Illatosítás', 'BELSO'),
-]
+const GUMI = extra('KULSO', ['premium', 'elit'])
+const KARPIT = extra('BELSO', [], true)
+const FOLYADEK = extra(null, ['elit'])
+const MUANYAG = extra('KULSO')
 
-console.log('=== 1) Név összevetése ===\n')
-ok('kis- és nagybetű, szóközök', 'kézi mosás samponnal', L.nevKulcs('  Kézi   MOSÁS samponnal '))
-ok('a zárójeles megjegyzés nem számít', 'gumiápolás', L.nevKulcs('Gumiápolás (külön kérve)'))
-ok('ékezetes nagybetű is', 'ózongenerátoros fertőtlenítés', L.nevKulcs('ÓZONGENERÁTOROS Fertőtlenítés'))
+console.log('=== 1) Csomag része ===\n')
+ok('csomag nélkül semmi sem esik ki', [false, false], [
+  L.csomagbanBenne(GUMI, null, 'TELJES', false), L.csomagbanBenne(KARPIT, null, 'TELJES', false)])
+ok('Premiumban és Elitben a gumiápolás benne van, Startban nincs', [true, true, false], [
+  L.csomagbanBenne(GUMI, 'premium', 'TELJES', false), L.csomagbanBenne(GUMI, 'elit', 'TELJES', false),
+  L.csomagbanBenne(GUMI, 'start', 'TELJES', false)])
+ok('ami sehol sincs bejelölve, mindig kérhető', false, L.csomagbanBenne(MUANYAG, 'elit', 'TELJES', true))
 
-console.log('\n=== 2) Mi van a csomagban ===\n')
-ok('nincs csomag: üres', 0, L.csomagTetelei(MATRIX, null).size)
-ok('ismeretlen csomag: üres', 0, L.csomagTetelei(MATRIX, 'nincs').size)
-ok('csak a választott csomag sorai', ['kézi mosás', 'kézi mosás samponnal', 'porszívózás'],
-  [...L.csomagTetelei(MATRIX, 'start')].sort())
-ok('a tétel neve és a helye is számít', [true, true],
-  [L.csomagTetelei(MATRIX, 'premium').has('gyors viasz'), L.csomagTetelei(MATRIX, 'premium').has('wax')])
+console.log('\n=== 2) Csak kívül / csak belül ===\n')
+ok('csak kívül: a külső tétel benne van', true, L.csomagbanBenne(GUMI, 'premium', 'KULSO', false))
+ok('csak belül: a gumiápolás nem része, kérhető', false, L.csomagbanBenne(GUMI, 'premium', 'BELSO', false))
+ok('terület nélküli tétel minden terjedelemnél benne van', [true, true],
+  [L.csomagbanBenne(FOLYADEK, 'elit', 'KULSO', false), L.csomagbanBenne(FOLYADEK, 'elit', 'BELSO', false)])
 
-console.log('\n=== 3) Benne van-e már az extra ===\n')
-const premium = L.csomagTetelei(MATRIX, 'premium')
-const start = L.csomagTetelei(MATRIX, 'start')
-ok('Premiumban a gumiápolás benne van', true, L.csomagbanBenne('Gumiápolás', premium))
-ok('Startban nincs benne', false, L.csomagbanBenne('Gumiápolás', start))
-ok('régi névvel is felismeri', true, L.csomagbanBenne('Gumiápolás (külön kérve)', premium))
-ok('a hasonló, de más szolgáltatás nem esik ki', false,
-  L.csomagbanBenne('Felni és gumi mélytisztítás és ápolás', premium))
-ok('a hely nevével is egyezik', true, L.csomagbanBenne('WAX', premium))
+console.log('\n=== 3) Full Service ===\n')
+ok('Full Service nélkül a vizes kárpit kérhető', false, L.csomagbanBenne(KARPIT, 'premium', 'TELJES', false))
+ok('Full Service-ben benne van, bármelyik csomaggal', [true, true],
+  [L.csomagbanBenne(KARPIT, 'premium', 'TELJES', true), L.csomagbanBenne(KARPIT, 'start', 'TELJES', true)])
+ok('Full Service mellett a csomag szerinti szűrés is marad', true, L.csomagbanBenne(GUMI, 'elit', 'TELJES', true))
 
-console.log('\n=== 4) Csak kívül / csak belül ===\n')
-const kivul = L.csomagTetelei(MATRIX, 'premium', 'KULSO')
-const belul = L.csomagTetelei(MATRIX, 'premium', 'BELSO')
-ok('teljes: minden tétel', [true, true],
-  [L.csomagbanBenne('Gumiápolás', L.csomagTetelei(MATRIX, 'premium', 'TELJES')), L.csomagbanBenne('Illatosítás', premium)])
-ok('csak kívül: a külső tételek', [true, false], [L.csomagbanBenne('Gumiápolás', kivul), L.csomagbanBenne('Illatosítás', kivul)])
-ok('csak belül: a gumiápolás már nem része', [false, true],
-  [L.csomagbanBenne('Gumiápolás', belul), L.csomagbanBenne('Illatosítás', belul)])
+console.log('\n=== 4) Az adatbázisból érkező lista ===\n')
+const alap = { id: 'x', name: 'Gumiápolás', included_in_full_service: 't' }
+ok('tömbként', ['a', 'b'], L.toExtra({ ...alap, included_in_packages: ['a', 'b'] }).included_in_packages)
+ok('Postgres szövegként', ['a', 'b'], L.toExtra({ ...alap, included_in_packages: '{a,b}' }).included_in_packages)
+ok('üresen vagy hiányozva', [[], []], [
+  L.toExtra({ ...alap, included_in_packages: '{}' }).included_in_packages,
+  L.toExtra({ ...alap, included_in_packages: undefined }).included_in_packages])
+
+console.log('\n=== 5) Száradós Itt hagyja: a munka a hozás napján ===\n')
+const nap = '2026-10-14'
+const masnap = '2026-10-15'
+const fs = {
+  id: 'fs', status: 'CONFIRMED', booking_type: 'LEADOS', service_date: nap, last_day: masnap,
+  start_at: null, drop_off_at: `${nap}T09:00:00+02:00`, pick_up_at: `${masnap}T08:00:00+02:00`,
+  deadline_at: `${masnap}T08:00:00+02:00`, planned_duration_minutes: 135, rest_minutes: 1440, napi_perc: 67,
+}
+const ma = L.munkakNapra([fs], nap, 480, 1020, () => 'FSV', null).munkak
+const holnap = L.munkakNapra([fs], masnap, 480, 1020, () => 'FSV', null).munkak
+ok('a hozás napján az egész munka, Itt hagyja-ként, zárásig', [{ fajta: 'RUGALMAS', perc: 135, tol: 540, hatarido: 1020 }],
+  ma.map((m) => ({ fajta: m.fajta, perc: m.perc, tol: m.tol, hatarido: m.hatarido })))
+ok('másnap nincs munka, csak elviszik', [], holnap)
+const tobbnapos = { ...fs, id: 'tn', rest_minutes: 0 }
+ok('száradás nélkül marad a többnapos felosztás', [{ fajta: 'TOBBNAPOS', perc: 67 }],
+  L.munkakNapra([tobbnapos], nap, 480, 1020, () => 'TN', null).munkak.map((m) => ({ fajta: m.fajta, perc: m.perc })))
 
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)
 process.exit(baj === 0 ? 0 : 1)

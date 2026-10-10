@@ -182,6 +182,18 @@ export function toOnlineKeres(r: OnlineKeres): OnlineKeres {
     nem_jott_db: num(r.nem_jott_db),
     lemondta_db: num(r.lemondta_db),
     utolso_nap: r.utolso_nap ? String(r.utolso_nap).slice(0, 10) : null,
+    seat_material: r.seat_material ?? null,
+  }
+}
+
+export function toExtra(r: Extra): Extra {
+  const lista: unknown = r.included_in_packages
+  return {
+    ...r,
+    included_in_packages: Array.isArray(lista) ? lista.map(String)
+      : typeof lista === 'string' ? lista.replace(/[{}]/g, '').split(',').filter(Boolean)
+      : [],
+    included_in_full_service: Boolean(r.included_in_full_service),
   }
 }
 

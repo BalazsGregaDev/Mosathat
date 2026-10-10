@@ -9,7 +9,7 @@ import {
   percEjfeltol, percOra, relativNap,
 } from '../../lib/format'
 import {
-  CATEGORY_LABEL, SCOPE_LABEL, STATUS_LABEL, TYPE_LABEL, type BookingStatus, type OnlineKeres,
+  CATEGORY_LABEL, SCOPE_LABEL, STATUS_LABEL, TYPE_LABEL, ULES_LABEL, type BookingStatus, type OnlineKeres,
 } from '../../lib/types'
 import Ablak from '../common/Ablak'
 import { useKerdes } from '../common/Kerdes'
@@ -50,6 +50,8 @@ export default function KeresAblak({
   const varos = keres.booking_type === 'VAROS'
   const maiNap = nap === maStr()
   const auto = [keres.brand, keres.model].filter(Boolean).join(' ')
+  const viszi = keres.pick_up_at ?? keres.deadline_at
+  const viszNap = viszi ? helyiNap(viszi) : null
   const egyeztetendo = (keres.extras_summary ?? '').split(', ')
     .filter((n) => katalogus.extras.some((e) => e.name === n && (e.requires_quote || e.price_huf == null)))
 
@@ -133,10 +135,17 @@ export default function KeresAblak({
                     {varos && keres.start_at
                       ? `kezdés ${helyiOra(keres.start_at)}, kész ${percOra(percEjfeltol(keres.start_at) + keres.planned_duration_minutes)}`
                       : `hozza ${helyiOra(keres.drop_off_at) || '—'}`}
+                    {!varos && viszi && viszNap && viszNap > nap && (
+                      <>, viszi {napRovidCim(viszNap)} {helyiOra(viszi)}-tól</>
+                    )}
                   </dd>
                   <dt>Mit</dt>
                   <dd>
-                    {keres.package_name ?? 'csomag nélkül'} · {SCOPE_LABEL[keres.scope]} · {CATEGORY_LABEL[keres.category]}
+                    {keres.package_name ?? 'csomag nélkül'}
+                    {keres.full_service && (
+                      <strong> + Full Service{keres.seat_material ? ` (${ULES_LABEL[keres.seat_material].toLowerCase()})` : ''}</strong>
+                    )}
+                    {' · '}{SCOPE_LABEL[keres.scope]} · {CATEGORY_LABEL[keres.category]}
                     {keres.extras_summary && <span className="halk"> + {keres.extras_summary}</span>}
                   </dd>
                   <dt>Munka</dt>

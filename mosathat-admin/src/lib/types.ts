@@ -6,6 +6,7 @@ export type BookingScope = 'KULSO' | 'BELSO' | 'TELJES'
 export type BookingType = 'VAROS' | 'LEADOS' | 'TOBBNAPOS' | 'HOZOMVISZEM'
 export type BookingSource = 'TELEFON' | 'ONLINE' | 'SZEMELYES' | 'MESSENGER'
 export type MeasureUnit = 'ALKALOM' | 'DB' | 'AJTO' | 'ULES' | 'LITER'
+export type SeatMaterial = 'KARPIT' | 'BOR' | 'KARPIT_BOR'
 
 export type BookingStatus =
   | 'REQUESTED'
@@ -36,6 +37,14 @@ export const CATEGORY_SHORT: Record<VehicleCategory, string> = {
   SZEMELYAUTO: 'Sedan',
   SUV: 'SUV',
   KISBUSZ: 'Kisbusz',
+}
+
+export const ULESEK: SeatMaterial[] = ['KARPIT', 'BOR', 'KARPIT_BOR']
+
+export const ULES_LABEL: Record<SeatMaterial, string> = {
+  KARPIT: 'Kárpit',
+  BOR: 'Bőr',
+  KARPIT_BOR: 'Kárpit-bőr',
 }
 
 export const SCOPE_LABEL: Record<BookingScope, string> = {
@@ -143,6 +152,8 @@ export interface Extra {
   requires_quote: boolean
   sort_order: number
   active: boolean
+  included_in_packages: string[]
+  included_in_full_service: boolean
 }
 
 export interface PackageMatrixRow {
@@ -250,6 +261,7 @@ export interface OnlineKeres extends DayBooking {
   utolso_nap: string | null
   nem_jott_db: number
   lemondta_db: number
+  seat_material: SeatMaterial | null
 }
 
 export type DontesEredmeny = 'OK' | BookingStatus
@@ -737,6 +749,8 @@ export interface OnlineBookingInput {
   scope: BookingScope
   package_id: string
   full_service: boolean
+  seat_material: SeatMaterial | null
+  next_day_pick_up: boolean
   extras: { extra_id: string; quantity: number }[]
   booking_type: 'VAROS' | 'LEADOS'
   service_date: string

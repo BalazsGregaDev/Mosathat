@@ -20,7 +20,7 @@ import type {
   OnlineKeres, DontesEredmeny,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
-import { idoRovidit, num, numOrNull, toOnlineKeres, toQuote } from './source'
+import { idoRovidit, num, numOrNull, toExtra, toOnlineKeres, toQuote } from './source'
 import { DEMO_BELEPOK, DEMO_STAFF_ID } from './demoBelepok'
 
 
@@ -142,7 +142,7 @@ export class DemoSource implements DataSource {
       packages,
       packagePricing: pp,
       fullServicePricing: fs,
-      extras,
+      extras: extras.map(toExtra),
       packageItems: matrix,
       packageExtras: tobblet,
       surcharges: surcharges.map((s) => ({
@@ -400,6 +400,11 @@ export class DemoSource implements DataSource {
          work_minutes = case when $2::jsonb ? 'work_minutes' then ($2->>'work_minutes')::integer else work_minutes end,
          rest_minutes = case when $2::jsonb ? 'rest_minutes' then coalesce(($2->>'rest_minutes')::integer, 0) else rest_minutes end,
          active       = case when $2::jsonb ? 'active'       then ($2->>'active')::boolean else active end,
+         included_in_packages = case when $2::jsonb ? 'included_in_packages'
+           then array(select jsonb_array_elements_text($2->'included_in_packages'))::uuid[]
+           else included_in_packages end,
+         included_in_full_service = case when $2::jsonb ? 'included_in_full_service'
+           then ($2->>'included_in_full_service')::boolean else included_in_full_service end,
          updated_at   = now()
        where id = $1::uuid`,
       [id, JSON.stringify(patch)],

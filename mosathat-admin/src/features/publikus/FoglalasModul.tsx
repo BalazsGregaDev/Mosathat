@@ -3,14 +3,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp, useRevizio, useCatalog } from '../../state/AppContext'
 import { napBeosztasBetolt, type NapBeosztas } from '../../state/napBeosztas'
 import { napAllapot, type Lehetoseg, type NapAllapot, type TiltottSav } from '../../lib/befer'
+import { negyedekbol } from '../../lib/beosztas'
 import {
-  ft, hetHetfoje, hibaSzoveg, idotartam, maStr, napCim, napokRovid, napPlusz, percIdo, percOra,
+  ft, hetHetfoje, hibaSzoveg, idotartam, maStr, napCim, napokRovid, napPlusz, napRovidCim, percIdo, percOra,
 } from '../../lib/format'
 import {
-  CATEGORY_LABEL, EGYSEG, SCOPE_LABEL,
-  type BookingScope, type Extra, type MeasureUnit, type Quote, type VehicleCategory,
+  CATEGORY_LABEL, EGYSEG, SCOPE_LABEL, ULES_LABEL, ULESEK,
+  type BookingScope, type Extra, type MeasureUnit, type Quote, type SeatMaterial, type VehicleCategory,
 } from '../../lib/types'
-import { csomagbanBenne, csomagTetelei } from '../../lib/csomag'
+import { csomagbanBenne } from '../../lib/csomag'
+import type { DataSource } from '../../data/source'
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
 const TERJEDELMEK: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
@@ -24,8 +26,16 @@ const EBED: TiltottSav[] = [
 const UZLET_TELEFON = '+36 1 506 0420'
 const ALAP_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 1, ULES: 5, AJTO: 4, LITER: 1 }
 const LEGTOBB_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 10, ULES: 9, AJTO: 6, LITER: 10 }
+const ELVITEL_KEZDETE = 8 * 60
 
 type Tipus = 'VAROS' | 'LEADOS'
+type Elvitel = 'AZNAP' | 'MASNAP'
+
+interface ElvitelAblak {
+  nap: string
+  tol: number
+  ig: number
+}
 
 interface Adatok {
   nev: string
@@ -54,6 +64,9 @@ export default function FoglalasModul({ onNapiNezet }: {
 
   const [kat, setKat] = useState<VehicleCategory>('SZEMELYAUTO')
   const [csomagId, setCsomagId] = useState<string | null>(null)
+  const [fs, setFs] = useState(false)
+  const [ules, setUles] = useState<SeatMaterial | null>(null)
+  const [elvitel, setElvitel] = useState<Elvitel | null>(null)
   const [scope, setScope] = useState<BookingScope>('TELJES')
   const [extrak, setExtrak] = useState<Record<string, number>>({})
   const [tipus, setTipus] = useState<Tipus | null>(null)
@@ -64,7 +77,7 @@ export default function FoglalasModul({ onNapiNezet }: {
   const [oldal, setOldal] = useState(0)
   const [kuld, setKuld] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
-  const [kesz, setKesz] = useState<{ id: string; nap: string } | null>(null)
+  const [kesz, setKesz] = useState<{ id: string; nap: string; mikor: string; elvitel: ElvitelAblak | null } | null>(null)
   const [reszletek, setReszletek] = useState(false)
 
   const csomagok = useMemo(
@@ -77,17 +90,23 @@ export default function FoglalasModul({ onNapiNezet }: {
     const a = ar(pid, s)
     return Boolean(a && a.price_huf != null && !a.requires_quote)
   }
-  const sc: BookingScope = csomagId && !foglalhato(csomagId, scope) ? 'TELJES' : scope
-  const tetelek = useMemo(
-    () => csomagTetelei(katalogus.packageItems, csomagId, sc),
-    [katalogus.packageItems, csomagId, sc],
-  )
+  const fsSor = csomagId
+    ? katalogus.fullServicePricing.find((x) => x.package_id === csomagId && x.category === kat) ?? null
+    : null
+  const fsLehet = Boolean(fsSor && fsSor.price_huf != null && !fsSor.requires_quote)
+  const fsBe = fs && fsLehet
+  const szaradni = ules !== 'BOR'
+  const sc: BookingScope = fsBe ? 'TELJES' : csomagId && !foglalhato(csomagId, scope) ? 'TELJES' : scope
+  const tip: Tipus | null = fsBe ? (elvitel ? 'LEADOS' : null) : tipus
+  const masnap = fsBe && elvitel === 'MASNAP'
+
   const kinaltExtrak = useMemo(
     () => katalogus.extras
-      .filter((e) => e.active && !csomagbanBenne(e.name, tetelek))
+      .filter((e) => e.active && !csomagbanBenne(e, csomagId, sc, fsBe))
       .sort((a, b) => a.sort_order - b.sort_order),
-    [katalogus.extras, tetelek],
+    [katalogus.extras, csomagId, sc, fsBe],
   )
+  const rejtett = katalogus.extras.filter((e) => e.active && csomagbanBenne(e, csomagId, sc, fsBe)).length
   const valasztottExtrak = useMemo(
     () => kinaltExtrak.filter((e) => (extrak[e.id] ?? 0) > 0),
     [kinaltExtrak, extrak],
@@ -117,14 +136,14 @@ export default function FoglalasModul({ onNapiNezet }: {
     if (!csomagId) { setAjanlat(null); setAjanlatHiba(null); return }
     let el = true
     data.quoteBooking({
-      package_id: csomagId, category: kat, scope: sc, full_service: false, extras: extraLista,
-      surcharge_pct: 0, surcharge_fix: 0, booking_type: tipus ?? 'LEADOS',
+      package_id: csomagId, category: kat, scope: sc, full_service: fsBe, extras: extraLista,
+      surcharge_pct: 0, surcharge_fix: 0, booking_type: tip ?? 'LEADOS',
       service_date: nap ?? holnap, company_id: null, company_name: null,
       customer_id: null, vehicle_id: null, contract_kind: null,
     }).then((q) => { if (el) { setAjanlat(q); setAjanlatHiba(null) } })
       .catch((e) => { if (el) { setAjanlat(null); setAjanlatHiba(hibaSzoveg(e)) } })
     return () => { el = false }
-  }, [data, csomagId, kat, sc, extraLista, tipus, nap, holnap])
+  }, [data, csomagId, kat, sc, fsBe, extraLista, tip, nap, holnap])
   const perc = ajanlat?.work_minutes ?? null
 
   const elsoHetfo = napPlusz(hetHetfoje(holnap), oldal * HETEK_OLDALANKENT * 7)
@@ -153,37 +172,55 @@ export default function FoglalasModul({ onNapiNezet }: {
 
   const napErtek = useMemo(() => {
     const m = new Map<string, ReturnType<typeof napAllapot>>()
-    if (!perc || !tipus) return m
+    if (!perc || !tip) return m
     for (const d of napok) {
       const a = napAdat.get(d)
-      if (a) m.set(d, napAllapot(a.negyedek, a.munkak, perc, tipus, a.most, EBED))
+      if (a) m.set(d, napAllapot(a.negyedek, a.munkak, perc, tip, a.most, EBED))
     }
     return m
-  }, [napok, napAdat, perc, tipus])
+  }, [napok, napAdat, perc, tip])
 
-  useEffect(() => { setIdo(null) }, [perc, tipus, nap])
+  useEffect(() => { setIdo(null) }, [perc, tip, nap])
+
+  const elvitelKulcs = masnap && nap ? `${revision}|${nap}` : null
+  const [elvitelek, setElvitelek] = useState<Map<string, ElvitelAblak | null>>(new Map())
+  useEffect(() => {
+    if (!elvitelKulcs || !nap || elvitelek.has(elvitelKulcs)) return
+    let el = true
+    elvitelAblak(data, nap)
+      .then((x) => { if (el) setElvitelek((m) => new Map(m).set(elvitelKulcs, x)) })
+      .catch(() => { if (el) setElvitelek((m) => new Map(m).set(elvitelKulcs, null)) })
+    return () => { el = false }
+  }, [data, elvitelKulcs, nap, elvitelek])
+  const elvitelInfo = elvitelKulcs ? elvitelek.get(elvitelKulcs) ?? null : null
 
   const lehetosegek = nap ? napErtek.get(nap)?.lehetosegek ?? [] : []
 
   const adatokRendben = Boolean(adatok.nev.trim() && adatok.telefon.trim() && adatok.rendszam.trim())
-  const kuldheto = Boolean(csomagId && tipus && nap && ido && adatokRendben && elfogad && !kuld)
+  const fsRendben = !fsBe || (ules !== null && elvitel !== null)
+  const kuldheto = Boolean(csomagId && tip && nap && ido && adatokRendben && fsRendben && elfogad && !kuld)
 
   async function kuldes() {
-    if (!kuldheto || !csomagId || !tipus || !nap || !ido) return
+    if (!kuldheto || !csomagId || !tip || !nap || !ido) return
     setKuld(true)
     setHiba(null)
     try {
       const id = await data.onlineBooking({
-        category: kat, scope: sc, package_id: csomagId, full_service: false, extras: extraLista,
-        booking_type: tipus, service_date: nap,
-        start_time: tipus === 'VAROS' ? percIdo(ido.tol) : null,
-        drop_off_time: tipus === 'LEADOS' ? percIdo(ido.tol) : null,
+        category: kat, scope: sc, package_id: csomagId, full_service: fsBe,
+        seat_material: fsBe ? ules : null, next_day_pick_up: masnap, extras: extraLista,
+        booking_type: tip, service_date: nap,
+        start_time: tip === 'VAROS' ? percIdo(ido.tol) : null,
+        drop_off_time: tip === 'LEADOS' ? percIdo(ido.tol) : null,
         customer_name: adatok.nev.trim(), customer_phone: adatok.telefon.trim(),
         customer_email: adatok.email.trim() || null, plate_raw: adatok.rendszam.trim(),
         brand: adatok.marka.trim() || null, model: adatok.modell.trim() || null,
         notes: adatok.megjegyzes.trim() || null,
       })
-      setKesz({ id, nap })
+      setKesz({
+        id, nap,
+        mikor: tip === 'VAROS' ? `kezdés: ${percOra(ido.tol)}` : `hozás: ${percOra(ido.tol)}`,
+        elvitel: masnap ? elvitelInfo : null,
+      })
       refresh()
     } catch (e) {
       setHiba(hibaSzoveg(e))
@@ -198,6 +235,7 @@ export default function FoglalasModul({ onNapiNezet }: {
 
   const set = <K extends keyof Adatok>(k: K, v: string) => setAdatok((x) => ({ ...x, [k]: v }))
   const csomag = csomagok.find((p) => p.id === csomagId) ?? null
+  const csomagNev = csomag ? `${csomag.name}${fsBe ? ' + Full Service' : ''}` : ''
 
   if (kesz) {
     return (
@@ -206,8 +244,9 @@ export default function FoglalasModul({ onNapiNezet }: {
         <section className="fogl-kartya fogl-siker">
           <h2>Köszönjük, megkaptuk a foglalási kérésed!</h2>
           <p>
-            {napCim(kesz.nap)}, {ido && (tipus === 'VAROS' ? `kezdés: ${percOra(ido.tol)}` : `hozás: ${percOra(ido.tol)}`)}.
-            Hamarosan visszaigazoljuk telefonon vagy e-mailben.
+            {napCim(kesz.nap)}, {kesz.mikor}.
+            {kesz.elvitel && <> Elviheted: {elvitelSzoveg(kesz.elvitel)}.</>}
+            {' '}Hamarosan visszaigazoljuk telefonon vagy e-mailben.
           </p>
           <div className="fogl-gombok">
             <button type="button" className="btn" onClick={ujra}>Új foglalás</button>
@@ -263,6 +302,36 @@ export default function FoglalasModul({ onNapiNezet }: {
             )
           })}
         </div>
+
+        {csomag && (
+          <label className="fogl-fs" data-be={fsBe || undefined} data-tiltva={!fsLehet || undefined}>
+            <input type="checkbox" checked={fsBe} disabled={!fsLehet} onChange={(e) => setFs(e.target.checked)} />
+            <span className="nev">
+              Full Service
+              <small>
+                A csomag mellé az ülések mélytisztítása: kárpitnál vizes kárpittisztítás, bőrnél
+                bőrtisztítás és ápolás. A vizes kárpit aznap is elvihető, de ajánlott egy éjszakára
+                nálunk hagyni, hogy megszáradjon.
+              </small>
+            </span>
+            <span className="ar">
+              {fsLehet ? <>{ft(fsSor!.price_huf)}<small>{csomag.name} csomaggal együtt</small></> : 'árajánlat alapján'}
+            </span>
+          </label>
+        )}
+
+        {fsBe && (
+          <div className="fogl-ules">
+            <span className="cimke">Milyen az ülés?</span>
+            <div className="fogl-valaszto harom">
+              {ULESEK.map((u) => (
+                <button key={u} type="button" aria-pressed={ules === u} onClick={() => setUles(u)}>
+                  {ULES_LABEL[u]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {csomagId && (
@@ -271,23 +340,25 @@ export default function FoglalasModul({ onNapiNezet }: {
           <div className="fogl-valaszto harom">
             {TERJEDELMEK.map((s) => {
               const a = ar(csomagId, s)
+              const lehet = foglalhato(csomagId, s) && (!fsBe || s === 'TELJES')
               return (
                 <button key={s} type="button" aria-pressed={sc === s}
-                        disabled={!foglalhato(csomagId, s)} onClick={() => setScope(s)}>
+                        disabled={!lehet} onClick={() => setScope(s)}>
                   {SCOPE_LABEL[s]}
                   <small>{foglalhato(csomagId, s) ? ft(a!.price_huf) : 'telefonon'}</small>
                 </button>
               )
             })}
           </div>
+          {fsBe && <p className="fogl-al-szoveg">Full Service-nél a teljes csomag jár, kívül és belül.</p>}
         </section>
       )}
 
       {csomagId && kinaltExtrak.length > 0 && (
         <section className="fogl-kartya">
           <h2><span className="lepes">4</span> Kérsz még valamit? <small>nem kötelező</small></h2>
-          {csomag && tetelek.size > 0 && (
-            <p className="fogl-al-szoveg">Ami a {csomag.name} csomagban már benne van, azt itt nem kínáljuk külön.</p>
+          {csomag && rejtett > 0 && (
+            <p className="fogl-al-szoveg">Ami a {csomagNev} csomagban már benne van, azt itt nem kínáljuk külön.</p>
           )}
           <div className="fogl-extrak">
             {kinaltExtrak.map((e) => {
@@ -324,7 +395,7 @@ export default function FoglalasModul({ onNapiNezet }: {
         </section>
       )}
 
-      {csomagId && (
+      {csomagId && !fsBe && (
         <section className="fogl-kartya">
           <h2><span className="lepes">5</span> Megvárod, vagy itt hagyod?</h2>
           <div className="fogl-valaszto ketto">
@@ -340,7 +411,27 @@ export default function FoglalasModul({ onNapiNezet }: {
         </section>
       )}
 
-      {csomagId && tipus && (
+      {csomagId && fsBe && (
+        <section className="fogl-kartya">
+          <h2><span className="lepes">5</span> Mikor viszed el?</h2>
+          <p className="fogl-al-szoveg">Full Service-nél az autót nálunk hagyod.</p>
+          <div className="fogl-valaszto ketto">
+            <button type="button" aria-pressed={elvitel === 'AZNAP'} onClick={() => setElvitel('AZNAP')}>
+              Aznap
+              <small>{szaradni ? 'Amint elkészül, vizesen elviheted.' : 'Amint elkészül, elviheted.'}</small>
+            </button>
+            <button type="button" aria-pressed={elvitel === 'MASNAP'} onClick={() => setElvitel('MASNAP')}>
+              Másnap
+              <small>
+                {szaradni ? 'Ajánlott: egy éjszakát nálunk szárad. ' : ''}
+                Másnap reggel 8-tól zárásig bármikor elviheted.
+              </small>
+            </button>
+          </div>
+        </section>
+      )}
+
+      {csomagId && tip && (
         <section className="fogl-kartya">
           <h2><span className="lepes">6</span> Melyik nap?</h2>
           {ajanlatHiba ? (
@@ -388,7 +479,7 @@ export default function FoglalasModul({ onNapiNezet }: {
               {nap && (
                 <>
                   <h2 className="fogl-al"><span className="lepes">7</span>
-                    {tipus === 'VAROS' ? ' Mikor kezdjük?' : ' Mikor hozod?'} <small>{napCim(nap)}</small>
+                    {tip === 'VAROS' ? ' Mikor kezdjük?' : ' Mikor hozod?'} <small>{napCim(nap)}</small>
                   </h2>
                   {lehetosegek.length === 0 ? (
                     <p className="fogl-figyel">Erre a napra már nincs szabad időpont.</p>
@@ -397,10 +488,17 @@ export default function FoglalasModul({ onNapiNezet }: {
                       {lehetosegek.map((l) => (
                         <button key={l.tol} type="button" aria-pressed={ido?.tol === l.tol} onClick={() => setIdo(l)}>
                           {percOra(l.tol)}
-                          {tipus === 'LEADOS' && <small>kész kb. {l.kesz !== null ? percOra(l.kesz) : '—'}</small>}
+                          {tip === 'LEADOS' && !masnap && <small>kész kb. {l.kesz !== null ? percOra(l.kesz) : '—'}</small>}
                         </button>
                       ))}
                     </div>
+                  )}
+                  {masnap && lehetosegek.length > 0 && (
+                    <p className="fogl-elvitel">
+                      {elvitelInfo
+                        ? <>Elviheted: <strong>{elvitelSzoveg(elvitelInfo)}</strong>, bármikor.</>
+                        : 'Az elvitel napját számoljuk…'}
+                    </p>
                   )}
                   <p className="fogl-erkezes">
                     Kérjük, ha lehet, a választott időpont előtt <strong>5–10 perccel</strong> érkezz.
@@ -448,7 +546,11 @@ export default function FoglalasModul({ onNapiNezet }: {
       {csomag && (
         <section className="fogl-osszeg">
           <div className="sorok">
-            <div><strong>{csomag.name}</strong> · {CATEGORY_LABEL[kat]} · {SCOPE_LABEL[sc]}</div>
+            <div>
+              <strong>{csomag.name}</strong>
+              {fsBe && <> + Full Service{ules ? ` (${ULES_LABEL[ules].toLowerCase()})` : ''}</>}
+              {' · '}{CATEGORY_LABEL[kat]} · {SCOPE_LABEL[sc]}
+            </div>
             {valasztottExtrak.length > 0 && (
               <div className="halk">
                 + {valasztottExtrak
@@ -460,7 +562,10 @@ export default function FoglalasModul({ onNapiNezet }: {
               <div className="halk">Ára egyeztetés után: {egyeztetendo.map((e) => e.name).join(', ')}</div>
             )}
             {nap && ido && (
-              <div>{napCim(nap)} · {tipus === 'VAROS' ? `kezdés: ${percOra(ido.tol)}` : `hozás: ${percOra(ido.tol)}`}</div>
+              <div>
+                {napCim(nap)} · {tip === 'VAROS' ? `kezdés: ${percOra(ido.tol)}` : `hozás: ${percOra(ido.tol)}`}
+                {masnap && elvitelInfo && ` · elvitel: ${napRovidCim(elvitelInfo.nap)} ${percOra(elvitelInfo.tol)}-tól`}
+              </div>
             )}
           </div>
           <div className="osszeg">
@@ -488,7 +593,7 @@ export default function FoglalasModul({ onNapiNezet }: {
         </label>
         {reszletek && (
           <ul>
-            <li>Munkaidő: {perc ? `${perc} perc` : 'nincs'} · típus: {tipus ?? '—'}</li>
+            <li>Munkaidő: {perc ? `${perc} perc` : 'nincs'} · típus: {tip ?? '—'}{fsBe ? ` · Full Service, elvitel: ${elvitel ?? '—'}` : ''}</li>
             <li>Napok: {napok.filter((d) => napErtek.has(d)).map((d) => {
               const e = napErtek.get(d)!
               return `${d.slice(5)}: ${ALLAPOT_NEV[e.allapot]} (${e.lehetosegek.length} időpont, még ${e.meg})`
@@ -513,4 +618,19 @@ function ProbaSav() {
 
 function egyeztetesre(e: Extra): boolean {
   return e.requires_quote || e.price_huf == null
+}
+
+function elvitelSzoveg(a: ElvitelAblak): string {
+  return `${napCim(a.nap)}, ${percOra(a.tol)} és ${percOra(a.ig)} között`
+}
+
+async function elvitelAblak(data: DataSource, nap: string): Promise<ElvitelAblak | null> {
+  for (let i = 1; i <= 14; i++) {
+    const d = napPlusz(nap, i)
+    const negyedek = negyedekbol(await data.getDayLanes(d))
+    if (negyedek.length > 0) {
+      return { nap: d, tol: Math.max(ELVITEL_KEZDETE, negyedek[0].tol), ig: negyedek[negyedek.length - 1].ig }
+    }
+  }
+  return null
 }

@@ -121,6 +121,9 @@
   display: flex; align-items: center; gap: var(--t2);
 }
 .extrasor .nev .nyil { color: var(--szoveg-halvany); font-size: var(--m-md); }
+.extrasor .nev-szoveg { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.extrasor .nev .resze { font-size: var(--m-xs); font-weight: 400; color: var(--szoveg-halk); }
+.resze-jelolok { display: flex; flex-wrap: wrap; gap: var(--t2); }
 .extrasor .nev:hover { color: var(--zold); }
 
 .extrasor .reszletek {

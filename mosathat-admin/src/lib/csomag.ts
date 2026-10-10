@@ -1,25 +1,12 @@
-import type { BookingScope, PackageMatrixRow } from './types'
+import type { BookingScope, Extra } from './types'
 
-export function nevKulcs(nev: string): string {
-  return nev.toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
-export function csomagTetelei(
-  sorok: PackageMatrixRow[],
+export function csomagbanBenne(
+  e: Pick<Extra, 'area' | 'included_in_packages' | 'included_in_full_service'>,
   csomagId: string | null,
-  terjedelem: BookingScope = 'TELJES',
-): Set<string> {
-  const ki = new Set<string>()
-  if (!csomagId) return ki
-  for (const r of sorok) {
-    if (r.package_id !== csomagId) continue
-    if (terjedelem !== 'TELJES' && r.area !== terjedelem) continue
-    ki.add(nevKulcs(r.name))
-    ki.add(nevKulcs(r.slot_name))
-  }
-  return ki
-}
-
-export function csomagbanBenne(nev: string, tetelek: Set<string>): boolean {
-  return tetelek.has(nevKulcs(nev))
+  terjedelem: BookingScope,
+  fullService: boolean,
+): boolean {
+  if (fullService && e.included_in_full_service) return true
+  if (!csomagId || !e.included_in_packages.includes(csomagId)) return false
+  return terjedelem === 'TELJES' || e.area === null || e.area === terjedelem
 }

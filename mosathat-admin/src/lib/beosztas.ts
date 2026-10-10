@@ -181,6 +181,7 @@ export interface FoglalasBeosztashoz {
   pick_up_at: string | null
   deadline_at: string | null
   planned_duration_minutes: number
+  rest_minutes?: number
   napi_perc?: number | null
   kezdve?: string | null
   befejezve?: string | null
@@ -197,7 +198,10 @@ export function munkakNapra(foglalasok: FoglalasBeosztashoz[], nap: string, nyit
   for (const b of foglalasok) {
     if (!eloE(b.status) || b.not_fitted) continue
     const tobbnapos = tobbnaposE(b)
-    const perc = tobbnapos ? Math.round(b.napi_perc ?? 0) : b.planned_duration_minutes
+    const szarad = tobbnapos && b.booking_type === 'LEADOS' && (b.rest_minutes ?? 0) > 0
+    const perc = !tobbnapos ? b.planned_duration_minutes
+      : szarad ? (b.service_date.slice(0, 10) === nap ? b.planned_duration_minutes : 0)
+      : Math.round(b.napi_perc ?? 0)
     const keszE = b.status === 'READY' || b.status === 'COMPLETED'
 
     if (keszE) {
@@ -232,7 +236,7 @@ export function munkakNapra(foglalasok: FoglalasBeosztashoz[], nap: string, nyit
     let tol = hozza && helyiNap(hozza) === nap ? percEjfeltol(hozza) : nyit
     if (most !== null && (b.status === 'CONFIRMED' || b.status === 'REQUESTED')) tol = Math.max(tol, most)
     const hatarido = viszi && helyiNap(viszi) === nap ? percEjfeltol(viszi) : zar
-    munkak.push({ id: b.id, cimke: cimke(b), fajta: tobbnapos ? 'TOBBNAPOS' : 'RUGALMAS',
+    munkak.push({ id: b.id, cimke: cimke(b), fajta: tobbnapos && !szarad ? 'TOBBNAPOS' : 'RUGALMAS',
                   tol, hatarido: Math.max(hatarido, tol), perc, kerdojeles: b.tentative,
                   keres: b.status === 'REQUESTED' })
   }

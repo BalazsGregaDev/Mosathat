@@ -48,6 +48,30 @@
 .fogl-csomag .ar { color: var(--zold-sotet); }
 .fogl-csomag .ido { font-size: var(--m-xs); font-weight: 400; color: var(--szoveg-halk); }
 .fogl-csomag .leiras { font-size: var(--m-xs); font-weight: 400; color: var(--szoveg-halk); line-height: 1.4; }
+.fogl-fs {
+  display: flex; align-items: center; gap: var(--t3);
+  padding: 14px 16px; border-radius: var(--r);
+  border: 2px dashed var(--keret-eros); cursor: pointer;
+}
+.fogl-fs input { width: 22px; height: 22px; flex: none; accent-color: var(--zold); }
+.fogl-fs .nev {
+  flex: 1; display: flex; flex-direction: column; gap: 4px;
+  font-size: var(--m-lg); font-weight: var(--vastag-eros);
+}
+.fogl-fs .nev small { font-size: var(--m-xs); font-weight: 400; color: var(--szoveg-halk); line-height: 1.45; }
+.fogl-fs .ar {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  font-family: var(--betu-szam); font-weight: var(--vastag-eros); color: var(--zold-sotet); white-space: nowrap;
+}
+.fogl-fs .ar small { font-family: var(--betu); font-size: var(--m-xs); font-weight: 400; color: var(--szoveg-halk); }
+.fogl-fs[data-be] { border-style: solid; border-color: var(--zold); background: var(--zold-halvany); }
+.fogl-fs[data-tiltva] { opacity: .55; cursor: not-allowed; }
+.fogl-ules { display: flex; flex-direction: column; gap: var(--t2); }
+.fogl-ules .cimke { font-size: var(--m-sm); font-weight: var(--vastag-eros); }
+.fogl-elvitel {
+  margin: 0; padding: var(--t3); border-radius: var(--r);
+  background: var(--zold-halvany); color: var(--zold-sotet); font-size: var(--m-md); line-height: 1.45;
+}
 .fogl-extrak { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--t2); }
 .fogl-extra {
   display: flex; flex-direction: column; gap: 6px;
@@ -129,6 +153,11 @@
 @media (max-width: 700px) {
   .fogl-csomagok, .fogl-valaszto.harom, .fogl-extrak, .fogl-urlap { grid-template-columns: 1fr; }
   .fogl-valaszto.ketto { grid-template-columns: 1fr; }
+  .fogl-fs { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .fogl-fs input { margin-top: 4px; }
+  .fogl-fs .ar { grid-column: 2; flex-direction: row; align-items: baseline; gap: var(--t2); white-space: normal; }
+  .fogl-ules .fogl-valaszto.harom { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fogl-ules .fogl-valaszto button { align-items: center; padding: 12px 6px; }
   .fogl-naptar { gap: 4px; }
   .fogl-nap { padding: 8px 2px; }
   .fogl-nap .allapot { font-size: 9px; }

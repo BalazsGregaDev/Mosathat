@@ -12,7 +12,7 @@ import type {
   OnlineKeres, DontesEredmeny,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
-import { idoRovidit, num, numOrNull, toOnlineKeres, toQuote } from './source'
+import { idoRovidit, num, numOrNull, toExtra, toOnlineKeres, toQuote } from './source'
 import { EloFrissites } from './elo'
 import { tokenFetch } from './tokenFetch'
 
@@ -120,7 +120,7 @@ export class SupabaseSource implements DataSource {
       packages: pk.data ?? [],
       packagePricing: pp.data ?? [],
       fullServicePricing: fs.data ?? [],
-      extras: ex.data ?? [],
+      extras: (ex.data ?? []).map(toExtra),
       packageItems: mx.data ?? [],
       packageExtras: tb.data ?? [],
       surcharges: (su.data ?? []).map((s) => ({
