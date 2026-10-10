@@ -98,7 +98,7 @@ await p.locator('.lap-torzs').click({ position: { x: 5, y: 5 } })
 await p.waitForTimeout(400)
 await p.getByRole('button', { name: 'Foglalás rögzítése' }).click()
 await p.waitForTimeout(2000)
-ok('a foglalás elment (az ablak bezárult)', 0, await p.locator('.lap[aria-label="Új időpont"]').count())
+ok('a foglalás elment (az ablak bezárult)', 0, await p.locator('dialog[aria-label="Új időpont"]').count())
 
 console.log('\n=== 3) elírt cégnév: rákérdez ===\n')
 await p.locator('.fab').click(); await p.waitForTimeout(1500)
@@ -115,7 +115,7 @@ await p.waitForTimeout(1200)
   ok('megkérdezi: „Erre a cégre gondoltál?"', 'Erre a cégre gondoltál?', cim)
   await p.locator('.kerdes-ablak button').filter({ hasText: 'Igen: Autó Trans' }).click()
   await p.waitForTimeout(2000)
-  ok('az Igen után elment', 0, await p.locator('.lap[aria-label="Új időpont"]').count())
+  ok('az Igen után elment', 0, await p.locator('dialog[aria-label="Új időpont"]').count())
 }
 
 console.log('\n=== 4) munkalap: sorrend, cég, Hozza / Viszi ===\n')

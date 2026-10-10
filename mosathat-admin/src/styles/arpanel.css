@@ -1,6 +1,9 @@
 .arpanel {
   position: fixed;
   z-index: 70;
+  margin: 0;
+  padding: 0;
+  color: inherit;
   display: flex;
   flex-direction: column;
   background: var(--lap);

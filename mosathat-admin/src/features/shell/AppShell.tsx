@@ -167,6 +167,17 @@ export default function AppShell() {
 
   const arlistaGombok = <ArlistaGombok ertek={arlista} onValt={setArlista} />
   const arlistaGombokRovid = <ArlistaGombok ertek={arlista} onValt={setArlista} rovid />
+  const arlistaPanel = arlista && (
+    <ArlistaPanel
+      ful={arlista}
+      onFul={setArlista}
+      onBezar={() => setArlista(null)}
+      allapot={arPanel}
+      onAllapot={setArPanel}
+      osztott={osztott}
+    />
+  )
+  const panelHely = reszletId ? 'reszlet' : szerkesztId ? 'szerkeszt' : ujNyitva ? 'uj' : null
 
   return (
     <div className="keret">
@@ -293,7 +304,8 @@ export default function AppShell() {
 
       {ujNyitva && (
         <BookingForm nap={nap} onBezar={() => setUjNyitva(false)} onKesz={ujFoglalasKesz}
-                     arlistaGombok={arlistaGombokRovid} osztott={osztott} />
+                     arlistaGombok={arlistaGombokRovid} osztott={osztott}
+                     arlistaPanel={panelHely === 'uj' && arlistaPanel} />
       )}
 
       {szerkesztId && (
@@ -303,20 +315,12 @@ export default function AppShell() {
           onBezar={() => setSzerkesztId(null)}
           onKesz={() => { setSzerkesztId(null); refresh() }}
           arlistaGombok={arlistaGombokRovid}
+          arlistaPanel={panelHely === 'szerkeszt' && arlistaPanel}
           osztott={osztott}
         />
       )}
 
-      {arlista && (
-        <ArlistaPanel
-          ful={arlista}
-          onFul={setArlista}
-          onBezar={() => setArlista(null)}
-          allapot={arPanel}
-          onAllapot={setArPanel}
-          osztott={osztott}
-        />
-      )}
+      {!panelHely && arlistaPanel}
 
       {reszletId && (
         <BookingDetail
@@ -326,6 +330,7 @@ export default function AppShell() {
           onBezar={() => { setReszletId(null); setReszletFokusz(undefined) }}
           onSzerkeszt={(id) => { setSzerkesztId(id); setReszletId(null) }}
           arlistaGombok={arlistaGombokRovid}
+          arlistaPanel={panelHely === 'reszlet' && arlistaPanel}
           osztott={osztott}
         />
       )}

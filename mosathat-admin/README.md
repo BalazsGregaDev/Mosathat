@@ -199,12 +199,12 @@ szabályok indoklása itt áll:
 - `jsx-a11y/control-has-associated-label` hiba, de a `td` és `th` kivétel:
   a cellában lévő saját mezőkomponens ad aria-label-t, amit a statikus
   elemző nem lát.
-- `jsx-a11y/prefer-tag-over-role` csak figyelmeztet: a natív `<dialog>`
-  jobb lenne (fókuszcsapda, Esc), de az külön átalakítás.
+- `jsx-a11y/prefer-tag-over-role` figyelmeztet, ha valahol `role="dialog"`
+  kerülne elő: minden ablak a közös `Ablak` komponensen át natív `<dialog>`.
 
 A teljes szabálykészlet 90%-ban zajt adna ennél a projektnél, és egy linter,
 amit senki nem néz meg, rosszabb a semminél. Jelenleg 0 hiba van; a
-figyelmeztetések nagy része a fenti két halasztott témából jön.
+figyelmeztetések nagy része a `set-state-in-effect` szabályból jön.
 
 ## Ami már működik
 

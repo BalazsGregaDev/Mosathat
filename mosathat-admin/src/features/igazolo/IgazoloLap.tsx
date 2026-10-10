@@ -7,6 +7,7 @@ import { cellaSzoveg, idoszakCim, idoszakNapok, lablecArak, naptariHonap } from 
 import { igazoloLetolt } from '../../lib/igazoloWord'
 import type { SheetDetail, SheetRow } from '../../lib/types'
 import { useKerdes } from '../common/Kerdes'
+import Ablak from '../common/Ablak'
 import SorUrlap from './SorUrlap'
 import LapBeallitas from './LapBeallitas'
 import HonapUgras from './HonapUgras'
@@ -65,12 +66,6 @@ export default function IgazoloLap({
 
   useEffect(() => { void betolt() }, [betolt])
   useEffect(() => data.subscribe(() => void betolt()), [data, betolt])
-
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !sor && !beallit) onBezar() }
-    window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
-  }, [onBezar, sor, beallit])
 
   function lep(uj: string) {
     if (uj === kert) return
@@ -146,9 +141,8 @@ export default function IgazoloLap({
       : lap.sheet ? 'nyitott' : 'még nincs sora'
 
   return createPortal(
-    <div className="fedo" role="presentation"
-         onMouseDown={(e) => e.target === e.currentTarget && !sor && !beallit && onBezar()}>
-      <div className="lap lap-igazolo" role="dialog" aria-modal="true" aria-label={`Igazolólap: ${cegNev}`}>
+    <Ablak cimke={`Igazolólap: ${cegNev}`} onEsc={onBezar} onHatter={onBezar}>
+      <div className="lap lap-igazolo">
         <div className="lap-fej">
           <div>
             <h2>Igazolólap</h2>
@@ -315,7 +309,7 @@ export default function IgazoloLap({
         />
       )}
       {kerdesAblak}
-    </div>,
+    </Ablak>,
     document.body,
   )
 }

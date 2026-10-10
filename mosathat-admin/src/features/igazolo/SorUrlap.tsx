@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
 import { hibaSzoveg, honapCim } from '../../lib/format'
 import type { SheetColumn, SheetRow } from '../../lib/types'
 import { useKerdes } from '../common/Kerdes'
+import Ablak from '../common/Ablak'
 import AlairasRajzolo from './AlairasRajzolo'
 
 function szam(s: string): number | null {
@@ -54,17 +55,6 @@ export default function SorUrlap({
     || nev !== (sor.name ?? '')
     || JSON.stringify(extra) !== JSON.stringify(sor.extra ?? {})
 
-  const kerdesNyitva = Boolean(kerdesAblak)
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || kerdesNyitva) return
-      e.stopPropagation()
-      if (!megy) onBezar()
-    }
-    window.addEventListener('keydown', k, true)
-    return () => window.removeEventListener('keydown', k, true)
-  }, [onBezar, megy, kerdesNyitva])
-
   const latszik = (key: string) => oszlopok.find((o) => o.key === key)?.visible !== false
   const cimke = (key: string, alap: string) => oszlopok.find((o) => o.key === key)?.label ?? alap
   const sajat = oszlopok.filter((o) => o.key.startsWith('E_') && o.visible)
@@ -113,9 +103,10 @@ export default function SorUrlap({
   }
 
   return createPortal(
-    <div className="fedo" role="presentation"
-         onMouseDown={(e) => { if (e.target === e.currentTarget && !megy && !valtozott) onBezar() }}>
-      <div className="lap" role="dialog" aria-modal="true" aria-label="Igazolólap sora">
+    <Ablak cimke="Igazolólap sora"
+           onEsc={() => { if (!megy) onBezar() }}
+           onHatter={() => { if (!megy && !valtozott) onBezar() }}>
+      <div className="lap">
         <div className="lap-fej">
           <div>
             <h2>Igazolólap</h2>
@@ -221,7 +212,7 @@ export default function SorUrlap({
         </div>
       </div>
       {kerdesAblak}
-    </div>,
+    </Ablak>,
     document.body,
   )
 }

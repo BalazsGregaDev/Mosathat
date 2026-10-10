@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { erintokepernyo } from '../../lib/kepernyo'
+import Ablak from './Ablak'
 
 const PERCEK = Array.from({ length: 12 }, (_, i) => i * 5)
 
@@ -89,20 +90,9 @@ function IdoPanel({ cim, ertek, torolheto, onValt, onBezar }: {
     onBezar(uj)
   }
 
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.stopPropagation()
-      onBezar(most)
-    }
-    window.addEventListener('keydown', k, true)
-    return () => window.removeEventListener('keydown', k, true)
-  }, [onBezar, most])
-
   return createPortal(
-    <div className="fedo ido-fedo" role="presentation"
-         onMouseDown={(e) => { if (e.target === e.currentTarget) onBezar(most) }}>
-      <div className="ido-ablak" role="dialog" aria-modal="true" aria-label={cim}>
+    <Ablak osztaly="fedo ido-fedo" cimke={cim} onEsc={() => onBezar(most)} onHatter={() => onBezar(most)}>
+      <div className="ido-ablak">
         <div className="ido-fej">
           <span className="ido-cim">{cim}</span>
           <span className="ido-ertek">{most || '—:—'}</span>
@@ -139,7 +129,7 @@ function IdoPanel({ cim, ertek, torolheto, onValt, onBezar }: {
           <button type="button" className="btn btn-fo" onClick={() => onBezar(most)}>Kész</button>
         </div>
       </div>
-    </div>,
+    </Ablak>,
     document.body,
   )
 }

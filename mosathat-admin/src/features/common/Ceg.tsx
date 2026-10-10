@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
 import type { CompanyCandidate, CompanyHit } from '../../lib/types'
+import Ablak from './Ablak'
 
 export interface CegErtek {
   id: string | null
@@ -117,19 +118,10 @@ export function useCegEgyeztetes(): [React.ReactNode, (e: CegErtek) => Promise<C
     setKerdes(null)
   }, [])
 
-  useEffect(() => {
-    if (!kerdes) return
-    const f = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') { ev.stopPropagation(); lezar(null) }
-    }
-    window.addEventListener('keydown', f, true)
-    return () => window.removeEventListener('keydown', f, true)
-  }, [kerdes, lezar])
-
   const ablak = kerdes ? createPortal(
-    <div className="fedo kerdes-fedo" role="presentation"
-         onMouseDown={(ev) => { if (ev.target === ev.currentTarget) lezar(null) }}>
-      <div className="kerdes-ablak" role="alertdialog" aria-modal="true" aria-labelledby="ceg-kerdes">
+    <Ablak osztaly="fedo kerdes-fedo" szerep="alertdialog" cimkeId="ceg-kerdes"
+           onEsc={() => lezar(null)} onHatter={() => lezar(null)}>
+      <div className="kerdes-ablak">
         <h2 id="ceg-kerdes">Erre a cégre gondoltál?</h2>
         <p>
           Hasonló nevű cég már van a rendszerben. Ha ugyanaz, válaszd ki — különben
@@ -147,7 +139,7 @@ export function useCegEgyeztetes(): [React.ReactNode, (e: CegErtek) => Promise<C
           </button>
         </div>
       </div>
-    </div>,
+    </Ablak>,
     document.body,
   ) : null
 

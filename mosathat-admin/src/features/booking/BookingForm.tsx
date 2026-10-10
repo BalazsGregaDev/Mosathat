@@ -11,6 +11,7 @@ import {
 } from '../../lib/types'
 import Sugo from '../common/Sugo'
 import IdoMezo from '../common/IdoMezo'
+import Ablak from '../common/Ablak'
 import { CegValaszto, useCegEgyeztetes } from '../common/Ceg'
 
 const TIPUSOK: { id: BookingType; cimke: string }[] = [
@@ -25,6 +26,7 @@ export default function BookingForm({
   onBezar,
   onKesz,
   arlistaGombok,
+  arlistaPanel,
   osztott,
 }: {
   nap: string
@@ -32,6 +34,7 @@ export default function BookingForm({
   onBezar: () => void
   onKesz: () => void
   arlistaGombok?: React.ReactNode
+  arlistaPanel?: React.ReactNode
   osztott?: boolean
 }) {
   const { data, user } = useApp()
@@ -73,12 +76,6 @@ export default function BookingForm({
   const [elozmenyNyitva, setElozmenyNyitva] = useState(
     () => typeof window === 'undefined' || window.matchMedia('(min-width: 701px)').matches,
   )
-
-  useEffect(() => {
-    const kezel = (e: KeyboardEvent) => e.key === 'Escape' && onBezar()
-    window.addEventListener('keydown', kezel)
-    return () => window.removeEventListener('keydown', kezel)
-  }, [onBezar])
 
   useEffect(() => {
     if (szerkesztes && Object.keys(f.extras).length > 0) setExtrakNyitva(true)
@@ -162,12 +159,13 @@ export default function BookingForm({
   }
 
   const viszi = f.pickUpDate && f.pickUpDate > f.date
+  const megse = () => { if (!mentes && !kuld) onBezar() }
 
   return (
-    <div className={`fedo${osztott ? ' osztott' : ''}`} role="presentation"
-         onMouseDown={(e) => e.target === e.currentTarget && onBezar()}>
-      <div className="lap lap-szeles" role="dialog" aria-modal="true"
-           aria-label={szerkesztes ? 'Időpont módosítása' : 'Új időpont'}>
+    <Ablak osztaly={`fedo${osztott ? ' osztott' : ''}`}
+           cimke={szerkesztes ? 'Időpont módosítása' : 'Új időpont'}
+           onEsc={megse} onHatter={megse}>
+      <div className="lap lap-szeles">
         <div className="lap-fej">
           <h2>{szerkesztes ? 'Időpont módosítása' : 'Új időpont'}</h2>
           <span className="halk" style={{ fontSize: 'var(--m-sm)' }}>{napRovidCim(f.date)}</span>
@@ -198,7 +196,7 @@ export default function BookingForm({
                            keresoZar()
                          }
                        }}
-                       autoFocus={!szerkesztes}
+                       data-autofocus={!szerkesztes || undefined}
                        autoComplete="off" spellCheck={false} />
                 {keresMezo === 'RENDSZAM' && talalatLista}
               </div>
@@ -627,8 +625,9 @@ export default function BookingForm({
           </div>
         </div>
       </div>
+      {arlistaPanel}
       {cegAblak}
-    </div>
+    </Ablak>
   )
 }
 

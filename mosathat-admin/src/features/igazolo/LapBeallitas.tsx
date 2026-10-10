@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
 import { sajatOszlop, ujOszlopKulcs } from '../../lib/igazolo'
 import type { SheetColumn } from '../../lib/types'
 import { useKerdes } from '../common/Kerdes'
+import Ablak from '../common/Ablak'
 import { hibaSzoveg } from '../../lib/format'
 
 export default function LapBeallitas({
@@ -28,17 +29,6 @@ export default function LapBeallitas({
   const [szoveg, setSzoveg] = useState(lablec ?? '')
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
-
-  const kerdesNyitva = Boolean(kerdesAblak)
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || kerdesNyitva) return
-      e.stopPropagation()
-      if (!megy) onBezar()
-    }
-    window.addEventListener('keydown', k, true)
-    return () => window.removeEventListener('keydown', k, true)
-  }, [onBezar, megy, kerdesNyitva])
 
   function valtoztat(i: number, v: Partial<SheetColumn>) {
     setSorok((s) => s.map((o, j) => (j === i ? { ...o, ...v } : o)))
@@ -88,8 +78,8 @@ export default function LapBeallitas({
   }
 
   return createPortal(
-    <div className="fedo" role="presentation">
-      <div className="lap" role="dialog" aria-modal="true" aria-label="Oszlopok és lábléc">
+    <Ablak cimke="Oszlopok és lábléc" onEsc={() => { if (!megy) onBezar() }}>
+      <div className="lap">
         <div className="lap-fej">
           <h2>Oszlopok és lábléc</h2>
           <button className="bezar" onClick={onBezar} aria-label="Bezárás">×</button>
@@ -166,7 +156,7 @@ export default function LapBeallitas({
         </div>
       </div>
       {kerdesAblak}
-    </div>,
+    </Ablak>,
     document.body,
   )
 }

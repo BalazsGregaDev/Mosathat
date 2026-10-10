@@ -144,7 +144,7 @@ await menu(t, 'Időpontok')
   await t.locator('#atvetel').click(); await t.waitForTimeout(300)
   await t.keyboard.press('Escape'); await t.waitForTimeout(300)
   ok('Escape: a panel bezárul, az űrlap marad', [0, 1],
-    [await t.locator('.ido-ablak').count(), await t.locator('.lap[aria-label="Új időpont"]').count()])
+    [await t.locator('.ido-ablak').count(), await t.locator('dialog[aria-label="Új időpont"]').count()])
 }
 await ctx2.close()
 

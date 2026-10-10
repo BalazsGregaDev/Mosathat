@@ -1,5 +1,10 @@
 .fedo {
   position: fixed; inset: 0;
+  width: auto; height: auto;
+  max-width: none; max-height: none;
+  margin: 0; border: 0;
+  color: inherit;
+  overflow: visible;
   background: rgba(20, 24, 26, .48);
   display: flex; align-items: center; justify-content: center;
   padding:
@@ -7,8 +12,9 @@
     calc(var(--t5) + env(safe-area-inset-right))
     calc(var(--t5) + env(safe-area-inset-bottom))
     calc(var(--t5) + env(safe-area-inset-left));
-  z-index: 60;
 }
+.fedo::backdrop { background: transparent; }
+.fedo:focus { outline: none; }
 @supports (height: 100dvh) {
   .fedo { bottom: auto; height: 100dvh; }
 }
@@ -353,7 +359,6 @@
 .extra-sav { display: flex; align-items: center; gap: 6px; }
 .extra-sav .extra { flex: 1; min-width: 0; }
 .fedo.kerdes-fedo {
-  z-index: 90;
   align-items: center;
   justify-content: center;
   padding: var(--t4);
@@ -390,7 +395,7 @@
 }
 .ido-gomb[data-ures] { color: var(--szoveg-halvany); }
 
-.fedo.ido-fedo { z-index: 95; align-items: center; }
+.fedo.ido-fedo { align-items: center; }
 .ido-ablak {
   background: var(--lap);
   border-radius: var(--r-lg);

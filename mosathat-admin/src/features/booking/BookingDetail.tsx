@@ -14,6 +14,7 @@ import Sugo from '../common/Sugo'
 import { useKerdes, type KerdesBeallitas } from '../common/Kerdes'
 import { ELUTASITAS_KERDES, NEM_FERT_BE_KERDES, TORLES_KERDES } from '../common/kerdesek'
 import Csuszka from '../common/Csuszka'
+import Ablak from '../common/Ablak'
 import Kerdojel from '../day/Kerdojel'
 import FlottaMunkalap from './FlottaMunkalap'
 import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
@@ -49,6 +50,7 @@ export default function BookingDetail({
   onBezar,
   onSzerkeszt,
   arlistaGombok,
+  arlistaPanel,
   osztott,
   fokusz,
   egyedi,
@@ -57,6 +59,7 @@ export default function BookingDetail({
   onBezar: () => void
   onSzerkeszt: (id: string) => void
   arlistaGombok?: React.ReactNode
+  arlistaPanel?: React.ReactNode
   osztott?: boolean
   fokusz?: MunkalapFokusz
   egyedi?: boolean
@@ -146,12 +149,6 @@ export default function BookingDetail({
 
   const csoportNezet = Boolean(b?.fleet_group) && !egyedi
   useEffect(() => { csoportRef.current = csoportNezet }, [csoportNezet])
-  useEffect(() => {
-    if (csoportNezet) return
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && bezar()
-    window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
-  }, [bezar, csoportNezet])
 
   const lezart = b?.status === 'COMPLETED'
   const megerkezett = b ? ['ARRIVED', 'IN_PROGRESS', 'READY'].includes(b.status) : false
@@ -370,27 +367,28 @@ export default function BookingDetail({
       <FlottaMunkalap
         groupId={b.fleet_group}
         onBezar={onBezar}
+        arlistaPanel={arlistaPanel}
         reszletek={(id, bezarReszlet) => (
           <BookingDetail key={id} bookingId={id} egyedi onBezar={bezarReszlet}
-                         onSzerkeszt={onSzerkeszt} arlistaGombok={arlistaGombok} />
+                         onSzerkeszt={onSzerkeszt} arlistaGombok={arlistaGombok}
+                         arlistaPanel={arlistaPanel} />
         )}
       />
     )
   }
 
   return (
-    <div className={`fedo${osztott ? ' osztott' : ''}`} role="presentation"
-         onMouseDown={(e) => {
-           if (e.target !== e.currentTarget) return
-           const f = document.activeElement
-           if ((f instanceof HTMLInputElement || f instanceof HTMLTextAreaElement)
-               && e.currentTarget.contains(f)) {
-             f.blur()
-             return
-           }
-           bezar()
-         }}>
-      <div className="lap" role="dialog" aria-modal="true" aria-label="Munkalap">
+    <Ablak osztaly={`fedo${osztott ? ' osztott' : ''}`} cimke="Munkalap" onEsc={bezar}
+           onHatter={(ablak) => {
+             const f = document.activeElement
+             if ((f instanceof HTMLInputElement || f instanceof HTMLTextAreaElement)
+                 && ablak.contains(f)) {
+               f.blur()
+               return
+             }
+             bezar()
+           }}>
+      <div className="lap">
         {tolt || !b ? (
           <div className="lap-torzs">
             <div className="betolt">{hiba ? <span className="hibauzenet">{hiba}</span> : 'Betöltés…'}</div>
@@ -914,10 +912,11 @@ export default function BookingDetail({
           </>
         )}
       </div>
+      {arlistaPanel}
       {kerdesAblak}
       {keszAblak}
       {kapuAblak}
-    </div>
+    </Ablak>
   )
 }
 

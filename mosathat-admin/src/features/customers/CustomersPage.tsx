@@ -9,6 +9,7 @@ import {
 import Szerkesztheto, { type Valaszthato } from '../common/Szerkesztheto'
 import { urlapMegnyilt } from '../../lib/kepernyo'
 import KartyaFej from '../common/KartyaFej'
+import Ablak from '../common/Ablak'
 import IgazoloLap from '../igazolo/IgazoloLap'
 
 type Nezet = 'jarmu' | 'ugyfel' | 'ceg'
@@ -211,9 +212,10 @@ function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   const keszEnged = name.trim().length > 0 && phone.trim().length > 0
 
   return (
-    <div className="fedo" role="presentation"
-         onMouseDown={(e) => { if (e.target === e.currentTarget && !piszkos && !megy) bezar() }}>
-      <div className="lap" role="dialog" aria-modal="true" aria-label="Ügyfél hozzáadása">
+    <Ablak cimke="Ügyfél hozzáadása"
+           onEsc={() => { if (!megy) bezar() }}
+           onHatter={() => { if (!piszkos && !megy) bezar() }}>
+      <div className="lap">
         <div className="lap-fej">
           <h2>Ügyfél hozzáadása</h2>
           <button className="bezar" onClick={bezar} aria-label="Bezárás">×</button>
@@ -341,7 +343,7 @@ function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
           </div>
         </div>
       </div>
-    </div>
+    </Ablak>
   )
 }
 

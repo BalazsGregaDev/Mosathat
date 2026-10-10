@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { urlapMegnyilt } from '../../lib/kepernyo'
 import { hibaSzoveg } from '../../lib/format'
+import Ablak from './Ablak'
 
 const MIN = 8
 
@@ -18,11 +19,6 @@ export default function JelszoModal({ kinek, sajat, onMent, onBezar }: {
   const elso = useRef<HTMLInputElement>(null)
 
   useEffect(() => { urlapMegnyilt(elso.current) }, [])
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !megy) onBezar() }
-    window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
-  }, [onBezar, megy])
 
   const rovid = uj.length > 0 && uj.length < MIN
   const elter = megint.length > 0 && uj !== megint
@@ -42,9 +38,10 @@ export default function JelszoModal({ kinek, sajat, onMent, onBezar }: {
   }
 
   return (
-    <div className="fedo" role="presentation"
-         onMouseDown={(e) => { if (e.target === e.currentTarget && !megy && !mostani && !uj && !megint) onBezar() }}>
-      <div className="lap" role="dialog" aria-modal="true" aria-label="Jelszó megadása">
+    <Ablak cimke="Jelszó megadása"
+           onEsc={() => { if (!megy) onBezar() }}
+           onHatter={() => { if (!megy && !mostani && !uj && !megint) onBezar() }}>
+      <div className="lap">
         <div className="lap-fej">
           <div>
             <h2>Jelszó</h2>
@@ -107,6 +104,6 @@ export default function JelszoModal({ kinek, sajat, onMent, onBezar }: {
           </form>
         </div>
       </div>
-    </div>
+    </Ablak>
   )
 }

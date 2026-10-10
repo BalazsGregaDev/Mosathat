@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import Ablak from './Ablak'
+
 export interface KerdesBeallitas {
   cim: string
   szoveg?: string
@@ -34,20 +36,13 @@ export function useKerdes(): [React.ReactNode, (k: KerdesBeallitas) => Promise<b
 function KerdesAblak({ k, onValasz }: { k: KerdesBeallitas; onValasz: (v: boolean) => void }) {
   const igenGomb = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
-    igenGomb.current?.focus()
-    const f = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onValasz(false) }
-    }
-    window.addEventListener('keydown', f, true)
-    return () => window.removeEventListener('keydown', f, true)
-  }, [onValasz])
+  useEffect(() => { igenGomb.current?.focus() }, [])
 
   return (
-    <div className="fedo kerdes-fedo" role="presentation"
-         onMouseDown={(e) => { if (e.target === e.currentTarget) onValasz(false) }}>
-      <div className="kerdes-ablak" role="alertdialog" aria-modal="true"
-           aria-labelledby="kerdes-cim" aria-describedby={k.szoveg ? 'kerdes-szoveg' : undefined}>
+    <Ablak osztaly="fedo kerdes-fedo" szerep="alertdialog" cimkeId="kerdes-cim"
+           leirasId={k.szoveg ? 'kerdes-szoveg' : undefined}
+           onEsc={() => onValasz(false)} onHatter={() => onValasz(false)}>
+      <div className="kerdes-ablak">
         <h2 id="kerdes-cim">{k.cim}</h2>
         {k.szoveg && <p id="kerdes-szoveg">{k.szoveg}</p>}
         <div className="kerdes-gombok">
@@ -61,6 +56,6 @@ function KerdesAblak({ k, onValasz }: { k: KerdesBeallitas; onValasz: (v: boolea
           </button>
         </div>
       </div>
-    </div>
+    </Ablak>
   )
 }

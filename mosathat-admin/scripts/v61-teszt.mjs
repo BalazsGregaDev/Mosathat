@@ -101,9 +101,9 @@ console.log('\n=== 2) Beállítások: a fülváltás nem dobja el a beírt időt
   ok('van találati lista', true, (await p.locator('.talalatlista').count()) > 0)
   await p.locator('#rendszam').press('Escape'); await p.waitForTimeout(400)
   ok('Esc után: a lista eltűnt, az űrlap nyitva', [0, 1],
-    [await p.locator('.talalatlista').count(), await p.locator('.lap[aria-label="Új időpont"]').count()])
+    [await p.locator('.talalatlista').count(), await p.locator('dialog[aria-label="Új időpont"]').count()])
   await p.locator('#rendszam').press('Escape'); await p.waitForTimeout(400)
-  ok('második Esc: az űrlap bezárul', 0, await p.locator('.lap[aria-label="Új időpont"]').count())
+  ok('második Esc: az űrlap bezárul', 0, await p.locator('dialog[aria-label="Új időpont"]').count())
 
   console.log('\n=== 5) Ügyfélszerkesztési jog: az alkalmazott szerkesztheti a cégeket ===\n')
   await menu(p, 'Felhasználók')
@@ -132,7 +132,7 @@ console.log('\n=== 6) Flotta: idő írható, a sorrend megmarad, a Szerkesztés 
 
   await menu(p, 'Időpontok')
   await p.locator('.fejlec .btn-fo').filter({ hasText: 'Új időpont' }).click(); await p.waitForTimeout(1500)
-  const lap = p.locator('.lap[aria-label="Új időpont"]')
+  const lap = p.locator('dialog[aria-label="Új időpont"]')
   await p.locator('#nev').fill('Flotta Feri')
   await p.locator('#tel').fill('+36301239876')
   await p.locator('#ceg').fill('Autó Tr'); await p.waitForTimeout(700)
@@ -164,9 +164,9 @@ console.log('\n=== 6) Flotta: idő írható, a sorrend megmarad, a Szerkesztés 
     await ml.locator('input[aria-label="Végső időpont"]').inputValue())
 
   await ml.locator('.flotta-sor').nth(1).getByRole('button', { name: 'Részletek' }).click(); await p.waitForTimeout(1500)
-  await p.locator('.lap[aria-label="Munkalap"]').getByRole('button', { name: 'Szerkesztés' }).click()
+  await p.locator('dialog[aria-label="Munkalap"]').getByRole('button', { name: 'Szerkesztés' }).click()
   await p.waitForTimeout(2000)
-  const modosit = p.locator('.lap[aria-label="Időpont módosítása"]')
+  const modosit = p.locator('dialog[aria-label="Időpont módosítása"]')
   ok('megnyílt a módosító űrlap', 1, await modosit.count())
   await modosit.locator('.szakasz').filter({ hasText: 'Megjegyzés' }).locator('textarea').fill('csak a második autó')
   await modosit.getByRole('button', { name: 'Módosítás mentése' }).click(); await p.waitForTimeout(2500)
@@ -175,7 +175,7 @@ console.log('\n=== 6) Flotta: idő írható, a sorrend megmarad, a Szerkesztés 
   }
   const megj = async (i) => {
     await ml.locator('.flotta-sor').nth(i).getByRole('button', { name: 'Részletek' }).click(); await p.waitForTimeout(1500)
-    const v = await p.locator('.lap[aria-label="Munkalap"] .szakasz').filter({ hasText: 'Megjegyzés' }).locator('textarea').inputValue()
+    const v = await p.locator('dialog[aria-label="Munkalap"] .szakasz').filter({ hasText: 'Megjegyzés' }).locator('textarea').inputValue()
     await p.keyboard.press('Escape'); await p.waitForTimeout(700)
     return v
   }
@@ -202,7 +202,7 @@ console.log('\n=== 7) Online kérés munkalapja: Elutasít, utána Mégis jön =
   await m.getByRole('button', { name: 'Megnézem a napi nézetben' }).click(); await p.waitForTimeout(2500)
   await p.locator('.napi-lista .kartya').filter({ hasText: 'KRS-001' }).first().locator('.kartya-nyit').click()
   await p.waitForTimeout(1500)
-  const lab = p.locator('.lap[aria-label="Munkalap"] .munkalap-lab')
+  const lab = p.locator('dialog[aria-label="Munkalap"] .munkalap-lab')
   const gombok = async () => (await lab.locator('.gombok button').allInnerTexts()).map((x) => x.trim())
   const kerdes = await gombok()
   ok('kérésnél: Elutasít van, Törlés és Nem fért be nincs', [true, false, false],

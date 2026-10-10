@@ -193,7 +193,7 @@ await p.waitForTimeout(2000)
   const hatarido = p.locator('.gondok .gond-sor').filter({ hasText: 'határideje' }).first()
   ok('a határidő sor egy gomb', 1, await hatarido.count())
   await hatarido.click(); await p.waitForTimeout(1500)
-  ok('megnyitja a munkalapot', 1, await p.locator('.lap[aria-label="Munkalap"]').count())
+  ok('megnyitja a munkalapot', 1, await p.locator('dialog[aria-label="Munkalap"]').count())
   await p.locator('.lap-fej .bezar').click(); await p.waitForTimeout(800)
 
   const hianyzo = p.locator('.gondok .gond-sor').filter({ hasText: 'nincs ára' }).first()

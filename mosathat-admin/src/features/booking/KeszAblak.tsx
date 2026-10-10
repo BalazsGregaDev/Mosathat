@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { useApp } from '../../state/AppContext'
 import { ft, hibaSzoveg } from '../../lib/format'
 import type { BookingTask, FinishPreview } from '../../lib/types'
+import Ablak from '../common/Ablak'
 
 interface Kerdes {
   bookingId: string
@@ -55,14 +56,6 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
       .catch((e) => { if (el) setHiba(hibaSzoveg(e)) })
     return () => { el = false }
   }, [data, k.bookingId])
-
-  useEffect(() => {
-    const f = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); megse() }
-    }
-    window.addEventListener('keydown', f, true)
-    return () => window.removeEventListener('keydown', f, true)
-  }, [megse])
 
   const csoportok = useMemo<Csoport[]>(() => {
     if (!lista) return []
@@ -126,9 +119,8 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
   const csokken = elonezet && elonezet.skip_huf > 0
 
   return (
-    <div className="fedo kerdes-fedo" role="presentation"
-         onMouseDown={(e) => { if (e.target === e.currentTarget) megse() }}>
-      <div className="kerdes-ablak kesz-ablak" role="dialog" aria-modal="true" aria-labelledby="kesz-cim">
+    <Ablak osztaly="fedo kerdes-fedo" cimkeId="kesz-cim" onEsc={megse} onHatter={megse}>
+      <div className="kerdes-ablak kesz-ablak">
         <div className="kesz-fej">
           <h2 id="kesz-cim">Kész van? <span className="rendszam">{k.felirat}</span></h2>
           {nyitott.length > 0 && (
@@ -218,6 +210,6 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
           </button>
         </div>
       </div>
-    </div>
+    </Ablak>
   )
 }

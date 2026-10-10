@@ -13,6 +13,7 @@ import IdoMezo from '../common/IdoMezo'
 import DatumMezo from '../common/DatumMezo'
 import { NEM_FERT_BE_KERDES } from '../common/kerdesek'
 import { useKerdes } from '../common/Kerdes'
+import Ablak from '../common/Ablak'
 import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
 
 const TIPUSOK: BookingType[] = ['LEADOS', 'HOZOMVISZEM']
@@ -21,10 +22,12 @@ export default function FlottaMunkalap({
   groupId,
   onBezar,
   reszletek,
+  arlistaPanel,
 }: {
   groupId: string
   onBezar: () => void
   reszletek: (bookingId: string, bezar: () => void) => React.ReactNode
+  arlistaPanel?: React.ReactNode
 }) {
   const { data, catalog, refresh } = useApp()
   const [kerdesAblak, kerdez] = useKerdes()
@@ -53,12 +56,6 @@ export default function FlottaMunkalap({
 
   const bezar = useCallback(() => { refresh(); onBezar() }, [refresh, onBezar])
 
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !reszletId) bezar() }
-    window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
-  }, [bezar, reszletId])
-
   async function muvelet(fn: () => Promise<unknown>, dob = false) {
     if (megy) {
       if (dob) throw new Error('Még tart az előző mentés, próbáld újra.')
@@ -79,13 +76,14 @@ export default function FlottaMunkalap({
 
   if (!tagok || !elso) {
     return (
-      <div className="fedo" role="presentation">
-        <div className="lap lap-szeles" role="dialog" aria-modal="true" aria-label="Flottás csoport">
+      <Ablak cimke="Flottás csoport" onEsc={bezar} onHatter={bezar}>
+        <div className="lap lap-szeles">
           <div className="lap-torzs">
             <div className="betolt">{hiba ? <span className="hibauzenet">{hiba}</span> : 'Betöltés…'}</div>
           </div>
         </div>
-      </div>
+        {arlistaPanel}
+      </Ablak>
     )
   }
 
@@ -109,10 +107,8 @@ export default function FlottaMunkalap({
   }
 
   return (
-    <div className="fedo" role="presentation"
-         onMouseDown={(e) => e.target === e.currentTarget && !reszletId && bezar()}>
-      <div className="lap lap-szeles flotta-munkalap" role="dialog" aria-modal="true"
-           aria-label="Flottás csoport">
+    <Ablak cimke="Flottás csoport" onEsc={bezar} onHatter={bezar}>
+      <div className="lap lap-szeles flotta-munkalap">
         <div className="lap-fej">
           <div>
             <h2>
@@ -227,9 +223,9 @@ export default function FlottaMunkalap({
         </div>
       </div>
 
-      {reszletId && reszletek(reszletId, () => { setReszletId(null); void betolt() })}
+      {reszletId ? reszletek(reszletId, () => { setReszletId(null); void betolt() }) : arlistaPanel}
       {kerdesAblak}
-    </div>
+    </Ablak>
   )
 }
 

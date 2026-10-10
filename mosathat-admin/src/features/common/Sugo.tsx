@@ -39,7 +39,12 @@ export default function Sugo({ cim, szoveg }: { cim: string; szoveg: string }) {
       if (buborek.current?.contains(e.target as Node)) return
       zar()
     }
-    const bill = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); zar() } }
+    const bill = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      e.stopPropagation()
+      zar()
+    }
     document.addEventListener('pointerdown', kint, true)
     document.addEventListener('keydown', bill, true)
     window.addEventListener('scroll', zar, true)

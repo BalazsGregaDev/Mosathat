@@ -20,7 +20,7 @@ await p.locator('aside.oldalsav button').filter({ hasText: 'Időpontok' }).first
 await p.waitForTimeout(1500)
 await p.locator('.fejlec .btn-fo').filter({ hasText: 'Új időpont' }).click()
 await p.waitForTimeout(1500)
-const fejek = await p.evaluate(() => [...document.querySelectorAll('.lap[aria-label="Új időpont"] .szakasz > .fej')]
+const fejek = await p.evaluate(() => [...document.querySelectorAll('dialog[aria-label="Új időpont"] .szakasz > .fej')]
   .map((e) => e.textContent.trim().split('\n')[0].trim()))
 console.log(`         ${JSON.stringify(fejek)}`)
 ok('a Mikor a második szakasz (az ügyfél után)', 'Mikor', fejek[1])

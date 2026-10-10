@@ -14,6 +14,7 @@ import SzerzodesArak, { FAJTAK, MERETEK } from './SzerzodesArak'
 import IgazoloLap from '../igazolo/IgazoloLap'
 import KetallasuCsuszka from '../common/KetallasuCsuszka'
 import Csuszka from '../common/Csuszka'
+import Ablak from '../common/Ablak'
 
 export default function PartnersPage({ fokuszCeg }: {
   fokuszCeg?: string | null
@@ -274,6 +275,9 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   const [ment, setMent] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
   const mentRef = useRef(false)
+  const kereso = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { if (!ugyfel) kereso.current?.focus() }, [ugyfel])
 
   useEffect(() => {
     if (q.trim().length < 1) { setTalalatok([]); return }
@@ -322,9 +326,10 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   const osszesAlkalom = tetelek.reduce((a, t) => a + (t.qty_total || 0), 0)
 
   return (
-    <div className="fedo" role="presentation"
-         onMouseDown={(e) => { if (e.target === e.currentTarget && !piszkos && !ment) onBezar() }}>
-      <div className="lap" role="dialog" aria-modal="true" aria-label="Új bérlet">
+    <Ablak cimke="Új bérlet"
+           onEsc={() => { if (!ment) onBezar() }}
+           onHatter={() => { if (!piszkos && !ment) onBezar() }}>
+      <div className="lap">
         <div className="lap-fej">
           <h2>Új bérlet</h2>
           <button className="bezar" onClick={onBezar} aria-label="Bezárás">×</button>
@@ -344,8 +349,8 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
               </div>
             ) : (
               <div className="kereso">
-                <input className="beviteli" value={q} onChange={(e) => setQ(e.target.value)}
-                       placeholder="Rendszám, név vagy cég" autoFocus />
+                <input ref={kereso} className="beviteli" value={q} onChange={(e) => setQ(e.target.value)}
+                       placeholder="Rendszám, név vagy cég" />
                 {talalatok.length > 0 && (
                   <div className="talalatlista">
                     {talalatok.map((h) => (
@@ -450,7 +455,7 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
           </div>
         </div>
       </div>
-    </div>
+    </Ablak>
   )
 }
 
@@ -570,8 +575,8 @@ function ContractForm({
   }
 
   return (
-    <div className="fedo" role="presentation">
-      <div className="lap" role="dialog" aria-modal="true" aria-label="Szerződés">
+    <Ablak cimke="Szerződés" onEsc={() => { if (!ment) onBezar() }}>
+      <div className="lap">
         <div className="lap-fej">
           <h2>{contract ? 'Szerződés módosítása' : 'Új szerződés'}</h2>
           <button className="bezar" onClick={onBezar} aria-label="Bezárás">×</button>
@@ -725,7 +730,7 @@ function ContractForm({
         </div>
       </div>
       {cegAblak}
-    </div>
+    </Ablak>
   )
 }
 

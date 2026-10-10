@@ -8,6 +8,7 @@ import {
 } from '../../lib/types'
 import JelszoModal from '../common/JelszoModal'
 import Csuszka from '../common/Csuszka'
+import Ablak from '../common/Ablak'
 
 export default function UsersPage() {
   const { data, user, refreshUser } = useApp()
@@ -355,9 +356,10 @@ function UjFelhasznalo({ fejleszto, onBezar, onKesz }: {
   const piszkos = Boolean(f.full_name || f.email || f.password)
 
   return (
-    <div className="fedo" role="presentation"
-         onMouseDown={(e) => { if (e.target === e.currentTarget && !piszkos && !megy) onBezar() }}>
-      <div className="lap" role="dialog" aria-modal="true" aria-label="Új felhasználó">
+    <Ablak cimke="Új felhasználó"
+           onEsc={() => { if (!megy) onBezar() }}
+           onHatter={() => { if (!piszkos && !megy) onBezar() }}>
+      <div className="lap">
         <div className="lap-fej">
           <h2>Új felhasználó</h2>
           <button className="bezar" onClick={onBezar} aria-label="Bezárás">×</button>
@@ -366,7 +368,7 @@ function UjFelhasznalo({ fejleszto, onBezar, onKesz }: {
         <div className="lap-torzs">
           <label className="mezo">
             <span>Név</span>
-            <input className="beviteli" value={f.full_name} autoFocus
+            <input className="beviteli" value={f.full_name} data-autofocus
                    onChange={(e) => setF({ ...f, full_name: e.target.value })} />
           </label>
 
@@ -428,6 +430,6 @@ function UjFelhasznalo({ fejleszto, onBezar, onKesz }: {
           </div>
         </div>
       </div>
-    </div>
+    </Ablak>
   )
 }

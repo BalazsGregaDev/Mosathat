@@ -113,9 +113,9 @@ export default function ArlistaPanel({ ful, onFul, onBezar, allapot, onAllapot, 
     : { left: latszo.x, top: latszo.y, width: latszo.w, height: latszo.h }
 
   return (
-    <div
+    <dialog
+      open
       className={`arpanel${osztott ? ' osztott' : ''}`}
-      role="dialog"
       aria-label="Árlista"
       style={stilus}
     >
@@ -148,6 +148,6 @@ export default function ArlistaPanel({ ful, onFul, onBezar, allapot, onAllapot, 
         <div className="arpanel-meret" onPointerDown={fogas('meretez')}
              aria-hidden="true" title="Húzd a méretezéshez" />
       )}
-    </div>
+    </dialog>
   )
 }
