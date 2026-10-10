@@ -283,11 +283,11 @@ export default function FoglalasModul({ onNapiNezet }: {
           <div className="fogl-valaszto ketto">
             <button type="button" aria-pressed={tipus === 'VAROS'} onClick={() => setTipus('VAROS')}>
               Megvárom
-              <small>Pontos kezdési időpontot választasz, és amíg kész, nálunk vársz.</small>
+              <small>Pontos kezdési időpontot választasz, és amíg kész, nálunk várhatsz.</small>
             </button>
             <button type="button" aria-pressed={tipus === 'LEADOS'} onClick={() => setTipus('LEADOS')}>
               Itt hagyom
-              <small>Reggel behozod, és szólunk, amikor elkészült.</small>
+              <small>Behozod amikor tudod, kész vagyunk mire viszed.</small>
             </button>
           </div>
         </section>
