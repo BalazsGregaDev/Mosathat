@@ -358,6 +358,8 @@ export default function FoglalasModul({ onNapiNezet }: {
                   <p className="fogl-erkezes">
                     Kérjük, ha lehet, a választott időpont előtt <strong>5–10 perccel</strong> érkezz.
                     Ha késel, kérjük, telefonálj: <a href={`tel:${UZLET_TELEFON.replace(/\s/g, '')}`}>{UZLET_TELEFON}</a>
+                  <br />
+                  A végleges ár az autó állapotától függően eltérhet, erősen szennyezett autón 50% felárat számíthatunk fel.
                   </p>
                 </>
               )}
@@ -418,10 +420,7 @@ export default function FoglalasModul({ onNapiNezet }: {
             <button type="button" className="btn btn-fo" disabled={!kuldheto} onClick={() => void kuldes()}>
               {kuld ? 'Küldés…' : 'Foglalási kérés küldése'}
             </button>
-            <small className="halk">
-              A végleges ár az autó állapotától függően eltérhet, erősen szennyezett autón
-              50% felárat számíthatunk fel.
-            </small>
+           
           </div>
         </section>
       )}
