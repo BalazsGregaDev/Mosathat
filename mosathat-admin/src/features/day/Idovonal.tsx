@@ -15,12 +15,13 @@ const FAJTA_NEV: Record<MunkaFajta, string> = {
   KESZ: 'Kész',
 }
 
-export default function Idovonal({ nap, foglalasok, savok, startPerc, onMegnyit }: {
+export default function Idovonal({ nap, foglalasok, savok, startPerc, onMegnyit, kiemelt }: {
   nap: string
   foglalasok: DayBooking[]
   savok: DayLane[]
   startPerc: number | null
   onMegnyit: (id: string) => void
+  kiemelt?: string
 }) {
   const ma = maStr()
   const maiNap = nap === ma
@@ -121,6 +122,7 @@ export default function Idovonal({ nap, foglalasok, savok, startPerc, onMegnyit 
                                 data-fajta={m.fajta} data-kerdojeles={m.kerdojeles || undefined}
                                 data-keres={m.keres || undefined}
                                 data-gond={gond || undefined}
+                                data-kiemelt={d.id === kiemelt || undefined}
                                 style={{ left: hely(d.tol), width: szel(d.tol, d.ig) }}
                                 title={`${m.cimke} · ${m.keres ? 'Online kérés · ' : ''}${FAJTA_NEV[m.fajta]} · ${percOra(d.tol)}–${percOra(d.ig)}`
                                   + (m.fajta === 'RUGALMAS' || m.fajta === 'TOBBNAPOS'

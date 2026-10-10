@@ -45,7 +45,7 @@ const SZEREPEK = [
   ['demo@mosathat.hu', ['Áttekintés', 'Időpontok', 'Igazolólap', 'Szolgáltatások', 'Cégek és bérletesek',
     'Ügyfelek', 'Felhasználók', 'Beállítások', 'Profilom', 'Időpontfoglalás']],
   ['tulaj@mosathat.hu', ['Áttekintés', 'Időpontok', 'Igazolólap', 'Szolgáltatások', 'Cégek és bérletesek',
-    'Ügyfelek', 'Felhasználók', 'Beállítások', 'Profilom']],
+    'Ügyfelek', 'Felhasználók', 'Beállítások', 'Profilom', 'Időpontfoglalás']],
   ['alkalmazott@mosathat.hu', ['Időpontok', 'Igazolólap', 'Szolgáltatások', 'Cégek és bérletesek', 'Ügyfelek', 'Profilom']],
 ]
 for (const [email, menupontok] of SZEREPEK) {
@@ -199,6 +199,8 @@ console.log('\n=== 7) Online kérés munkalapja: Elutasít, utána Mégis jön =
   await p.fill('#fo-rsz', 'KRS-001')
   await m.locator('.fogl-feltetel input').check()
   await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2000)
+  await p.locator('dialog[aria-label="Online foglalási kérés"] .keres-lab button').filter({ hasText: 'Később' }).click()
+  await p.waitForTimeout(400)
   await m.getByRole('button', { name: 'Megnézem a napi nézetben' }).click(); await p.waitForTimeout(2500)
   await p.locator('.napi-lista .kartya').filter({ hasText: 'KRS-001' }).first().locator('.kartya-nyit').click()
   await p.waitForTimeout(1500)

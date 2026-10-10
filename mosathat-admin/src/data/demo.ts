@@ -17,9 +17,10 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
+  OnlineKeres, DontesEredmeny,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
-import { idoRovidit, num, numOrNull, toQuote } from './source'
+import { idoRovidit, num, numOrNull, toOnlineKeres, toQuote } from './source'
 import { DEMO_BELEPOK, DEMO_STAFF_ID } from './demoBelepok'
 
 
@@ -229,6 +230,17 @@ export class DemoSource implements DataSource {
   async onlineBooking(input: OnlineBookingInput): Promise<string> {
     const [r] = await this.rows<{ id: string }>(`select online_foglalas($1::jsonb) as id`, [JSON.stringify(input)])
     return r.id
+  }
+
+  async listOnlineKeresek(): Promise<OnlineKeres[]> {
+    const r = await this.rows<OnlineKeres>(`select * from v_online_kerelmek order by beerkezett`)
+    return r.map(toOnlineKeres)
+  }
+
+  async onlineKeresDontes(bookingId: string, elfogad: boolean): Promise<DontesEredmeny> {
+    const [r] = await this.rows<{ eredmeny: DontesEredmeny }>(
+      `select online_keres_dontes($1::uuid, $2::boolean) as eredmeny`, [bookingId, elfogad])
+    return r.eredmeny
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {

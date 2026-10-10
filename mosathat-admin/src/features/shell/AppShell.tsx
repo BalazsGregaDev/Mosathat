@@ -25,12 +25,14 @@ import ArlistaPanel, { PANEL_ALAP, type PanelAllapot } from '../services/Arlista
 import ArlistaGombok, { type ArlistaFul } from '../services/ArlistaGombok'
 import JelszoModal from '../common/JelszoModal'
 import FoglalasModul from '../publikus/FoglalasModul'
+import KeresFigyelo from '../keresek/KeresFigyelo'
+import { foglalasModulLatja } from '../../lib/jogok'
 
 type Oldal =
   | 'attekintes' | 'nap' | 'szolgaltatasok' | 'partnerek' | 'ugyfelek'
   | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo' | 'foglalas'
 
-const MENU: { id: Oldal; cimke: string; tulaj?: boolean; fejleszto?: boolean }[] = [
+const MENU: { id: Oldal; cimke: string; tulaj?: boolean; foglalas?: boolean }[] = [
   { id: 'attekintes', cimke: 'Áttekintés', tulaj: true },
   { id: 'nap', cimke: 'Időpontok' },
   { id: 'igazolo', cimke: 'Igazolólap' },
@@ -40,7 +42,7 @@ const MENU: { id: Oldal; cimke: string; tulaj?: boolean; fejleszto?: boolean }[]
   { id: 'felhasznalok', cimke: 'Felhasználók', tulaj: true },
   { id: 'beallitasok', cimke: 'Beállítások', tulaj: true },
   { id: 'profilom', cimke: 'Profilom' },
-  { id: 'foglalas', cimke: 'Időpontfoglalás', fejleszto: true },
+  { id: 'foglalas', cimke: 'Időpontfoglalás', foglalas: true },
 ]
 
 const MENU_2 = [
@@ -53,8 +55,8 @@ export default function AppShell() {
   const { user, data, signOut, refresh } = useApp()
 
   const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
-  const fejleszto = user?.role === 'SUPERADMIN'
-  const menu = MENU.filter((m) => (!m.tulaj || teljesJogu) && (!m.fejleszto || fejleszto))
+  const foglalasJog = foglalasModulLatja(user)
+  const menu = MENU.filter((m) => (!m.tulaj || teljesJogu) && (!m.foglalas || foglalasJog))
 
   const [oldal, setOldal] = useState<Oldal>(teljesJogu ? 'attekintes' : 'nap')
   const [szerzodesCeg, setSzerzodesCeg] = useState<string | null>(null)
@@ -276,7 +278,7 @@ export default function AppShell() {
           {oldal === 'felhasznalok' && <UsersPage />}
           {oldal === 'beallitasok' && <SettingsPage />}
           {oldal === 'profilom' && <ProfilPage onJelszo={() => setJelszoNyitva(true)} />}
-          {oldal === 'foglalas' && fejleszto && (
+          {oldal === 'foglalas' && foglalasJog && (
             <FoglalasModul onNapiNezet={(d) => { setNap(d); setNezet('nap'); setOldal('nap') }} />
           )}
         </main>
@@ -321,6 +323,8 @@ export default function AppShell() {
       )}
 
       {!panelHely && arlistaPanel}
+
+      <KeresFigyelo onMegnyit={(id) => megnyit(id)} />
 
       {reszletId && (
         <BookingDetail

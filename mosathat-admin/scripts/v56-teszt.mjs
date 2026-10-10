@@ -20,9 +20,9 @@ async function belep(email) {
 }
 const menu = (p) => p.locator('aside.oldalsav button')
 
-console.log('=== 1) menüpont: csak a fejlesztőnek ===\n')
+console.log('=== 1) menüpont: fejlesztő és tulajdonos (v63) ===\n')
 const tulaj = await belep('tulaj@mosathat.hu')
-ok('a tulajdonosnál nincs Időpontfoglalás', 0, await menu(tulaj).filter({ hasText: 'Időpontfoglalás' }).count())
+ok('a tulajdonosnál is ott van az Időpontfoglalás', 1, await menu(tulaj).filter({ hasText: 'Időpontfoglalás' }).count())
 await menu(tulaj).filter({ hasText: 'Időpontok' }).first().click(); await tulaj.waitForTimeout(1200)
 await tulaj.locator('.fejlec .btn-fo').filter({ hasText: 'Új időpont' }).click()
 await tulaj.waitForTimeout(1500)
@@ -77,6 +77,11 @@ await m.locator('.fogl-feltetel input').check()
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click()
 await p.waitForTimeout(2000)
 ok('köszönő üzenet', true, (await m.locator('.fogl-siker').innerText()).includes('megkaptuk'))
+{
+  const kp = p.locator('dialog[aria-label="Online foglalási kérés"]')
+  ok('felugrott az elfogadó ablak (v63)', 1, await kp.count())
+  await kp.locator('.keres-lab button').filter({ hasText: 'Később' }).click(); await p.waitForTimeout(400)
+}
 
 console.log('\n=== 4) a napi nézetben: Online kérés → Visszaigazol ===\n')
 await m.getByRole('button', { name: 'Megnézem a napi nézetben' }).click(); await p.waitForTimeout(2500)

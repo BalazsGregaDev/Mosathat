@@ -1,4 +1,7 @@
-import { beferMeg, beoszt, PUFFER_PERC, type Eredmeny, type Munka, type Negyed } from './beosztas'
+import {
+  beferMeg, beoszt, munkakNapra, negyedekbol, PUFFER_PERC,
+  type Eredmeny, type FoglalasBeosztashoz, type Munka, type MunkaFajta, type Negyed,
+} from './beosztas'
 import { idotartam, percOra } from './format'
 
 export interface Ellenorzes {
@@ -110,4 +113,50 @@ export function napAllapot(negyedek: Negyed[], munkak: Munka[], perc: number,
   const allapot: NapAllapot = lehetosegek.length === 0 ? 'tele'
     : lehetosegek.length <= 2 || meg <= 1 ? 'keves' : 'szabad'
   return { allapot, lehetosegek, meg }
+}
+
+export interface Elhelyezes {
+  nyitva: boolean
+  fajta: MunkaFajta | null
+  tol: number | null
+  befer: boolean
+  kesz: number | null
+  gondok: string[]
+  darabok: { sor: number; tol: number; ig: number }[]
+  alternativak: Lehetoseg[]
+}
+
+export function keresElhelyez<T extends FoglalasBeosztashoz>(
+  keres: T,
+  foglalasok: T[],
+  savok: { starts: string; ends: string; lanes: number }[],
+  most: number | null,
+  cimke: (b: T) => string,
+): Elhelyezes {
+  const ures: Elhelyezes = {
+    nyitva: true, fajta: null, tol: null, befer: false, kesz: null, gondok: [], darabok: [], alternativak: [],
+  }
+  const negyedek = negyedekbol(savok)
+  if (negyedek.length === 0) return { ...ures, nyitva: false, gondok: ['Ezen a napon zárva vagyunk.'] }
+  const nyit = negyedek[0].tol
+  const zar = negyedek[negyedek.length - 1].ig
+  const nap = keres.service_date.slice(0, 10)
+  const nev = (b: FoglalasBeosztashoz) => cimke(b as T)
+  const { munkak } = munkakNapra(foglalasok.filter((b) => b.id !== keres.id), nap, nyit, zar, nev, most)
+  const [m] = munkakNapra([keres], nap, nyit, zar, nev, most).munkak
+  if (!m) return { ...ures, gondok: ['A kérésnek nincs munkaideje, ezért nem tudjuk beosztani.'] }
+
+  const e = ujMunkaEllenoriz(negyedek, munkak, m, most)
+  const uj = most !== null && m.fajta !== 'FIX' && m.tol < most ? { ...m, tol: most } : m
+  const darabok = beoszt(negyedek, [...munkak, uj], most).darabok
+    .filter((d) => d.id === m.id)
+    .map((d) => ({ sor: d.sor, tol: d.tol, ig: d.ig }))
+  const alternativak = e.befer ? []
+    : m.fajta === 'FIX'
+      ? varosKezdesek(negyedek, munkak, m.perc, most)
+      : leadosHozasok(negyedek, munkak, m.perc, most)
+
+  return {
+    nyitva: true, fajta: m.fajta, tol: uj.tol, befer: e.befer, kesz: e.kesz, gondok: e.gondok, darabok, alternativak,
+  }
 }

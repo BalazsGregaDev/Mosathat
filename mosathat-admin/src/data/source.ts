@@ -6,6 +6,7 @@ import type {
   Quote, CompanyHit, CompanyCandidate, AbsenceInput, AbsenceRow, DayAbsence,
   CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
+  OnlineKeres, DontesEredmeny,
 } from '../lib/types'
 
 export interface Catalog {
@@ -46,6 +47,8 @@ export interface DataSource {
   getDayLanes(date: string): Promise<DayLane[]>
   getStartMinutes(): Promise<number | null>
   onlineBooking(input: OnlineBookingInput): Promise<string>
+  listOnlineKeresek(): Promise<OnlineKeres[]>
+  onlineKeresDontes(bookingId: string, elfogad: boolean): Promise<DontesEredmeny>
   getBooking(id: string): Promise<DayBooking | null>
   getCapacity(date: string): Promise<DayCapacity>
   getWorkWindows(date: string): Promise<WorkWindow[]>
@@ -171,6 +174,16 @@ export const num = (v: unknown): number =>
 
 export const numOrNull = (v: unknown): number | null =>
   v === null || v === undefined ? null : typeof v === 'number' ? v : Number(v)
+
+export function toOnlineKeres(r: OnlineKeres): OnlineKeres {
+  return {
+    ...r,
+    korabbi_db: num(r.korabbi_db),
+    nem_jott_db: num(r.nem_jott_db),
+    lemondta_db: num(r.lemondta_db),
+    utolso_nap: r.utolso_nap ? String(r.utolso_nap).slice(0, 10) : null,
+  }
+}
 
 export function toQuote(r: Record<string, unknown> | null | undefined): Quote {
   const lines = Array.isArray(r?.lines) ? (r!.lines as Record<string, unknown>[]) : []

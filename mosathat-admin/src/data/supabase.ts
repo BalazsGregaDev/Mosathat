@@ -9,9 +9,10 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
+  OnlineKeres, DontesEredmeny,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
-import { idoRovidit, num, numOrNull, toQuote } from './source'
+import { idoRovidit, num, numOrNull, toOnlineKeres, toQuote } from './source'
 import { EloFrissites } from './elo'
 import { tokenFetch } from './tokenFetch'
 
@@ -224,6 +225,18 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('online_foglalas', { p: input })
     if (error) fail('Foglalási kérés', error)
     return data as string
+  }
+
+  async listOnlineKeresek(): Promise<OnlineKeres[]> {
+    const { data, error } = await this.sb.from('v_online_kerelmek').select('*').order('beerkezett')
+    if (error) fail('Online kérések', error)
+    return ((data ?? []) as OnlineKeres[]).map(toOnlineKeres)
+  }
+
+  async onlineKeresDontes(bookingId: string, elfogad: boolean): Promise<DontesEredmeny> {
+    const { data, error } = await this.sb.rpc('online_keres_dontes', { p_id: bookingId, p_elfogad: elfogad })
+    if (error) fail('Döntés a kérésről', error)
+    return data as DontesEredmeny
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {

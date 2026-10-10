@@ -243,6 +243,17 @@ export interface DayBooking {
   napok_szama?: number
 }
 
+export interface OnlineKeres extends DayBooking {
+  beerkezett: string
+  ugyfel_email: string | null
+  korabbi_db: number
+  utolso_nap: string | null
+  nem_jott_db: number
+  lemondta_db: number
+}
+
+export type DontesEredmeny = 'OK' | BookingStatus
+
 export interface StandingCar {
   id: string
   arrived_at: string | null

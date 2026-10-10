@@ -215,6 +215,23 @@ export function relativNap(datum: string, ma: string = maStr()): string {
   return napokRovid(datum, datum)
 }
 
+export function napMulva(datum: string, ma: string = maStr()): string {
+  const k = napKulonbseg(ma, datum.slice(0, 10))
+  if (k === 0) return 'ma'
+  if (k === 1) return 'holnap'
+  if (k === 2) return 'holnapután'
+  if (k > 0) return `${k} nap múlva`
+  return k === -1 ? 'tegnap' : `${-k} napja`
+}
+
+export function ota(iso: string, most: number = Date.now()): string {
+  const perc = Math.floor((most - new Date(iso).getTime()) / 60_000)
+  if (perc < 1) return 'épp most'
+  if (perc < 60) return `${perc} perce`
+  if (perc < 24 * 60) return `${Math.floor(perc / 60)} órája`
+  return `${Math.floor(perc / (24 * 60))} napja`
+}
+
 export function hibaSzoveg(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
