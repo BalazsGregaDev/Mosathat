@@ -20,7 +20,7 @@ const EBED: TiltottSav[] = [
   { tol: 0, ig: 9 * 60 - 1 },
   { tol: 11 * 60 + 15, ig: 12 * 60 + 45 },
 ]
-const UZLET_TELEFON = '+36 __ ___ ____'
+const UZLET_TELEFON = '+3615060420'
 
 type Tipus = 'VAROS' | 'LEADOS'
 
