@@ -1,16 +1,3 @@
--- =============================================================================
---  20260926140000_nap_nezet.sql — a napi kártyához hiányzó mezők
--- =============================================================================
---  A kártya az időpontot intervallumként mutatja: kezdés – vég. Többnapos
---  munkánál a vég a határidő, ami eddig nem szerepelt a nézetben.
---
---  Emellett a foglalás megnyitásakor kell a tételek mennyisége is: az
---  ablakmosó folyadék litereit a munkalistán adják meg, nem foglaláskor.
--- =============================================================================
-
--- Új oszlopokat a CREATE OR REPLACE csak a lista VÉGÉRE enged betenni, mi
--- viszont a logikus helyükre tesszük őket. Ezért előbb eldobjuk a nézetet.
--- Semmi nem függ tőle az adatbázisban — csak a felület olvassa.
 drop view if exists public.v_day_bookings;
 
 create view public.v_day_bookings
@@ -64,14 +51,6 @@ join public.customers c on c.id = b.customer_id
 join public.vehicles  v on v.id = b.vehicle_id
 left join public.packages p on p.id = b.package_id;
 
-
--- -----------------------------------------------------------------------------
---  Egy foglalás mennyiséges tételei — a munkalistán szerkeszthetők
--- -----------------------------------------------------------------------------
---  Az ablakmosó folyadékot literben mérik, és a mennyiség akkor derül ki,
---  amikor betöltik — nem akkor, amikor a foglalás készül. Ugyanez igaz a
---  kárpittisztításnál az ülésszámra.
-
 create or replace view public.v_booking_extras
 with (security_invoker = on) as
 select
@@ -88,9 +67,6 @@ join public.extras e on e.id = bi.ref_id
 where bi.kind = 'EXTRA'
   and e.price_unit <> 'ALKALOM';
 
-
--- A mennyiség módosítása a munkalistáról. Az ár és az idő újraszámolódik,
--- mert a liter és az ülésszám mindkettőt befolyásolhatja.
 create or replace function public.set_booking_extra_qty(
   p_item_id uuid,
   p_qty     numeric)
@@ -126,7 +102,6 @@ begin
                                else greatest(p_qty, 0) end
    where bi.id = p_item_id;
 
-  -- A foglalás összegét a tételekből írjuk vissza, hogy a kettő ne csússzon el.
   update public.bookings b
      set estimated_price_huf = (select coalesce(sum(i.price_huf), 0)
                                   from public.booking_items i where i.booking_id = v_b),

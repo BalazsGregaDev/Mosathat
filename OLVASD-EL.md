@@ -19,6 +19,33 @@ első betöltés 5–10 másodperc, mert akkor tölti be az adatbázist.
 
 ---
 
+## v37 — ami ennél a verziónál a te dolgod
+
+1. **Kicsomagolás** a szokásos módon (lent: előbb törölj, aztán másolj).
+2. **Adatbázis:** `cd mosathat-admin && npm run db:push`. Hat új migráció
+   megy fel (`20261003090000` … `20261003150000`): cégek, szerződés
+   csomagonként, Hozza/Viszi, kapacitás és munkaidő-változás, a nap
+   sorrendje, Áttekintés, Profilom, cég nézet. Előtte ki lehet próbálni:
+   `node scripts/migracio-teszt.mjs`.
+3. **Mindhárom alkalmazottnak legyen saját fiókja, Alkalmazott
+   szerepkörrel.** A kapacitás az Alkalmazott fiókokból számol: ha valaki
+   bejelenti, hogy korábban megy, a nap kapacitása arra az időre 80%-ra esik
+   (két hiányzónál 40%-ra). Akinek nincs fiókja, az a számításban nem létezik.
+4. **Szerződések:** a régi árak átkerültek — a „normál" a Startra, a
+   „prémium" a Premiumra ÉS az Elitre. Nyisd meg mindegyik szerződést
+   (Cégek és bérletesek → Szerződéses cégek → Szerkesztés), és nézd át: az
+   Elitnek jó eséllyel saját ára van, és most már a **Magán** ár (a cég
+   dolgozóinak saját autója) is megadható.
+5. **Realtime:** a migráció magától bekapcsolja az élő frissítést a
+   `day_order` és a `staff_absences` táblára (ha a Supabase-ben a
+   `supabase_realtime` kiadvány létezik). Ellenőrizni: Database →
+   Replication.
+
+A foglalások ára visszamenőleg NEM változik. Egy régi foglalás akkor kapja
+meg a szerződéses árat, ha valamit átírsz rajta (az újraszámolja).
+
+---
+
 ## Kicsomagolás: előbb törölj, aztán másolj
 
 A zip csak **hozzáad és felülír**. Amit egy korábbi verzióból törölni kellett,
@@ -45,25 +72,23 @@ maradvány: töröld, és menj tovább.
 Amíg próbálgattátok a rendszert, felkerültek rá kitalált ügyfelek és
 időpontok. Éles indulás előtt ezt egyszer ki kell üríteni.
 
-Supabase → **SQL Editor**, az egész blokk egyben:
+Supabase → **SQL Editor**, az egész blokk egyben. Sorban ezt csinálja:
+
+1. Az áthelyezett foglalások egymásra mutatnak, ezért a kapcsolatot előbb
+   elengedi, különben a törlés önmagába akadna.
+2. Törli a foglalásokat. Velük megy a tételsoruk, a munkalistájuk, a
+   többnapos foglaltságuk és a felhasznált bérletalkalom is.
+3. Törli az ügyfeleket. Velük megy a járművük és a bérletük is.
+4. Törli a cégeket. Velük megy a szerződésük és a szerződéses áruk is.
+5. Törli a naplót, mert az a próbaidőszak műveleteiről szól.
 
 ```sql
 begin;
-
--- Az áthelyezett foglalások egymásra mutatnak. A kapcsolatot előbb
--- elengedjük, különben a törlés önmagába akad.
 update public.bookings set moved_to_booking_id = null;
-
--- A foglalással megy a tételsora, a munkalistája, a többnapos foglaltsága
--- és a felhasznált bérletalkalma is.
 delete from public.bookings;
-
--- Az ügyféllel megy a járműve, a bérlete és a szerződéses ára is.
 delete from public.customers;
-
--- A napló a próbaidőszak műveleteiről szól, annak sincs értelme tovább.
+delete from public.companies;
 delete from public.audit_log;
-
 commit;
 ```
 
@@ -152,7 +177,10 @@ node scripts/migracio-teszt.mjs
 Ha elgépelés van egy migrációban, itt derül ki — nem a működő rendszeren.
 Ugyanígy futtatható: `jarmu-teszt.mjs`, `veszjelszo-teszt.mjs`,
 `urites-teszt.mjs`, `eles-ellenorzes.mjs`, `ugyfel-jog-teszt.mjs`,
-`hozomviszem-teszt.mjs`, `kereses-teszt.mjs`.
+`hozomviszem-teszt.mjs`, `kereses-teszt.mjs`, és a v37 szabályai:
+`fazis1-teszt.mjs` (cégek, szerződéses árak, Hozza/Viszi, kapacitás),
+`fazis3-db-teszt.mjs` (Áttekintés), `fazis4-db-teszt.mjs` (munkaidő-változás,
+új szolgáltatás, cég nézet).
 
 A telefonos elrendezéshez külön ellenőrzés van. Ehhez futnia kell a
 fejlesztői kiszolgálónak (`npm run dev`), és telepítve kell lennie a
@@ -161,7 +189,15 @@ Playwrightnak:
 ```bash
 node scripts/mobil-teszt.mjs
 node scripts/urlap-teszt.mjs
+node scripts/fazis2-teszt.mjs
+node scripts/fazis3-teszt.mjs
+node scripts/fazis4-teszt.mjs
 ```
+
+A `fazis2` az új időpontot, a munkalapot és a „Biztosan elkészült?" kérdést,
+a `fazis3` a napi listát, az áthúzást, a heti és havi nézetet és a tabletes
+elrendezést, a `fazis4` a Profilomat, a szolgáltatásokat, az ügyfeleket és a
+szerződést nézi végig.
 
 Az első azt nézi, hogy a nagyítás tiltva van-e, az árlista kifér-e a
 képernyőre, a mögöttes tartalom görgetése zárva van-e amíg az árlista nyitva,
@@ -247,11 +283,12 @@ npm run db:status
 
 | Menüpont | Mit tud |
 |---|---|
-| **Áttekintés** | Mai várható bevétel, autószám, foglalt munka, heti kapacitás naponta, leggyakoribb csomagok, figyelmeztetések |
-| **Időpontok** | Napi nézet, helyben szerkeszthető adatok, munkalap, státuszok, élő frissítés |
-| **Szolgáltatások** | Csomagárak, időtartamok, extrák — **itt kell pótolni a hiányzó adatokat** |
-| **Cégek és bérletesek** | Bérletek egyedi tételekkel, szerződéses ft/autó árak, hozom-viszem fuvardíj |
-| **Ügyfelek** | Egy oldal, két nézet: jármű szerint vagy ügyfél szerint. Új ügyfél és további jármű felvétele |
+| **Áttekintés** | Mai várható bevétel, autószám, foglalt munka (ugyanaz, mint a napi kártyán), heti kapacitás naponta, leggyakoribb csomagok, kattintható figyelmeztetések |
+| **Időpontok** | Napi lista kézi sorrenddel (áthúzás), többnapos munka minden napján, munkalap, státuszok, élő frissítés; heti nézetben a többnaposak sávként |
+| **Szolgáltatások** | Csomagárak, időtartamok, extrák, új egyéb szolgáltatás felvétele — **itt kell pótolni a hiányzó adatokat** |
+| **Cégek és bérletesek** | Bérletek egyedi tételekkel; szerződés csomagonként (Start, Premium, Elit), méretenként, Céges és Magán áron; hozom-viszem fuvardíj |
+| **Ügyfelek** | Egy oldal, három nézet: jármű, ügyfél és cég szerint. Új ügyfél és további jármű felvétele |
+| **Profilom** | Mindenkinek: jelszó, kilépés, munkaidő-változás bejelentése (később jön, korábban megy, napközben távol, egész nap) |
 | **Felhasználók** | Három szerepkör, új felhasználó felvétele, ki- és visszakapcsolás, jelszó, ügyfélszerkesztési jog szerepkörre és fiókra |
 | **Beállítások** | Nyitvatartás, munkaidő, szünetek, kivételnapok, párhuzamos autók, bérlet alapérték |
 
@@ -273,6 +310,10 @@ munkalista automatikusan újraszámolódik. A már kipipált lépések megmaradn
 Megérkezett → Kész van → Átvette. A korábbi „Kezdjük" lépés kikerült: a
 gyakorlatban vagy elfelejtették megnyomni, vagy utólag nyomták meg. A munka
 kezdetének most az érkezés ideje számít, ezt a rendszer magától rögzíti.
+
+A „Kész van" és az „Átvette" rákérdez („Biztosan elkészült?" Igen / Nem),
+a „Megérkezett" nem. A gomb csak az adott autó állapotát váltja: a lista
+nem töltődik újra, és a sorrend sem változik.
 
 ### Szerepkörök
 
@@ -308,8 +349,9 @@ linkre kell kattintania.
    Amíg ezek üresek, a rendszer nem tud pontos időt és árat mondani rájuk.
    Az Áttekintés figyelmeztetései is ezt mondják.
 2. Supabase → Database → **Replication**: kapcsold be a realtime-ot a
-   `bookings` és `booking_tasks` táblákra, különben a többi gépen nem
-   frissül magától a képernyő.
+   `bookings` és `booking_tasks` táblákra (a `day_order` és a
+   `staff_absences` a v37 migrációval magától bekapcsol), különben a többi
+   gépen nem frissül magától a képernyő.
 3. **Beállítások → Nyitvatartás**: ellenőrizd, hogy a munkaidő és az
    ebédszünet stimmel-e. Ebből számol a kapacitás.
 

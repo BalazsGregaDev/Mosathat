@@ -1,38 +1,3 @@
--- =============================================================================
---  20260927100000_full_service_nev.sql
---  A Full Service tételsor neve a munkalapon
--- =============================================================================
---  A régi szöveg — „Full Service (mélytisztítás)" — nem mondta meg, mit tartalmaz.
---  Az új: „Full Service (Csomag+Kárpit/Bőrtisztítás)".
---
---  MIÉRT KELL EHHEZ MIGRÁCIÓ, ha csak egy felirat?
---
---  Mert ez nem felirat, hanem ADAT. A foglalás tételsorai a booking_items
---  táblában élnek, és a name_snapshot oszlopba az kerül, ahogy a tételt a
---  foglalás pillanatában hívtuk. Ez szándékos: ha jövőre átnevezünk egy
---  szolgáltatást, egy tavalyi munkalapon akkor is az álljon, ami akkor
---  elhangzott az ügyfélnek.
---
---  A nevet két függvény írja be:
---    create_booking  – új foglaláskor
---    update_booking  – minden módosításkor (a helyben szerkesztés is ezen megy)
---
---  A .sql fájlok ÁTÍRÁSA önmagában semmit nem csinál: azok a migrációk már
---  lefutottak az adatbázison. A függvényt új migrációban kell újradefiniálni
---  — ez a fájl pontosan ezt teszi. A két függvény törzse egy karakter
---  eltéréssel ugyanaz, mint az eredeti: a szövegen kívül semmi nem változott.
---
---  A MÁR MEGLÉVŐ SOROK:
---  A lezárt munkalapokat nem bántjuk — azok a maguk idejének a dokumentumai.
---  A még nyitott foglalásokon viszont átírjuk, mert azokat még most olvassák
---  fel az ügyfélnek, és ott a régi szöveg csak félreértést szülne.
--- =============================================================================
-
-
--- -----------------------------------------------------------------------------
---  1. Új foglalás
--- -----------------------------------------------------------------------------
-
 create or replace function public.create_booking(p jsonb)
 returns uuid
 language plpgsql
@@ -80,12 +45,9 @@ begin
   if v_type     is null then raise exception 'Hiányzik a foglalás típusa.';  end if;
   if v_date     is null then raise exception 'Hiányzik a dátum.';            end if;
 
-  -- ---------- 1. ÜGYFÉL ----------
   v_customer_id := nullif(p->>'customer_id','')::uuid;
 
   if v_customer_id is null then
-    -- Ugyanazt a telefonszámot nem visszük fel kétszer: ha már ismerjük,
-    -- ahhoz kötjük az autót. A telefonszám a gyakorlatban az azonosító.
     select c.id into v_customer_id
       from public.customers c
      where regexp_replace(c.phone, '[^0-9]', '', 'g')
@@ -101,7 +63,6 @@ begin
             'MAGAN')
     returning id into v_customer_id;
   else
-    -- amit most mondott, azt elmentjük, de nem törlünk felül meglévőt üressel
     update public.customers
        set name  = coalesce(nullif(p->>'customer_name',''),  name),
            phone = coalesce(nullif(p->>'customer_phone',''), phone),
@@ -109,7 +70,6 @@ begin
      where id = v_customer_id;
   end if;
 
-  -- ---------- 2. JÁRMŰ ----------
   v_vehicle_id := nullif(p->>'vehicle_id','')::uuid;
 
   if v_vehicle_id is null and coalesce(p->>'plate_raw','') <> '' then
@@ -133,17 +93,15 @@ begin
     update public.vehicles
        set brand    = coalesce(nullif(p->>'brand',''),  brand),
            model    = coalesce(nullif(p->>'model',''),  model),
-           category = v_category,      -- a felvevő most látja az autót
+           category = v_category,
            seats    = coalesce(nullif(p->>'seats','')::integer, seats),
            updated_at = now()
      where id = v_vehicle_id;
   end if;
 
-  -- ---------- 3. ÁR ÉS IDŐ ----------
   select * into v_calc
     from public.calc_service(v_package_id, v_category, v_scope, v_full, v_extras, v_pct, v_fix);
 
-  -- ---------- időpontok ----------
   if nullif(p->>'start_time','') is not null then
     v_start := (v_date + (p->>'start_time')::time) at time zone 'Europe/Budapest';
   end if;
@@ -159,7 +117,6 @@ begin
                   at time zone 'Europe/Budapest';
   end if;
 
-  -- ---------- 4. FOGLALÁS ----------
   insert into public.bookings (
     customer_id, vehicle_id, booking_type, status, source, service_date,
     start_at, drop_off_at, pick_up_at, deadline_at,
@@ -173,18 +130,13 @@ begin
     v_date,
     v_start, v_drop, v_pick, v_deadline,
     v_package_id, v_scope, v_full,
-    coalesce(v_calc.work_minutes, 0),   -- ha nem ismert, 0 kerül be, és a
-                                        -- felület jelzi, hogy pótolni kell
+    coalesce(v_calc.work_minutes, 0),
     coalesce(v_calc.rest_minutes, 0),
     coalesce(v_calc.price_huf, 0),
     nullif(p->>'notes',''),
     nullif(p->>'internal_notes',''),
     v_staff)
   returning id into v_booking_id;
-
-  -- ---------- 5. TÉTELEK ----------
-  -- Pillanatfelvétel: a név és az ár ide bemásolódik. Ha jövő januárban
-  -- emelünk árat, a tavalyi foglalás akkor is a tavalyi árat mutatja.
 
   if v_package_id is not null then
     select pp.price_huf, pp.duration_minutes into v_pp
@@ -208,8 +160,6 @@ begin
       from public.full_service_pricing fp
      where fp.package_id = v_package_id and fp.category = v_category;
 
-    -- A Full Service SAJÁT ártáblából megy, nem csomag + extra összegként.
-    -- A tételsoron a különbözet jelenik meg, hogy a sorok összege stimmeljen.
     insert into public.booking_items (booking_id, kind, ref_id, name_snapshot,
                                       quantity, unit_price_huf, price_huf, work_minutes, sort_order)
     values (v_booking_id, 'FULL_SERVICE', null, 'Full Service (Csomag+Kárpit/Bőrtisztítás)',
@@ -246,8 +196,6 @@ begin
     v_sort := v_sort + 1;
   end loop;
 
-  -- A felár sora pontosan a maradékot viszi. Így a tételsorok összege
-  -- mindig egyezik a foglalás végösszegével, kerekítéssel együtt.
   if coalesce(v_calc.price_huf,0) <> v_items_sum then
     insert into public.booking_items (booking_id, kind, ref_id, name_snapshot,
                                       quantity, unit_price_huf, price_huf, work_minutes, sort_order)
@@ -261,17 +209,11 @@ begin
             0, v_sort);
   end if;
 
-  -- ---------- 6. MUNKALISTA ----------
   perform public.rebuild_booking_tasks(v_booking_id);
 
   return v_booking_id;
 end;
 $$;
-
-
--- -----------------------------------------------------------------------------
---  2. Foglalás módosítása
--- -----------------------------------------------------------------------------
 
 create or replace function public.update_booking(p_booking_id uuid, p jsonb)
 returns uuid
@@ -312,7 +254,6 @@ begin
     raise exception 'A foglalás le van zárva. Módosításhoz előbb vissza kell nyitni.';
   end if;
 
-  -- A kategória a JÁRMŰRŐL jön, ha az űrlap nem adja meg.
   v_category := coalesce(
     nullif(p->>'category','')::vehicle_category,
     (select v.category from public.vehicles v where v.id = v_regi.vehicle_id));
@@ -328,9 +269,6 @@ begin
   v_customer_id := v_regi.customer_id;
   v_vehicle_id  := v_regi.vehicle_id;
 
-  -- ---------- ügyfél és jármű frissítése ----------
-  -- Üres értékkel nem írunk felül meglévőt: ha a felvevő nem tudja a nevet,
-  -- attól még nem kell elveszíteni, amit korábban tudtunk.
   update public.customers
      set name  = coalesce(nullif(p->>'customer_name',''),  name),
          phone = coalesce(nullif(p->>'customer_phone',''), phone),
@@ -347,11 +285,9 @@ begin
          updated_at = now()
    where id = v_vehicle_id;
 
-  -- ---------- ár és idő újraszámolása ----------
   select * into v_calc
     from public.calc_service(v_package_id, v_category, v_scope, v_full, v_extras, v_pct, v_fix);
 
-  -- ---------- időpontok ----------
   if nullif(p->>'start_time','') is not null then
     v_start := (v_date + (p->>'start_time')::time) at time zone 'Europe/Budapest';
   end if;
@@ -367,7 +303,6 @@ begin
                   at time zone 'Europe/Budapest';
   end if;
 
-  -- ---------- a foglalás ----------
   update public.bookings
      set booking_type = v_type,
          service_date = v_date,
@@ -385,8 +320,6 @@ begin
          updated_at = now()
    where id = p_booking_id;
 
-  -- ---------- tételsorok újraírása ----------
-  -- A tételek a MOSTANI állapotot tükrözik, ezért teljesen újraépülnek.
   delete from public.booking_items where booking_id = p_booking_id;
 
   if v_package_id is not null then
@@ -457,20 +390,11 @@ begin
             0, v_sort);
   end if;
 
-  -- ---------- munkalista ----------
-  -- A rebuild megtartja a már kipipált lépéseket, és csak a különbséget
-  -- vezeti át. Ha az ügyfél Premiumról Elitre vált, a kimosott karosszéria
-  -- pipája nem vész el.
   perform public.rebuild_booking_tasks(p_booking_id);
 
   return p_booking_id;
 end;
 $$;
-
-
--- -----------------------------------------------------------------------------
---  3. A még nyitott foglalások tételsorai
--- -----------------------------------------------------------------------------
 
 update public.booking_items bi
    set name_snapshot = 'Full Service (Csomag+Kárpit/Bőrtisztítás)'

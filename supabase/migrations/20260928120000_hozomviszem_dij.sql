@@ -1,31 +1,3 @@
--- =============================================================================
---  20260928120000_hozomviszem_dij.sql
---  A hozom-viszem ára a szerződésben
--- =============================================================================
---  A szerződésben eddig csak annyi szerepelt, hogy JÁR-E hozom-viszem. Az,
---  hogy mennyibe kerül, sehol nem volt tárolva — pedig ez külön megállapodás
---  szokott lenni, és a munka árán KÍVÜL van.
---
---  Miért külön mező, és nem beleszámolt ár: nem minden autóért mennek el. Egy
---  céges flottából az egyiket behozzák, a másikért menni kell. Ha a fuvar ára
---  bele volna építve a csomagárba, akkor a behozott autó is fizetné.
---
---  A foglaláson ezt a `booking_type = 'HOZOMVISZEM'` mondja meg, foglalásról
---  foglalásra. A szerződés csak az ÁRAT tartja nyilván.
---
---  Amit ez a migráció SZÁNDÉKOSAN nem csinál: nem adja hozzá magától a
---  foglalás árához. A szerződéses árazás (customer_price) még sehol nincs
---  bekötve a foglalás árába — ha most csak a fuvardíj kerülne bele, az ár
---  félig lenne szerződéses, ami rosszabb, mintha egyik sem volna az. Az
---  összeg megjelenik a munkalapon, hogy a számlázásnál látszódjon; a
---  bekötése a szerződéses árazással együtt jön.
--- =============================================================================
-
-
--- -----------------------------------------------------------------------------
---  1. Az új mező
--- -----------------------------------------------------------------------------
-
 alter table public.contracts
   add column if not exists pickup_delivery_fee_huf integer;
 
@@ -36,17 +8,6 @@ do $$ begin
       check (pickup_delivery_fee_huf is null or pickup_delivery_fee_huf >= 0);
   end if;
 end $$;
-
-comment on column public.contracts.pickup_delivery_fee_huf is
-  'A hozom-viszem díja forintban, a munka árán felül, alkalmanként. '
-  'NULL: nincs külön megállapodva (benne van, vagy egyedileg beszélik meg).';
-
-
--- -----------------------------------------------------------------------------
---  2. A nézet adja tovább
--- -----------------------------------------------------------------------------
---  A CREATE OR REPLACE csak a lista végére enged új oszlopot, ezért eldobjuk
---  és újraírjuk — így a díj a hozom-viszem jelölő MELLETT áll, ahova való.
 
 drop view if exists public.v_contracts;
 
@@ -71,12 +32,6 @@ select
   ), '[]'::jsonb) as prices
 from public.contracts ct
 join public.customers c on c.id = ct.customer_id;
-
-
--- -----------------------------------------------------------------------------
---  3. A mentés ismerje az új mezőt
--- -----------------------------------------------------------------------------
---  A törzs változatlan, csak a fuvardíj kerül bele.
 
 create or replace function public.save_contract(p jsonb)
 returns uuid
@@ -107,8 +62,6 @@ begin
     update public.contracts
        set tax_number      = nullif(p->>'tax_number',''),
            pickup_delivery = coalesce((p->>'pickup_delivery')::boolean, false),
-           -- Ha a hozom-viszem nincs bepipálva, a díj se maradjon ott: egy
-           -- felejtett összeg később azt a látszatot keltené, hogy jár.
            pickup_delivery_fee_huf = case
              when coalesce((p->>'pickup_delivery')::boolean, false)
              then nullif(p->>'pickup_delivery_fee_huf','')::integer end,
@@ -122,7 +75,6 @@ begin
 
   for r in select * from jsonb_array_elements(coalesce(p->'prices', '[]'::jsonb))
   loop
-    -- Az üres mezőt nem mentjük árként: az azt jelenti, nincs rá megállapodás.
     if nullif(r->>'price_huf','') is not null and (r->>'price_huf')::integer > 0 then
       insert into public.contract_prices (contract_id, tier, size, price_huf)
       values (v_id, (r->>'tier')::contract_tier, (r->>'size')::contract_size,
@@ -135,17 +87,6 @@ end;
 $$;
 
 grant execute on function public.save_contract(jsonb) to authenticated;
-
-
--- -----------------------------------------------------------------------------
---  4. A munkalapon látszódjon
--- -----------------------------------------------------------------------------
---  Egy oszlop a napi nézetben: mennyi a fuvardíj ENNÉL a foglalásnál. Akkor
---  van értéke, ha a foglalás hozom-viszem, és az ügyfélnek van érvényes
---  szerződése díjjal. Minden más esetben NULL, és a felület nem is mutatja.
---
---  Nem a foglaláson tárolt adat, hanem a szerződésből olvasott: ha a
---  megállapodás változik, a régi, még le nem zárt munkák is követik.
 
 drop view if exists public.v_day_bookings;
 
@@ -190,7 +131,6 @@ select
   p.code         as package_code,
   p.name         as package_name,
 
-  -- A fuvardíj CSAK hozom-viszem foglalásnál. A többinél nincs mit felszámolni.
   case when b.booking_type = 'HOZOMVISZEM' then (
     select ct.pickup_delivery_fee_huf
       from public.contracts ct

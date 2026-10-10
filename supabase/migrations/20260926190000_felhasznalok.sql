@@ -1,32 +1,3 @@
--- =============================================================================
---  20260926190000_felhasznalok.sql — ki mit lát és mit írhat
--- =============================================================================
---  A jogosultság NEM a felületen dől el. A felület csak azt csinálja, hogy nem
---  mutat olyan gombot, amit úgysem lehetne megnyomni — a tiltás maga itt van,
---  az adatbázisban. Ha valaki megkerüli a képernyőt, az adatbázis akkor is
---  visszautasítja.
---
---  Két réteg védi ugyanazt:
---
---    RLS szabályok   – ez az igazi határ. Éles Supabase-en ezen nem lehet
---                      átmenni, mert a bejelentkezett felhasználó nevében fut
---                      minden lekérdezés.
---    Trigger         – ugyanaz a szabály, de érthető hibaüzenettel, és akkor
---                      is működik, amikor az RLS nem (demóban a PGlite a tábla
---                      tulajdonosaként fut, ott az RLS-t átugorja a Postgres).
---
---  A kettő ugyanazt mondja. Nem azért van mindkettő, mert az egyik gyenge,
---  hanem mert az egyik éles környezetben véd, a másik pedig mindenhol egyformán
---  viselkedik — és így a demó nem hazudik arról, mit tud egy alkalmazott.
--- =============================================================================
-
-
--- -----------------------------------------------------------------------------
---  1. Segédfüggvények
--- -----------------------------------------------------------------------------
-
--- "Teljes jogú": fejlesztő vagy tulajdonos. Ami az alkalmazott elől el van
--- zárva, arra ez a függvény a kapu.
 create or replace function public.is_owner()
 returns boolean
 language sql
@@ -37,17 +8,10 @@ as $$
   select exists (
     select 1 from public.staff s
     where s.id = auth.uid() and s.active
-      -- Szövegként hasonlítunk, nem enum értékként. Az előző migráció
-      -- vette fel a 'TULAJDONOS' értéket, és a PostgreSQL nem engedi, hogy
-      -- egy friss enum értéket ugyanabban a tranzakcióban ki is értékeljünk.
-      -- Külön fájlban vagyunk, tehát ez elvileg rendben lenne — de ha egy
-      -- eszköz mégis egy tranzakcióba fogja a migrációkat, ez így is átmegy.
       and s.role::text in ('SUPERADMIN', 'TULAJDONOS')
   );
 $$;
 
--- A saját szerepköröm. Azért security definer, mert a staff táblán RLS van,
--- és egy szabály nem hivatkozhat körbe önmagára.
 create or replace function public.my_role()
 returns staff_role
 language sql
@@ -61,36 +25,11 @@ $$;
 grant execute on function public.is_owner() to authenticated;
 grant execute on function public.my_role()  to authenticated;
 
-
--- -----------------------------------------------------------------------------
---  2. A fejlesztői fiók neve
--- -----------------------------------------------------------------------------
---  Eddig a saját neve volt benne. Ez a fiók nem egy ember, hanem egy szerep:
---  aki a rendszert fejleszti és karbantartja. A műhelyben dolgozók számára
---  "Fejlesztő" többet mond, mint egy név, amit nem ismernek.
 update public.staff
    set full_name = 'Fejlesztő'
  where role = 'SUPERADMIN'
    and full_name in ('Grega Balázs', 'Gréga Balázs', 'Balázs');
 
-
--- -----------------------------------------------------------------------------
---  3. Meghívók — hogyan lesz új felhasználó szolgáltatói kulcs nélkül
--- -----------------------------------------------------------------------------
---  Supabase-en új belépőt csak a service role kulccsal lehet létrehozni, azt
---  pedig SOHA nem szabad a böngészőbe tenni: aki megnyitja a fejlesztői
---  eszközöket, mindenhez hozzáférne.
---
---  Ezért a szerepkör nem a böngészőből érkezik, hanem innen. A folyamat:
---
---    1. A tulaj felvesz egy meghívót: név, e-mail, szerepkör.
---       Ezt a sort csak teljes jogú felhasználó írhatja meg.
---    2. A fiók a szokásos regisztrációval jön létre (jelszóval).
---    3. Az alábbi trigger a regisztrációkor megkeresi a meghívót az e-mail
---       alapján, és ELABBÓL veszi a szerepkört.
---
---  Így hiába küldene bárki "role: SUPERADMIN"-t a regisztrációval, a trigger
---  nem abból dolgozik.
 create table if not exists public.staff_invites (
   email       text primary key,
   full_name   text        not null,
@@ -99,10 +38,6 @@ create table if not exists public.staff_invites (
   created_at  timestamptz not null default now(),
   used_at     timestamptz
 );
-
-comment on table public.staff_invites is
-  'Meghívók. A regisztrációkor ebből jön a szerepkör, nem a kliens adatából.';
-
 
 create or replace function public.staff_meghivo_bevaltas()
 returns trigger
@@ -117,8 +52,6 @@ begin
     from public.staff_invites
    where email = lower(new.email) and used_at is null;
 
-  -- Nincs meghívó: a fiók létrejön, de dolgozó nem lesz belőle, és az
-  -- alkalmazás nem engedi be. Ez nem hiba, hanem a lényeg.
   if not found then
     return new;
   end if;
@@ -140,41 +73,25 @@ create trigger staff_meghivo
   after insert on auth.users
   for each row execute function public.staff_meghivo_bevaltas();
 
-
--- -----------------------------------------------------------------------------
---  4. A dolgozók táblájának szabályai
--- -----------------------------------------------------------------------------
---  Eddig: mindenki olvashatta, csak a superadmin írhatta.
---  Mostantól a tulaj is felvehet és módosíthat — de KIZÁRÓLAG alkalmazottat.
---  A fejlesztői és a tulajdonosi sorhoz nem nyúlhat hozzá, mert abból az
---  következne, hogy egy tulaj kizárhatja a fejlesztőt, vagy előléptetheti
---  magát valamivé, amiről nem volt szó.
-
 drop policy if exists staff_write on public.staff;
 
 create policy staff_write_super on public.staff
   for all to authenticated
   using (public.is_superadmin()) with check (public.is_superadmin());
 
--- A tulaj csak alkalmazotti sort hozhat létre...
 create policy staff_insert_owner on public.staff
   for insert to authenticated
   with check (public.my_role()::text = 'TULAJDONOS' and role = 'STAFF');
 
--- ...és csak alkalmazotti sort módosíthat, alkalmazottként.
 create policy staff_update_owner on public.staff
   for update to authenticated
   using (public.my_role()::text = 'TULAJDONOS' and role = 'STAFF')
   with check (public.my_role()::text = 'TULAJDONOS' and role = 'STAFF');
 
--- Mindenki átírhatja a SAJÁT nevét — de a saját szerepkörét nem, és magát
--- sem kapcsolhatja ki. Enélkül a tulaj a saját elgépelt nevét sem tudná
--- javítani, mert a fenti szabályok a tulajdonosi sort védik.
 create policy staff_self on public.staff
   for update to authenticated
   using (id = auth.uid())
   with check (id = auth.uid() and role = public.my_role() and active);
-
 
 alter table public.staff_invites enable row level security;
 
@@ -189,37 +106,18 @@ create policy staff_invites_owner on public.staff_invites
   for insert to authenticated
   with check (public.my_role()::text = 'TULAJDONOS' and role = 'STAFF');
 
-
--- -----------------------------------------------------------------------------
---  5. Amihez az alkalmazott nem nyúlhat
--- -----------------------------------------------------------------------------
---  Olvasni mindent olvashat, ami a napi munkához kell — az árat látnia KELL,
---  különben nem tud időpontot adni. Írni viszont nem ír:
---
---    szolgáltatások, árak, időtartamok   → a tulaj dolga
---    nyitvatartás, munkaidő, beállítások → a tulaj dolga
---    bérletek, szerződések               → a tulaj dolga
---
---  Ami marad neki: foglalás, munkalap, ügyfél és jármű. Vagyis a napi munka.
---  A pass_usages szándékosan NEM védett: ha egy foglalás bérletes alkalmat
---  használ fel, azt a foglalás rögzíti, nem a bérlet szerkesztése.
-
 do $$
 declare
   t      text;
   vedett text[] := array[
-    -- szolgáltatások és árak
     'packages', 'package_items', 'package_pricing', 'full_service_pricing',
     'extras', 'surcharges',
-    -- beállítások
     'business_hours', 'working_hours', 'break_windows', 'shop_settings',
     'day_overrides',
-    -- bérletek és szerződések
     'passes', 'pass_items', 'contracts', 'contract_prices'
   ];
 begin
   foreach t in array vedett loop
-    -- A korábbi, mindent engedő szabályok nevei két migrációból származnak.
     execute format('drop policy if exists %I on public.%I', t || '_staff_all', t);
     execute format('drop policy if exists %I on public.%I', t || '_staff', t);
 
@@ -233,17 +131,6 @@ begin
   end loop;
 end $$;
 
-
--- -----------------------------------------------------------------------------
---  6. Ugyanez triggerrel, érthető hibaüzenettel
--- -----------------------------------------------------------------------------
---  Az RLS hibaüzenete ("new row violates row-level security policy") nem mond
---  semmit annak, aki használja a programot. Ez a trigger ugyanazt tiltja, de
---  megmondja, mi a baj — és demóban is működik, ahol az RLS nem él.
---
---  Ha nincs bejelentkezett felhasználó (auth.uid() üres), akkor migráció vagy
---  karbantartás fut: azt átengedjük. Oda nem a böngészőn át vezet út, és az
---  RLS amúgy is zárva tartja a bejelentkezetlen hozzáférést.
 create or replace function public.csak_teljes_jogu()
 returns trigger
 language plpgsql
@@ -284,17 +171,6 @@ begin
   end loop;
 end $$;
 
-
--- -----------------------------------------------------------------------------
---  7. Az üzleti számok is zártak
--- -----------------------------------------------------------------------------
---  Az Áttekintés a heti bevételt mutatja. Az alkalmazott a saját napi
---  munkájához látja az árakat — az összesített bevétel viszont nem tartozik rá.
---  A menüből eltűnik, de a függvény maga is nemet mond, hogy ne csak a
---  képernyő tiltsa.
---
---  A meglévő függvényt átnevezzük, és elé teszünk egy őrt. Így a törzse nincs
---  kétszer leírva: ha egyszer lemásolnánk, a két példány előbb-utóbb eltérne.
 do $$
 begin
   if not exists (
@@ -322,16 +198,6 @@ $$;
 grant execute on function public.dashboard_adat(date)    to authenticated;
 grant execute on function public.dashboard_summary(date) to authenticated;
 
-
--- -----------------------------------------------------------------------------
---  8. Felhasználókezelés
--- -----------------------------------------------------------------------------
-
---  A lista nem nézet, hanem függvény. Azért, mert az e-mail címet az
---  auth.users tartalmazza, amit a bejelentkezett felhasználó nem olvashat —
---  egy sima nézet ezért nem működne. Egy security definer függvény el tudja
---  olvasni, de akkor NEKI kell ellenőriznie, ki kérdezi. Ez az ellenőrzés az
---  első sor: enélkül a függvény pont azt a falat bontaná le, amit véd.
 create or replace function public.list_staff()
 returns table (
   id            uuid,
@@ -340,7 +206,7 @@ returns table (
   active        boolean,
   email         text,
   belepett_mar  boolean,
-  meghivo       boolean,      -- még nincs fiókja, csak meghívva
+  meghivo       boolean,
   created_at    timestamptz
 )
 language plpgsql
@@ -357,8 +223,6 @@ begin
   return query
   select s.id, s.full_name, s.role, s.active,
          u.email,
-         -- Belépett-e már valaha. Egy felvett, de soha be nem lépett
-         -- dolgozónál ez az első kérdés, amikor azt mondja, "nem enged be".
          (u.last_sign_in_at is not null),
          false,
          s.created_at
@@ -367,19 +231,16 @@ begin
 
   union all
 
-  -- A meghívók, amikhez még nem tartozik fiók. Enélkül a lista hazudna arról,
-  -- hány embert vettek fel: a tulaj felvette, de a dolgozó még nem regisztrált.
   select null::uuid, i.full_name, i.role, true,
          i.email, false, true, i.created_at
     from public.staff_invites i
    where i.used_at is null
 
-  order by 7, 3, 2;   -- előbb a meglévők, szerepkör, majd név szerint
+  order by 7, 3, 2;
 end;
 $$;
 
 grant execute on function public.list_staff() to authenticated;
-
 
 create or replace function public.invite_staff(p jsonb)
 returns text
@@ -398,8 +259,6 @@ begin
       using errcode = '42501';
   end if;
 
-  -- A tulaj alkalmazottat vehet fel. Másik tulajt és fejlesztőt nem: az a
-  -- fejlesztő dolga, mert az a rendszer gazdáját érinti, nem a napi munkát.
   if v_sajat::text = 'TULAJDONOS' and v_role <> 'STAFF' then
     raise exception 'Tulajdonosként alkalmazottat tudsz felvenni.'
       using errcode = '42501';
@@ -429,10 +288,6 @@ begin
 end;
 $$;
 
-
--- Szerepkör- és állapotváltás egy helyen, ellenőrzésekkel. Közvetlen
--- update-tel is menne, de akkor a "nem lőheted ki magad" szabály a felületben
--- lakna, és ott bármikor ki lehet hagyni.
 create or replace function public.set_staff(p jsonb)
 returns void
 language plpgsql
@@ -479,7 +334,6 @@ begin
 end;
 $$;
 
-
 create or replace function public.delete_invite(p_email text)
 returns void
 language plpgsql
@@ -495,7 +349,6 @@ begin
    where email = lower(p_email) and used_at is null;
 end;
 $$;
-
 
 grant execute on function public.invite_staff(jsonb) to authenticated;
 grant execute on function public.set_staff(jsonb)    to authenticated;

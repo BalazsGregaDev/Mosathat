@@ -1,23 +1,3 @@
--- =============================================================================
---  20260926090000_munkalap.sql — a munkalap használhatóvá tétele
--- =============================================================================
---  Egy Elit csomagnál 14 lépés van a listán. Ezeket a mosóállásban vizes
---  kézzel egyenként kipipálni értelmetlen: ami a csomag része, az úgyis
---  elkészül. Amit KÜLÖN kértek, az az érdekes.
---
---  Ezért a listát kétfelé bontjuk (kívül / belül), és csoportosan lehet
---  pipálni azt, ami a csomaghoz tartozik. A csomagon kívüli tételek —
---  kárpittisztítás, motortér, ózon — külön maradnak.
---
---  Ehhez tudni kell egy lépésről, hogy a csomagból jön-e vagy extrából.
---  Eddig ez nem látszott: a booking_tasks csak a nevet tárolta.
--- =============================================================================
-
-
--- -----------------------------------------------------------------------------
---  1. Honnan jön a lépés
--- -----------------------------------------------------------------------------
-
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'task_source') then
@@ -28,14 +8,6 @@ end $$;
 alter table public.booking_tasks
   add column if not exists source task_source not null default 'PACKAGE';
 
-comment on column public.booking_tasks.source is
-  'PACKAGE: a csomag része, csoportosan pipálható. EXTRA: külön kérték, külön pipa.';
-
-
--- -----------------------------------------------------------------------------
---  2. A terv is adja vissza a forrást
--- -----------------------------------------------------------------------------
-
 drop function if exists public.booking_task_plan(uuid);
 
 create function public.booking_task_plan(p_booking_id uuid)
@@ -43,8 +15,6 @@ returns table (name text, area service_area, sort_order integer, source task_sou
 language sql
 stable
 as $$
-  -- a csomag tételei, a terjedelem szerint szűrve
-  -- (egy "csak kívül" foglalás listájára nem kerülhet fel a porszívózás)
   select r.name, r.area, r.sort_order, 'PACKAGE'::task_source
     from public.bookings b
     join lateral public.resolve_package_items(b.package_id) r on true
@@ -54,14 +24,12 @@ as $$
 
   union all
 
-  -- a választott extrák, a csomag lépései után
   select bi.name_snapshot, e.area, 900 + bi.sort_order, 'EXTRA'::task_source
     from public.booking_items bi
     left join public.extras e on e.id = bi.ref_id
    where bi.booking_id = p_booking_id
      and bi.kind in ('EXTRA', 'FULL_SERVICE');
 $$;
-
 
 create or replace function public.rebuild_booking_tasks(p_booking_id uuid)
 returns integer
@@ -75,14 +43,12 @@ begin
     raise exception 'Nincs ilyen foglalás: %', p_booking_id;
   end if;
 
-  -- Kivesszük azt, ami már nem kell — de csak ha NINCS kipipálva.
   delete from public.booking_tasks t
    where t.booking_id = p_booking_id
      and not t.done
      and not exists (
        select 1 from public.booking_task_plan(p_booking_id) k where k.name = t.name);
 
-  -- Betesszük, ami hiányzik.
   insert into public.booking_tasks (booking_id, name, area, sort_order, source)
   select p_booking_id, k.name, k.area, min(k.sort_order), min(k.source::text)::task_source
     from public.booking_task_plan(p_booking_id) k
@@ -96,8 +62,6 @@ begin
 end;
 $$;
 
--- A már meglévő foglalások lépéseit is megjelöljük: ami extrából jött, azt
--- a booking_items alapján találjuk meg.
 update public.booking_tasks t
    set source = 'EXTRA'
   from public.booking_items bi
@@ -105,20 +69,11 @@ update public.booking_tasks t
    and bi.kind in ('EXTRA', 'FULL_SERVICE')
    and bi.name_snapshot = t.name;
 
-
--- -----------------------------------------------------------------------------
---  3. Csoportos pipálás
--- -----------------------------------------------------------------------------
---  Egy gomb, egy kérés. Nem 12 külön hívás a böngészőből.
---
---  Csak a csomaghoz tartozó lépéseket érinti: a külön kért szolgáltatásokat
---  szándékosan kihagyja, mert azoknál számít, hogy tényleg megcsinálták-e.
-
 create or replace function public.toggle_task_group(
   p_booking_id uuid,
   p_area       service_area,
   p_done       boolean)
-returns integer      -- hány lépést érintett
+returns integer
 language plpgsql
 volatile
 as $$
@@ -139,17 +94,6 @@ begin
 end;
 $$;
 
-comment on function public.toggle_task_group is
-  'A csomaghoz tartozó kívüli vagy belüli lépések egyben. Az extrák érintetlenek.';
-
-
--- -----------------------------------------------------------------------------
---  4. Megjegyzés szerkesztése a már felvett foglaláson
--- -----------------------------------------------------------------------------
---  Menet közben derül ki a legtöbb fontos dolog: "a kulcs a kesztyűtartóban",
---  "a hátsó lökhárító már így jött". Ezt akkor kell tudni leírni, amikor
---  elhangzik, nem a foglaláskor.
-
 create or replace function public.set_booking_notes(
   p_booking_id uuid,
   p_notes      text)
@@ -162,14 +106,6 @@ as $$
          updated_at = now()
    where id = p_booking_id;
 $$;
-
-
--- -----------------------------------------------------------------------------
---  5. Lezárt foglalás zárolása
--- -----------------------------------------------------------------------------
---  A lezárt időpont végleges munkalap. Attól kezdve nem lehet hozzányúlni —
---  se a listához, se az árhoz. Ezt nem a felületen kell megakadályozni,
---  hanem itt: a felület elromolhat, a szabály nem.
 
 create or replace function public.lezart_e(p_booking_id uuid)
 returns boolean
@@ -196,9 +132,6 @@ create trigger booking_tasks_zarolas_trg
   before insert or update or delete on public.booking_tasks
   for each row execute function public.booking_tasks_zarolas();
 
-
--- A lezárt foglalás árát és adatait sem lehet átírni. A státuszt viszont
--- igen: egy téves lezárást vissza kell tudni vonni.
 create or replace function public.bookings_zarolas()
 returns trigger
 language plpgsql
@@ -222,7 +155,6 @@ drop trigger if exists bookings_zarolas_trg on public.bookings;
 create trigger bookings_zarolas_trg
   before update on public.bookings
   for each row execute function public.bookings_zarolas();
-
 
 grant execute on function public.toggle_task_group(uuid, service_area, boolean) to authenticated;
 grant execute on function public.set_booking_notes(uuid, text)                  to authenticated;

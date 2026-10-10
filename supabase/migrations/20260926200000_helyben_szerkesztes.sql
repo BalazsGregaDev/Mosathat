@@ -1,28 +1,3 @@
--- =============================================================================
---  20260926200000_helyben_szerkesztes.sql
---  Egy adatra kattintok, átírom, kész.
--- =============================================================================
---  A telefon közben ez történik: „úgy alakult, a férjem tud érte jönni, őt
---  ezen a másik számon érem el." Ehhez eddig meg kellett nyitni a teljes
---  szerkesztő űrlapot, végigmenni rajta, és a végén menteni. Nyolc kattintás
---  egy telefonszám miatt.
---
---  Mostantól egy mezőt lehet átírni. A nehézség nem a felületen van, hanem
---  itt: ha csak egy mezőt küldünk be, a többinek NEM szabad elveszni.
---
---  Az update_booking() teljes állapotot vár — ha hiányzik az extrák listája,
---  törli az extrákat; ha hiányzik a megjegyzés, kiüríti. Ezért a patch_booking()
---  előbb összeszedi a foglalás MOSTANI állapotát ugyanabban az alakban, arra
---  ráteszi a módosítást, és csak az eredményt adja tovább.
---
---  Miért nem írjuk egyszerűen az egy mezőt közvetlenül? Mert ha a csomag vagy
---  a terjedelem változik, az árat és az időt újra kell számolni, a munkalistát
---  pedig hozzáigazítani. Két út (egy „gyors" és egy „rendes") előbb-utóbb
---  eltérne egymástól. Egy út van, és az mindig végigszámol.
--- =============================================================================
-
-
--- A foglalás mostani állapota abban az alakban, ahogy az update_booking() várja.
 create or replace function public.booking_patch_alap(p_booking_id uuid)
 returns jsonb
 language sql
@@ -37,7 +12,6 @@ as $$
     'full_service',  b.full_service,
     'notes',         coalesce(b.notes, ''),
 
-    -- Idők budapesti időben, ahogy a felületen is látszanak.
     'start_time',    to_char(b.start_at    at time zone 'Europe/Budapest', 'HH24:MI'),
     'drop_off_time', to_char(b.drop_off_at at time zone 'Europe/Budapest', 'HH24:MI'),
     'pick_up_time',  to_char(b.pick_up_at  at time zone 'Europe/Budapest', 'HH24:MI'),
@@ -50,10 +24,6 @@ as $$
        where bi.booking_id = b.id and bi.kind = 'EXTRA' and bi.ref_id is not null
     ), '[]'::jsonb),
 
-    -- A felárat nem százalékban és fix összegben tároljuk, hanem egyetlen
-    -- tételsorként. Visszafelé ezért fix összegként adjuk vissza: az
-    -- update_booking ugyanezt az összeget fogja újra a végére írni, tehát a
-    -- végösszeg forintra ugyanaz marad.
     'surcharge_pct', 0,
     'surcharge_fix', coalesce((
       select bi.price_huf from public.booking_items bi
@@ -63,7 +33,6 @@ as $$
   join public.vehicles v on v.id = b.vehicle_id
   where b.id = p_booking_id;
 $$;
-
 
 create or replace function public.patch_booking(p_booking_id uuid, p_patch jsonb)
 returns uuid
@@ -82,8 +51,6 @@ begin
       using hint = 'Ha mégis módosítani kell, előbb vissza kell nyitni.';
   end if;
 
-  -- A || jobb oldala nyer: ami a módosításban benne van, az írja felül az
-  -- eddigit, a többi változatlanul megy tovább.
   return public.update_booking(p_booking_id, public.booking_patch_alap(p_booking_id) || p_patch);
 end;
 $$;
@@ -91,19 +58,6 @@ $$;
 grant execute on function public.booking_patch_alap(uuid)  to authenticated;
 grant execute on function public.patch_booking(uuid, jsonb) to authenticated;
 
-
--- =============================================================================
---  A „kezdjük" lépés kivétele a folyamatból
--- =============================================================================
---  Eddig négy lépés volt: megérkezett → kezdjük → kész van → átvette. A
---  „kezdjük" gombot a gyakorlatban vagy elfelejtették megnyomni, vagy
---  utólag nyomták meg — vagyis nem mondott igazat.
---
---  Három lépés marad: megérkezett → kész van → átvette.
---
---  A tényleges munkaidő mérése viszont nem veszhet el: ha nincs külön
---  „kezdjük", akkor a munka kezdete az érkezés. Ez nem pontosabb annál,
---  mint amit egy elfelejtett gombnyomás adott volna, viszont mindig megvan.
 create or replace function public.set_booking_status(
   p_booking_id uuid,
   p_status     booking_status,
@@ -126,9 +80,6 @@ begin
          arrived_at = case when p_status = 'ARRIVED' and arrived_at is null
                            then now() else arrived_at end,
 
-         -- A munka kezdete: ha volt külön „kezdjük", az. Ha nem volt, akkor
-         -- az érkezés ideje. Így a valós munkaidő akkor is számolható, ha a
-         -- folyamatban nincs külön indítólépés.
          actual_started_at = case
            when p_status = 'IN_PROGRESS' and actual_started_at is null then now()
            when p_status in ('READY','COMPLETED') and actual_started_at is null
@@ -151,18 +102,6 @@ begin
 end;
 $$;
 
-
--- =============================================================================
---  Ügyfél és jármű szerkesztése
--- =============================================================================
---  Az Ügyfelek képernyőn eddig csak nézni lehetett az adatot. Márpedig
---  telefonszám, e-mail, cégnév és rendszám folyamatosan változik, és ha nincs
---  hol átírni, akkor az adat lassan elavul — a rendszer pedig pont attól lesz
---  használhatatlan.
---
---  Ezek a függvények szándékosan NEM security definer: a jogosultságot az RLS
---  dönti el, ugyanúgy, mint bárhol máshol.
-
 create or replace function public.save_customer(p jsonb)
 returns uuid
 language plpgsql
@@ -175,8 +114,6 @@ begin
     raise exception 'Hiányzik az ügyfél azonosítója.';
   end if;
 
-  -- A név és a telefonszám kötelező az adatbázisban. Üresre állítani nem
-  -- lehet — de aki csak az e-mailt írja át, annak nem kell újra beírnia.
   update public.customers
      set name           = coalesce(nullif(trim(p->>'name'),''), name),
          phone          = coalesce(nullif(trim(p->>'phone'),''), phone),
@@ -203,7 +140,6 @@ begin
   return v_id;
 end;
 $$;
-
 
 create or replace function public.save_vehicle(p jsonb)
 returns uuid
@@ -232,9 +168,6 @@ begin
     raise exception 'Nincs ilyen jármű.';
   end if;
 
-  -- A jármű kategóriája a foglalás árát is meghatározza. A MÁR FELVETT,
-  -- még le nem zárt foglalásokat ezért újraszámoljuk — különben a lista
-  -- egy SUV-ot mutatna személyautó áron, és csak a fizetésnél derülne ki.
   if nullif(p->>'category','') is not null then
     perform public.patch_booking(b.id, jsonb_build_object('category', p->>'category'))
       from public.bookings b
@@ -246,7 +179,6 @@ begin
   return v_id;
 end;
 $$;
-
 
 grant execute on function public.save_customer(jsonb) to authenticated;
 grant execute on function public.save_vehicle(jsonb)  to authenticated;

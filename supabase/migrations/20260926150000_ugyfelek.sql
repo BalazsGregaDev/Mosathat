@@ -1,15 +1,3 @@
--- =============================================================================
---  20260926150000_ugyfelek.sql — az Ügyfelek képernyő adatai
--- =============================================================================
---  Egy oldal, két rendezés. Ugyanaz az adat — ügyfél, jármű, foglalások —,
---  csak más a lista sora. A műhelyben a belépési pont szinte mindig a
---  rendszám, cégeknél viszont a cégnév; ezért kell mindkettő.
---
---  Amit a soron látni kell, az nem a nyers adat, hanem a történet: hányszor
---  járt itt, mennyit költött, mikor volt utoljára, milyen sűrűn jár. Ezt az
---  adatbázis számolja ki, nem a felület — így a szám mindenhol ugyanaz.
--- =============================================================================
-
 create or replace view public.v_customer_summary
 with (security_invoker = on) as
 select
@@ -26,12 +14,8 @@ select
   coalesce(t.latogatas, 0)      as latogatas,
   coalesce(t.osszesen, 0)       as osszesen,
   t.utolso,
-  -- Átlagos költés: a lezárt munkák átlaga, nem a teljes összeg osztva.
   case when coalesce(t.latogatas,0) > 0
        then (t.osszesen / t.latogatas)::integer end as atlag,
-  -- Milyen sűrűn jár: az első és az utolsó látogatás közti idő elosztva a
-  -- látogatások közti szakaszok számával. Kevesebb mint két látogatásnál
-  -- nincs értelme, ezért ott NULL.
   case when coalesce(t.latogatas,0) > 1
        then ((t.utolso - t.elso) / (t.latogatas - 1))::integer end as atlag_napok,
   t.kedvenc_csomag
@@ -50,7 +34,6 @@ left join lateral (
   where b.customer_id = c.id and b.status = 'COMPLETED'
 ) t on true
 where c.anonymized_at is null;
-
 
 create or replace view public.v_vehicle_summary
 with (security_invoker = on) as
@@ -84,10 +67,6 @@ left join lateral (
    where b.vehicle_id = v.id and b.status = 'COMPLETED'
 ) t on true
 where c.anonymized_at is null;
-
-
--- Szűrés ugyanazzal a logikával, mint a foglalásfelvitel keresője:
--- rendszám, név és cégnév egyszerre, ékezet nélkül is.
 
 create or replace function public.list_customers(p_q text default '', p_limit integer default 100)
 returns setof public.v_customer_summary

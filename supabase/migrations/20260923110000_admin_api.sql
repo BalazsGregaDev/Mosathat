@@ -1,31 +1,3 @@
--- =============================================================================
---  0005_admin_api.sql — amit a felület hív
--- =============================================================================
---  Az admin felület NEM rakja össze a foglalást hat külön hívásból. Egy
---  foglalás felvitele hat dolgot jelent: ügyfél, jármű, árszámítás, foglalás,
---  tételek, munkalista. Ha ez hat külön kérés a böngészőből, akkor a harmadik
---  után megszakadó net félkész adatot hagy maga után, és nincs mit
---  visszavonni.
---
---  Ezért minden művelet EGY függvény, ami egy tranzakcióban fut le. Ugyanezt
---  hívja majd a publikus online foglalás is — más belépési ponttal, de
---  ugyanazzal a logikával.
---
---  Sorrend: 0001 → 0002 → 0003 → 0004 → 0005
--- =============================================================================
-
-
--- -----------------------------------------------------------------------------
---  Rendszám-keresés
--- -----------------------------------------------------------------------------
---  A telefonos foglalás első kérdése: "mi a rendszám?". Ha megvan, a nevet,
---  a telefonszámot és a méretet nem kell újra elkérni — és látszik, mit
---  szokott kérni.
---
---  A keresés a plate_normalized-en megy: a "ABC-123", "abc 123" és "ABC123"
---  ugyanaz az autó. Külföldi rendszámnál is működik, mert nincs beégetett
---  formátum.
-
 create or replace function public.lookup_plate(p_plate text)
 returns jsonb
 language sql
@@ -49,25 +21,6 @@ as $$
     )
   end;
 $$;
-
-comment on function public.lookup_plate is
-  'Rendszám → jármű + ügyfél + korábbi munkák. Ékezet- és kötőjel-független.';
-
-
--- -----------------------------------------------------------------------------
---  Foglalás létrehozása
--- -----------------------------------------------------------------------------
---  Bemenet egyetlen jsonb. Azért nem húsz paraméter, mert a felület
---  űrlapja úgyis egy objektum, és mert így bővíthető anélkül, hogy minden
---  hívót át kellene írni.
---
---  Amit elvégez:
---    1. ügyfél — meglévőt használ, vagy újat hoz létre
---    2. jármű  — meglévőt frissít, vagy újat hoz létre
---    3. ár és idő — calc_service(), ugyanaz, amit az árkalkulátor is hív
---    4. foglalás sor
---    5. tételsorok, pillanatfelvétellel (egy későbbi áremelés nem írja át)
---    6. munkalista — rebuild_booking_tasks()
 
 create or replace function public.create_booking(p jsonb)
 returns uuid
@@ -116,12 +69,9 @@ begin
   if v_type     is null then raise exception 'Hiányzik a foglalás típusa.';  end if;
   if v_date     is null then raise exception 'Hiányzik a dátum.';            end if;
 
-  -- ---------- 1. ÜGYFÉL ----------
   v_customer_id := nullif(p->>'customer_id','')::uuid;
 
   if v_customer_id is null then
-    -- Ugyanazt a telefonszámot nem visszük fel kétszer: ha már ismerjük,
-    -- ahhoz kötjük az autót. A telefonszám a gyakorlatban az azonosító.
     select c.id into v_customer_id
       from public.customers c
      where regexp_replace(c.phone, '[^0-9]', '', 'g')
@@ -137,7 +87,6 @@ begin
             'MAGAN')
     returning id into v_customer_id;
   else
-    -- amit most mondott, azt elmentjük, de nem törlünk felül meglévőt üressel
     update public.customers
        set name  = coalesce(nullif(p->>'customer_name',''),  name),
            phone = coalesce(nullif(p->>'customer_phone',''), phone),
@@ -145,7 +94,6 @@ begin
      where id = v_customer_id;
   end if;
 
-  -- ---------- 2. JÁRMŰ ----------
   v_vehicle_id := nullif(p->>'vehicle_id','')::uuid;
 
   if v_vehicle_id is null and coalesce(p->>'plate_raw','') <> '' then
@@ -169,17 +117,15 @@ begin
     update public.vehicles
        set brand    = coalesce(nullif(p->>'brand',''),  brand),
            model    = coalesce(nullif(p->>'model',''),  model),
-           category = v_category,      -- a felvevő most látja az autót
+           category = v_category,
            seats    = coalesce(nullif(p->>'seats','')::integer, seats),
            updated_at = now()
      where id = v_vehicle_id;
   end if;
 
-  -- ---------- 3. ÁR ÉS IDŐ ----------
   select * into v_calc
     from public.calc_service(v_package_id, v_category, v_scope, v_full, v_extras, v_pct, v_fix);
 
-  -- ---------- időpontok ----------
   if nullif(p->>'start_time','') is not null then
     v_start := (v_date + (p->>'start_time')::time) at time zone 'Europe/Budapest';
   end if;
@@ -195,7 +141,6 @@ begin
                   at time zone 'Europe/Budapest';
   end if;
 
-  -- ---------- 4. FOGLALÁS ----------
   insert into public.bookings (
     customer_id, vehicle_id, booking_type, status, source, service_date,
     start_at, drop_off_at, pick_up_at, deadline_at,
@@ -209,18 +154,13 @@ begin
     v_date,
     v_start, v_drop, v_pick, v_deadline,
     v_package_id, v_scope, v_full,
-    coalesce(v_calc.work_minutes, 0),   -- ha nem ismert, 0 kerül be, és a
-                                        -- felület jelzi, hogy pótolni kell
+    coalesce(v_calc.work_minutes, 0),
     coalesce(v_calc.rest_minutes, 0),
     coalesce(v_calc.price_huf, 0),
     nullif(p->>'notes',''),
     nullif(p->>'internal_notes',''),
     v_staff)
   returning id into v_booking_id;
-
-  -- ---------- 5. TÉTELEK ----------
-  -- Pillanatfelvétel: a név és az ár ide bemásolódik. Ha jövő januárban
-  -- emelünk árat, a tavalyi foglalás akkor is a tavalyi árat mutatja.
 
   if v_package_id is not null then
     select pp.price_huf, pp.duration_minutes into v_pp
@@ -244,8 +184,6 @@ begin
       from public.full_service_pricing fp
      where fp.package_id = v_package_id and fp.category = v_category;
 
-    -- A Full Service SAJÁT ártáblából megy, nem csomag + extra összegként.
-    -- A tételsoron a különbözet jelenik meg, hogy a sorok összege stimmeljen.
     insert into public.booking_items (booking_id, kind, ref_id, name_snapshot,
                                       quantity, unit_price_huf, price_huf, work_minutes, sort_order)
     values (v_booking_id, 'FULL_SERVICE', null, 'Full Service (mélytisztítás)',
@@ -282,8 +220,6 @@ begin
     v_sort := v_sort + 1;
   end loop;
 
-  -- A felár sora pontosan a maradékot viszi. Így a tételsorok összege
-  -- mindig egyezik a foglalás végösszegével, kerekítéssel együtt.
   if coalesce(v_calc.price_huf,0) <> v_items_sum then
     insert into public.booking_items (booking_id, kind, ref_id, name_snapshot,
                                       quantity, unit_price_huf, price_huf, work_minutes, sort_order)
@@ -297,23 +233,11 @@ begin
             0, v_sort);
   end if;
 
-  -- ---------- 6. MUNKALISTA ----------
   perform public.rebuild_booking_tasks(v_booking_id);
 
   return v_booking_id;
 end;
 $$;
-
-comment on function public.create_booking is
-  'Egy foglalás felvitele egy tranzakcióban: ügyfél, jármű, ár, tételek, munkalista.';
-
-
--- -----------------------------------------------------------------------------
---  Állapotváltás
--- -----------------------------------------------------------------------------
---  A dolgozó egy gombot nyom. Az időbélyegeket a rendszer írja — ezekből
---  derül ki később, mennyi ideig tartott valójában a munka, és hogy
---  nyitvatartási időn kívül készült-e.
 
 create or replace function public.set_booking_status(
   p_booking_id uuid,
@@ -353,14 +277,6 @@ begin
 end;
 $$;
 
-comment on function public.set_booking_status is
-  'Állapotváltás + időbélyegek + előzmény. A felület csak a célállapotot adja meg.';
-
-
--- -----------------------------------------------------------------------------
---  Munkalista pipálás
--- -----------------------------------------------------------------------------
-
 create or replace function public.toggle_task(p_task_id uuid, p_done boolean)
 returns void
 language sql
@@ -372,14 +288,6 @@ as $$
          done_by = case when p_done then (select s.id from public.staff s where s.id = auth.uid()) end
    where id = p_task_id;
 $$;
-
-
--- -----------------------------------------------------------------------------
---  Végleges ár
--- -----------------------------------------------------------------------------
---  A becsült ár a foglaláskor készül. A végleges az, amit az ügyfél fizetett.
---  A kettő eltérhet — és pont az eltérés az érdekes adat: abból derül ki,
---  hol becsül rosszul a rendszer.
 
 create or replace function public.set_final_price(
   p_booking_id uuid,
@@ -395,13 +303,6 @@ as $$
          updated_at = now()
    where id = p_booking_id;
 $$;
-
-
--- -----------------------------------------------------------------------------
---  Jogosultság
--- -----------------------------------------------------------------------------
---  A függvények security invoker módban futnak, tehát a hívó jogaival —
---  az RLS ugyanúgy érvényes rájuk, mint a közvetlen táblaműveletekre.
 
 revoke all on function public.create_booking(jsonb)                       from public, anon;
 revoke all on function public.set_booking_status(uuid, booking_status, text) from public, anon;

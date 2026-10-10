@@ -1,8 +1,3 @@
--- =============================================================================
---  20260926130000_partner_api.sql — amit a Cégek és bérletesek képernyő hív
--- =============================================================================
-
--- A szerződés fej és az árak egyben. A felület egy listát lát, nem két táblát.
 create or replace view public.v_contracts
 with (security_invoker = on) as
 select
@@ -24,12 +19,6 @@ select
 from public.contracts ct
 join public.customers c on c.id = ct.customer_id;
 
-
--- Szerződés mentése: fej és árak egy tranzakcióban.
---
--- Az árakat teljesen újraírjuk, mert a felület a MOSTANI állapotot küldi.
--- Ha egy ár kikerült a listából, az azt jelenti, hogy arra a kombinációra
--- nincs megállapodás — és akkor listaáron megy, nem a régi szerződéses áron.
 create or replace function public.save_contract(p jsonb)
 returns uuid
 language plpgsql
@@ -61,7 +50,6 @@ begin
 
   for r in select * from jsonb_array_elements(coalesce(p->'prices', '[]'::jsonb))
   loop
-    -- Az üres mezőt nem mentjük árként: az azt jelenti, nincs rá megállapodás.
     if nullif(r->>'price_huf','') is not null and (r->>'price_huf')::integer > 0 then
       insert into public.contract_prices (contract_id, tier, size, price_huf)
       values (v_id, (r->>'tier')::contract_tier, (r->>'size')::contract_size,
@@ -73,8 +61,6 @@ begin
 end;
 $$;
 
-
--- Bérlet kivezetése. Nem törlés: a felhasznált alkalmak előzménye megmarad.
 create or replace function public.deactivate_pass(p_pass_id uuid)
 returns void
 language sql
@@ -82,7 +68,6 @@ volatile
 as $$
   update public.passes set active = false, updated_at = now() where id = p_pass_id;
 $$;
-
 
 grant execute on function public.save_contract(jsonb)    to authenticated;
 grant execute on function public.deactivate_pass(uuid)   to authenticated;

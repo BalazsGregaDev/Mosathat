@@ -1,31 +1,3 @@
--- =============================================================================
---  20260926220000_meghivo_osszekapcsolas.sql
---  „Ezzel az e-mail címmel már van fiók" — zsákutca volt
--- =============================================================================
---  Eddig ha egy e-mail címhez MÁR létezett Supabase-fiók, a meghívó felvétele
---  hibával elszállt. Ez a gyakorlatban zsákutca:
---
---    – a fiókot a Supabase felületén hozták létre kézzel (dolgozó sor nélkül),
---    – vagy egy korábbi próbálkozás felét sikerült csak befejezni.
---
---  Mindkét esetben van egy fiók, ami nem tud belépni az alkalmazásba, és nincs
---  mód arra, hogy hozzáférést kapjon: a meghívó nem vehető fel, a trigger
---  pedig csak ÚJ regisztrációnál fut le.
---
---  Mostantól ilyenkor a meghívó nem hiba, hanem összekapcsolás: a meglévő
---  fiók megkapja azt a szerepkört, amit a tulaj éppen most adott meg.
---
---  Miért nem veszélyes: a hozzáférést az adja, hogy egy teljes jogú felhasználó
---  beírta a nevet, az e-mailt és a szerepkört, és megnyomta a gombot. Ez maga a
---  felhatalmazás. A visszajelzés viszont más — a felület kiírja, hogy itt nem új
---  fiók készült, hanem egy meglévő kapott hozzáférést. Aki ezt nem várta, az
---  ebből tudja meg.
---
---  Aktív dolgozói sorhoz továbbra sem lehet meghívót felvenni: az már bent van.
--- =============================================================================
-
--- A régi változat szöveget adott vissza, az új jsonb-t. A CREATE OR REPLACE
--- nem tud visszatérési típust váltani, ezért előbb el kell dobni.
 drop function if exists public.invite_staff(jsonb);
 
 create or replace function public.invite_staff(p jsonb)
@@ -48,8 +20,6 @@ begin
       using errcode = '42501';
   end if;
 
-  -- A tulaj alkalmazottat vehet fel. Másik tulajt és fejlesztőt nem: az a
-  -- fejlesztő dolga, mert az a rendszer gazdáját érinti, nem a napi munkát.
   if v_sajat::text = 'TULAJDONOS' and v_role <> 'STAFF' then
     raise exception 'Tulajdonosként alkalmazottat tudsz felvenni.'
       using errcode = '42501';
@@ -70,7 +40,6 @@ begin
         using hint = 'A szerepkörét a listában tudod átállítani.';
     end if;
 
-    -- Van fiók, de nincs (vagy inaktív) a dolgozói sora: most kapja meg.
     insert into public.staff (id, full_name, role, active)
     values (v_uid, v_nev, v_role, true)
     on conflict (id) do update

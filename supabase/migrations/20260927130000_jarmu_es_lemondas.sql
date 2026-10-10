@@ -1,45 +1,3 @@
--- =============================================================================
---  20260927130000_jarmu_es_lemondas.sql
---  További jármű egy ügyfélhez, és az ügyféladat védelme
--- =============================================================================
---  Két dolgot rendez el, és a kettő ugyanarról szól: ki nyúlhat az
---  ügyféltörzshöz.
---
---  1. ÚJ JÁRMŰ FELVÉTELE
---     Egy ügyfélnek több autója lehet — a feleségé, a céges kisbusz, a
---     gyerek első kocsija. Eddig új autó csak foglaláskor keletkezett. Ha
---     valaki telefonon annyit mond, hogy „jövő héten a másik autóval
---     jönnék", nem volt hova felvenni.
---
---  2. AZ ÜGYFÉLTÖRZS AZ ALKALMAZOTTNAK CSAK OLVASHATÓ
---     Ez eddig csak a képernyőn volt így gondolva, de az adatbázis nem
---     tartotta be: a save_customer és a save_vehicle bárkinek engedte. Aki
---     a böngésző fejlesztői eszközeit megnyitja, át tudta írni. A szabály
---     ott ér valamit, ahol az adat van.
---
---     FONTOS, hogy mit NEM érint ez: a foglalás felvételét és szerkesztését.
---     Az továbbra is az alkalmazott napi munkája, és az a saját útján megy
---     (create_booking / patch_booking). Ha telefonál egy ügyfél, hogy a
---     férje jön az autóért egy másik számon, azt az alkalmazott a foglalási
---     ablakban változtatja meg — az működik. Amit nem tud: az Ügyfelek
---     képernyőn átírni a törzsadatot.
---
---  A LEMONDÁSHOZ nem kell új függvény: a set_booking_status már ismeri a
---  CANCELLED_BY_CUSTOMER állapotot, a kapacitás és a bevétel pedig eddig is
---  kihagyta a lemondott foglalásokat. Csak gomb nem volt hozzá.
---
---  A lemondás SZÁNDÉKOSAN nem sorlemez: a foglalás sora megmarad. Egyrészt
---  mert a lemondások száma üzleti adat (ki mond le rendszeresen), másrészt
---  mert egy véletlen lemondás így visszavonható. Az ügyfél és a jármű
---  pedig eleve külön sor: az akkor is megmarad, ha az első foglalását
---  mondja le — a következő hívásnál már nem kell újra felvenni.
--- =============================================================================
-
-
--- -----------------------------------------------------------------------------
---  1. További jármű egy meglévő ügyfélhez
--- -----------------------------------------------------------------------------
-
 create or replace function public.add_vehicle(p jsonb)
 returns uuid
 language plpgsql
@@ -67,9 +25,6 @@ begin
     raise exception 'A rendszám nem maradhat üresen.';
   end if;
 
-  -- Egy rendszám egy autó. Ha már van ilyen, meg kell mondani, kinél —
-  -- különben két sor élne ugyanarról a kocsiról, külön előzménnyel, és
-  -- félévente az egyik, félévente a másik jönne elő.
   select v.id, c.name into v_letezo, v_gazda
     from public.vehicles v
     join public.customers c on c.id = v.customer_id
@@ -103,14 +58,6 @@ $$;
 
 grant execute on function public.add_vehicle(jsonb) to authenticated;
 
-
--- -----------------------------------------------------------------------------
---  2. Az ügyféltörzs írása: csak tulajdonos és fejlesztő
--- -----------------------------------------------------------------------------
---  A két függvény törzse változatlan, csak egy őrszem kerül a legelejére.
---  Az eredeti a 20260926200000_helyben_szerkesztes.sql-ben van; itt csak az
---  ellenőrzés az új.
-
 create or replace function public.save_customer(p jsonb)
 returns uuid
 language plpgsql
@@ -131,8 +78,6 @@ begin
     raise exception 'Hiányzik az ügyfél azonosítója.';
   end if;
 
-  -- A név és a telefonszám kötelező az adatbázisban. Üresre állítani nem
-  -- lehet — de aki csak az e-mailt írja át, annak nem kell újra beírnia.
   update public.customers
      set name           = coalesce(nullif(trim(p->>'name'),''), name),
          phone          = coalesce(nullif(trim(p->>'phone'),''), phone),
@@ -159,7 +104,6 @@ begin
   return v_id;
 end;
 $$;
-
 
 create or replace function public.save_vehicle(p jsonb)
 returns uuid
@@ -196,9 +140,6 @@ begin
     raise exception 'Nincs ilyen jármű.';
   end if;
 
-  -- A jármű kategóriája a foglalás árát is meghatározza. A MÁR FELVETT,
-  -- még le nem zárt foglalásokat ezért újraszámoljuk — különben a lista
-  -- egy SUV-ot mutatna személyautó áron, és csak a fizetésnél derülne ki.
   if nullif(p->>'category','') is not null then
     perform public.patch_booking(b.id, jsonb_build_object('category', p->>'category'))
       from public.bookings b
@@ -210,7 +151,6 @@ begin
   return v_id;
 end;
 $$;
-
 
 grant execute on function public.save_customer(jsonb) to authenticated;
 grant execute on function public.save_vehicle(jsonb)  to authenticated;

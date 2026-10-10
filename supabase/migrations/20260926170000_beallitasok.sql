@@ -1,17 +1,3 @@
--- =============================================================================
---  20260926170000_beallitasok.sql — a Beállítások képernyő
--- =============================================================================
---  Három időréteg van, és ezek NEM ugyanazok:
---
---    Nyitvatartás   – amit a weboldal kiír, és amikor az ügyfél jöhet
---    Munkaidő       – amikor ténylegesen dolgozunk. A KAPACITÁS ebből számol.
---    Szünetek       – az ebédszünet, ami kiveszi a közepét
---
---  A munkaidő korábban kezdődik, mint a nyitvatartás: nyolckor már dolgozunk,
---  de kilencre nyitunk. Ha a kapacitás a nyitvatartásból számolna, minden nap
---  egy órával kevesebbet mutatna a valóságnál.
--- =============================================================================
-
 create or replace view public.v_opening
 with (security_invoker = on) as
 select
@@ -31,10 +17,6 @@ from (select generate_series(1, 7) as weekday) d
 left join public.business_hours bh on bh.weekday = d.weekday
 left join public.working_hours  wh on wh.weekday = d.weekday;
 
-
--- Egy nap teljes beállítása egy hívásban: nyitvatartás, munkaidő, szünetek.
--- Külön mentve könnyen félresiklana — a szünet kikerülhetne egy olyan napra,
--- ami közben zárva lett.
 create or replace function public.save_day_hours(p jsonb)
 returns void
 language plpgsql
@@ -56,7 +38,6 @@ begin
   on conflict (weekday) do update
     set starts = excluded.starts, ends = excluded.ends, closed = excluded.closed;
 
-  -- A szünetek teljesen újraíródnak: a felület a nap MOSTANI állapotát küldi.
   delete from public.break_windows where weekday = v_wd;
   for r in select * from jsonb_array_elements(coalesce(p->'breaks', '[]'::jsonb))
   loop
@@ -68,7 +49,6 @@ begin
   end loop;
 end;
 $$;
-
 
 create or replace function public.save_shop_settings(p jsonb)
 returns void
@@ -95,9 +75,6 @@ as $$
     updated_at             = now();
 $$;
 
-
--- Kivételnapok: ledolgozós szombat, ünnep körüli szabadnap.
--- Mindkét irányban működik — rendkívüli nyitva és rendkívüli zárva.
 create or replace function public.save_day_override(p jsonb)
 returns void
 language sql
@@ -127,7 +104,6 @@ volatile
 as $$
   delete from public.day_overrides where day = p_day;
 $$;
-
 
 grant execute on function public.save_day_hours(jsonb)        to authenticated;
 grant execute on function public.save_shop_settings(jsonb)    to authenticated;
