@@ -7,9 +7,10 @@ import {
   ft, hetHetfoje, hibaSzoveg, idotartam, maStr, napCim, napokRovid, napPlusz, percIdo, percOra,
 } from '../../lib/format'
 import {
-  CATEGORY_LABEL, SCOPE_LABEL,
-  type BookingScope, type Quote, type VehicleCategory,
+  CATEGORY_LABEL, EGYSEG, SCOPE_LABEL,
+  type BookingScope, type Extra, type MeasureUnit, type Quote, type VehicleCategory,
 } from '../../lib/types'
+import { csomagbanBenne, csomagTetelei } from '../../lib/csomag'
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
 const TERJEDELMEK: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
@@ -21,6 +22,8 @@ const EBED: TiltottSav[] = [
   { tol: 11 * 60 + 15, ig: 12 * 60 + 45 },
 ]
 const UZLET_TELEFON = '+36 1 506 0420'
+const ALAP_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 1, ULES: 5, AJTO: 4, LITER: 1 }
+const LEGTOBB_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 10, ULES: 9, AJTO: 6, LITER: 10 }
 
 type Tipus = 'VAROS' | 'LEADOS'
 
@@ -52,7 +55,7 @@ export default function FoglalasModul({ onNapiNezet }: {
   const [kat, setKat] = useState<VehicleCategory>('SZEMELYAUTO')
   const [csomagId, setCsomagId] = useState<string | null>(null)
   const [scope, setScope] = useState<BookingScope>('TELJES')
-  const [extrak, setExtrak] = useState<Set<string>>(new Set())
+  const [extrak, setExtrak] = useState<Record<string, number>>({})
   const [tipus, setTipus] = useState<Tipus | null>(null)
   const [nap, setNap] = useState<string | null>(null)
   const [ido, setIdo] = useState<Lehetoseg | null>(null)
@@ -74,19 +77,42 @@ export default function FoglalasModul({ onNapiNezet }: {
     const a = ar(pid, s)
     return Boolean(a && a.price_huf != null && !a.requires_quote)
   }
-  const onlineExtrak = useMemo(
-    () => katalogus.extras
-      .filter((e) => e.active && e.price_huf != null && !e.requires_quote
-        && (e.price_unit === 'ALKALOM' || e.price_unit === 'DB'))
-      .sort((a, b) => a.sort_order - b.sort_order),
-    [katalogus.extras],
-  )
-
   const sc: BookingScope = csomagId && !foglalhato(csomagId, scope) ? 'TELJES' : scope
+  const tetelek = useMemo(
+    () => csomagTetelei(katalogus.packageItems, csomagId, sc),
+    [katalogus.packageItems, csomagId, sc],
+  )
+  const kinaltExtrak = useMemo(
+    () => katalogus.extras
+      .filter((e) => e.active && !csomagbanBenne(e.name, tetelek))
+      .sort((a, b) => a.sort_order - b.sort_order),
+    [katalogus.extras, tetelek],
+  )
+  const valasztottExtrak = useMemo(
+    () => kinaltExtrak.filter((e) => (extrak[e.id] ?? 0) > 0),
+    [kinaltExtrak, extrak],
+  )
+  const egyeztetendo = valasztottExtrak.filter(egyeztetesre)
+
+  function extraValt(e: Extra) {
+    setExtrak((x) => {
+      const u = { ...x }
+      if (u[e.id]) delete u[e.id]
+      else u[e.id] = ALAP_DB[e.price_unit]
+      return u
+    })
+  }
+
+  function extraDarab(e: Extra, n: number) {
+    setExtrak((x) => ({ ...x, [e.id]: Math.min(LEGTOBB_DB[e.price_unit], Math.max(1, n)) }))
+  }
 
   const [ajanlat, setAjanlat] = useState<Quote | null>(null)
   const [ajanlatHiba, setAjanlatHiba] = useState<string | null>(null)
-  const extraLista = useMemo(() => [...extrak].map((id) => ({ extra_id: id, quantity: 1 })), [extrak])
+  const extraLista = useMemo(
+    () => valasztottExtrak.map((e) => ({ extra_id: e.id, quantity: extrak[e.id] })),
+    [valasztottExtrak, extrak],
+  )
   useEffect(() => {
     if (!csomagId) { setAjanlat(null); setAjanlatHiba(null); return }
     let el = true
@@ -257,22 +283,43 @@ export default function FoglalasModul({ onNapiNezet }: {
         </section>
       )}
 
-      {csomagId && onlineExtrak.length > 0 && (
+      {csomagId && kinaltExtrak.length > 0 && (
         <section className="fogl-kartya">
           <h2><span className="lepes">4</span> Kérsz még valamit? <small>nem kötelező</small></h2>
+          {csomag && tetelek.size > 0 && (
+            <p className="fogl-al-szoveg">Ami a {csomag.name} csomagban már benne van, azt itt nem kínáljuk külön.</p>
+          )}
           <div className="fogl-extrak">
-            {onlineExtrak.map((e) => (
-              <label key={e.id} className="fogl-extra" data-be={extrak.has(e.id) || undefined}>
-                <input type="checkbox" checked={extrak.has(e.id)}
-                       onChange={() => setExtrak((x) => {
-                         const u = new Set(x)
-                         if (u.has(e.id)) u.delete(e.id); else u.add(e.id)
-                         return u
-                       })} />
-                <span className="nev">{e.name}</span>
-                <span className="ar">+ {ft(e.price_huf)}</span>
-              </label>
-            ))}
+            {kinaltExtrak.map((e) => {
+              const db = extrak[e.id] ?? 0
+              const egyeztet = egyeztetesre(e)
+              const egysegre = e.price_unit !== 'ALKALOM'
+              return (
+                <div key={e.id} className="fogl-extra" data-be={db > 0 || undefined}>
+                  <label className="fogl-extra-fej">
+                    <input type="checkbox" checked={db > 0} onChange={() => extraValt(e)} />
+                    <span className="nev">
+                      {e.name}
+                      {e.description && <small>{e.description}</small>}
+                    </span>
+                    <span className="ar" data-egyeztet={egyeztet || undefined}>
+                      {egyeztet ? 'ár egyeztetés után'
+                        : `+ ${ft(e.price_huf)}${egysegre ? ` / ${EGYSEG[e.price_unit]}` : ''}`}
+                    </span>
+                  </label>
+                  {db > 0 && egysegre && (
+                    <div className="fogl-darab">
+                      <button type="button" className="btn btn-kicsi" disabled={db <= 1}
+                              onClick={() => extraDarab(e, db - 1)} aria-label={`${e.name}: kevesebb`}>−</button>
+                      <span className="db">{db} {EGYSEG[e.price_unit]}</span>
+                      <button type="button" className="btn btn-kicsi" disabled={db >= LEGTOBB_DB[e.price_unit]}
+                              onClick={() => extraDarab(e, db + 1)} aria-label={`${e.name}: több`}>+</button>
+                      {!egyeztet && e.price_huf != null && <span className="osszeg">= {ft(e.price_huf * db)}</span>}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </section>
       )}
@@ -402,8 +449,15 @@ export default function FoglalasModul({ onNapiNezet }: {
         <section className="fogl-osszeg">
           <div className="sorok">
             <div><strong>{csomag.name}</strong> · {CATEGORY_LABEL[kat]} · {SCOPE_LABEL[sc]}</div>
-            {extrak.size > 0 && (
-              <div className="halk">+ {onlineExtrak.filter((e) => extrak.has(e.id)).map((e) => e.name).join(', ')}</div>
+            {valasztottExtrak.length > 0 && (
+              <div className="halk">
+                + {valasztottExtrak
+                  .map((e) => (e.price_unit === 'ALKALOM' ? e.name : `${e.name} (${extrak[e.id]} ${EGYSEG[e.price_unit]})`))
+                  .join(', ')}
+              </div>
+            )}
+            {egyeztetendo.length > 0 && (
+              <div className="halk">Ára egyeztetés után: {egyeztetendo.map((e) => e.name).join(', ')}</div>
             )}
             {nap && ido && (
               <div>{napCim(nap)} · {tipus === 'VAROS' ? `kezdés: ${percOra(ido.tol)}` : `hozás: ${percOra(ido.tol)}`}</div>
@@ -412,6 +466,7 @@ export default function FoglalasModul({ onNapiNezet }: {
           <div className="osszeg">
             <span className="ar">{ajanlat ? ft(ajanlat.price_huf) : '—'}</span>
             <span className="halk">{perc ? `kb. ${idotartam(perc)}` : ''}</span>
+            {egyeztetendo.length > 0 && <span className="halk">+ egyeztetendő tétel</span>}
           </div>
           <div className="kuld">
             {hiba && <div className="hibauzenet">{hiba}</div>}
@@ -454,4 +509,8 @@ function ProbaSav() {
       eszközön felugrik elfogadásra.
     </div>
   )
+}
+
+function egyeztetesre(e: Extra): boolean {
+  return e.requires_quote || e.price_huf == null
 }

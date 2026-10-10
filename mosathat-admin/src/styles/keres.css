@@ -32,6 +32,7 @@
 .keres-adatok dt { color: var(--szoveg-halk); }
 .keres-adatok dd { margin: 0; }
 .keres-megjegyzes { font-style: italic; }
+.keres-egyeztet { color: #7a5600; font-weight: var(--vastag-eros); }
 
 .keres-ugyfel { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--t3); font-size: var(--m-sm); }
 .keres-cimkek { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--t2); }

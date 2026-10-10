@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 
-import { useApp } from '../../state/AppContext'
+import { useApp, useCatalog } from '../../state/AppContext'
 import { useDay } from '../../state/useDay'
 import { munkaCimke } from '../../state/napBeosztas'
 import { keresElhelyez, type Elhelyezes, type Lehetoseg } from '../../lib/befer'
@@ -37,6 +37,7 @@ export default function KeresAblak({
   onDontott: () => void
 }) {
   const { data, user, refresh } = useApp()
+  const katalogus = useCatalog()
   const nap = keres.service_date.slice(0, 10)
   const d = useDay(nap)
   const [kerdesAblak, kerdez] = useKerdes()
@@ -49,6 +50,8 @@ export default function KeresAblak({
   const varos = keres.booking_type === 'VAROS'
   const maiNap = nap === maStr()
   const auto = [keres.brand, keres.model].filter(Boolean).join(' ')
+  const egyeztetendo = (keres.extras_summary ?? '').split(', ')
+    .filter((n) => katalogus.extras.some((e) => e.name === n && (e.requires_quote || e.price_huf == null)))
 
   const hely = useMemo<Elhelyezes | null>(() => {
     if (d.loading || d.error) return null
@@ -139,7 +142,12 @@ export default function KeresAblak({
                   <dt>Munka</dt>
                   <dd>{idotartam(keres.planned_duration_minutes)}</dd>
                   <dt>Ár</dt>
-                  <dd><strong>{ft(keres.estimated_price_huf)}</strong></dd>
+                  <dd>
+                    <strong>{ft(keres.estimated_price_huf)}</strong>
+                    {egyeztetendo.length > 0 && (
+                      <span className="keres-egyeztet"> + egyeztetendő: {egyeztetendo.join(', ')}</span>
+                    )}
+                  </dd>
                   {keres.notes && (
                     <>
                       <dt>Megjegyzés</dt>
