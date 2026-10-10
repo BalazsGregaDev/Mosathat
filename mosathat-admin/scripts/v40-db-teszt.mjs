@@ -1,4 +1,3 @@
-// v40, adatbázis: az Igazolólap menüpont céglistája (sheet_cegek).
 import { adatbazis, tesztelo, TULAJ, ALK } from './_db.mjs'
 
 const db = await adatbazis()

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import {
-  hetCim, honapCim, honapElseje, honapPlusz, maE, maStr, napCim, napLep,
+  hetCim, honapCim, honapElseje, honapPlusz, maE, maStr, napCim,
   napPlusz, napRovidCim,
 } from '../../lib/format'
 import { ROLE_LABEL, type MunkalapFokusz } from '../../lib/types'
@@ -26,34 +26,20 @@ import ArlistaGombok, { type ArlistaFul } from '../services/ArlistaGombok'
 import JelszoModal from '../common/JelszoModal'
 import FoglalasModul from '../publikus/FoglalasModul'
 
-// Az oldalak. Ami még nincs megépítve, az szürke és nem kattintható — nem
-// azért, hogy szép legyen a lista, hanem hogy látszódjon a terv, és ne
-// tűnjön elveszettnek egy funkció, ami csak később jön.
 type Oldal =
   | 'attekintes' | 'nap' | 'szolgaltatasok' | 'partnerek' | 'ugyfelek'
   | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo' | 'foglalas'
 
-// A `tulaj: true` menüpontok az alkalmazottnak MEG SEM JELENNEK. Nem
-// szürkén, nem "nincs jogosultság" üzenettel — nincsenek ott. Egy szürke
-// menüpont arra emlékezteti az embert minden nap, hogy van valami, amihez
-// nem érhet hozzá; ennek semmi haszna.
-//
-// Fontos: ez csak a kényelem. A tényleges tiltás az adatbázisban van, mert
-// ezt a listát bárki átírhatja a böngészőjében.
 const MENU: { id: Oldal; cimke: string; tulaj?: boolean; fejleszto?: boolean }[] = [
   { id: 'attekintes', cimke: 'Áttekintés', tulaj: true },
   { id: 'nap', cimke: 'Időpontok' },
-  // Mindenkinek: a szerződéses / bérletes cégek havi lapja. Az alkalmazott
-  // kitölti és aláíratja, a tulajdonos ezen felül beállítja és lezárja.
   { id: 'igazolo', cimke: 'Igazolólap' },
   { id: 'szolgaltatasok', cimke: 'Szolgáltatások' },
   { id: 'partnerek', cimke: 'Cégek és bérletesek' },
   { id: 'ugyfelek', cimke: 'Ügyfelek' },
   { id: 'felhasznalok', cimke: 'Felhasználók', tulaj: true },
   { id: 'beallitasok', cimke: 'Beállítások', tulaj: true },
-  // Mindenkinek: jelszó, kilépés, és a munkaidő-változás bejelentése.
   { id: 'profilom', cimke: 'Profilom' },
-  // Csak a fejlesztői fióknak: a publikus oldal foglalási modulja, próbaüzemben.
   { id: 'foglalas', cimke: 'Időpontfoglalás', fejleszto: true },
 ]
 
@@ -66,29 +52,19 @@ const MENU_2 = [
 export default function AppShell() {
   const { user, data, signOut, refresh } = useApp()
 
-  // Teljes jogú: fejlesztő vagy tulajdonos. Az alkalmazott a napi munkát
-  // végzi, az üzleti számokhoz és a beállításokhoz nem fér hozzá.
   const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
   const fejleszto = user?.role === 'SUPERADMIN'
   const menu = MENU.filter((m) => (!m.tulaj || teljesJogu) && (!m.fejleszto || fejleszto))
 
   const [oldal, setOldal] = useState<Oldal>(teljesJogu ? 'attekintes' : 'nap')
-  // Az Igazolólap menü „Szerződés részletei" gombja: ennek a cégnek a
-  // szerződését kell megnyitni a Cégek és bérletesek oldalon. A menüből
-  // odalépve nincs ilyen (null) — akkor a lista a szokott módon nyílik.
   const [szerzodesCeg, setSzerzodesCeg] = useState<string | null>(null)
   const [nap, setNap] = useState(maStr())
-  // Nap, hét vagy hónap. A nyilak ehhez igazodnak: napi nézetben egy napot,
-  // hetiben egy hetet, haviban egy hónapot lépnek. Ugyanaz a gomb, más lépés.
   const [nezet, setNezet] = useState<'nap' | 'het' | 'honap'>('nap')
 
-  // A lebegő árlista. A hely és a méret itt él, nem a panelben: így ugyanoda
-  // és ugyanakkorán nyílik vissza, ahogy legutóbb beállította.
   const [arlista, setArlista] = useState<ArlistaFul | null>(null)
   const [arPanel, setArPanel] = useState<PanelAllapot>(PANEL_ALAP)
   const [ujNyitva, setUjNyitva] = useState(false)
   const [reszletId, setReszletId] = useState<string | null>(null)
-  // A „Figyelmet igényel" sorából nyitva: melyik mező legyen rögtön írható.
   const [reszletFokusz, setReszletFokusz] = useState<MunkalapFokusz | undefined>(undefined)
   const [szerkesztId, setSzerkesztId] = useState<string | null>(null)
   const [fiok, setFiok] = useState(false)
@@ -106,7 +82,6 @@ export default function AppShell() {
     refresh()
   }
 
-  /** Munkalap megnyitása — opcionálisan egy mezővel írásra nyitva. */
   function megnyit(id: string, fokusz?: MunkalapFokusz) {
     setReszletFokusz(fokusz)
     setReszletId(id)
@@ -131,10 +106,6 @@ export default function AppShell() {
           </button>
         ))}
 
-        {/* A még meg nem épített menüpontok csak a teljes jogúaknak látszanak:
-            nekik terv, az alkalmazottnak viszont csak három szürke sor lenne,
-            amire soha nem kattinthat. Mind a három amúgy is tulajdonosi
-            funkció lesz. */}
         {teljesJogu && (
           <>
             <div className="menu-cim">Később</div>
@@ -151,15 +122,9 @@ export default function AppShell() {
       <div className="oldalsav-lab">
         {data.isDemo && <span className="demo-jelzo">Demó adatbázis</span>}
         <div>{user?.name}</div>
-        {/* A szerepkör ott van a neve alatt: ha valaki azt mondja, "nálam
-            ez a menüpont nincs is", ebből egy pillanat alatt kiderül, miért.
-            A fejlesztői fiók neve maga is "Fejlesztő", azt nem írjuk ki
-            kétszer egymás alá. */}
         {user && ROLE_LABEL[user.role] !== user.name && (
           <div className="szerep">{ROLE_LABEL[user.role]}</div>
         )}
-        {/* A jelszó mindenkinek kell — az alkalmazott a Felhasználók
-            menüpontot nem is látja. Ezért van itt, a neve alatt. */}
         <button className="ki" onClick={() => setJelszoNyitva(true)}>Jelszó módosítása</button>
         <button className="ki" onClick={() => void signOut()}>Kilépés</button>
       </div>
@@ -169,7 +134,7 @@ export default function AppShell() {
   const napiFejlec = oldal === 'nap'
 
   function lep(irany: -1 | 1) {
-    if (nezet === 'nap') setNap(napLep(nap, irany))
+    if (nezet === 'nap') setNap(napPlusz(nap, irany))
     else if (nezet === 'het') setNap(napPlusz(nap, irany * 7))
     else setNap(honapPlusz(honapElseje(nap), irany))
   }
@@ -182,14 +147,11 @@ export default function AppShell() {
     : nezet === 'het' ? hetCim(nap)
     : honapCim(nap)
 
-  /** Egy napra ugorva mindig a napi nézet a hasznos: ott van a munkalap. */
   function napraUgrik(d: string) {
     setNap(d)
     setNezet('nap')
   }
 
-  // Egy definíció, két helyen: az asztali fejlécben és a mobil fejléc alatt.
-  // Ha kétszer lenne leírva, előbb-utóbb az egyik helyen maradna ki egy nézet.
   const nezetValto = (
     <div className="nezetvalto">
       {([['nap', 'Nap'], ['het', 'Hét'], ['honap', 'Hónap']] as const).map(([id, c]) => (
@@ -200,14 +162,10 @@ export default function AppShell() {
     </div>
   )
 
-  // Ha van megnyitott foglalás ÉS nyitva az árlista, osztott elrendezés jön:
-  // a foglalás balra, az árlista jobbra. Így nem kell húzogatni ahhoz, hogy
-  // mindkettő látszódjon.
   const foglalasNyitva = Boolean(ujNyitva || szerkesztId || reszletId)
   const osztott = foglalasNyitva && arlista !== null
 
   const arlistaGombok = <ArlistaGombok ertek={arlista} onValt={setArlista} />
-  // A foglalási ablakok fejlécében szűkebb a hely, ott rövidebb felirattal.
   const arlistaGombokRovid = <ArlistaGombok ertek={arlista} onValt={setArlista} rovid />
 
   return (
@@ -215,11 +173,7 @@ export default function AppShell() {
       <aside className="oldalsav">{menuTartalom}</aside>
 
       <div className="fo">
-        {/* --- asztali fejléc --- */}
         <header className="fejlec">
-          {/* Tableten nincs oldalsáv (elvenné a helyet a naptártól): ott a
-              menü ezzel a gombbal nyílik, ugyanúgy, mint telefonon. Asztali
-              gépen ez a gomb nem látszik. */}
           <button className="hamburger fejlec-hamburger" onClick={() => setFiok(true)}
                   aria-label="Menü">
             <span /><span /><span />
@@ -256,7 +210,6 @@ export default function AppShell() {
           )}
         </header>
 
-        {/* --- mobil fejléc --- */}
         <header className="mobil-fejlec">
           <button className="hamburger" onClick={() => setFiok(true)} aria-label="Menü">
             <span /><span /><span />
@@ -277,19 +230,14 @@ export default function AppShell() {
           )}
         </header>
 
-        {/* A mobil fejlécbe már nem fér be a nézetváltó a hamburger, a
-            nyilak és a dátum mellé. Külön sávot kap alatta — ez látszik is,
-            nem kell megkeresni a menüben. */}
         {napiFejlec && (
           <div className="nezetvalto-sav">{nezetValto}{arlistaGombok}</div>
         )}
 
         <main className="tartalom">
           {oldal === 'attekintes' && (
-            /* A kapacitássávra kattintva átvisz arra a napra — az áttekintés
-               akkor hasznos, ha egy kattintással el lehet indulni belőle. */
             <DashboardPage
-              onNapra={(d) => { setNap(d.slice(0, 10)); setOldal('nap') }}
+              onNapra={(d) => { setNap(d.slice(0, 10)); setNezet('nap'); setOldal('nap') }}
               onMegnyit={megnyit}
               onOldal={(o) => setOldal(o)}
             />
@@ -305,10 +253,8 @@ export default function AppShell() {
                        onHetre={(d) => { setNap(d); setNezet('het') }} />
           )}
 
-          {/* Az alkalmazott ugyanezt az adatot látja, de nem szerkesztőben:
-              árlista és bérletlista. Nem ugyanaz a képernyő letiltva. */}
           {oldal === 'szolgaltatasok' && (teljesJogu ? <ServicesPage /> : <ServicesView />)}
-          {oldal === 'partnerek' && (teljesJogu
+          {oldal === 'partnerek' && (teljesJogu || user?.canEditCustomers
             ? <PartnersPage fokuszCeg={szerzodesCeg} />
             : <PartnersView fokuszCeg={szerzodesCeg} />)}
 
@@ -325,7 +271,6 @@ export default function AppShell() {
         </main>
       </div>
 
-      {/* Az új időpont gomb csak a napi nézeten van, mert csak ott van értelme. */}
       {napiFejlec && (
         <button className="fab" onClick={() => setUjNyitva(true)} aria-label="Új időpont">+</button>
       )}
@@ -351,7 +296,6 @@ export default function AppShell() {
                      arlistaGombok={arlistaGombokRovid} osztott={osztott} />
       )}
 
-      {/* Szerkesztés: ugyanaz az űrlap, csak kap egy azonosítót. */}
       {szerkesztId && (
         <BookingForm
           nap={nap}
@@ -363,8 +307,6 @@ export default function AppShell() {
         />
       )}
 
-      {/* A foglalási ablak FÖLÖTT lebeg, és nem modális: a mellé kattintás
-          nem zárja be, csak az X. Így írás közben végig látszik. */}
       {arlista && (
         <ArlistaPanel
           ful={arlista}
@@ -382,7 +324,7 @@ export default function AppShell() {
           bookingId={reszletId}
           fokusz={reszletFokusz}
           onBezar={() => { setReszletId(null); setReszletFokusz(undefined) }}
-          onSzerkeszt={() => { setSzerkesztId(reszletId); setReszletId(null) }}
+          onSzerkeszt={(id) => { setSzerkesztId(id); setReszletId(null) }}
           arlistaGombok={arlistaGombokRovid}
           osztott={osztott}
         />

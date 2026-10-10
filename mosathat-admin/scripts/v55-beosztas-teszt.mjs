@@ -1,4 +1,3 @@
-// v55: a beosztás számítása (src/lib/beosztas.ts), böngésző nélkül.
 import { build } from 'esbuild'
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -15,7 +14,6 @@ await build({ entryPoints: ['src/lib/beosztas.ts'], outfile: join(dir, 'b.mjs'),
 const { beoszt, beferMeg, negyedekbol, munkakNapra } = await import(join(dir, 'b.mjs'))
 
 const o = (h, m = 0) => h * 60 + m
-/** negyedórák tol–ig között, n hellyel */
 const nap = (tol, ig, n = 2) => {
   const k = []
   for (let t = tol; t < ig; t += 15) k.push({ tol: t, ig: t + 15, helyek: typeof n === 'function' ? n(t) : n })
@@ -58,8 +56,6 @@ console.log('\n=== 4) ami nem fér be: csúszás, maradék ===\n')
 console.log('\n=== 5) hány Start fér még be ===\n')
 ok('üres nap, 2 hely, 8 óra, 90 perces Start: 10', 10, beferMeg(nap(o(8), o(16)), [], 90))
 ok('egy 6 órás munkával: 6', 6, beferMeg(nap(o(8), o(16)), [M('X', 'RUGALMAS', o(8), o(16), 360)], 90))
-// (4 óra × 2 hely: helyenként kettő; az ötödikhez a két hely egyidejű maradéka
-// nem elég — óvatos számítás)
 ok('mostantól (12:00): 4', 4, beferMeg(nap(o(8), o(16)), [], 90, o(12)))
 ok('egy emberrel (1 hely): 5', 5, beferMeg(nap(o(8), o(16), 1), [], 90))
 ok('a kérdőjeles nem foglal (a sor végén van)... de a próbaautók utána jönnek', true,
@@ -74,7 +70,7 @@ console.log('\n=== 6) szünet, foglalásokból munkák ===\n')
   const f = (x) => ({ status: 'CONFIRMED', booking_type: 'LEADOS', service_date: ma, last_day: ma,
     start_at: null, drop_off_at: null, pick_up_at: null, deadline_at: null, planned_duration_minutes: 60, ...x })
   const { munkak, idoNelkul } = munkakNapra([
-    f({ id: 'V', booking_type: 'VAROS', start_at: '2026-10-08T07:00:00Z' }),          // 9:00 Budapest
+    f({ id: 'V', booking_type: 'VAROS', start_at: '2026-10-08T07:00:00Z' }),
     f({ id: 'L', drop_off_at: '2026-10-08T06:00:00Z', pick_up_at: '2026-10-08T13:00:00Z' }),
     f({ id: 'T', service_date: '2026-10-07', last_day: '2026-10-09', napi_perc: 100 }),
     f({ id: 'X', status: 'CANCELLED_BY_CUSTOMER' }),
@@ -88,9 +84,6 @@ console.log('\n=== 6) szünet, foglalásokból munkák ===\n')
 
 console.log('\n=== 7) kész autók (v59): nem fix blokk az érkezéstől a Kész vanig ===\n')
 {
-  // Öt autó reggel 8:30-kor érkezett, mind 16:00-kor lett „Kész van"-ra
-  // nyomva, mindegyik 90 perc munka. Két hely. Ez 7,5 óra munka 2 × 7,5 órán
-  // — befér; nem lehet belőle „8 hely" és túlfoglalás.
   const n = nap(o(8), o(17))
   const kesz = [1, 2, 3, 4, 5].map((i) => M(`K${i}`, 'KESZ', o(8, 30), o(16), 90))
   const e = beoszt(n, [...kesz, M('R', 'RUGALMAS', o(8), o(17), 60)])
@@ -114,8 +107,6 @@ console.log('\n=== 7) kész autók (v59): nem fix blokk az érkezéstől a Kész
 
 console.log('\n=== 8) kész autó sosem tűnik el (v60) ===\n')
 {
-  // 12 kész autó, mind 90 perc, 8:30-tól 16:00-ig, két hely: ez 18 óra munka
-  // 15 óra helyen — több, mint ami „elférne", de megtörtént. Mind látszik.
   const n = nap(o(8), o(17))
   const kesz = Array.from({ length: 12 }, (_, i) => M(`K${i}`, 'KESZ', o(8, 30), o(16), 90))
   const e = beoszt(n, kesz)
@@ -124,7 +115,6 @@ console.log('\n=== 8) kész autó sosem tűnik el (v60) ===\n')
     kesz.every((k) => e.darabok.filter((d) => d.id === k.id).reduce((s, d) => s + d.ig - d.tol, 0) === 90
       && e.darabok.filter((d) => d.id === k.id).every((d) => d.ig <= o(16))))
   ok('nincs figyelmeztetés', [0, 0, 0], [e.keses.size, e.maradt.size, e.tulfoglalt.length])
-  // a flottás léptető egy pillanat alatt zárta: Megérkezett = Kész van = 15:00
   const { munkak } = munkakNapra([
     { id: 'F', status: 'COMPLETED', booking_type: 'LEADOS', service_date: '2026-10-08', last_day: '2026-10-08',
       start_at: null, drop_off_at: null, pick_up_at: null, deadline_at: null, planned_duration_minutes: 45,

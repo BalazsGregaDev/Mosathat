@@ -1,5 +1,3 @@
-// v45: az Új időpont űrlapon a Mikor közvetlenül az ügyfél (telefonszám, cég)
-// alatt, a Jármű fölött.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })

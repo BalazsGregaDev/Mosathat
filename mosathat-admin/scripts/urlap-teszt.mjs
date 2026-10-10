@@ -1,12 +1,3 @@
-// A foglalási űrlap és a napi kártya ellenőrzése Playwrighttal.
-//
-// Futtatás:  npm run dev   (másik ablakban, 5180-as porton)
-//            node scripts/urlap-teszt.mjs
-//
-// Amit néz: a napi kártyán a rendszám a leghangsúlyosabb és ott a H-V
-// címke; az új időpont ablakában a szakaszok sorrendje, hogy nincs külön
-// kereső doboz, hogy a rendszám és a név mező is keres, és hogy az ablakot
-// nem lehet oldalra elhúzni.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -25,7 +16,6 @@ async function belep(p) {
   await p.waitForTimeout(2500)
 }
 
-// --- telefon ---
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 const p = await ctx.newPage()
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
@@ -43,7 +33,6 @@ console.log('=== 1) nap nézet: rendszám a leghangsúlyosabb ===\n')
     return {
       rendszamMeret: rs.fontSize, rendszamVastag: rs.fontWeight,
       idoMeret: id.fontSize, idoVastag: id.fontWeight, idoSzin: id.color,
-      // a rendszám legyen az ELSŐ elem a felső sorban
       elso: k.querySelector('.kartya-felso').firstElementChild.className,
       hv: [...document.querySelectorAll('.kartya')]
         .filter((x) => x.innerText.includes('H-V')).length,
@@ -78,7 +67,6 @@ await p.locator('.fab').click(); await p.waitForTimeout(2500)
   ok('a doboz nem szélesebb a képernyőnél', true, r.sw <= r.cw + 1)
 }
 
-// rendszám kereső
 await p.locator('#rendszam').fill('LM')
 await p.waitForTimeout(900)
 {
@@ -100,14 +88,12 @@ await p.waitForTimeout(900)
     ok('a lista bezárult', 0, r.lista)
   }
 }
-// név kereső
 await p.locator('#nev').fill('Nagy')
 await p.waitForTimeout(900)
 ok('a név mező is keres', true, (await p.locator('.talalatlista .talalatsor').count()) > 0)
 await p.screenshot({ path: '/tmp/e-uj.png' })
 await ctx.close()
 
-// --- asztali: árlista oszlopnév ---
 const ctx2 = await b.newContext({ viewport: { width: 1440, height: 950 } })
 const p2 = await ctx2.newPage()
 p2.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })

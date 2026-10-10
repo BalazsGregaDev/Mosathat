@@ -1,8 +1,3 @@
-// 1. fázis: cégek, szerződéses árak, Hozza/Viszi, kapacitás, sorrend.
-//
-// Igazi PostgreSQL-en (PGlite) fut, az összes migrációval. Minden üzleti
-// szabályt egyszer kipróbál, és megmondja, ha valami nem úgy viselkedik,
-// ahogy a migrációk fejlécében le van írva.
 import { adatbazis, tesztelo, TULAJ, ALK } from './_db.mjs'
 
 const db = await adatbazis()
@@ -16,7 +11,6 @@ const belep = (id) => db.exec(`select set_config('app.uid','${id}',false)`)
 
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
 
-// Egy jövőbeli kedd: munkanap, és nincs rajta semmi más.
 const { kedd } = await egy(`
   select (current_date + ((9 - extract(isodow from current_date)::int) % 7) + 14)::text as kedd`)
 const szerda = (await egy(`select ($1::date + 1)::text as d`, [kedd])).d
@@ -29,7 +23,6 @@ const foglal = async (adat) => (await egy(`select create_booking($1::jsonb) as i
 
 await belep(TULAJ)
 
-// =============================================================================
 console.log('=== A) Cégek: ugyanaz a cég nem jön létre kétszer ===\n')
 
 t.ok('Raiffeisen Bank Zrt. → raifeisenbank', 'raifeisenbank',
@@ -74,28 +67,22 @@ await foglal({ customer_name: 'Nagy Éva', customer_phone: '+36301110002',
   t.ok('és tudja, hány ügyfele van', 2, r[0]?.ugyfelek)
 }
 
-// A cég levehető a foglalásról, ha a felület kifejezetten üreset küld
 await db.query(`select update_booking($1::uuid, $2::jsonb)`, [b1, JSON.stringify({
   category: 'SZEMELYAUTO', package_id: csomag.START, service_date: kedd, drop_off_time: '09:00',
   company_id: null, company_name: '' })])
 t.ok('a cég le is vehető', null,
   (await egy(`select c.company_id from bookings b join customers c on c.id=b.customer_id where b.id=$1`, [b1])).company_id)
 
-// Átnevezés
 await db.query(`update companies set name = 'Raiffeisen Bank' where name_key = 'raifeisenbank'`)
 t.ok('a cég átnevezése minden ügyfelén átvezetődik', 'Raiffeisen Bank',
   (await egy(`select company_name from customers where name = 'Nagy Éva'`)).company_name)
 
-
-// =============================================================================
 console.log('\n=== B) Szerződés csomagonként, Flotta / Saját ===\n')
 
 const PRICES = [
-  // FLOTTA (céges autó)
   ['START', 'NORMAL', 'FLOTTA', 9000], ['START', 'NAGY', 'FLOTTA', 11000],
   ['PREMIUM', 'NORMAL', 'FLOTTA', 13000], ['PREMIUM', 'NAGY', 'FLOTTA', 16000],
   ['ELIT', 'NORMAL', 'FLOTTA', 21000], ['ELIT', 'NAGY', 'FLOTTA', 26000],
-  // SAJÁT (a dolgozó saját autója)
   ['START', 'NORMAL', 'SAJAT', 10000], ['PREMIUM', 'NORMAL', 'SAJAT', 14500],
   ['ELIT', 'NORMAL', 'SAJAT', 23000],
 ].map(([package_code, size, kind, price_huf]) => ({ package_code, size, kind, price_huf }))
@@ -134,8 +121,6 @@ const lista = async (pkg, cat, scope = 'TELJES') => (await egy(
 
 const f6 = await foglal({ customer_name: 'Sofőr Sanyi', customer_phone: '+36301110010',
   plate_raw: 'FLT-SUV', category: 'SUV', package_id: csomag.START, contract_kind: 'SAJAT' })
-// A jelölés megmarad (a cégnek van szerződése), csak az ár a listaár: így
-// a munkalapon vissza lehet váltani Flottára.
 t.ok('nincs megállapodott ár (Start, nagy, saját) → listaár, a jelölés marad',
   { p: await lista(csomag.START, 'SUV'), k: 'SAJAT' }, await ar(f6))
 
@@ -161,7 +146,6 @@ const f8 = await foglal({ customer_name: 'Sofőr Sanyi', customer_phone: '+36301
     contract_kind: 'FLOTTA', service_date: kedd })])
   t.ok('az űrlap élő ára ugyanaz, mint a mentetté', 17000, qb.r.price_huf)
   t.ok('és tudja, hogy van szerződés', true, !!qb.r.contract_id)
-  // A csomagválasztó minden kártyájára: a cég ára ugyanerre a méretre/fajtára
   const ck = qb.r.contract_prices
   t.ok('minden csomag szerződéses ára (normál, flotta)', PRICES
     .filter((x) => x.size === 'NORMAL' && (x.kind ?? 'FLOTTA') === 'FLOTTA')
@@ -169,15 +153,12 @@ const f8 = await foglal({ customer_name: 'Sofőr Sanyi', customer_phone: '+36301
     Object.entries(ck).map(([id, ar]) => [Object.keys(csomag).find((k) => csomag[k] === id), ar]).sort())
 }
 
-// A munkalapi egymezős módosítás nem duplázza a fuvart és nem veszíti el a szerződéses árat
 await q(`select patch_booking($1::uuid, $2::jsonb)`, [f8, JSON.stringify({ notes: 'kapuban hagyja' })])
 t.ok('módosítás után is: szerződéses ár + egyszer a fuvar', 17000, (await ar(f8)).p)
 
-// Felár a szerződéses alapra
 await q(`select patch_booking($1::uuid, $2::jsonb)`, [f1, JSON.stringify({ surcharge_pct: 20, surcharge_fix: 0 })])
 t.ok('+20% felár a szerződéses árra számol (13 000 → 15 600)', 15600, (await ar(f1)).p)
 
-// Régi alakú mentés (szint): a prémium a Premiumra és az Elitre is
 await q(`select save_contract($1::jsonb)`, [JSON.stringify({
   company_name: 'Régi Formátum Bt.', prices: [{ tier: 'PREMIUM', size: 'NORMAL', price_huf: 15000 }] })])
 {
@@ -201,8 +182,6 @@ t.ok('alkalmazott nem köthet szerződést', true,
     [JSON.stringify({ company_name: 'X Kft', prices: [] })]) ?? ''))
 await belep(TULAJ)
 
-
-// =============================================================================
 console.log('\n=== C) Hozza / Viszi, többnapos a dátumból, csomag kötelező ===\n')
 
 t.ok('csomag nélkül nem menthető', true,
@@ -249,11 +228,8 @@ t.ok('a csomag nem vehető le', true,
 t.ok('„Gumiápolás (külön kérve)" → „Gumiápolás"', 1,
   (await q(`select 1 from extras where name = 'Gumiápolás'`)).length)
 
-
-// =============================================================================
 console.log('\n=== D) Kapacitás: egy forrás, +20%, jelenlét szerint ===\n')
 
-// Három alkalmazott, ahogy a műhelyben: Gábor (már van), Péter, Laci.
 const P = '00000000-0000-4000-8000-000000000004'
 const L = '00000000-0000-4000-8000-000000000005'
 await db.exec(`
@@ -287,7 +263,6 @@ t.ok('2 ember hiányzik → 40%', Math.round(ures.capacity_minutes * 0.4), (awai
 await q(`select set_absence($1::jsonb)`, [JSON.stringify({ staff_id: L, day: pentek, kind: 'EGESZ_NAP' })])
 t.ok('3 ember hiányzik → 0', 0, (await kap(pentek)).capacity_minutes)
 
-// Részleges: csak Gábor megy el két órával zárás előtt (egy másik napon)
 const hetfo = (await egy(`select ($1::date + 6)::text as d`, [kedd])).d
 const alap = await kap(hetfo)
 const zaras = (await egy(`select max(ends)::text e from work_windows($1::date)`, [hetfo])).e
@@ -310,8 +285,6 @@ t.ok('alkalmazott más munkaidejét nem állíthatja', true,
     [JSON.stringify({ staff_id: P, day: hetfo, kind: 'EGESZ_NAP' })]) ?? ''))
 await belep(TULAJ)
 
-// Többnapos: v57 óta a még elérhető munkaidő arányában (kedd 16:00-tól,
-// csütörtök 10:00-ig — azokra a napokra kevesebb jut)
 {
   const perc = (await egy(`select planned_duration_minutes m from bookings where id=$1`, [t1])).m
   const terhek = []
@@ -335,8 +308,6 @@ await belep(TULAJ)
   t.ok('az autók száma = a napi listán élő foglalások', autok, r.cars)
 }
 
-
-// =============================================================================
 console.log('\n=== E) Saját sorrend, ami nem mozdul ===\n')
 
 const rend = async (d) => (await q(`select * from day_bookings($1::date)`, [d])).map((x) => x.day_bookings.id)

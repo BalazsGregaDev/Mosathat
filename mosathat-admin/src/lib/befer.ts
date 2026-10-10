@@ -1,84 +1,50 @@
 import { beferMeg, beoszt, PUFFER_PERC, type Eredmeny, type Munka, type Negyed } from './beosztas'
-
-// ---------------------------------------------------------------------------
-//  Befér-e egy új autó — a beosztásra építve (lib/beosztas.ts)
-//
-//  Ugyanaz a számítás szolgálja ki:
-//    - az Új időpont űrlap „Befér-e" sorát (fejlesztői fiók, próba),
-//    - az Időpontfoglalás modult (a leendő publikus oldal): a naptár színeit
-//      és a választható időpontokat.
-//
-//  Az elv: kiszámoljuk a nap beosztását az új autó NÉLKÜL és VELE. Ha vele
-//  senki nem csúszik többet, semmi nem marad ki, és nincs túlfoglalt
-//  negyedóra (megvárósnál), akkor befér.
-//
-//  Az új autó ugyanúgy sorra kerül, mint a többi (aminek előbb kell
-//  elkészülnie, az előbb) — ezért nézzük meg, rontja-e a többiekét.
-// ---------------------------------------------------------------------------
+import { idotartam, percOra } from './format'
 
 export interface Ellenorzes {
   befer: boolean
-  /** Mikorra lesz kész az új autó (perc éjféltől), ha ma elkészül. */
   kesz: number | null
-  /** Mi romlana el, ha befogadnánk — emberi mondatokban. */
   gondok: string[]
 }
 
-/** 495 → "8:15" */
-export function ora(perc: number): string {
-  return `${Math.floor(perc / 60)}:${String(Math.round(perc % 60)).padStart(2, '0')}`
-}
+const percSzoveg = (p: number) => idotartam(Math.round(p))
 
-function percSzoveg(p: number): string {
-  const r = Math.round(p)
-  if (r < 60) return `${r} perc`
-  return r % 60 === 0 ? `${r / 60} óra` : `${Math.floor(r / 60)} óra ${r % 60} perc`
-}
-
-/** Az új autó hatása a napra. */
-export function ujMunkaEllenoriz(negyedek: Negyed[], munkak: Munka[], uj: Munka,
+export function ujMunkaEllenoriz(negyedek: Negyed[], munkak: Munka[], ujMunka: Munka,
                                  most: number | null = null, alap?: Eredmeny): Ellenorzes {
+  const uj = most !== null && ujMunka.fajta !== 'FIX' && ujMunka.tol < most ? { ...ujMunka, tol: most } : ujMunka
   const elotte = alap ?? beoszt(negyedek, munkak, most)
   const utana = beoszt(negyedek, [...munkak, uj], most)
   const nev = new Map(munkak.map((m) => [m.id, m.cimke]))
   const gondok: string[] = []
 
-  // Tűréshatár (PUFFER_PERC, 10 perc): ennyi csúszás még nem gond. Gond az,
-  // ami a határon túlra kerül, vagy ami már túl volt, és még ennél is többet romlik.
-  const rosszabb = (elotte_: number, utana_: number) =>
-    (utana_ > PUFFER_PERC && elotte_ <= PUFFER_PERC) || utana_ - elotte_ > PUFFER_PERC
+  const rosszabb = (regi: number, uj2: number) =>
+    (uj2 > PUFFER_PERC && regi <= PUFFER_PERC) || uj2 - regi > PUFFER_PERC
 
-  // az új autó maga
   const maradt = utana.maradt.get(uj.id)
   if (maradt && maradt > PUFFER_PERC) gondok.push(`Ezen a napon nem készülne el: ${percSzoveg(maradt)} munka nem fér bele.`)
   const keses = utana.keses.get(uj.id)
-  if (keses && keses > PUFFER_PERC && uj.fajta !== 'FIX') gondok.push(`${percSzoveg(keses)}-cel később lenne kész, mint ${ora(uj.hatarido)}.`)
+  if (keses && keses > PUFFER_PERC) gondok.push(`${percSzoveg(keses)}-cel később lenne kész, mint ${percOra(uj.hatarido)}.`)
 
-  // a meglévők: ki csúszna miatta többet
   for (const [id, p] of utana.keses) {
     if (id === uj.id) continue
-    const elotte_ = elotte.keses.get(id) ?? 0
-    if (rosszabb(elotte_, p)) gondok.push(`${nev.get(id) ?? 'Egy autó'} ${percSzoveg(p - elotte_)}-cel később lenne kész.`)
+    const regi = elotte.keses.get(id) ?? 0
+    if (rosszabb(regi, p)) gondok.push(`${nev.get(id) ?? 'Egy autó'} ${percSzoveg(p - regi)}-cel később lenne kész.`)
   }
   for (const [id, p] of utana.maradt) {
     if (id === uj.id) continue
-    const elotte_ = elotte.maradt.get(id) ?? 0
-    if (rosszabb(elotte_, p)) gondok.push(`${nev.get(id) ?? 'Egy autó'}: ${percSzoveg(p - elotte_)} munka nem férne bele a napba.`)
+    const regi = elotte.maradt.get(id) ?? 0
+    if (rosszabb(regi, p)) gondok.push(`${nev.get(id) ?? 'Egy autó'}: ${percSzoveg(p - regi)} munka nem férne bele a napba.`)
   }
 
-  // megvárós: nincs szabad hely az idejére
-  const ujTul = utana.tulfoglalt.filter((t) => !elotte.tulfoglalt.includes(t))
-  if (ujTul.length > 0) {
-    gondok.push(`${ora(ujTul[0])}–${ora(ujTul[ujTul.length - 1] + 15)} között nincs szabad hely.`)
+  const tele = uj.fajta !== 'FIX' ? []
+    : negyedek.filter((n) => n.tol < uj.tol + uj.perc && uj.tol < n.ig && utana.tulfoglalt.includes(n.tol))
+  if (tele.length > 0) {
+    gondok.push(`${percOra(tele[0].tol)}–${percOra(tele[tele.length - 1].ig)} között nincs szabad hely.`)
   }
 
   return { befer: gondok.length === 0, kesz: utana.kesz.get(uj.id) ?? null, gondok }
 }
 
-/**
- * Időszak, amikor nem kínálunk kezdést / hozást (pl. ebédszünet: 11:15–12:45,
- * a két végével együtt). Perc éjféltől.
- */
 export interface TiltottSav {
   tol: number
   ig: number
@@ -86,16 +52,11 @@ export interface TiltottSav {
 
 const tiltottE = (t: number, tiltott: TiltottSav[]) => tiltott.some((s) => t >= s.tol && t <= s.ig)
 
-/** Egy választható időpont: kezdés (megvárja) vagy hozás (itt hagyja), és mikorra kész. */
 export interface Lehetoseg {
   tol: number
   kesz: number | null
 }
 
-/**
- * Megvárja: mely kezdési időpontokban fér be egy `perc` hosszú munka.
- * A kezdés nem lehet a múltban (ma), és a munkának zárásig végeznie kell.
- */
 export function varosKezdesek(negyedek: Negyed[], munkak: Munka[], perc: number,
                               most: number | null = null, lepes = 30,
                               tiltott: TiltottSav[] = []): Lehetoseg[] {
@@ -114,10 +75,6 @@ export function varosKezdesek(negyedek: Negyed[], munkak: Munka[], perc: number,
   return ki
 }
 
-/**
- * Itt hagyja: mely hozási időpontokban fér be (zárásig elkészül), és
- * mikorra várható, hogy kész.
- */
 export function leadosHozasok(negyedek: Negyed[], munkak: Munka[], perc: number,
                               most: number | null = null, lepes = 30,
                               tiltott: TiltottSav[] = []): Lehetoseg[] {
@@ -138,13 +95,6 @@ export function leadosHozasok(negyedek: Negyed[], munkak: Munka[], perc: number,
 
 export type NapAllapot = 'szabad' | 'keves' | 'tele' | 'zarva'
 
-/**
- * A naptár egy napjának színe az adott kérésre.
- *   zárva    nincs munkaidő
- *   tele     egy időpont sem fér be
- *   kevés    egy-két lehetőség, vagy már csak egy ilyen autó fér be
- *   szabad   egyébként
- */
 export function napAllapot(negyedek: Negyed[], munkak: Munka[], perc: number,
                            tipus: 'VAROS' | 'LEADOS', most: number | null = null,
                            tiltott: TiltottSav[] = []): {

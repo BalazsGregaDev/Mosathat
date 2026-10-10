@@ -1,29 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
+import { hibaSzoveg } from '../../lib/format'
 import {
   ROLE_LABEL, ROLE_LEIRAS,
   type NewStaffInput, type RolePermission, type StaffRole, type StaffRow,
 } from '../../lib/types'
 import JelszoModal from '../common/JelszoModal'
 import Csuszka from '../common/Csuszka'
-
-// ---------------------------------------------------------------------------
-//  Felhasználók
-//
-//  Három szerepkör van, és a sorrend nem véletlen:
-//
-//    Fejlesztő   – aki a rendszert építi és karbantartja. Mindenhez hozzáfér,
-//                  és ide kerülnek később a fejlesztést segítő funkciók.
-//                  Ezért van külön a tulajtól: két különböző munka.
-//    Tulajdonos  – a műhely gazdája. Az alkalmazáson belül mindenhez hozzáfér,
-//                  és alkalmazottat vehet fel.
-//    Alkalmazott – a napi munkához mindent tud. Az üzleti számokhoz és a
-//                  beállításokhoz nem fér hozzá.
-//
-//  Amit a képernyő NEM tesz: nem ő dönti el, ki mit tehet. A tiltás az
-//  adatbázisban van. Ha valaki megkerüli ezt a képernyőt, ugyanúgy nemet kap.
-// ---------------------------------------------------------------------------
 
 export default function UsersPage() {
   const { data, user, refreshUser } = useApp()
@@ -36,19 +20,15 @@ export default function UsersPage() {
   const betolt = useCallback(() => {
     Promise.all([data.listStaff(), data.listRolePermissions()])
       .then(([s, j]) => { setSorok(s); setJogok(j); setHiba(null) })
-      .catch((e) => setHiba(e instanceof Error ? e.message : String(e)))
-    // A saját jogosultság is változhatott: ha most kapcsolta be magának, a
-    // többi képernyőnek is tudnia kell róla, különben újratöltésig nem látszik.
-    void refreshUser()
+      .catch((e) => setHiba(hibaSzoveg(e)))
+    refreshUser().catch((e) => setHiba(hibaSzoveg(e)))
   }, [data, refreshUser])
 
   useEffect(betolt, [betolt])
 
-  // A fejlesztő mindenkit kezelhet. A tulaj csak alkalmazottat — a fejlesztői
-  // és tulajdonosi hozzáférés a rendszer gazdáját érinti, nem a napi munkát.
   const fejleszto = user?.role === 'SUPERADMIN'
   function kezelheto(s: StaffRow) {
-    if (s.id === user?.id) return false          // magadat nem lövöd ki
+    if (s.id === user?.id) return false
     if (fejleszto) return true
     return s.role === 'STAFF'
   }
@@ -56,19 +36,12 @@ export default function UsersPage() {
   if (hiba) return <div className="oldal"><div className="hibauzenet">{hiba}</div></div>
   if (!sorok) return <div className="oldal"><div className="betolt">Betöltés…</div></div>
 
-  // A fejlesztői hozzáférés a rendszert karbantartó fiók, nem a vállalkozás
-  // dolgozója. A tulajdonos nem tudja kezelni, nem is tartozik rá — ezért
-  // nem is látja: sem a listában, sem a szerepkörök magyarázatában. Egy sor,
-  // amin semmit nem lehet csinálni, csak kérdést szül.
   const lathato = (s: StaffRow) => fejleszto || s.role !== 'SUPERADMIN'
   const meglevo = sorok.filter((s) => !s.meghivo && lathato(s))
   const meghivok = sorok.filter((s) => s.meghivo && lathato(s))
   const szerepek: StaffRole[] = fejleszto
     ? ['SUPERADMIN', 'TULAJDONOS', 'STAFF']
     : ['TULAJDONOS', 'STAFF']
-  // A tulajdonos csak az alkalmazottak jogát állítja. A sajátját és a
-  // fejlesztőit nem — ezt az adatbázis is így tartja be, a lista csak nem
-  // kínál fel olyan kapcsolót, amire nemet kapna.
   const allithatoSzerepek: StaffRole[] = fejleszto
     ? ['SUPERADMIN', 'TULAJDONOS', 'STAFF']
     : ['STAFF']
@@ -83,8 +56,6 @@ export default function UsersPage() {
         </button>
       </div>
 
-      {/* Nem hibaüzenet, hanem az, ami a szokásostól eltért — ezt el kell
-          olvasni, mert a jelszó máshogy működik ilyenkor. */}
       {uzenet && (
         <div className="figyelmeztet" style={{ marginBottom: 'var(--t4)' }}>
           <span>{uzenet}</span>
@@ -93,9 +64,6 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* Szerepkör szintű jog. A táblázat FÖLÖTT áll, mert ez a kiindulás: a
-          soroknál csak az van eltárolva, aki ettől eltér. Fordított sorrendben
-          a sorokban látott „Be" megmagyarázhatatlan volna. */}
       <div className="panel panelek-szeles" style={{ marginBottom: 'var(--t4)' }}>
         <h3>Ügyfelek, cégek és bérletesek szerkesztése</h3>
         <div className="panel-torzs">
@@ -162,7 +130,10 @@ export default function UsersPage() {
                       <td className="halk">{s.email}</td>
                       <td>
                         <button className="btn btn-csendes btn-kicsi"
-                                onClick={() => void data.deleteInvite(s.email!).then(betolt)}>
+                                onClick={() => {
+                                  data.deleteInvite(s.email!).then(betolt)
+                                    .catch((e) => setHiba(hibaSzoveg(e)))
+                                }}>
                           Visszavonás
                         </button>
                       </td>
@@ -200,7 +171,6 @@ export default function UsersPage() {
   )
 }
 
-/** Egy szerepkör kapcsolója. Mindenkire hat, akinél nincs külön beállítás. */
 function SzerepkorJog({ role, be, onValtozas }: {
   role: StaffRole
   be: boolean
@@ -217,7 +187,7 @@ function SzerepkorJog({ role, be, onValtozas }: {
       setHiba(null)
       onValtozas()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
       setDolgozik(false)
     }
@@ -255,13 +225,12 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
       setHiba(null)
       onValtozas()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
       setDolgozik(false)
     }
   }
 
-  // A tulaj alkalmazotti szerepkört adhat, a fejlesztő bármit.
   const valaszthato: StaffRole[] = fejleszto
     ? ['SUPERADMIN', 'TULAJDONOS', 'STAFF']
     : ['STAFF']
@@ -289,8 +258,6 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
         ) : (
           <span className="cimke-pill" data-r={s.role}>{ROLE_LABEL[s.role]}</span>
         )}
-        {/* Közös fiók (pl. a műhely tabletje): alkalmazotti belépés, de nem
-            egy ember — nem számít az alkalmazottak közé a kapacitásban. */}
         {s.role === 'STAFF' && s.id && (kezelheto ? (
           <label className="kozos-fiok">
             <input type="checkbox" checked={Boolean(s.kozos)} disabled={dolgozik}
@@ -306,9 +273,6 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
           : <span className="cimke-pill" data-r="tiltott">Kikapcsolva</span>}
       </td>
 
-      {/* Fiókra szóló kivétel. Amíg nincs, a szerepkörét követi — ezt ki is
-          írjuk, különben úgy tűnne, mint egy itt beállított érték, és a
-          szerepkör kapcsolójának a hatása érthetetlen lenne. */}
       <td>
         {kezelheto ? (
           <>
@@ -339,8 +303,6 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
               {s.active ? 'Kikapcsolás' : 'Bekapcsolás'}
             </button>
           )}
-          {/* Csak annak, akinek már van fiókja: a meghívott a saját maga
-              által megadott jelszóval lép be először. */}
           {kezelheto && s.id && (
             <button className="btn btn-kicsi btn-csendes" disabled={dolgozik}
                     onClick={() => setJelszo(true)}>
@@ -349,8 +311,6 @@ function Sor({ s, en, kezelheto, fejleszto, onValtozas }: {
           )}
         </div>
 
-        {/* A .fedo fixen pozicionált, tehát a táblázatból kilépve, a képernyő
-            fölött jelenik meg — nem a cellán belül szorong. */}
         {jelszo && s.id && (
           <JelszoModal
             kinek={s.full_name}
@@ -381,20 +341,22 @@ function UjFelhasznalo({ fejleszto, onBezar, onKesz }: {
     : ['STAFF']
 
   async function ment() {
+    if (megy) return
     setMegy(true)
     try {
       onKesz(await data.createStaff(f))
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
       setMegy(false)
     }
   }
 
-  const keszEnged = f.email.includes('@') && f.password.length >= 6
+  const keszEnged = f.email.includes('@') && f.password.length >= 8
+  const piszkos = Boolean(f.full_name || f.email || f.password)
 
   return (
     <div className="fedo" role="presentation"
-         onMouseDown={(e) => e.target === e.currentTarget && onBezar()}>
+         onMouseDown={(e) => { if (e.target === e.currentTarget && !piszkos && !megy) onBezar() }}>
       <div className="lap" role="dialog" aria-modal="true" aria-label="Új felhasználó">
         <div className="lap-fej">
           <h2>Új felhasználó</h2>
@@ -420,15 +382,11 @@ function UjFelhasznalo({ fejleszto, onBezar, onKesz }: {
             <input className="beviteli" type="text" value={f.password}
                    onChange={(e) => setF({ ...f, password: e.target.value })} />
             <small>
-              Legalább 6 karakter. Add oda neki, és kérd meg, hogy változtassa meg.
+              Legalább 8 karakter. Add oda neki, és kérd meg, hogy változtassa meg.
               Ez a mező szándékosan látszik: úgyis le kell írnod valahova.
             </small>
           </label>
 
-          {/* Ez a legvalószínűbb elakadás, ezért itt áll, nem a hibaüzenetben.
-              A Supabase beépített levélküldője óránként két levelet enged ki,
-              és csak a projekt tagjainak kézbesít — dolgozók felvételére eleve
-              alkalmatlan. */}
           <p className="halk" style={{ fontSize: 'var(--m-xs)', lineHeight: 1.5 }}>
             Ha „email rate limit exceeded" hibát kapsz: a Supabase beépített
             levélküldője óránként két levelet enged ki. Kapcsold ki az e-mailes

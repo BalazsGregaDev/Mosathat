@@ -4,30 +4,6 @@ import { createPortal } from 'react-dom'
 import { useApp } from '../../state/AppContext'
 import type { CompanyCandidate, CompanyHit } from '../../lib/types'
 
-// ---------------------------------------------------------------------------
-//  A Cég mező és a „hasonló nevű cég" kérdés
-//
-//  A cég nem egyszerű szöveg. Ha egy cégnek öt autója van, öt sofőrrel, akkor
-//  az öt ügyfél UGYANAHHOZ a céghez tartozik — a szerződéses ár, a fuvardíj
-//  és a cég szerinti nézet is ezen múlik. Ezért:
-//
-//  1. A mező keres, az első betűtől. A találatra kattintva a foglalás a
-//     MEGLÉVŐ céghez kötődik — nem egy újabb, ugyanúgy írt szöveghez.
-//
-//  2. Ha valaki gépel, és nem választ, az új cégnév lesz. Mentés előtt az
-//     adatbázis összeveti a meglévőkkel, kisbetűsítve, ékezet, írásjel,
-//     cégforma és dupla betű nélkül:
-//
-//        ugyanaz a kulcs   → ugyanaz a cég, csendben ahhoz kötjük
-//        nagyon hasonló    → rákérdezünk: „Erre gondoltál?"
-//        semmi hasonló     → új cég lesz
-//
-//     A hasonlót nem vonjuk össze magunktól: két tényleg különböző cégnek
-//     is lehet hasonló neve, és egy rossz összevonás rosszabb, mint egy
-//     kérdés.
-// ---------------------------------------------------------------------------
-
-/** A mező értéke: a kiválasztott cég (id), vagy csak a beírt név (id = null). */
 export interface CegErtek {
   id: string | null
   nev: string
@@ -46,24 +22,25 @@ export function CegValaszto({
   onValt: (uj: CegErtek) => void
   inputId?: string
   disabled?: boolean
-  /** A mezőből kilépéskor (pl. a munkalapon itt ment). */
   onKilep?: () => void
 }) {
   const { data } = useApp()
   const [talalatok, setTalalatok] = useState<CompanyHit[]>([])
   const [nyitva, setNyitva] = useState(false)
-  const idozito = useRef<number | undefined>(undefined)
 
-  // Keresés gépelés közben, 200 ms csend után. Kiválasztott cégnél nem
-  // keresünk: ott már tudjuk, melyik az.
   useEffect(() => {
-    window.clearTimeout(idozito.current)
     const q = ertek.nev.trim()
     if (!nyitva || ertek.id || q.length < 1) { setTalalatok([]); return }
-    idozito.current = window.setTimeout(async () => {
-      try { setTalalatok(await data.searchCompanies(q, 6)) } catch { setTalalatok([]) }
+    let el = true
+    const idozito = window.setTimeout(async () => {
+      try {
+        const r = await data.searchCompanies(q, 6)
+        if (el) setTalalatok(r)
+      } catch {
+        if (el) setTalalatok([])
+      }
     }, 200)
-    return () => window.clearTimeout(idozito.current)
+    return () => { el = false; window.clearTimeout(idozito) }
   }, [ertek.nev, ertek.id, nyitva, data])
 
   const valaszt = (h: CompanyHit) => {
@@ -81,8 +58,6 @@ export function CegValaszto({
         disabled={disabled}
         autoComplete="off"
         spellCheck={false}
-        // Gépeléssel a kiválasztás elengedődik: amit most írnak, az már nem
-        // feltétlenül az a cég.
         onChange={(e) => { onValt({ id: null, nev: e.target.value }); setNyitva(true) }}
         onFocus={() => setNyitva(true)}
         onBlur={() => { setNyitva(false); onKilep?.() }}
@@ -92,7 +67,6 @@ export function CegValaszto({
         }}
       />
 
-      {/* Mit fog jelenteni a mentés — hogy ne legyen meglepetés. */}
       {ertek.nev.trim() !== '' && (
         <small className={`ceg-allapot ${ertek.id ? 'meglevo' : 'uj'}`}>
           {ertek.id ? 'meglévő cég' : 'új cég lesz, ha nincs ilyen'}
@@ -102,8 +76,6 @@ export function CegValaszto({
       {nyitva && talalatok.length > 0 && (
         <div className="talalatlista">
           {talalatok.map((h) => (
-            // mousedown + preventDefault: a mező nem veszíti el a fókuszt a
-            // kattintás előtt, így a lista nem tűnik el a kattintás alól.
             <button key={h.id} type="button" className="talalatsor"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => valaszt(h)}>
@@ -119,20 +91,6 @@ export function CegValaszto({
     </div>
   )
 }
-
-
-// ---------------------------------------------------------------------------
-//  Mentés előtti egyeztetés
-// ---------------------------------------------------------------------------
-//
-//    const [cegAblak, cegEgyeztet] = useCegEgyeztetes()
-//    const ceg = await cegEgyeztet(ertek)
-//    if (ceg === null) return             // a felhasználó meggondolta magát
-//    … mentés ceg.id-vel vagy ceg.nev-vel …
-//
-//  Ha a cég ki van választva, vagy üres, nincs mit egyeztetni: rögtön
-//  visszaadja. Ha csak név van, megkérdezi az adatbázist, és szükség esetén
-//  a felhasználót is.
 
 export function useCegEgyeztetes(): [React.ReactNode, (e: CegErtek) => Promise<CegErtek | null>] {
   const { data } = useApp()

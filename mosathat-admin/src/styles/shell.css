@@ -1,12 +1,8 @@
-/* A keret: oldalsáv, fejléc, mobil navigáció. */
-
 .keret {
   display: grid;
   grid-template-columns: var(--oldalsav) 1fr;
   height: 100%;
 }
-
-/* --- oldalsáv --------------------------------------------------------------- */
 
 .oldalsav {
   background: var(--sotet);
@@ -33,11 +29,6 @@
   text-transform: uppercase;
   margin-top: 3px;
 }
-
-/* A min-height: 0 nem elhagyható. Oszlopirányú flexben egy elem alapból nem
-   lehet kisebb a saját tartalmánál (min-height: auto), tehát nem is tud
-   görgetni: a magassága a tartalomhoz nő, és a szülő levágja az alját.
-   Pontosan ez a „hosszú lista alja nem érhető el" hiba. */
 .menu { padding: var(--t3) var(--t2); flex: 1; min-height: 0; overflow-y: auto; }
 
 .menu button {
@@ -99,8 +90,6 @@
   letter-spacing: .06em; text-transform: uppercase;
 }
 
-/* --- fő terület ------------------------------------------------------------- */
-
 .fo { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 
 .fejlec {
@@ -138,34 +127,14 @@
 
 .tartalom {
   flex: 1;
-  /* Enélkül a görgetés elromlik, amint a tartalom menet közben megnő —
-     például ha egy kártyán belül lenyílik a „További jármű" űrlap. Oszlopos
-     flexben az elem alapból nem mehet a saját tartalma alá (min-height:
-     auto), ezért nem görgetni kezd, hanem MEGNŐ, a .fo pedig levágja az
-     alját: felfelé nem enged a lista tetejéig, lefelé viszont van üres hely.
-     A min-height: 0 mondja meg, hogy a doboz maradhat kisebb — és akkor
-     azon belül lesz görgetés. */
   min-height: 0;
   overflow-y: auto;
-  overflow-x: hidden;      /* a tartalom se tudjon oldalra csúszni */
-  /* A görgetés a lista végén ne adódjon tovább az oldalnak: iPhone-on ez a
-     „lap egésze elmozdul, aztán visszaugrik" mozgás. */
+  overflow-x: hidden;
   overscroll-behavior-y: contain;
   padding: var(--t5);
 }
 
-/* --- mobil ------------------------------------------------------------------ */
-
 .mobil-fejlec, .fab, .fiok, .fiok-hatter, .fejlec-hamburger { display: none; }
-
-/* --- tablet: a menü a hamburger mögött ----------------------------------------
-   Érintőképernyőn (tablet, fekvő helyzetben is) az oldalsáv eltűnik, és a
-   menü a fejléc bal szélén lévő gombbal nyílik — mint telefonon. Az oldalsáv
-   232 px-t venne el a naptártól, a tabletet pedig a műhelyben a NAPI LISTA
-   miatt nézik, nem a menüért. A fejléc maga (napváltó, nézetváltó, árlista,
-   Új időpont) marad: arra a szélességre még kényelmesen elfér.
-
-   Asztali gépen (egér) a 900 px fölötti szélességen marad az oldalsáv. */
 @media (hover: none) and (pointer: coarse) and (min-width: 901px) {
   .keret { grid-template-columns: 1fr; }
   .oldalsav { display: none; }

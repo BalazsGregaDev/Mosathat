@@ -1,19 +1,3 @@
-// A v37 2. fázisának ellenőrzése Playwrighttal: az új időpont űrlapja és a
-// munkalap.
-//
-// Futtatás:  npm run dev -- --port 5180   (másik ablakban)
-//            node scripts/fazis2-teszt.mjs
-//
-// Amit néz:
-//   1. Új időpont: a Start alapból ki van választva, nincs Ülések mező,
-//      Hozza / Viszi nappal és órával, többnapos jelzés, narancs extra.
-//   2. Cég: a kereső a meglévő céget adja; szerződéses cégnél megjelenik a
-//      Flotta / Saját, és az ár a választással együtt változik.
-//   3. Elírt cégnév mentéskor: „Erre a cégre gondoltál?"
-//   4. Munkalap: a sorok sorrendje, a Cég átírása, a Hozza / Viszi.
-//   5. „Kész van": a munkalistás ablak; a Mégse nem csinál semmit, a Kész van csak az
-//      állapotot váltja — a lista nem tölt újra és nem rendeződik át.
-//   6. Telefonon és tableten az ablak a látható képernyőn belül marad.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -40,7 +24,6 @@ async function idopontok(p) {
 }
 const osszeg = (p) => p.locator('.lap-lab .osszeg .ertek').innerText()
 
-// =============================================================================
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 const p = await ctx.newPage()
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
@@ -74,7 +57,6 @@ await p.waitForTimeout(300)
   globalThis.VISZI = d.toISOString().slice(0, 10)
 }
 
-// extra: narancs
 await p.locator('.osszecsuk').filter({ hasText: 'Egyéb szolgáltatások' }).click()
 await p.waitForTimeout(300)
 await p.locator('.extra').first().click()
@@ -83,7 +65,7 @@ await p.waitForTimeout(300)
   const bg = await p.locator('.extra[data-aktiv="true"]').first()
     .evaluate((e) => getComputedStyle(e).backgroundColor)
   ok('a kiválasztott extra narancs hátterű', 'rgb(253, 238, 221)', bg)
-  await p.locator('.extra[data-aktiv="true"]').first().click()   // vissza
+  await p.locator('.extra[data-aktiv="true"]').first().click()
   await p.waitForTimeout(300)
   await p.locator('.osszecsuk').filter({ hasText: 'Egyéb szolgáltatások' }).click()
   await p.waitForTimeout(300)
@@ -144,8 +126,6 @@ await p.waitForTimeout(1500)
     [...document.querySelector('.lap-torzs .szakasz').querySelectorAll(':scope > .adatsor')]
       .map((e) => e.firstElementChild.textContent.trim()))
   console.log(`         ${JSON.stringify(cimkek)}`)
-  // v38: szerződéses cégnél a Cég alatt ott az Igazolólap sora is.
-  // v43: a Viszi alatt a Kérdőjeles kapcsoló.
   ok('a sorok sorrendje', ['Név', 'Telefon', 'Cég', 'Igazolólap', 'Rendszám', 'Autó', 'Hozza', 'Viszi', 'Kérdőjeles', 'Méret',
     'Jármű típus', 'Csomag', 'Egyéb szolgáltatás', 'Terjedelem', 'Típus', 'Munkaóra'], cimkek)
   const ceg = await p.locator('.adatsor').filter({ hasText: /^Cég/ }).first().innerText()
@@ -156,7 +136,6 @@ await p.waitForTimeout(1500)
   const viszi = await p.locator('input[aria-label="Viszi napja"]').inputValue()
   ok('a Viszi napja a beírt nap', VISZI, viszi)
 
-  // Viszi órája: telefonon a saját időválasztóval (v43) — óra, majd perc → mentés
   await p.locator('button[aria-label="Viszi órája"]').click()
   await p.locator('.ido-ablak .ido-orak button').filter({ hasText: /^16$/ }).click()
   await p.locator('.ido-ablak .ido-percek button').filter({ hasText: ':30' }).click()
@@ -165,7 +144,6 @@ await p.waitForTimeout(1500)
 }
 await p.locator('.lap-fej .bezar').click(); await p.waitForTimeout(800)
 
-// Cég átírása egy foglaláson, amin nincs cég
 await p.locator('.kartya').filter({ hasText: 'ABC-123' }).first().locator('.kartya-nyit').click()
 await p.waitForTimeout(1500)
 {
@@ -180,7 +158,6 @@ await p.waitForTimeout(1500)
 
 console.log('\n=== 5) „Kész van": rákérdez, nem tölt újra ===\n')
 {
-  // A munkalapon: Megérkezett (nem kérdez) → Kész van (kérdez)
   const lab = p.locator('.munkalap-lab')
   if (await lab.getByRole('button', { name: 'Megérkezett' }).count()) {
     await lab.getByRole('button', { name: 'Megérkezett' }).click()
@@ -189,7 +166,6 @@ console.log('\n=== 5) „Kész van": rákérdez, nem tölt újra ===\n')
   ok('a Megérkezett nem kérdez', 0, await p.locator('.kerdes-ablak').count())
   await lab.getByRole('button', { name: 'Kész van' }).click()
   await p.waitForTimeout(400)
-  // v49: a kérdés a munkalistás „Kész van?" ablak
   ok('„Kész van?" ablak', true, (await p.locator('.kesz-ablak h2').innerText()).startsWith('Kész van?'))
   ok('Mégse / Kész van gomb', 'Mégse', (await p.locator('.kerdes-gombok button').allInnerTexts())[0])
   await p.locator('.kerdes-gombok button').filter({ hasText: 'Mégse' }).click()
@@ -204,14 +180,12 @@ console.log('\n=== 5) „Kész van": rákérdez, nem tölt újra ===\n')
   await p.locator('.kerdes-gombok .btn-fo').click()
   await p.waitForTimeout(1200)
   ok('az Igen után: Átvette a következő', 1, await lab.getByRole('button', { name: 'Átvette' }).count())
-  // v40: szerződéses cég autója — Kész van után megnyílik az igazolólap sora.
   ok('szerződéses cégnél megnyílt az igazolólap sora', 1, await p.locator('[aria-label="Igazolólap sora"]').count())
   await p.locator('[aria-label="Igazolólap sora"]').getByRole('button', { name: 'Mégse' }).click()
   await p.waitForTimeout(400)
 }
 await p.locator('.lap-fej .bezar').click(); await p.waitForTimeout(1200)
 
-// A kártyán: a sorrend és a „Betöltés…" figyelése
 {
   await p.evaluate(() => {
     window.__betolt = 0
@@ -235,12 +209,10 @@ await p.locator('.lap-fej .bezar').click(); await p.waitForTimeout(1200)
   await p.locator('.kerdes-gombok .btn-fo').click()
   await p.waitForTimeout(1500)
   const utana = await p.locator('.kartya .rendszam').allInnerTexts()
-  // Az állapot felirata nincs a kártyán: a kártya bal szélének színe mondja.
   ok(`${rsz}: csak az állapota változott`, 'READY',
     await k2.getAttribute('data-allapot'))
   ok('a sorrend nem változott', elotte, utana)
   ok('nem jelent meg a „Betöltés…"', 0, await p.evaluate(() => window.__betolt))
-  // v40: ha szerződéses cég autója volt, megnyílt az igazolólap sora — bezárjuk.
   if (await p.locator('[aria-label="Igazolólap sora"]').count()) {
     await p.locator('[aria-label="Igazolólap sora"]').getByRole('button', { name: 'Mégse' }).click()
     await p.waitForTimeout(400)
@@ -262,7 +234,6 @@ await p.waitForTimeout(1200)
 await p.screenshot({ path: '/tmp/f2-munkalap.png' })
 await ctx.close()
 
-// =============================================================================
 console.log('\n=== 7) tablet: térköz és a láb a képernyőn belül ===\n')
 const ctx3 = await b.newContext({ viewport: { width: 800, height: 1180 }, isMobile: true, hasTouch: true })
 const t = await ctx3.newPage()

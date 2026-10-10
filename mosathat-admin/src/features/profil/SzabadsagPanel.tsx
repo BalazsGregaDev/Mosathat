@@ -1,33 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { maStr, napokRovid } from '../../lib/format'
+import { hibaSzoveg, maStr, napokRovid } from '../../lib/format'
 import type { StaffRow, VacationRow } from '../../lib/types'
 import { useKerdes } from '../common/Kerdes'
-
-// ---------------------------------------------------------------------------
-//  Profilom → Szabadság
-//
-//  Előre beírható, ki melyik napra / napokra megy szabadságra:
-//
-//      Első nap    [2026-11-10]
-//      Utolsó nap  [2026-11-13]     (egy napnál ugyanaz, mint az első)
-//      Megjegyzés  [            ]
-//                              [Szabadság rögzítése]
-//
-//  Ahol megjelenik:
-//    - a napi nézet kapacitás-kártyáján, a következő egy hónapra összesítve
-//      („Szabadság — Gábor: nov. 10–13.")
-//    - a havi naptárban rózsaszín sávként, mint a többnapos autók
-//    - a kapacitásban: aki szabadságon van, aznap egész nap hiányzik
-//
-//  Az alkalmazott a sajátját írja be és látja; a tulajdonos és a fejlesztő
-//  bárkinek beírhatja, és mindenkiét látja a listában.
-// ---------------------------------------------------------------------------
+import KinekValaszto from './KinekValaszto'
 
 interface Urlap {
   id: string | null
-  staffId: string | null       // null = én magam
+  staffId: string | null
   tol: string
   ig: string
   note: string
@@ -36,9 +17,7 @@ interface Urlap {
 const URES = (): Urlap => ({ id: null, staffId: null, tol: '', ig: '', note: '' })
 
 export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
-  /** Tulajdonos vagy fejlesztő: másnak is beírhatja. */
   teljesJogu: boolean
-  /** A „Kinek" választóhoz (csak a tulajdonosnak). */
   dolgozok: StaffRow[]
 }) {
   const { data, user, refresh } = useApp()
@@ -52,7 +31,7 @@ export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
     try {
       setLista(await data.listVacations())
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     }
   }, [data])
 
@@ -60,7 +39,6 @@ export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
 
   const set = <K extends keyof Urlap>(k: K, v: Urlap[K]) => setF((x) => ({ ...x, [k]: v }))
 
-  // Az utolsó nap üresen hagyva = egy nap (ugyanaz, mint az első).
   const ig = f.ig || f.tol
   const rosszSorrend = Boolean(f.tol && ig && ig < f.tol)
   const menthetE = Boolean(f.tol) && !rosszSorrend
@@ -75,9 +53,9 @@ export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
       })
       setF(URES())
       await betolt()
-      refresh()       // a napi kártya és a havi naptár is utánamegy
+      refresh()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
       setMegy(false)
     }
@@ -107,7 +85,7 @@ export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
       await betolt()
       refresh()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     }
   }
 
@@ -123,16 +101,8 @@ export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
         </p>
 
         {teljesJogu && dolgozok.length > 0 && (
-          <div className="mezo">
-            <label htmlFor="sz-kinek">Kinek</label>
-            <select id="sz-kinek" className="beviteli" value={f.staffId ?? ''}
-                    onChange={(e) => set('staffId', e.target.value || null)}>
-              <option value="">Nekem</option>
-              {dolgozok.filter((d) => d.id !== user.id).map((d) => (
-                <option key={d.id!} value={d.id!}>{d.full_name}</option>
-              ))}
-            </select>
-          </div>
+          <KinekValaszto id="sz-kinek" ertek={f.staffId} dolgozok={dolgozok} sajatId={user.id}
+                         onValt={(v) => set('staffId', v)} />
         )}
 
         <div className="sor-2">
@@ -142,7 +112,6 @@ export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
                    value={f.tol}
                    onChange={(e) => {
                      const uj = e.target.value
-                     // Ha az utolsó nap korábbra kerülne, vele megy.
                      setF((x) => ({ ...x, tol: uj, ig: x.ig && x.ig < uj ? uj : x.ig }))
                    }} />
           </div>
@@ -178,7 +147,6 @@ export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
           </button>
         </div>
 
-        {/* a beírt szabadságok, a mai naptól */}
         <div className="szabadsag-lista-cim">
           {teljesJogu ? 'Beírt szabadságok — mindenki' : 'Beírt szabadságaim'}
         </div>

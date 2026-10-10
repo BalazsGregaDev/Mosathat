@@ -1,11 +1,3 @@
-// Telefonos ellenőrzés Playwrighttal.
-//
-// Futtatás:  npm run dev   (másik ablakban, 5180-as porton)
-//            node scripts/mobil-teszt.mjs
-//
-// Amit néz: a nagyítás tiltva van-e, az árlista kifér-e a képernyőre, a
-// mögöttes tartalom görgetése zárva van-e amíg az árlista nyitva, és a
-// munkalap lába kifér-e telefonon (négy gombbal is).
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -171,7 +163,6 @@ console.log('\n=== 5) négygombos eset (még nem érkezett meg) ===\n')
 await p.locator('.lap-fej .bezar').click()
 await p.waitForTimeout(800)
 {
-  // Olyan kártya, ahol a „Nem jött el" is megjelenik (CONFIRMED).
   const kartyak = p.locator('.kartya')
   const n = await kartyak.count()
   let talalt = false
@@ -229,7 +220,6 @@ await p.waitForTimeout(2200)
 console.log('\n=== 7) lenyíló űrlap nem rontja el a görgetést ===\n')
 await p.setViewportSize({ width: 390, height: 844 })
 await p.waitForTimeout(600)
-// A 6. pont munkalapja még nyitva van.
 if (await p.locator('.lap-fej .bezar').count()) {
   await p.locator('.lap-fej .bezar').first().click()
   await p.waitForTimeout(800)
@@ -256,7 +246,6 @@ await p.waitForTimeout(2000)
   ok('a görgetődoboz zsugorodhat (min-height: 0)', '0px', (await meret()).minH)
   ok('a görgetés nem csordul tovább a lapra', 'contain', (await meret()).tulcsordul)
 
-  // A kártyák csukva nyílnak; a „További jármű" gomb a lenyitott kártyán van.
   const fej = p.locator('.tartalom .panel .kartya-fej, .tartalom .panel h3').first()
   if (await fej.count()) { await fej.click(); await p.waitForTimeout(700) }
 
@@ -278,8 +267,6 @@ await p.waitForTimeout(2000)
     await p.evaluate(() => { document.querySelector('.tartalom').scrollTop = 99999 })
     await p.waitForTimeout(250)
     const v = await meret()
-    // A .tartalom alul 96px helyet hagy a lebegő + gombnak; ennél több üres
-    // hely azt jelentené, hogy a doboz nagyobb, mint a tartalma.
     ok('alul nincs indokolatlan üres hely', true, v.scrollH - v.tartalomAlja <= 100)
     ok('a lap egésze nem csúszott el', 0, await p.evaluate(() => window.scrollY))
     await p.screenshot({ path: '/tmp/m-ujjarmu.png' })

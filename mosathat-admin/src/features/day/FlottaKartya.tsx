@@ -1,27 +1,10 @@
 import { useApp } from '../../state/AppContext'
 import { ft } from '../../lib/format'
 import FlottaLepteto from './FlottaLepteto'
-import { csoportNev, csoportOsszeg, elo, vanRendszam, vegsoIdo } from '../../lib/flotta'
+import { autoNev, csoportNev, csoportOsszeg, elo, vegsoIdo } from '../../lib/flotta'
 import { STATUS_LABEL, type DayBooking } from '../../lib/types'
 
-// ---------------------------------------------------------------------------
-//  Flottás csoport a napi listában — egy kártya, több autó
-//
-//    RAIFFEISEN BANK  [3 darab]  17:00-ig  Premium
-//    [RAI-001] [2. autó] [3. autó]          ← autónként, az állapot színével
-//    38 100 Ft        [−] 1 / 3 kész · most: 2. autó [Kész, jöhet a következő] [Autók]
-//
-//  Az autók sorában a rendszám áll, ha már tudjuk; ha még nem, a sorszám
-//  („2. autó"). A kártya színe a csoport állapota: ahol a legkevésbé
-//  előrehaladott autója tart.
-//
-//  Állapotgombok (Megérkezett, Kész van, Átvette) nincsenek: a flottás autók
-//  gyors munkák. Helyettük a léptető: hányadik autónál tartunk (lásd
-//  FlottaLepteto). A munkalapot az „Autók" gomb nyitja.
-// ---------------------------------------------------------------------------
-
 export default function FlottaKartya({ b, onMegnyit }: {
-  /** A csoport képviselője (a `flotta` mezőben az összes autó). */
   b: DayBooking
   onMegnyit: () => void
 }) {
@@ -43,12 +26,11 @@ export default function FlottaKartya({ b, onMegnyit }: {
           <span className="csak-felolvaso">{STATUS_LABEL[b.status]}</span>
         </div>
 
-        {/* Autónként: rendszám (vagy sorszám), az állapot színével. */}
         <div className="flotta-autok">
           {tagok.filter(elo).map((t) => (
             <span key={t.id} className="flotta-auto" data-allapot={t.status}
                   title={STATUS_LABEL[t.status]}>
-              {vanRendszam(t) ? t.plate_raw?.toUpperCase() : `${t.fleet_index}. autó`}
+              {autoNev(t)}
             </span>
           ))}
         </div>

@@ -1,5 +1,3 @@
-// v57, adatbázis: többnapos autó — a maradék munka a még hátralévő munkaidő
-// arányában; „Nem fért be" bármelyik autónál; a nem fért be nem terhel.
 import { adatbazis, tesztelo, ALK } from './_db.mjs'
 
 const db = await adatbazis()
@@ -9,7 +7,6 @@ const egy = async (sql, p = []) => (await q(sql, p))[0]
 await db.exec(`select set_config('app.uid','${ALK}',false)`)
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
 const kozel = (a, b) => Math.abs(a - b) < 0.5
-// a jövő hét hétfő–szerda: mind munkanap, és mind a jövőben (a „most" nem számít)
 const het = (n) => egy(`select (date_trunc('week', current_date) + ($1::int || ' days')::interval)::date::text d`, [7 + n])
 const [h, k, sz] = [(await het(0)).d, (await het(1)).d, (await het(2)).d]
 const terhe = async (id, d) => Number((await egy(`select foglalas_napi_terhe(b, $2::date) t from bookings b where b.id = $1`, [id, d])).t)

@@ -1,57 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
+import { hibaSzoveg } from '../../lib/format'
 import type { DayBooking } from '../../lib/types'
 import BookingCard from './BookingCard'
 import FlottaKartya from './FlottaKartya'
+import { azonosito } from './MiniKartya'
 
-// ---------------------------------------------------------------------------
-//  A nap egyetlen listája, kézzel rendezhető sorrendben
-//
-//  Nincsenek órasávok: a nap egy sor egymás alatti kártya, abban a
-//  sorrendben, ahogy a műhely dolgozik. A sorrendet a kártya bal oldalán
-//  lévő fogóval lehet megváltoztatni — megfogod, húzod, elengeded.
-//
-//  A sorrend az adatbázisban van (day_order), napra szólóan. Így minden
-//  gépen és tableten ugyanaz, és semmi más nem írja felül: az állapotgomb
-//  („Kész van") nem rendezi át a listát, és egy új foglalás sem tolja el a
-//  meglévőket — az új az érkezési ideje szerinti helyre kerül be.
-//
-//  Hogyan működik a húzás (egér, ujj, toll — mind ugyanaz, „pointer"):
-//
-//    1. A fogó megnyomásakor lemérjük az összes kártya helyét.
-//    2. Húzás közben a megfogott kártya követi az ujjat; a többi kártya
-//       odébb csúszik, hogy látsszon, hova kerülne.
-//    3. Elengedéskor a lista azonnal az új sorrendben áll, a mentés utána
-//       megy. Ha a mentés hibára fut, visszaáll a régi sorrend.
-//
-//  Ha a lista hosszabb a képernyőnél, a széléhez húzva magától görget.
-//
-//  Billentyűzetről: a fogóra lépve (Tab) a fel/le nyíl egy hellyel mozgat.
-// ---------------------------------------------------------------------------
-
-/** Ennyi pixelre a görgethető terület szélétől kezd el magától görgetni. */
 const SZEL = 80
 
 interface Huzas {
   id: string
-  kezd: number        // honnan indult (index)
-  cel: number         // hova kerülne, ha most elengednék
-  dy: number          // mennyit mozdult a kártya (px)
-  lepes: number       // ennyivel csúsznak odébb a többiek (a kártya magassága + hézag)
+  kezd: number
+  cel: number
+  dy: number
+  lepes: number
 }
 
-/** A húzás közben változó, de a megjelenítést nem érintő adatok. */
 interface HuzasAdat {
   pointerId: number
-  kezdoY: number               // az ujj helye induláskor, tartalom-koordinátában
-  kozepek: number[]            // minden kártya közepe, tartalom-koordinátában
+  kezdoY: number
+  kozepek: number[]
   gorgeto: HTMLElement
-  ujY: number                  // az ujj utolsó helye (képernyő-koordináta)
+  ujY: number
   raf: number
 }
 
-/** A legközelebbi görgethető szülő. A napi nézetben ez a fő tartalom-terület. */
 function gorgetoElem(el: HTMLElement): HTMLElement {
   let x: HTMLElement | null = el.parentElement
   while (x) {
@@ -62,12 +36,15 @@ function gorgetoElem(el: HTMLElement): HTMLElement {
   return (document.scrollingElement as HTMLElement) ?? document.documentElement
 }
 
-/** A tömb egy elemét áthelyezi: [a, b, c], 0 → 2 = [b, c, a]. */
 function athelyez<T>(t: T[], honnan: number, hova: number): T[] {
   const uj = t.slice()
   const [x] = uj.splice(honnan, 1)
   uj.splice(hova, 0, x)
   return uj
+}
+
+function kibont(lista: DayBooking[]): string[] {
+  return lista.flatMap((b) => (b.flotta ? b.flotta.map((t) => t.id) : [b.id]))
 }
 
 export default function NapiLista({
@@ -81,7 +58,6 @@ export default function NapiLista({
   bookings: DayBooking[]
   onMegnyit: (id: string) => void
   onModosit: (id: string, valtozas: Partial<DayBooking>) => void
-  /** A lista helyben, azonnal átrendeződik (a mentés külön megy). */
   onAtrendez: (ids: string[]) => void
 }) {
   const { data, refresh } = useApp()
@@ -89,29 +65,38 @@ export default function NapiLista({
   const [hiba, setHiba] = useState<string | null>(null)
   const elemek = useRef(new Map<string, HTMLDivElement>())
   const adat = useRef<HuzasAdat | null>(null)
-  // Ugyanaz, mint a `huzas`, de mindig a legfrissebb: a mozgás- és az
-  // elengedés-esemény két rajzolás között is jöhet, és akkor a state még a
-  // régi lenne.
   const huzasRef = useRef<Huzas | null>(null)
+  const fokuszKell = useRef<string | null>(null)
   const huzasAllit = useCallback((h: Huzas | null) => {
     huzasRef.current = h
     setHuzas(h)
   }, [])
 
-  // --- mentés ------------------------------------------------------------------
   const ment = useCallback(async (ids: string[]) => {
     onAtrendez(ids)
     setHiba(null)
     try {
       await data.setDayOrder(nap, ids)
-      refresh()            // csendes: a többi gépen is az új sorrend jelenik meg
+      refresh()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
-      refresh()            // a régi sorrend visszaáll az adatbázisból
+      setHiba(hibaSzoveg(e))
+      refresh()
     }
   }, [data, nap, onAtrendez, refresh])
 
-  // --- húzás közben: hova kerülne -------------------------------------------------
+  useEffect(() => {
+    const id = fokuszKell.current
+    if (!id) return
+    fokuszKell.current = null
+    elemek.current.get(id)?.querySelector<HTMLButtonElement>('.fogo')?.focus()
+  })
+
+  useEffect(() => () => {
+    if (!adat.current) return
+    cancelAnimationFrame(adat.current.raf)
+    document.body.classList.remove('huzas-folyik')
+  }, [])
+
   const frissit = useCallback(() => {
     const a = adat.current
     const h = huzasRef.current
@@ -119,12 +104,10 @@ export default function NapiLista({
     const y = a.ujY + a.gorgeto.scrollTop
     const dy = y - a.kezdoY
     const kozep = a.kozepek[h.kezd] + dy
-    // Annyiadik helyre kerül, ahány MÁSIK kártya közepe van fölötte.
     let cel = 0
     a.kozepek.forEach((k, i) => { if (i !== h.kezd && k < kozep) cel++ })
     huzasAllit({ ...h, dy, cel })
   }, [huzasAllit])
-
 
   function vege(mentse: boolean) {
     const a = adat.current
@@ -133,18 +116,21 @@ export default function NapiLista({
     adat.current = null
     document.body.classList.remove('huzas-folyik')
     huzasAllit(null)
-    if (mentse && h && h.cel !== h.kezd) {
-      void ment(athelyez(bookings.map((b) => b.id), h.kezd, h.cel))
-    }
+    if (!mentse || !h) return
+    const kezd = bookings.findIndex((b) => b.id === h.id)
+    if (kezd === -1 || h.cel === kezd) return
+    void ment(kibont(athelyez(bookings, kezd, h.cel)))
   }
 
-  // Escape: a húzás megszakad, minden marad a régiben.
+  const vegeRef = useRef(vege)
+  useEffect(() => { vegeRef.current = vege })
+  const huzasFolyik = huzas !== null
   useEffect(() => {
-    if (!huzas) return
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); vege(false) } }
+    if (!huzasFolyik) return
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); vegeRef.current(false) } }
     window.addEventListener('keydown', k, true)
     return () => window.removeEventListener('keydown', k, true)
-  })
+  }, [huzasFolyik])
 
   function indul(e: React.PointerEvent<HTMLButtonElement>, id: string, index: number) {
     if (e.pointerType === 'mouse' && e.button !== 0) return
@@ -170,10 +156,8 @@ export default function NapiLista({
     document.body.classList.add('huzas-folyik')
     huzasAllit({ id, kezd: index, cel: index, dy: 0, lepes: d[index].height + hezag })
 
-    // A szélén magától görget, amíg ott tartják az ujjukat. Képkockánként
-    // egy kis lépés — minél közelebb a széléhez, annál gyorsabban.
     function gorget() {
-      if (adat.current !== a) return            // közben vége lett a húzásnak
+      if (adat.current !== a) return
       const r = a.gorgeto === document.scrollingElement
         ? { top: 0, bottom: window.innerHeight }
         : a.gorgeto.getBoundingClientRect()
@@ -196,17 +180,16 @@ export default function NapiLista({
     frissit()
   }
 
-  // Billentyűzet: a fogón a fel/le nyíl egy hellyel mozgat, és rögtön ment.
   function billentyu(e: React.KeyboardEvent, index: number) {
     const irany = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0
     if (!irany) return
     e.preventDefault()
     const hova = index + irany
     if (hova < 0 || hova >= bookings.length) return
-    void ment(athelyez(bookings.map((b) => b.id), index, hova))
+    fokuszKell.current = bookings[index].id
+    void ment(kibont(athelyez(bookings, index, hova)))
   }
 
-  /** Hol áll most egy kártya húzás közben (eltolás pixelben). */
   function eltolas(i: number): number {
     if (!huzas) return 0
     if (i === huzas.kezd) return huzas.dy
@@ -234,7 +217,7 @@ export default function NapiLista({
               <button
                 type="button"
                 className="fogo"
-                aria-label={`${b.plate_raw} áthelyezése a listában (fel/le nyíl)`}
+                aria-label={`${azonosito(b)} áthelyezése a listában (fel/le nyíl)`}
                 title="Fogd meg és húzd a helyére"
                 onPointerDown={(e) => indul(e, b.id, i)}
                 onPointerMove={mozog}

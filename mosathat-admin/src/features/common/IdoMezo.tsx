@@ -1,30 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-// ---------------------------------------------------------------------------
-//  Időpont mező — érintőképernyőn saját, gombos választóval
-//
-//  A böngésző beépített időválasztója a Samsung tableten használhatatlan
-//  (kis óralap, nehezen eltalálható számok). Ezért ÉRINTŐKÉPERNYŐN (telefon,
-//  tablet) a mező egy gomb, ami egy saját panelt nyit:
-//
-//      Óra    [06][07][08][09][10][11][12][13]
-//             [14][15][16][17][18][19][20][21]
-//      Perc   [:00][:05][:10][:15][:20][:25]
-//             [:30][:35][:40][:45][:50][:55]
-//                                   [Törlés] [Kész]
-//
-//  Két koppintás: előbb az óra, aztán a perc — a perc után a panel magától
-//  bezárul. Ha csak az órát kell átírni, az óra után a „Kész" gomb.
-//
-//  EGÉRREL (asztali gépen) marad a sima időmező: ott a beírás a leggyorsabb.
-//  Mindkét esetben ugyanazt adja vissza: "HH:MM" szöveget (vagy üreset).
-// ---------------------------------------------------------------------------
-
-/** Érintőképernyős-e az eszköz (durva mutató: ujj). */
-function erintoE(): boolean {
-  try { return window.matchMedia('(pointer: coarse)').matches } catch { return false }
-}
+import { erintokepernyo } from '../../lib/kepernyo'
 
 const PERCEK = Array.from({ length: 12 }, (_, i) => i * 5)
 
@@ -40,20 +17,16 @@ export default function IdoMezo({
   cim,
 }: {
   id?: string
-  /** "HH:MM" vagy üres. */
   value: string
   onChange: (uj: string) => void
-  /** A választás vége (panel bezárva / a mező elhagyva) — az utolsó értékkel. */
   onKesz?: (vegso: string) => void
   ariaLabel?: string
   className?: string
   placeholder?: string
-  /** Lehet-e üresre törölni (pl. a Viszi órája: „nincs megbeszélve"). */
   torolheto?: boolean
-  /** A panel címe (pl. „Hozza — óra"). Alapból az ariaLabel. */
   cim?: string
 }) {
-  const [erinto] = useState(erintoE)
+  const [erinto] = useState(erintokepernyo)
   const [nyitva, setNyitva] = useState(false)
 
   if (!erinto) {
@@ -93,13 +66,10 @@ function IdoPanel({ cim, ertek, torolheto, onValt, onBezar }: {
   onValt: (uj: string) => void
   onBezar: (vegso: string) => void
 }) {
-  // A panelen belül is követjük az értéket: a perc gomb az épp választott
-  // órához kell.
   const [most, setMost] = useState(ertek)
   const ora = most ? Number(most.slice(0, 2)) : null
   const perc = most ? Number(most.slice(3, 5)) : null
 
-  // Az órák: 6-tól 21-ig; ha a mostani érték ezen kívül esik, az is.
   const orak = Array.from({ length: 16 }, (_, i) => i + 6)
   if (ora !== null && !orak.includes(ora)) orak.push(ora)
   orak.sort((a, b) => a - b)
@@ -116,10 +86,9 @@ function IdoPanel({ cim, ertek, torolheto, onValt, onBezar }: {
     const uj = `${ketjegy(ora ?? 8)}:${ketjegy(p)}`
     setMost(uj)
     onValt(uj)
-    onBezar(uj)                       // a perc után kész: bezárjuk
+    onBezar(uj)
   }
 
-  // Escape: csak ezt a panelt zárja, az alatta lévő ablakot nem.
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return

@@ -1,25 +1,12 @@
 import { useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import type { DayBooking, SheetForBooking } from '../../lib/types'
+import { eloE, type DayBooking, type SheetForBooking } from '../../lib/types'
 import SorUrlap from './SorUrlap'
+import { hibaSzoveg } from '../../lib/format'
 
-// ---------------------------------------------------------------------------
-//  „Igazolólap" gomb a napi kártyán és a munkalapon (ott a cég sora alatt)
-//
-//  Szerződéses vagy bérletes cég autójánál látszik. Megnyomva az adatbázis
-//  visszaadja a foglalás sorát: ha már kitöltötték, a meglévőt, ha még nem,
-//  egy előre kitöltöttet (dátum, rendszám, nettó ár, a sofőr neve). Ebbe már
-//  csak a km-t kell beírni, és aláíratni — mentés, bezárás.
-//
-//  A sor a cég adott havi lapjára kerül; ha az a hónap még nem volt
-//  megnyitva, a mentés megnyitja.
-// ---------------------------------------------------------------------------
-
-/** Kell-e a foglaláshoz igazolólap gomb. */
 export function igazoloKell(b: DayBooking): boolean {
-  const lemondott = ['CANCELLED_BY_CUSTOMER', 'CANCELLED_BY_SHOP', 'NO_SHOW'].includes(b.status)
-  // A „nem fért be" autót nem csináltuk meg: nincs mit igazolni.
+  const lemondott = !eloE(b.status)
   return Boolean(b.company_id) && b.billing_kind !== 'NORMAL' && !lemondott && !b.not_fitted
 }
 
@@ -30,7 +17,6 @@ export default function IgazoloGomb({
 }: {
   bookingId: string
   className?: string
-  /** A gomb szövege (a munkalapon a sor neve már „Igazolólap"). */
   felirat?: string
 }) {
   const { data } = useApp()
@@ -45,7 +31,7 @@ export default function IgazoloGomb({
     try {
       setAdat(await data.sheetForBooking(bookingId))
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
       setMegy(false)
     }

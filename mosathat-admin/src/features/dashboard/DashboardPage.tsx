@@ -1,25 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { ft, hetCim, maStr, napCim, napRovidCim, oraSzam } from '../../lib/format'
+import { ft, hetCim, hibaSzoveg, maStr, napCim, napRovidCim, oraSzam } from '../../lib/format'
 import { billentyuzetElore } from '../../lib/billentyuzet'
 import type { DashboardSummary, Gond, MunkalapFokusz, WeekDay } from '../../lib/types'
 
-// ---------------------------------------------------------------------------
-//  Áttekintés
-//
-//  Egy szabály visz mindent: EGY nagy szám van a képernyőn. Ha három is
-//  nagy, akkor egy sem nagy, és a tíz másodpercből fél perc lesz.
-//
-//  A nagy szám a mai várható bevétel. Minden más — hány autó, mennyi munka,
-//  mennyi kész — támogató adat, kisebb betűvel, ugyanabban a panelben.
-//
-//  Amit a képernyő NEM tesz: nem számol. Az összesítés a dashboard_summary()
-//  és a week_capacity() dolga, ugyanazokból a függvényekből, amiket a napi
-//  nézet is hív. Így nincs két igazság ugyanarról a napról.
-// ---------------------------------------------------------------------------
-
-/** 70% alatt bőven van hely, 90% fölött már nem lehet mit bevállalni. */
 function terheles(pct: number): 'jo' | 'szoros' | 'tele' {
   if (pct >= 90) return 'tele'
   if (pct >= 70) return 'szoros'
@@ -32,50 +17,38 @@ const TERHELES_SZO: Record<'jo' | 'szoros' | 'tele', string> = {
   tele: 'tele',
 }
 
-// A hét napjai a week_capacity hetfotol mezője szerint. Nem formázzuk a
-// dátumból: az index már az adatban benne van, és mindig stimmel.
 const NAPOK = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
 
 export default function DashboardPage({ onNapra, onMegnyit, onOldal }: {
   onNapra: (nap: string) => void
-  /** Egy foglalás munkalapja — a telefonszámnál a mezővel írásra nyitva. */
   onMegnyit: (id: string, fokusz?: MunkalapFokusz) => void
-  /** Másik oldalra visz (pl. a hiányzó árnál a Szolgáltatásokra). */
   onOldal: (oldal: 'szolgaltatasok' | 'partnerek') => void
 }) {
   const { data } = useApp()
-  // Az Áttekintés MINDIG a mai napról szól, akkor is, ha az Időpontokban épp
-  // jövő csütörtököt nézed. Korábban a közös napválasztót használta, így egy
-  // jövő heti napról átváltva a képernyő annak a napnak az adatait mutatta —
-  // „Ma" felirattal. Ez nem tévedés volt, hanem hazugság: a szám jó volt, a
-  // címke nem. Egy áttekintés, amiben nem lehet megbízni, rosszabb, mintha
-  // ott sem lenne.
   const nap = maStr()
   const [ossz, setOssz] = useState<DashboardSummary | null>(null)
   const [het, setHet] = useState<WeekDay[]>([])
   const [hiba, setHiba] = useState<string | null>(null)
-  const [tolt, setTolt] = useState(true)
+  const kerSzam = useRef(0)
 
   const betolt = useCallback(async () => {
+    const n = ++kerSzam.current
     try {
       const [d, w] = await Promise.all([data.getDashboard(nap), data.getWeekCapacity(nap)])
+      if (n !== kerSzam.current) return
       setOssz(d)
       setHet(w)
       setHiba(null)
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
-    } finally {
-      setTolt(false)
+      if (n === kerSzam.current) setHiba(hibaSzoveg(e))
     }
   }, [data, nap])
 
   useEffect(() => { void betolt() }, [betolt])
 
-  // Élő frissítés. Nincs csontváz-villogás: a régi adat halványodik el, amíg
-  // az új megjön. Villogó képernyőt senki nem néz tíz másodpercig.
   useEffect(() => data.subscribe(() => void betolt()), [data, betolt])
 
-  if (hiba) return <div className="oldal"><div className="hibauzenet">{hiba}</div></div>
+  if (hiba && !ossz) return <div className="oldal"><div className="hibauzenet">{hiba}</div></div>
   if (!ossz) return <div className="oldal"><div className="betolt">Betöltés…</div></div>
 
   const ma = ossz.ma
@@ -83,18 +56,16 @@ export default function DashboardPage({ onNapra, onMegnyit, onOldal }: {
   const gondokVannak = ossz.gondok.length > 0
 
   return (
-    <div className="oldal" style={tolt ? { opacity: 0.55 } : undefined}>
-      {/* Mindig ki van írva, melyik napról van szó. Enélkül a „Ma" csak egy
-          szó, amiről el kell hinni, hogy igaz. */}
+    <div className="oldal">
       <div className="oldal-fej">
         <h2>Áttekintés</h2>
         <span className="oldal-datum">{napCim(nap)}</span>
       </div>
+      {hiba && <div className="hibauzenet">{hiba}</div>}
 
       <div className="attekintes">
 
-        {/* ---------- MA: egy nagy szám, körülötte a támogató adatok ---------- */}
-        <section className="panel kiemelt">
+        <section className="panel">
           <h3>
             Ma
             <span className="fej-datum">{napRovidCim(nap)}</span>
@@ -122,7 +93,6 @@ export default function DashboardPage({ onNapra, onMegnyit, onOldal }: {
           </div>
         </section>
 
-        {/* ---------- A HÉT KAPACITÁSA ---------- */}
         <section className="panel">
           <h3>
             A hét kapacitása
@@ -139,9 +109,6 @@ export default function DashboardPage({ onNapra, onMegnyit, onOldal }: {
           </div>
         </section>
 
-        {/* ---------- LEGGYAKORIBB ----------
-            Ha nincs figyelmeztetés, ez a panel a teljes sort elfoglalja —
-            különben üresen maradna mellette a fél képernyő. */}
         <section className={`panel${gondokVannak ? '' : ' teljes-sor'}`}>
           <h3>Leggyakoribb az elmúlt 90 napban</h3>
           <div className="panel-torzs">
@@ -165,11 +132,6 @@ export default function DashboardPage({ onNapra, onMegnyit, onOldal }: {
           </div>
         </section>
 
-        {/* ---------- FIGYELMET IGÉNYEL ----------
-            Csak akkor van itt, ha tényleg van mit mondania. Egy panel, ami
-            minden reggel azt írja, hogy „most nincs semmi", pár nap alatt
-            láthatatlanná válik — és akkor sem nézünk rá, amikor van benne
-            valami. Inkább ne legyen ott, amíg nincs mit jelenteni. */}
         {gondokVannak && (
           <section className="panel">
             <h3>Figyelmet igényel</h3>
@@ -187,16 +149,6 @@ export default function DashboardPage({ onNapra, onMegnyit, onOldal }: {
   )
 }
 
-/**
- * Egy figyelmeztetés. Mindegyikre lehet kattintani, és oda visz, ahol a
- * gondot meg lehet oldani:
- *
- *   - egy foglalás (határidő)       → a sor maga nyitja meg a munkalapot
- *   - több foglalás (nincs telefon) → a rendszámok egyenként gombok; a
- *                                      telefonszám nélkülinél a munkalap a
- *                                      telefon mezővel, írásra készen nyílik
- *   - hiányzó ár / bérlet           → a megfelelő oldal
- */
 function GondSor({ g, onMegnyit, onOldal }: {
   g: Gond
   onMegnyit: (id: string, fokusz?: MunkalapFokusz) => void
@@ -206,7 +158,6 @@ function GondSor({ g, onMegnyit, onOldal }: {
   const foglalasok = g.foglalasok ?? []
 
   function nyit(id: string) {
-    // A billentyűzetet a kattintáson BELÜL kell előhívni (lásd billentyuzet.ts).
     if (fokusz === 'telefon') billentyuzetElore('tel')
     onMegnyit(id, fokusz)
   }
@@ -219,7 +170,6 @@ function GondSor({ g, onMegnyit, onOldal }: {
     </>
   )
 
-  // Egy foglalás, vagy egy oldal: az egész sor egy gomb.
   const egyCel = foglalasok.length === 1
     ? () => nyit(foglalasok[0].id)
     : g.cel === 'szolgaltatasok' || g.cel === 'partnerek'
@@ -251,24 +201,15 @@ function GondSor({ g, onMegnyit, onOldal }: {
   )
 }
 
-/** Támogató szám a nagy szám mellé. Félkövér érték, halk címke. */
 function Csempe({ cimke, ertek }: { cimke: string; ertek: string }) {
   return (
-    <div className="csempe">
+    <div>
       <div className="csempe-cimke">{cimke}</div>
       <div className="csempe-ertek">{ertek}</div>
     </div>
   )
 }
 
-/**
- * Egy nap kapacitása. A sáv kitöltése a terhelést mutatja, a sáv háttere
- * ugyanannak a színnek a világos változata — így a sáv egésze is olvasható,
- * nem csak a kitöltött rész.
- *
- * A szám nem csak a felugró ablakban van meg: kint van a sor végén. Amit
- * csak hover mutat, azt telefonon senki nem látja.
- */
 function MeterSor({ d, ma, onNapra }: {
   d: WeekDay
   ma: string
@@ -281,7 +222,6 @@ function MeterSor({ d, ma, onNapra }: {
   const zarva = d.capacity_minutes === 0
   const pct = d.load_pct ?? 0
   const allapot = terheles(pct)
-  // 100% fölött is van élet: a sáv nem nyúlik tovább, a szám igen.
   const kitoltes = Math.min(100, pct)
 
   function mutat(be: boolean) {
@@ -300,15 +240,11 @@ function MeterSor({ d, ma, onNapra }: {
       onFocus={() => mutat(true)}
       onBlur={() => mutat(false)}
     >
-      {/* A nap neve az elsődleges: "szerdán tele vagyunk" — a dátum csak
-          azért kell, hogy tudd, melyik szerdáról van szó. */}
       <button className="meter-nap" onClick={() => onNapra(datum)}>
         <span className="nev">{NAPOK[d.hetfotol] ?? ''}</span>
         <span className="datum">{napRovidCim(datum)}</span>
       </button>
 
-      {/* A sáv csak megmutatja a százalékot, ami mellette szövegben is ott van.
-          Felolvasónak nincs mit hozzátennie, ezért nem is szólal meg. */}
       <div className="meter-sav" aria-hidden="true">
         {!zarva && <div className="meter-toltes" style={{ width: `${kitoltes}%` }} />}
       </div>

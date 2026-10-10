@@ -1,33 +1,12 @@
 import { ft, idotartam } from '../../lib/format'
 import {
-  CATEGORY_SHORT, SCOPE_LABEL,
+  CATEGORY_SHORT, EGYSEG, KATEGORIAK, SCOPE_LABEL, TERJEDELMEK,
   type BookingScope, type Package, type ServiceArea, type VehicleCategory,
 } from '../../lib/types'
 import type { Catalog } from '../../data'
 import Sugo from '../common/Sugo'
 
-// ---------------------------------------------------------------------------
-//  Az árlista tartalma — egy helyen leírva.
-//
-//  Két helyen jelenik meg: a Szolgáltatások képernyőn (alkalmazotti nézet) és
-//  a foglalás közben felnyitható lebegő ablakban. Ha kétszer lenne megírva,
-//  előbb-utóbb az egyik helyen maradna el egy oszlop vagy egy jelölés — és
-//  pont telefonálás közben derülne ki, a rosszabbik pillanatban.
-// ---------------------------------------------------------------------------
-
-export const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
-export const TERJEDELMEK: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
-
-export const EGYSEG: Record<string, string> = {
-  DB: 'db', AJTO: 'ajtó', ULES: 'ülés', LITER: 'liter', ALKALOM: 'alkalom',
-}
-
-/**
- * „| Start + Gyors viasz, Gumiápolás, …" — amivel ez a csomag több az
- * előzőnél. A felsorolás az adatbázisból jön (v_package_extra), nem innen:
- * ha holnap átrendezitek a csomagokat, ez a szöveg magától követi.
- */
-export function Tobblet({ k, packageId }: { k: Catalog; packageId: string }) {
+function Tobblet({ k, packageId }: { k: Catalog; packageId: string }) {
   const sorok = k.packageExtras.filter((x) => x.package_id === packageId)
   if (sorok.length === 0) return null
   return (
@@ -38,15 +17,6 @@ export function Tobblet({ k, packageId }: { k: Catalog; packageId: string }) {
   )
 }
 
-/**
- * Ami a csomag neve mellé kerül, a cím sorába — EGYSZER.
- *
- *   Premium, Elit:  „| Start + Gyors viasz, Gumiápolás, …" — amivel több az
- *                   előzőnél. A csomag leírása ugyanezt mondaná el még
- *                   egyszer, ezért az nem jelenik meg alatta.
- *   Start:          nincs mihez képest többet mondani — ott a leírása áll a
- *                   cím mellett („| Alap külső mosás és belső takarítás.").
- */
 export function CimMellett({ k, p }: { k: Catalog; p: Package }) {
   if (k.packageExtras.some((x) => x.package_id === p.id)) {
     return <Tobblet k={k} packageId={p.id} />
@@ -60,7 +30,6 @@ export function CimMellett({ k, p }: { k: Catalog; p: Package }) {
   )
 }
 
-/** Csomagárak méret és terjedelem szerint, ahogy a publikus oldalon is állnak. */
 export function CsomagArak({ k, tomor }: { k: Catalog; tomor?: boolean }) {
   const ar = (p: Package, c: VehicleCategory, s: BookingScope) =>
     k.packagePricing.find((x) => x.package_id === p.id && x.category === c && x.scope === s)
@@ -72,10 +41,6 @@ export function CsomagArak({ k, tomor }: { k: Catalog; tomor?: boolean }) {
     <>
       {k.packages.filter((p) => p.active).map((p) => (
         <div className="panel panelek-szeles" key={p.id} style={{ marginBottom: 'var(--t4)' }}>
-          {/* A cím mellett rögtön ott áll, amivel ez a csomag több az
-              előzőnél. Telefon közben pont ez hangzik el: „a Start mindene,
-              plusz gyors viasz és gumiápolás". A Startnál a leírása áll ott.
-              Alatta nincs még egyszer leírás: ugyanazt mondaná el kétszer. */}
           <h3 className="csomag-cim">
             {p.name}
             <CimMellett k={k} p={p} />
@@ -109,8 +74,6 @@ export function CsomagArak({ k, tomor }: { k: Catalog; tomor?: boolean }) {
                         })}
                         <td>
                           <div className="ar">{ft(fs?.price_huf ?? null)}</div>
-                          {/* Az üléshatár csak akkor mond valamit, ha ár is
-                              tartozik hozzá. Ár nélkül csak zavarna. */}
                           {fs?.price_huf != null && fs.included_seats > 0 && (
                             <div className="ido">{fs.included_seats} ülésig</div>
                           )}
@@ -132,12 +95,6 @@ export function CsomagArak({ k, tomor }: { k: Catalog; tomor?: boolean }) {
   )
 }
 
-/** Extrák: ár, időigény, leírás. A leírás az, amit telefonban felolvasol.
- *
- *  Két alakja van. Teljes szélességben a leírás külön oszlopban áll — ott van
- *  hely rá. A csomagok MELLETT viszont (tomor) a leírás a karikás „i" alá
- *  kerül: a név és az ár így is elfér egy fél hasábban, a leírás meg ott
- *  van, amikor kérik. Ugyanaz az adat, két sűrűség — nem két lista. */
 export function ExtraLista({ k, q, onQ, tomor }: {
   k: Catalog
   q: string
@@ -245,32 +202,9 @@ export function ExtraLista({ k, q, onQ, tomor }: {
   )
 }
 
-// ---------------------------------------------------------------------------
-//  Mi van a csomagokban — összehasonlító táblázat
-//
-//  Egy sor egy munkalépés, egy oszlop egy csomag. A leggyakoribb telefonos
-//  kérdésre válaszol: „mi a különbség a Premium és az Elit között?"
-//
-//  Két dolgot csinál másképp, mint egy szokásos pipa-táblázat:
-//
-//  1. A felülírt tételek EGY sorba kerülnek. Az Elitben a „Falc áttörlés"
-//     helyén „Falc mélytisztítás" áll — ha két sor lenne belőle, a táblázat
-//     azt állítaná, hogy az Elitből hiányzik a falctisztítás, miközben pont
-//     alaposabb. Ilyenkor a cellában a NEVE látszik, nem egy pipa.
-//
-//  2. A „benne van" nem csak pipa, hanem olvasható szöveg is (a képernyőolvasó
-//     és a kinyomtatott lap kedvéért). Aki látja a pipát, annak a pipa elég;
-//     aki nem, annak ott a szó.
-//
-//  Az oszlopok a csomagokból jönnek. Ha lesz egy negyedik csomag, a táblázat
-//  magától bővül — nincs beleírva, hogy három van.
-// ---------------------------------------------------------------------------
-
 export function CsomagTartalom({ k }: { k: Catalog }) {
   const csomagok = k.packages.filter((p) => p.active)
 
-  // Sorokká rendezés: slot_id szerint. A sorrendet az adatbázis adja
-  // (terület, majd a gyökértétel helye), itt csak megtartjuk.
   const sorok: { slotId: string; nev: string; area: ServiceArea; cella: Record<string, string> }[] = []
   for (const r of k.packageItems) {
     let s = sorok.find((x) => x.slotId === r.slot_id)
@@ -320,8 +254,6 @@ export function CsomagTartalom({ k }: { k: Catalog }) {
                             </td>
                           )
                         }
-                        // Ugyanaz a tétel, csak ebben a csomagban más a neve:
-                        // ez a különbség, ezt ki kell írni.
                         if (v !== s.nev) {
                           return <td key={p.id} className="masik">{v}</td>
                         }

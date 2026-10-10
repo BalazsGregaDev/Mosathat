@@ -1,4 +1,3 @@
-// v44: a napi kártyán a cég neve (céges autónál), asztalon és telefonon.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })

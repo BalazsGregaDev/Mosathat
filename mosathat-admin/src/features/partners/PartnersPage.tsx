@@ -1,47 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useApp, useCatalog } from '../../state/AppContext'
-import { ft } from '../../lib/format'
+import { bruttobol, ft, hibaSzoveg, nettobol } from '../../lib/format'
 import {
-  CATEGORY_SHORT, KIND_LABEL, SIZE_LABEL,
+  CATEGORY_LABEL, CATEGORY_SHORT, KATEGORIAK, KIND_LABEL, SIZE_LABEL,
   type ContractKind, type ContractRow, type ContractSize,
   type PassBalanceRow, type SearchHit, type ValidityKind, type VehicleCategory,
 } from '../../lib/types'
 import KartyaFej from '../common/KartyaFej'
 import { useKerdes } from '../common/Kerdes'
 import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../common/Ceg'
-import SzerzodesArak, { AFA, FAJTAK, MERETEK } from './SzerzodesArak'
+import SzerzodesArak, { FAJTAK, MERETEK } from './SzerzodesArak'
 import IgazoloLap from '../igazolo/IgazoloLap'
 import KetallasuCsuszka from '../common/KetallasuCsuszka'
 import Csuszka from '../common/Csuszka'
 
-// ---------------------------------------------------------------------------
-//  Cégek és bérletesek.
-//
-//  Ez nem egy második ügyféllista. Itt nem ügyfelet keresel, hanem a
-//  MEGÁLLAPODÁST kezeled: mennyi alkalom van még a bérletben, meddig
-//  érvényes, milyen Ft/autó árat kap a cég.
-//
-//  Egy ügyfélnek a kettő közül csak az egyike lehet — ezt az adatbázis
-//  is kikényszeríti, nem csak ez a képernyő.
-// ---------------------------------------------------------------------------
-
 export default function PartnersPage({ fokuszCeg }: {
-  /**
-   * Ennek a cégnek a szerződése legyen nyitva (az Igazolólap menü „Szerződés
-   * részletei" gombja küldi): a Szerződéses cégek fülön, kinyitva, odagörgetve.
-   */
   fokuszCeg?: string | null
 } = {}) {
   const { data, user } = useApp()
-  // Ugyanaz a kapcsoló, mint az Ügyfelek képernyőn: itt is törzsadatról van
-  // szó, csak a megállapodás oldaláról. Az alkalmazott a bérletet HASZNÁLJA
-  // (az alkalom levonása a foglalás lezárásának a része) — kiadni és
-  // kivezetni nem tudja. Az adatbázis is így tartja be: create_pass,
-  // save_contract, deactivate_pass.
   const szerkesztheto = user?.canEditCustomers === true
-  // A szerződéses cégek az alapértelmezett, első fül: ezt nyitják meg a
-  // leggyakrabban (igazolólap, árak). A bérletekre át kell kattintani.
   const [ful, setFul] = useState<'berletek' | 'cegek'>('cegek')
   const [passes, setPasses] = useState<PassBalanceRow[]>([])
   const [contracts, setContracts] = useState<ContractRow[]>([])
@@ -52,13 +30,13 @@ export default function PartnersPage({ fokuszCeg }: {
   const [kerdesAblak, kerdez] = useKerdes()
 
   const ujra = useCallback(async () => {
-    setTolt(true)
     try {
       const [p, c] = await Promise.all([data.listPasses(), data.listContracts()])
       setPasses(p)
       setContracts(c)
+      setHiba(null)
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
       setTolt(false)
     }
@@ -66,7 +44,6 @@ export default function PartnersPage({ fokuszCeg }: {
 
   useEffect(() => { void ujra() }, [ujra])
 
-  // A nézet tételsoronként jön; itt bérletenként csoportosítjuk.
   const berletek = useMemo(() => {
     const m = new Map<string, { fej: PassBalanceRow; tetelek: PassBalanceRow[] }>()
     for (const r of passes) {
@@ -160,8 +137,12 @@ export default function PartnersPage({ fokuszCeg }: {
                                   szoveg: 'A megmaradt alkalmak ezután nem használhatók fel.',
                                   igen: 'Kivezetés', nem: 'Mégse', veszelyes: true,
                                 }))) return
-                                await data.deactivatePass(fej.pass_id)
-                                await ujra()
+                                try {
+                                  await data.deactivatePass(fej.pass_id)
+                                  await ujra()
+                                } catch (e) {
+                                  setHiba(hibaSzoveg(e))
+                                }
                               }}>
                         Kivezetés
                       </button>
@@ -226,8 +207,6 @@ export default function PartnersPage({ fokuszCeg }: {
                     </div>
                   )}
 
-                  {/* Bruttó árak, alattuk halványan a nettó: a cégekkel
-                      nettóban egyeznek meg, a pultnál bruttót mondunk. */}
                   <div style={{ marginTop: 'var(--t3)' }}>
                     <SzerzodesArak prices={c.prices} netto />
                   </div>
@@ -237,9 +216,6 @@ export default function PartnersPage({ fokuszCeg }: {
                       <button className="btn btn-kicsi" onClick={() => setSzerkContract(c)}>
                         Szerkesztés
                       </button>
-                      {/* Törlés rákérdezéssel. A cég és az autói megmaradnak,
-                          csak a megállapodás tűnik el: onnantól listaáron
-                          mennek. A már felvett foglalások ára nem változik. */}
                       <button className="btn btn-kicsi btn-veszelyes"
                               onClick={async () => {
                                 if (!(await kerdez({
@@ -252,7 +228,7 @@ export default function PartnersPage({ fokuszCeg }: {
                                   await data.deleteContract(c.id)
                                   await ujra()
                                 } catch (e) {
-                                  setHiba(e instanceof Error ? e.message : String(e))
+                                  setHiba(hibaSzoveg(e))
                                 }
                               }}>
                         Törlés
@@ -282,12 +258,6 @@ export default function PartnersPage({ fokuszCeg }: {
   )
 }
 
-// ---------------------------------------------------------------------------
-//  Új bérlet
-// ---------------------------------------------------------------------------
-//  Nincs két egyforma bérlet, ezért nincs sablon sem: minden tétel külön sor,
-//  tetszőleges csomaggal és darabszámmal, és az ár szabadon beírható.
-
 function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void }) {
   const { data } = useApp()
   const katalogus = useCatalog()
@@ -303,17 +273,33 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   >([{ package_id: null, category: null, qty_total: 10 }])
   const [ment, setMent] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
+  const mentRef = useRef(false)
 
   useEffect(() => {
     if (q.trim().length < 1) { setTalalatok([]); return }
+    let el = true
     const t = window.setTimeout(async () => {
-      try { setTalalatok(await data.searchCustomers(q, 5)) } catch { setTalalatok([]) }
+      try {
+        const r = await data.searchCustomers(q, 5)
+        if (el) setTalalatok(r)
+      } catch {
+        if (el) setTalalatok([])
+      }
     }, 220)
-    return () => window.clearTimeout(t)
+    return () => { el = false; window.clearTimeout(t) }
   }, [q, data])
 
+  function modValt(uj: ValidityKind) {
+    setMod(uj)
+    setErtek(uj === 'EV' ? '1' : uj === 'NAP' ? '30' : '')
+  }
+
+  const piszkos = Boolean(ugyfel || q.trim() || nev.trim() || ar.trim())
+  const ervenyes = mod === 'DATUM' ? /^\d{4}-\d{2}-\d{2}$/.test(ertek) : Number(ertek) > 0
+
   async function mentes() {
-    if (!ugyfel) return
+    if (!ugyfel || mentRef.current) return
+    mentRef.current = true
     setMent(true); setHiba(null)
     try {
       await data.createPass({
@@ -326,8 +312,9 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
       })
       onKesz()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
+      mentRef.current = false
       setMent(false)
     }
   }
@@ -335,7 +322,8 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   const osszesAlkalom = tetelek.reduce((a, t) => a + (t.qty_total || 0), 0)
 
   return (
-    <div className="fedo" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onBezar()}>
+    <div className="fedo" role="presentation"
+         onMouseDown={(e) => { if (e.target === e.currentTarget && !piszkos && !ment) onBezar() }}>
       <div className="lap" role="dialog" aria-modal="true" aria-label="Új bérlet">
         <div className="lap-fej">
           <h2>Új bérlet</h2>
@@ -392,9 +380,7 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
                         onChange={(e) => setTetelek((l) => l.map((x, j) =>
                           j === i ? { ...x, category: (e.target.value || null) as VehicleCategory | null } : x))}>
                   <option value="">Bármelyik méret</option>
-                  <option value="SZEMELYAUTO">Személyautó</option>
-                  <option value="SUV">SUV</option>
-                  <option value="KISBUSZ">Kisbusz</option>
+                  {KATEGORIAK.map((k) => <option key={k} value={k}>{CATEGORY_LABEL[k]}</option>)}
                 </select>
                 <input className="beviteli szam darab" aria-label="Alkalmak száma"
                        type="number" inputMode="numeric" min={1}
@@ -432,7 +418,7 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
               <div className="mezo">
                 <label htmlFor="bmod">Érvényesség</label>
                 <select id="bmod" className="beviteli" value={mod}
-                        onChange={(e) => setMod(e.target.value as ValidityKind)}>
+                        onChange={(e) => modValt(e.target.value as ValidityKind)}>
                   <option value="EV">Ennyi évig</option>
                   <option value="NAP">Ennyi napig</option>
                   <option value="DATUM">Eddig a napig</option>
@@ -458,7 +444,7 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
           <div className="gombok">
             <button className="btn" onClick={onBezar} disabled={ment}>Mégse</button>
             <button className="btn btn-fo" onClick={() => void mentes()}
-                    disabled={!ugyfel || osszesAlkalom === 0 || ment}>
+                    disabled={!ugyfel || osszesAlkalom === 0 || !ervenyes || ment}>
               {ment ? 'Mentés…' : 'Bérlet létrehozása'}
             </button>
           </div>
@@ -468,44 +454,7 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   )
 }
 
-// ---------------------------------------------------------------------------
-//  Szerződés
-// ---------------------------------------------------------------------------
-//
-//  A szerződés a CÉGÉ, nem egy ügyfélé: a cég bármelyik sofőrje hozza az
-//  autót, ugyanaz az ár jár. A cég ugyanazzal a keresővel választható, mint
-//  az új időpontnál — és ha új név, mentés előtt itt is összeveti a
-//  meglévőkkel („Erre a cégre gondoltál?").
-//
-//  Az árak csomagonként:
-//
-//                 Normál méret   Nagy méret
-//      Céges      [        ]     [        ]   ← a cég autói (Flotta)
-//      Magán      [        ]     [        ]   ← a dolgozók saját autója
-//
-//  Előbb ki kell választani, melyik csomagokra szól (Start, Premium, Elit) —
-//  csak azoknál jelennek meg a mezők. Amit üresen hagysz, arra nincs
-//  megállapodás: az listaáron megy.
-
-/** Egy ár kulcsa az űrlapban: csomag + méret + fajta. */
 const arKulcs = (pk: string, m: ContractSize, f: ContractKind) => `${pk}_${m}_${f}`
-
-// ---------------------------------------------------------------------------
-//  Bruttó vagy nettó ár megadása
-//
-//  A cégekkel nettóban egyeznek meg, a pultnál bruttót mondunk — ezért a
-//  szerződés árai mindkét módon beírhatók. A csúszka az ÖSSZES ármezőt
-//  átváltja (a fuvar árát is); minden mező alatt a másik szerinti ár áll.
-//
-//  Az adatbázisba mindig a BRUTTÓ ár kerül (ezzel számol a foglalás).
-//  Nettóból: bruttó = nettó × 1,27, egész forintra kerekítve. Ez visszafelé
-//  pontosan ugyanazt a nettót adja (a kerekítés hibája fél forint alatt
-//  marad), így a beírt nettó nem „ugrik el" gépelés közben, és az
-//  igazolólapon is pont ez a nettó jelenik meg.
-//
-//  Melyik módban dolgoznak, azt a böngésző megjegyzi: aki nettóban szokott,
-//  annak legközelebb is nettóban nyílik.
-// ---------------------------------------------------------------------------
 
 const AR_MOD_KULCS = 'mosathat.szerzodes.armod'
 
@@ -514,15 +463,9 @@ function nettoModOlvas(): boolean {
 }
 
 function nettoModMent(netto: boolean) {
-  try { localStorage.setItem(AR_MOD_KULCS, netto ? 'netto' : 'brutto') } catch { /* nem baj */ }
+  try { localStorage.setItem(AR_MOD_KULCS, netto ? 'netto' : 'brutto') } catch { }
 }
 
-/** Bruttó → nettó, egész forintra. */
-const nettobol = (brutto: number) => Math.round(brutto / (1 + AFA))
-/** Nettó → bruttó, egész forintra. */
-const bruttobol = (netto: number) => Math.round(netto * (1 + AFA))
-
-/** Egy mondat a fordulónap alá: meddig tart egy igazolólap. */
 function fordulonapSzoveg(n: number): string {
   return n === 1
     ? 'Egy igazolólap a naptári hónapot fedi (1-jétől a hónap végéig).'
@@ -548,37 +491,29 @@ function ContractForm({
   const [fuvardij, setFuvardij] = useState(
     contract?.pickup_delivery_fee_huf != null ? String(contract.pickup_delivery_fee_huf) : '')
   const [lejarat, setLejarat] = useState(contract?.valid_until?.slice(0, 10) ?? '')
-  // Az igazolólap fordulónapja: hányadikán kezdődik egy lap (1 = naptári hónap).
   const [fordulo, setFordulo] = useState(contract?.cycle_day ?? 1)
-  // Flottás autók: az új időpontnál „Autó hozzáadása" — több autó egyszerre,
-  // rendszám nélkül is (a flottakezelő reggel csak a darabszámot tudja).
   const [flottas, setFlottas] = useState(contract?.fleet_cars ?? false)
   const [arak, setArak] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       (contract?.prices ?? []).map((p) => [arKulcs(p.package_id, p.size, p.kind), String(p.price_huf)]),
     ),
   )
-  // Melyik csomagokra szól. Szerkesztéskor azok, amelyekre már van ár.
   const [csomagok, setCsomagok] = useState<string[]>(() =>
     [...new Set((contract?.prices ?? []).map((p) => p.package_id))])
   const [ment, setMent] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
-  // Nettó árakat írnak-e be (különben bruttót). Az állapotban mindig a
-  // bruttó szöveg van; a mező a módtól függően azt vagy a nettóját mutatja.
   const [nettoMod, setNettoMod] = useState(nettoModOlvas)
+  const mentRef = useRef(false)
 
   function modValt(netto: boolean) {
     setNettoMod(netto)
     nettoModMent(netto)
   }
 
-  /** A mezőben látszó szöveg a tárolt bruttóból. */
   const mezoErtek = (brutto: string | undefined) =>
     !brutto ? '' : nettoMod ? String(nettobol(Number(brutto))) : brutto
-  /** A beírt szövegből a tárolt bruttó. */
   const beirt = (szoveg: string) =>
     szoveg === '' ? '' : nettoMod ? String(bruttobol(Number(szoveg))) : szoveg
-  /** A mező alatti sor: a másik szerinti ár. */
   const masikAr = (brutto: number) =>
     nettoMod ? `bruttó ${ft(brutto)}` : `nettó ${ft(nettobol(brutto))}`
 
@@ -588,22 +523,21 @@ function ContractForm({
     setCsomagok((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]))
   }
 
-  // A kiválasztott csomagok a katalógus sorrendjében (Start, Premium, Elit).
   const valasztott = aktivCsomagok.filter((p) => csomagok.includes(p.id))
 
   async function mentes() {
-    if (!ceg.nev.trim() || ment) return
+    if (!ceg.nev.trim() || mentRef.current) return
+    mentRef.current = true
     setHiba(null)
-    // Új cégnév: előbb összevetjük a meglévőkkel (azonos → ahhoz kötjük,
-    // hasonló → megkérdezzük). Szerkesztésnél a cég már adott.
     let c = ceg
     try {
       const e = await cegEgyeztet(ceg)
-      if (e === null) return
+      if (e === null) { mentRef.current = false; return }
       c = e
       setCeg(e)
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
+      mentRef.current = false
       return
     }
 
@@ -620,25 +554,23 @@ function ContractForm({
         valid_until: lejarat || null,
         notes: contract?.notes ?? null,
         cycle_day: fordulo,
-        // Csak a kiválasztott csomagok árai mennek: ha egy csomagot
-        // kivettél, az árai is törlődnek.
-        prices: valasztott.flatMap((p) => MERETEK.flatMap((m) => FAJTAK.map((f) => ({
-          package_id: p.id, size: m, kind: f,
-          price_huf: Number(arak[arKulcs(p.id, m, f)]) || 0,
+        prices: csomagok.flatMap((pid) => MERETEK.flatMap((m) => FAJTAK.map((f) => ({
+          package_id: pid, size: m, kind: f,
+          price_huf: Number(arak[arKulcs(pid, m, f)]) || 0,
         })))).filter((x) => x.price_huf > 0),
       })
-      // A kapcsoló külön hívás: csak ha változott (új szerződésnél ha be van kapcsolva).
       if (flottas !== (contract?.fleet_cars ?? false)) await data.setContractFleet(id, flottas)
       onKesz()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
+      mentRef.current = false
       setMent(false)
     }
   }
 
   return (
-    <div className="fedo" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onBezar()}>
+    <div className="fedo" role="presentation">
       <div className="lap" role="dialog" aria-modal="true" aria-label="Szerződés">
         <div className="lap-fej">
           <h2>{contract ? 'Szerződés módosítása' : 'Új szerződés'}</h2>
@@ -646,7 +578,6 @@ function ContractForm({
         </div>
 
         <div className="lap-torzs">
-          {/* Fent, minden ár előtt: bruttóban vagy nettóban írják be. */}
           <div className="armod-sor">
             <span className="halk">Árak megadása:</span>
             <KetallasuCsuszka bal="Bruttó" jobb="Nettó" jobbra={nettoMod}
@@ -669,10 +600,7 @@ function ContractForm({
           </div>
 
           <div className="szakasz">
-            {/* Telefonon egymás alatt: a dátummező a böngészőben nem megy a
-                saját legkisebb szélessége alá, és két oszlopban kilógott a
-                képernyő jobb szélén. */}
-            <div className="sor-2 szerz-adatok">
+            <div className="sor-2">
               <div className="mezo">
                 <label htmlFor="ado">Adószám</label>
                 <input id="ado" className="beviteli" value={adoszam}
@@ -685,8 +613,6 @@ function ContractForm({
                 <small>Üresen hagyva határozatlan.</small>
               </div>
             </div>
-            {/* A fordulónap: az igazolólap időszaka. 28-ig, hogy minden
-                hónapban (februárban is) legyen ilyen nap. */}
             <div className="mezo">
               <label htmlFor="fordulo">Igazolólap fordulónapja</label>
               <select id="fordulo" className="beviteli" value={fordulo}
@@ -719,9 +645,6 @@ function ContractForm({
               <span>Hozom-viszem szolgáltatás jár</span>
             </label>
 
-            {/* A fuvar ára KÜLÖN mező, nem a csomagárba építve: nem minden
-                autóért kell elmenni. Hogy melyik foglalásnál számít, azt a
-                foglalás típusa mondja meg (Hozom-viszem), nem ez a mező. */}
             {hozomViszem && (
               <div className="mezo">
                 <span>Fuvar ára alkalmanként ({nettoMod ? 'nettó' : 'bruttó'})</span>
@@ -806,15 +729,6 @@ function ContractForm({
   )
 }
 
-// ---------------------------------------------------------------------------
-//  Kártyák — csukva a lényeg, nyitva a részletek
-//
-//  Ugyanaz az elrendezés, mint az Ügyfelek menüpontban: hat kártya fér egy
-//  sorba, és csak az van kint, amivel keresni szoktak. Egy bérletnél ez az,
-//  hogy kié és hány alkalom van még rajta; egy szerződésnél az, hogy melyik
-//  cég és van-e hozom-viszem. A tételek és az árak egy kattintásra vannak.
-// ---------------------------------------------------------------------------
-
 function BerletKartya({ cim, maradt, osszes, lejart, children }: {
   cim: string
   maradt: number
@@ -844,9 +758,7 @@ function BerletKartya({ cim, maradt, osszes, lejart, children }: {
 
 function CegKartya({ cim, cegId, kiemelt, nev, hozomViszem, arDb, autok, children }: {
   cim: string
-  /** Erre a cégre érkeztünk (Szerződés részletei): nyitva, odagörgetve, kiemelve. */
   kiemelt?: boolean
-  /** A cég: ehhez tartozik az igazolólap. */
   cegId: string | null
   nev: string
   hozomViszem: boolean
@@ -856,7 +768,6 @@ function CegKartya({ cim, cegId, kiemelt, nev, hozomViszem, arDb, autok, childre
 }) {
   const [nyitva, setNyitva] = useState(kiemelt === true)
   const doboz = useRef<HTMLDivElement>(null)
-  // A kiemelés pár másodperc után elhalványul: csak azt mutatja, hova érkeztünk.
   const [villan, setVillan] = useState(kiemelt === true)
   useEffect(() => {
     if (!kiemelt) return
@@ -864,9 +775,6 @@ function CegKartya({ cim, cegId, kiemelt, nev, hozomViszem, arDb, autok, childre
     const t = window.setTimeout(() => setVillan(false), 2500)
     return () => window.clearTimeout(t)
   }, [kiemelt])
-  // Az igazolólap ablaka. Innen is megnyitható (nem csak az Ügyfelek → Cég
-  // szerint nézetből): itt kezelik a szerződést, itt keresik a lapját is —
-  // kitöltés, oszlopok és lábléc, lezárás, Word letöltés.
   const [lapNyitva, setLapNyitva] = useState(false)
   return (
     <div className="panel" data-nyitva={nyitva} data-kiemelt={villan || undefined} ref={doboz}>
@@ -874,7 +782,6 @@ function CegKartya({ cim, cegId, kiemelt, nev, hozomViszem, arDb, autok, childre
         {cim}
       </KartyaFej>
       <div className="panel-torzs">
-        {/* Csukott kártyán is látszik: egy mozdulat legyen megnyitni. */}
         {cegId && (
           <div className="ceg-lap-sor">
             <button className="btn" onClick={() => setLapNyitva(true)}>Igazolólap</button>

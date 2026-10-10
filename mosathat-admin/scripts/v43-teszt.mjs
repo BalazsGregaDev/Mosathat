@@ -1,17 +1,6 @@
-// v43 ellenőrzése Playwrighttal.
-//
-// Futtatás:  npm run dev -- --port 5180   (másik ablakban)
-//            node scripts/v43-teszt.mjs
-//
-// Amit néz:
-//   1. Új időpont: „Kérdőjeles (???)" gomb a Mikor részben; kisbetűs rendszám
-//      nagybetűvel jelenik meg; a napi, heti és havi nézetben „???" a rendszám
-//      mellett.
-//   2. Napi kártya: „Nem fért be" gomb (v57 óta minden autónál) → lezárva 0 Ft-tal,
-//      „nem fért be" címke.
-//   3. Munkalap: Kérdőjeles kapcsoló, „Nem fért be" gomb a lábban.
-//   4. Érintőképernyő: a gyári időválasztó helyett saját gombos panel.
 import { chromium } from 'playwright'
+
+import { hetkoznapra } from './_munkanap.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -21,6 +10,7 @@ const ok = (mit, v, k) => {
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
 async function belep(p, email = 'tulaj@mosathat.hu') {
+  await hetkoznapra(p)
   await p.goto('http://localhost:5180/')
   await p.waitForSelector('input[type="email"]', { timeout: 60000 })
   await p.fill('input[type="email"]', email)
@@ -55,7 +45,6 @@ async function ujFoglalas(p, rsz, nev, tel, kerdojeles, datum) {
   await p.waitForTimeout(2000)
 }
 
-// =============================================================================
 const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } })
 const p = await ctx.newPage()
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
@@ -68,8 +57,6 @@ ok('a Mikor részben ott a Kérdőjeles gomb', 1, await p.locator('.kerdojel-gom
 await p.locator('.lap-fej .bezar').click(); await p.waitForTimeout(500)
 await ujFoglalas(p, 'kq-001', 'Kérdő Kálmán', '+36301110043', true)
 await ujFoglalas(p, 'kq-002', 'Kérdő Klára', '+36301110044', true)
-// Egy kérdőjeles egy hét múlva is: a havi nézet zsúfolt mai cellája helyett
-// azon a csendes napon nézzük meg.
 const hetMulva = await p.evaluate(() => {
   const d = new Date(); d.setDate(d.getDate() + 7)
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest' }).format(d)
@@ -81,7 +68,6 @@ await ujFoglalas(p, 'kq-003', 'Kérdő Kornél', '+36301110045', true, hetMulva)
   ok('napi nézet: „???" a rendszám mellett', '???', (await k.locator('.cimke-pill.kerdojel').innerText()).trim())
   ok('a „???" közvetlenül a rendszám után', true, await k.evaluate((el) =>
     el.querySelector('.rendszam').nextElementSibling?.classList.contains('kerdojel')))
-  // v57: „Nem fért be" minden még nem lezárt autónál
   ok('nem kérdőjelesnél is van „Nem fért be" gomb (v57)', 1,
     await p.locator('.napi-lista .kartya').filter({ hasText: 'ABC-123' })
       .getByRole('button', { name: 'Nem fért be' }).count())
@@ -91,8 +77,6 @@ await p.waitForTimeout(1500)
 ok('heti nézet: „???"', true, (await p.locator('.minikartya, .hetsav').filter({ hasText: 'KQ-001' }).first().innerText()).includes('???'))
 await p.locator('.fejlec .nezetvalto button').filter({ hasText: 'Hónap' }).click()
 await p.waitForTimeout(1500)
-// v50 óta a havi nézetben az egynapos autók csak számként látszanak
-// („+ 8 autó"); a „???" a napi és a heti nézetben, meg a többnapos sávon van.
 ok('havi nézet: az egynaposak számként', true, (await p.locator('.honap-autok').count()) > 0)
 await p.locator('.fejlec .nezetvalto button').filter({ hasText: /^Nap$/ }).click()
 await p.waitForTimeout(1500)
@@ -127,7 +111,6 @@ console.log('\n=== 3) Munkalap ===\n')
   await p.locator('.kerdes-gombok button').filter({ hasText: 'Nem fért be' }).click()
   await p.waitForTimeout(1500)
   ok('lezárva, a fejlécben „nem fért be"', true, (await p.locator('.lap-fej h2').innerText()).includes('nem fért be'))
-  // Visszanyitás: a jelölés eltűnik
   await p.locator('.munkalap-lab').getByRole('button', { name: 'Visszanyit' }).click()
   await p.waitForTimeout(1500)
   ok('visszanyitva: újra „???"', true, (await p.locator('.lap-fej h2').innerText()).includes('???'))
@@ -136,7 +119,6 @@ console.log('\n=== 3) Munkalap ===\n')
 await p.screenshot({ path: '/tmp/v43-nap.png' })
 await ctx.close()
 
-// =============================================================================
 console.log('\n=== 4) Tablet: saját időválasztó ===\n')
 const ctx2 = await b.newContext({ viewport: { width: 800, height: 1280 }, isMobile: true, hasTouch: true })
 const t = await ctx2.newPage()
@@ -159,7 +141,6 @@ await menu(t, 'Időpontok')
   await t.waitForTimeout(300)
   ok('perc után bezárul', 0, await t.locator('.ido-ablak').count())
   ok('a mezőben 10:30', '10:30', (await t.locator('#leadas').innerText()).trim())
-  // Escape csak a panelt zárja, az űrlapot nem
   await t.locator('#atvetel').click(); await t.waitForTimeout(300)
   await t.keyboard.press('Escape'); await t.waitForTimeout(300)
   ok('Escape: a panel bezárul, az űrlap marad', [0, 1],

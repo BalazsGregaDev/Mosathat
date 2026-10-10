@@ -1,7 +1,6 @@
-// v55: idővonal a napi nézet tetején (negyedórás bontás, megvárja / itt
-// hagyja más színnel, a sor végén hány Start fér még be).
-// Az óra 9:40-re állítva, hogy a „most" a munkaidőbe essen.
 import { chromium } from 'playwright'
+
+import { helyiIdo, munkanap } from './_munkanap.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -10,12 +9,10 @@ const ok = (mit, v, k) => {
   if (!jo) baj++
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
-const ma = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest' }).format(new Date())
+const ma = munkanap().nap
 const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } })
 const p = await ctx.newPage()
-// 9:40 budapesti idő (nyári időszámításnál UTC+2, télen +1 — a teszt a mai napra számol)
-const eltolas = new Date(`${ma}T12:00:00Z`).toLocaleString('en-US', { timeZone: 'Europe/Budapest', hour: '2-digit', hour12: false })
-await p.clock.install({ time: new Date(`${ma}T${String(9 - (Number(eltolas) - 12)).padStart(2, '0')}:40:00Z`) })
+await p.clock.install({ time: helyiIdo(ma, '09:40') })
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
 await p.goto('http://localhost:5180/')
 await p.waitForSelector('input[type="email"]', { timeout: 60000 })
@@ -45,7 +42,6 @@ const szin = async (rsz) => iv.locator('.iv-darab').filter({ hasText: rsz }).fir
 ok('ABC-123 (megvárja): sárga, fix', ['FIX', 'rgb(255, 216, 77)'], await szin('ABC-123'))
 ok('LMN-882 (itt hagyja): türkiz, rugalmas', ['RUGALMAS', 'rgb(205, 234, 230)'], await szin('LMN-882'))
 ok('van többnapos darab (lila)', true, (await iv.locator('.iv-darab[data-fajta="TOBBNAPOS"]').count()) > 0)
-// a megvárós a saját idején: 8:00–10:00 → a sáv elején kezdődik
 const abc = await iv.locator('.iv-darab').filter({ hasText: 'ABC-123' }).first().evaluate((e) => {
   const t = e.parentElement.getBoundingClientRect(); const r = e.getBoundingClientRect()
   return [Math.round((r.left - t.left) / t.width * 9 * 60), Math.round(r.width / t.width * 9 * 60)]

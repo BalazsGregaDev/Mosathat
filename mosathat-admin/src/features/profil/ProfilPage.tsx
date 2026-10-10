@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { maStr, napCim } from '../../lib/format'
+import { hibaSzoveg, maStr, napCim } from '../../lib/format'
 import { VALTOZAS_FAJTAK, valtozasSzoveg } from '../../lib/munkaido'
 import {
   ROLE_LABEL,
@@ -10,29 +10,11 @@ import {
 import { useKerdes } from '../common/Kerdes'
 import IdoMezo from '../common/IdoMezo'
 import SzabadsagPanel from './SzabadsagPanel'
-
-// ---------------------------------------------------------------------------
-//  Profilom
-//
-//  Mindenkinek van, az alkalmazottnak is. Három dolog van rajta:
-//
-//    1. a fiók: név, szerepkör, jelszóváltoztatás, kilépés
-//    2. munkaidő-változás bejelentése: később jövök, korábban megyek,
-//       napközben nem leszek bent, egész nap nem jövök — megjegyzéssel
-//    3. a bejelentett változások listája, a mai naptól
-//
-//  A bejelentett változás MAGÁTÓL megjelenik a napi nézet kapacitás-
-//  kártyáján („Gábor ma: 16:00-ig van bent"), és a kapacitás is annyival
-//  kevesebb lesz: ha egy alkalmazott hiányzik, a nap 80%-ára, ha kettő,
-//  40%-ára csökken — arra az időszakra, amíg nincsenek bent.
-//
-//  A tulajdonos és a fejlesztő másnak is bejelentheti (ha valaki reggel
-//  telefonál, hogy késik), és mindenkiét látja a listában.
-// ---------------------------------------------------------------------------
+import KinekValaszto from './KinekValaszto'
 
 interface Urlap {
   id: string | null
-  staffId: string | null       // null = én magam
+  staffId: string | null
   day: string
   kind: AbsenceKind
   starts: string
@@ -45,7 +27,6 @@ const URES = (): Urlap => ({
 })
 
 export default function ProfilPage({ onJelszo }: {
-  /** A jelszóváltoztató ablak — a héj nyitja, mert onnan a menüből is elérhető. */
   onJelszo: () => void
 }) {
   const { data, user, signOut, refresh } = useApp()
@@ -61,25 +42,21 @@ export default function ProfilPage({ onJelszo }: {
     try {
       setLista(await data.listAbsences())
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     }
   }, [data])
 
   useEffect(() => { void betolt() }, [betolt])
 
-  // A tulajdonosnak a „Kinek" választóhoz kellenek a dolgozók.
   useEffect(() => {
     if (!teljesJogu) return
     data.listStaff()
-      // a közös fiók (pl. tablet) nem ember: neki nincs munkaideje, szabadsága
       .then((l) => setDolgozok(l.filter((d) => d.active && d.id && !d.kozos)))
       .catch(() => setDolgozok([]))
   }, [data, teljesJogu])
 
   const set = <K extends keyof Urlap>(k: K, v: Urlap[K]) => setF((x) => ({ ...x, [k]: v }))
 
-  // Milyen időmező kell: később jön → mikor érkezik; korábban megy → mikor
-  // megy el; napközben távol → mettől meddig; egész nap → egyik sem.
   const kellTol = f.kind === 'KORABBAN_TAVOZIK' || f.kind === 'TAVOL'
   const kellIg = f.kind === 'KESOBB_ERKEZIK' || f.kind === 'TAVOL'
   const menthetE = Boolean(f.day)
@@ -102,9 +79,9 @@ export default function ProfilPage({ onJelszo }: {
       })
       setF(URES())
       await betolt()
-      refresh()       // a napi nézet kapacitása is utánamegy
+      refresh()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
       setMegy(false)
     }
@@ -136,7 +113,7 @@ export default function ProfilPage({ onJelszo }: {
       await betolt()
       refresh()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     }
   }
 
@@ -149,7 +126,6 @@ export default function ProfilPage({ onJelszo }: {
       </div>
 
       <div className="profil-racs">
-        {/* ---------- fiók ---------- */}
         <section className="panel">
           <h3>Fiók</h3>
           <div className="panel-torzs">
@@ -165,7 +141,6 @@ export default function ProfilPage({ onJelszo }: {
           </div>
         </section>
 
-        {/* ---------- munkaidő-változás ---------- */}
         <section className="panel" id="munkaido-urlap">
           <h3>{f.id ? 'Munkaidő-változás módosítása' : 'Munkaidő-változás'}</h3>
           <div className="panel-torzs profil-urlap">
@@ -175,16 +150,8 @@ export default function ProfilPage({ onJelszo }: {
             </p>
 
             {teljesJogu && dolgozok.length > 0 && (
-              <div className="mezo">
-                <label htmlFor="mv-kinek">Kinek</label>
-                <select id="mv-kinek" className="beviteli" value={f.staffId ?? ''}
-                        onChange={(e) => set('staffId', e.target.value || null)}>
-                  <option value="">Nekem</option>
-                  {dolgozok.filter((d) => d.id !== user.id).map((d) => (
-                    <option key={d.id!} value={d.id!}>{d.full_name}</option>
-                  ))}
-                </select>
-              </div>
+              <KinekValaszto id="mv-kinek" ertek={f.staffId} dolgozok={dolgozok} sajatId={user.id}
+                             onValt={(v) => set('staffId', v)} />
             )}
 
             <div className="mezo">
@@ -228,8 +195,6 @@ export default function ProfilPage({ onJelszo }: {
               </div>
             )}
 
-            {/* Megjegyzés mindig írható: „orvoshoz megyek", „a gyerek miatt" —
-                hogy a többiek tudják, mire számítsanak. */}
             <div className="mezo">
               <label htmlFor="mv-megj">Megjegyzés</label>
               <input id="mv-megj" className="beviteli" value={f.note}
@@ -252,7 +217,6 @@ export default function ProfilPage({ onJelszo }: {
           </div>
         </section>
 
-        {/* ---------- bejelentett változások ---------- */}
         <section className="panel">
           <h3>{teljesJogu ? 'Bejelentett változások — mindenki' : 'Bejelentett változásaim'}</h3>
           <div className="panel-torzs">
@@ -281,7 +245,6 @@ export default function ProfilPage({ onJelszo }: {
           </div>
         </section>
 
-        {/* ---------- szabadság ---------- */}
         <SzabadsagPanel teljesJogu={teljesJogu} dolgozok={dolgozok} />
       </div>
       {kerdesAblak}

@@ -1,5 +1,3 @@
-// v56: fejlesztői fiók — „Időpontfoglalás" menüpont (a publikus foglalási
-// modul próbája) és a „Befér-e?" sor az Új időpont űrlapon.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -41,7 +39,6 @@ await p.waitForTimeout(2500)
 const sor = p.locator('.befer-sor')
 ok('van Befér-e sor', 1, await sor.count())
 ok('befér vagy nem fér be — kiírja', true, /Befér|Nem fér be|zárva/.test(await sor.innerText()))
-// egy biztosan szabad nap: a jövő hét szerdája
 const szerda = new Date(); szerda.setDate(szerda.getDate() + ((10 - szerda.getDay()) % 7 || 7) + 0)
 const sz = `${szerda.getFullYear()}-${String(szerda.getMonth() + 1).padStart(2, '0')}-${String(szerda.getDate()).padStart(2, '0')}`
 await p.locator('#datum').fill(sz)

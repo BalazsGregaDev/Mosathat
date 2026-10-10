@@ -5,27 +5,7 @@ import { useApp } from '../../state/AppContext'
 import { sajatOszlop, ujOszlopKulcs } from '../../lib/igazolo'
 import type { SheetColumn } from '../../lib/types'
 import { useKerdes } from '../common/Kerdes'
-
-// ---------------------------------------------------------------------------
-//  Az igazolólap oszlopai és lábléce — cégenként
-//
-//  Minden cég a saját formáját kéri. Ezért:
-//
-//    - az alap oszlopok (Dátum, Rendszám, Km óra állás, Nettó ár, Név,
-//      Aláírás) ÁTNEVEZHETŐK és ELREJTHETŐK, de nem törölhetők — a program
-//      ezekbe tölti az adatot a foglalásból;
-//    - bármennyi SAJÁT oszlop felvehető (pl. „Munkaszám", „Költséghely"),
-//      ezek szöveges mezők, kézzel töltik ki;
-//    - a sorrend szabadon állítható (Fel / Le).
-//
-//  A lábléc elején a szerződés árai állnak (méret – csomag – nettó ár), ezt
-//  a szerződésből számoljuk, itt nem kell beírni. Alájuk jön a saját szöveg
-//  (pl. „Fizetés havonta, átutalással.").
-//
-//  A beállítás a NYITOTT hónapokra érvényes. A lezárt hónap a lezáráskori
-//  oszlopokkal, lábléccel és árakkal marad (az adatbázis rögzíti) — így egy
-//  régi lap Word fájlja akkor is ugyanaz, ha azóta itt bármi változott.
-// ---------------------------------------------------------------------------
+import { hibaSzoveg } from '../../lib/format'
 
 export default function LapBeallitas({
   cegId,
@@ -38,22 +18,17 @@ export default function LapBeallitas({
   cegId: string
   oszlopok: SheetColumn[]
   lablec: string | null
-  /** A szerződés árai a lábléchez — csak megmutatjuk, itt nem szerkeszthető. */
   arSorok: string[]
   onBezar: () => void
   onMentve: () => void
 }) {
   const { data } = useApp()
   const [kerdesAblak, kerdez] = useKerdes()
-  // Saját másolat: a „Mégse" így nem hagy nyomot.
   const [sorok, setSorok] = useState<SheetColumn[]>(() => oszlopok.map((o) => ({ ...o })))
   const [szoveg, setSzoveg] = useState(lablec ?? '')
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
 
-  // Escape: csak ezt az ablakot zárja be, az alatta lévőt (munkalap, cég
-  // lapja) nem. Ezért a „capture" fázisban figyeljük, és nem engedjük tovább.
-  // Ha épp egy kérdés van nyitva (pl. „Biztosan törlöd?"), az Escape azé.
   const kerdesNyitva = Boolean(kerdesAblak)
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -69,7 +44,6 @@ export default function LapBeallitas({
     setSorok((s) => s.map((o, j) => (j === i ? { ...o, ...v } : o)))
   }
 
-  /** Egy oszlop arrébb tolása: -1 fel, +1 le. */
   function mozgat(i: number, irany: -1 | 1) {
     const j = i + irany
     if (j < 0 || j >= sorok.length) return
@@ -107,15 +81,14 @@ export default function LapBeallitas({
       onMentve()
       onBezar()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
       setMegy(false)
     }
   }
 
   return createPortal(
-    <div className="fedo" role="presentation"
-         onMouseDown={(e) => e.target === e.currentTarget && !megy && onBezar()}>
+    <div className="fedo" role="presentation">
       <div className="lap" role="dialog" aria-modal="true" aria-label="Oszlopok és lábléc">
         <div className="lap-fej">
           <h2>Oszlopok és lábléc</h2>

@@ -1,74 +1,60 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { ft } from '../../lib/format'
+import { ft, hibaSzoveg } from '../../lib/format'
 import {
-  CATEGORY_SHORT, SCOPE_LABEL,
+  CATEGORY_SHORT, EGYSEG, KATEGORIAK, SCOPE_LABEL, TERJEDELMEK,
   type BookingScope, type Extra, type FullServicePrice, type Package,
   type PackagePrice, type VehicleCategory,
 } from '../../lib/types'
-import type { Catalog } from '../../data'
 import { CimMellett, CsomagTartalom } from './Arlista'
 import { KETTO_PX } from './ServicesView'
 import { useSzeles } from '../../state/useSzeles'
 import { urlapMegnyilt } from '../../lib/kepernyo'
 
-const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
-const TERJEDELMEK: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
-
-// ---------------------------------------------------------------------------
-//  Szolgáltatások — árak, időtartamok, leírások.
-//
-//  Ez a képernyő azért van elöl a sorban, mert ezzel lehet pótolni a hiányzó
-//  adatokat: a hét extra árát és a tizennyolc Kívül/Belül időtartamot. Amíg
-//  azok nincsenek meg, a kapacitásszámítás és az árkalkulátor is féllábon áll.
-//
-//  Ezért a hiányzó értékek nem üres mezőként jelennek meg, hanem narancs
-//  kerettel — hogy szemet szúrjanak, ne el lehessen nézni felettük.
-//
-//  Mentés a mezőből kilépéskor. Nincs külön Mentés gomb: harminc mezőnél
-//  úgyis elfelejtené az ember, melyiket írta át.
-// ---------------------------------------------------------------------------
-
 type Mentes = 'nincs' | 'megy' | 'kesz' | 'hiba'
 
-/** Szám bevitele, ami üresen NULL-t jelent (nem nullát). */
 function SzamMezo({
   ertek, onMent, cimke, suffix, hianyzoJelzes = true, lepes = 100,
 }: {
   ertek: number | null
   onMent: (v: number | null) => Promise<void>
-  /** Képernyőolvasónak: melyik cella ez. A táblázatban nincs látható címke. */
   cimke: string
   suffix?: string
   hianyzoJelzes?: boolean
   lepes?: number
 }) {
   const [v, setV] = useState(ertek === null ? '' : String(ertek))
+  const [alap, setAlap] = useState(ertek)
   const [allapot, setAllapot] = useState<Mentes>('nincs')
+  const [hiba, setHiba] = useState<string | undefined>(undefined)
+  const idozito = useRef<number | undefined>(undefined)
 
-  useEffect(() => {
-    setV(ertek === null ? '' : String(ertek))
-  }, [ertek])
+  if (ertek !== alap) { setAlap(ertek); setV(ertek === null ? '' : String(ertek)) }
+
+  useEffect(() => () => window.clearTimeout(idozito.current), [])
 
   async function ki() {
     const uj = v.trim() === '' ? null : Number(v)
     if (uj !== null && !Number.isFinite(uj)) return
     if (uj === ertek) return
+    window.clearTimeout(idozito.current)
     setAllapot('megy')
+    setHiba(undefined)
     try {
       await onMent(uj)
       setAllapot('kesz')
-      window.setTimeout(() => setAllapot('nincs'), 1200)
-    } catch {
+      idozito.current = window.setTimeout(() => setAllapot('nincs'), 1200)
+    } catch (e) {
       setAllapot('hiba')
+      setHiba(hibaSzoveg(e))
     }
   }
 
   const hianyzik = hianyzoJelzes && v.trim() === ''
 
   return (
-    <span className="szammezo" data-allapot={allapot} data-hianyzik={hianyzik}>
+    <span className="szammezo" data-allapot={allapot} data-hianyzik={hianyzik} title={hiba}>
       <input
         className="beviteli szam"
         type="number"
@@ -85,23 +71,12 @@ function SzamMezo({
 }
 
 export default function ServicesPage() {
-  const { data, catalog, refreshCatalog } = useApp()
-  const [k, setK] = useState<Catalog | null>(catalog)
+  const { data, catalog: k, refreshCatalog: ujra } = useApp()
   const [ful, setFul] = useState<'csomagok' | 'tartalom' | 'extrak'>('csomagok')
-  // Széles képernyőn a csomagok mellé fér az egyéb szolgáltatások listája is:
-  // soronként egy név, egy ár és egy időtartam. Keskenyen külön fülre megy.
   const szeles = useSzeles(KETTO_PX)
 
-  // Minden mentés után: ez a képernyő ÉS a foglalási űrlap katalógusa is
-  // frissül — különben az új ár / új szolgáltatás csak újrabelépés után
-  // jelenne meg az Új időpontnál.
-  const ujra = useCallback(async () => {
-    setK(await data.getCatalog())
-    void refreshCatalog()
-  }, [data, refreshCatalog])
-
   useEffect(() => {
-    void ujra()
+    ujra().catch(() => {})
   }, [ujra])
 
   if (!k) return <div className="betolt">Betöltés…</div>
@@ -112,7 +87,6 @@ export default function ServicesPage() {
   const fsAr = (p: Package, c: VehicleCategory): FullServicePrice | undefined =>
     k.fullServicePricing.find((x) => x.package_id === p.id && x.category === c)
 
-  // Hány adat hiányzik még — ezt érdemes látni a fejlécben.
   const hianyzoIdo = k.packages.length * KATEGORIAK.length * 2 -
     k.packagePricing.filter((x) => x.scope !== 'TELJES' && x.duration_minutes !== null).length
   const hianyzoExtraAr = k.extras.filter((e) => e.price_huf === null && !e.requires_quote).length
@@ -151,13 +125,10 @@ export default function ServicesPage() {
 
       {ful === 'csomagok' && (
         <div className={szeles ? 'szolg-ketto' : undefined}>
-          <div className="szolg-bal">
+          <div>
           <div className="panelek panelek-szeles">
             {k.packages.map((p) => (
               <div className="panel" key={p.id}>
-                {/* Ugyanaz az egysoros összefoglaló, mint az alkalmazotti
-                    nézetben és az árlista ablakban — ne kelljen két helyen
-                    fejben tartani, mi a különbség a csomagok között. */}
                 <h3 className="csomag-cim">
                   {p.name}
                   <CimMellett k={k} p={p} />
@@ -194,10 +165,7 @@ export default function ServicesPage() {
                                   ertek={sor?.price_huf ?? null}
                                   lepes={100}
                                   onMent={async (v) => {
-                                    await data.updatePackagePrice(p.id, c, s, {
-                                      price_huf: v,
-                                      duration_minutes: sor?.duration_minutes ?? null,
-                                    })
+                                    await data.updatePackagePrice(p.id, c, s, { price_huf: v })
                                     await ujra()
                                   }}
                                 />
@@ -208,10 +176,7 @@ export default function ServicesPage() {
                                   ertek={sor?.duration_minutes ?? null}
                                   lepes={15}
                                   onMent={async (v) => {
-                                    await data.updatePackagePrice(p.id, c, s, {
-                                      price_huf: sor?.price_huf ?? null,
-                                      duration_minutes: v,
-                                    })
+                                    await data.updatePackagePrice(p.id, c, s, { duration_minutes: v })
                                     await ujra()
                                   }}
                                 />
@@ -259,8 +224,6 @@ export default function ServicesPage() {
           </div>
           </div>
 
-          {/* Széles képernyőn ide, a csomagok mellé kerül. Keskenyen külön
-              fülre megy — ott a fenti gombsorban jelenik meg. */}
           {szeles && (
             <div className="szolg-jobb">
               <h3 className="szolg-cim">
@@ -285,10 +248,6 @@ export default function ServicesPage() {
         </div>
       )}
 
-      {/* A csomagok tartalma nem itt szerkeszthető: a munkalépéseket és az
-          öröklődést az adatbázis tartja (package_items), mert ugyanaz a lista
-          adja a munkalapot is. Itt megnézni lehet — ugyanazt, amit az
-          alkalmazott lát. */}
       {ful === 'tartalom' && <CsomagTartalom k={k} />}
 
       {ful === 'extrak' && (
@@ -312,11 +271,14 @@ export default function ServicesPage() {
 function ExtraSor({ e, onMent }: { e: Extra; onMent: (patch: Partial<Extra>) => Promise<void> }) {
   const [leiras, setLeiras] = useState(e.description ?? '')
   const [nyitva, setNyitva] = useState(false)
+  const [hiba, setHiba] = useState<string | null>(null)
 
-  const egyseg =
-    e.price_unit === 'ULES' ? '/ ülés'
-    : e.price_unit === 'AJTO' ? '/ ajtó'
-    : e.price_unit === 'LITER' ? '/ liter' : ''
+  const egyseg = ['ULES', 'AJTO', 'LITER'].includes(e.price_unit) ? `/ ${EGYSEG[e.price_unit]}` : ''
+
+  function ment(patch: Partial<Extra>) {
+    setHiba(null)
+    onMent(patch).catch((err) => setHiba(hibaSzoveg(err)))
+  }
 
   return (
     <div className="extrasor" data-aktiv={e.active}>
@@ -342,6 +304,7 @@ function ExtraSor({ e, onMent }: { e: Extra; onMent: (patch: Partial<Extra>) => 
         />
       </div>
 
+      {hiba && <div className="hibauzenet">{hiba}</div>}
       {nyitva && (
         <div className="reszletek">
           <div className="mezo">
@@ -351,7 +314,7 @@ function ExtraSor({ e, onMent }: { e: Extra; onMent: (patch: Partial<Extra>) => 
               className="beviteli"
               value={leiras}
               onChange={(ev) => setLeiras(ev.target.value)}
-              onBlur={() => leiras !== (e.description ?? '') && void onMent({ description: leiras })}
+              onBlur={() => { if (leiras !== (e.description ?? '')) ment({ description: leiras }) }}
             />
           </div>
           <div className="sor-2">
@@ -359,7 +322,7 @@ function ExtraSor({ e, onMent }: { e: Extra; onMent: (patch: Partial<Extra>) => 
               <input
                 type="checkbox"
                 checked={e.active}
-                onChange={(ev) => void onMent({ active: ev.target.checked })}
+                onChange={(ev) => ment({ active: ev.target.checked })}
               />
               <span>Aktív — látszik a foglalási űrlapon</span>
             </label>
@@ -392,17 +355,6 @@ function ExtraSor({ e, onMent }: { e: Extra; onMent: (patch: Partial<Extra>) => 
   )
 }
 
-// ---------------------------------------------------------------------------
-//  Új egyéb szolgáltatás
-//
-//  Három adat kell hozzá: név, ár, idő. A többit (leírás, száradási idő,
-//  aktív) utána a listában lehet beállítani, ugyanúgy, mint a meglévőknél —
-//  a felvett tétel a lista végére kerül, kinyitható.
-//
-//  Ugyanaz a név (ékezet és kisbetű nélkül is) nem lehet kétszer: azt az
-//  adatbázis szól vissza, itt csak megjelenik.
-// ---------------------------------------------------------------------------
-
 function UjExtra({ onKesz }: { onKesz: () => Promise<void> }) {
   const { data } = useApp()
   const [nyitva, setNyitva] = useState(false)
@@ -411,8 +363,6 @@ function UjExtra({ onKesz }: { onKesz: () => Promise<void> }) {
   const [perc, setPerc] = useState('')
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
-  // Nyitáskor a kurzor a név mezőbe kerül (egérrel); telefonon csak a képbe
-  // görgetjük az űrlapot, a billentyűzet a koppintásra jön fel.
   const nevMezo = useRef<HTMLInputElement>(null)
   useEffect(() => { if (nyitva) urlapMegnyilt(nevMezo.current) }, [nyitva])
 
@@ -427,14 +377,13 @@ function UjExtra({ onKesz }: { onKesz: () => Promise<void> }) {
     try {
       await data.createExtra({
         name: nev.trim(),
-        // Üresen hagyva NULL, nem nulla: „még nincs ára", nem „ingyenes".
         price_huf: ar.trim() === '' ? null : Number(ar),
         work_minutes: perc.trim() === '' ? null : Number(perc),
       })
       await onKesz()
       bezar()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
       setMegy(false)
     }
@@ -459,8 +408,6 @@ function UjExtra({ onKesz }: { onKesz: () => Promise<void> }) {
                onChange={(e) => setNev(e.target.value)}
                onKeyDown={(e) => { if (e.key === 'Enter') void ment() }} />
       </div>
-      {/* Az ár és az idő egymás mellett: egy gondolat — mennyibe kerül, és
-          mennyi ideig tart. */}
       <div className="uj-extra-szamok">
         <label className="mezo">
           <span>Ár</span>

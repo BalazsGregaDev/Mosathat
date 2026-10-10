@@ -1,6 +1,3 @@
-// v38, adatbázis: szerződés törlése és az igazolólapok.
-//
-// Igazi PostgreSQL-en (PGlite), az összes migrációval.
 import { adatbazis, tesztelo, TULAJ, ALK } from './_db.mjs'
 
 const db = await adatbazis()
@@ -20,7 +17,6 @@ const foglal = async (adat) => (await egy(`select create_booking($1::jsonb) as i
   drop_off_time: '09:00', package_id: csomag.PREMIUM, extras: [], ...adat,
 })])).id
 
-// Egy szerződéses cég, két autóval
 const szerzId = (await egy(`select save_contract($1::jsonb) as id`, [JSON.stringify({
   company_name: 'Flotta Kft.', valid_until: await nap(300),
   prices: [
@@ -57,11 +53,9 @@ t.ok('km, aláírás, saját oszlop elmentve', [123456, true, 'MSZ-1'],
   [lap.rows[0].km, lap.rows[0].signature === alairas, lap.rows[0].extra.E_munkaszam])
 t.ok('a lábléc árai a szerződésből', 2, lap.prices.length)
 
-// Ugyanarra a foglalásra másodszor: a meglévő sor jön, nem új
 const ujra = (await egy(`select sheet_for_booking($1) as r`, [f1])).r
 t.ok('a gomb másodszorra a meglévő sort nyitja', sor1, ujra.row.id)
 {
-  // Aláírás nélküli kérés: a mentett aláírás nem változhat.
   const { signature: _nem, ...kepNelkul } = ujra.row
   void _nem
   await q(`select sheet_row_save($1::jsonb)`, [JSON.stringify({ ...kepNelkul, km: 123460 })])

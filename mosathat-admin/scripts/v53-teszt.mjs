@@ -1,4 +1,3 @@
-// v53: a napi kártyán a „Megvárja" címke (sárga), a H-V-hez hasonlóan.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -24,7 +23,6 @@ const kartya = (rsz) => p.locator('.napi-lista .kartya').filter({ has: p.locator
 const cimke = (rsz) => kartya(rsz).locator('.cimke-pill[data-r="megvarja"]')
 
 console.log('=== Megvárja címke ===\n')
-// A demóban ma két „megvárja" foglalás van (ABC-123, PQR-450), a többi itt hagyja.
 ok('ABC-123 (megvárja): van címke', 'Megvárja', (await cimke('ABC-123').innerText()).trim())
 ok('PQR-450 (megvárja): van címke', 1, await cimke('PQR-450').count())
 ok('LMN-882 (itt hagyja): nincs', 0, await cimke('LMN-882').count())

@@ -2,31 +2,15 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
-import { honapCim } from '../../lib/format'
+import { hibaSzoveg, honapCim } from '../../lib/format'
 import type { SheetColumn, SheetRow } from '../../lib/types'
 import { useKerdes } from '../common/Kerdes'
 import AlairasRajzolo from './AlairasRajzolo'
 
-// ---------------------------------------------------------------------------
-//  Az igazolólap egy sora — kitöltés, aláírás, mentés
-//
-//  Két helyről nyílik:
-//
-//    - a napi nézetből (a kártya vagy a munkalap „Igazolólap" gombja): a sor
-//      már ki van töltve a foglalásból — dátum (az átadás napja), rendszám,
-//      nettó ár, a sofőr neve. Csak a km-t kell beírni és aláírni.
-//    - a cég lapjáról („+ Új sor", vagy egy meglévő sorra kattintva).
-//
-//  A mezők a cég oszlopaiból jönnek: ami el van rejtve, az itt sem látszik
-//  (a dátum kivétel: abból tudjuk, melyik havi lapra kerül a sor). A cég
-//  saját oszlopai szöveges mezők.
-//
-//  Lezárt lapnál minden csak olvasható.
-// ---------------------------------------------------------------------------
-
-/** Csak a számjegyek („123 456 km" → 123456); üresből null. */
 function szam(s: string): number | null {
-  const d = s.replace(/[^0-9]/g, '')
+  const t = s.trim()
+  if (/^\d+\.\d{1,2}$/.test(t)) return Math.round(Number(t))
+  const d = t.split(',')[0].replace(/[^0-9]/g, '')
   return d === '' ? null : Number(d)
 }
 
@@ -43,14 +27,10 @@ export default function SorUrlap({
   cegId: string
   cegNev: string
   oszlopok: SheetColumn[]
-  /** A kitöltendő / módosítandó sor (új sornál id = null). */
   sor: SheetRow
-  /** A sor hónapjának lapja le van zárva: csak olvasható. */
   zarva: boolean
-  /** Egy mondat felül (pl. „Az autó kész: írasd alá átadáskor."). */
   uzenet?: string
   onBezar: () => void
-  /** Mentés vagy törlés után (a hívó újratölt). */
   onMentve?: () => void
 }) {
   const { data } = useApp()
@@ -62,14 +42,18 @@ export default function SorUrlap({
   const [nev, setNev] = useState(sor.name ?? '')
   const [extra, setExtra] = useState<Record<string, string>>(sor.extra ?? {})
   const [alairas, setAlairas] = useState<string | null>(sor.signature)
-  // Csak akkor küldjük el az aláírást, ha változott — különben a mentett marad.
   const [alairasValtozott, setAlairasValtozott] = useState(false)
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
 
-  // Escape: csak ezt az ablakot zárja be, az alatta lévőt (munkalap, cég
-  // lapja) nem. Ezért a „capture" fázisban figyeljük, és nem engedjük tovább.
-  // Ha épp egy kérdés van nyitva (pl. „Biztosan törlöd?"), az Escape azé.
+  const valtozott = alairasValtozott
+    || nap !== sor.day.slice(0, 10)
+    || rendszam !== (sor.plate ?? '')
+    || km !== (sor.km != null ? String(sor.km) : '')
+    || netto !== (sor.net_huf != null ? String(sor.net_huf) : '')
+    || nev !== (sor.name ?? '')
+    || JSON.stringify(extra) !== JSON.stringify(sor.extra ?? {})
+
   const kerdesNyitva = Boolean(kerdesAblak)
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -106,7 +90,7 @@ export default function SorUrlap({
       onMentve?.()
       onBezar()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
       setMegy(false)
     }
@@ -124,13 +108,13 @@ export default function SorUrlap({
       onMentve?.()
       onBezar()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     }
   }
 
   return createPortal(
     <div className="fedo" role="presentation"
-         onMouseDown={(e) => e.target === e.currentTarget && !megy && onBezar()}>
+         onMouseDown={(e) => { if (e.target === e.currentTarget && !megy && !valtozott) onBezar() }}>
       <div className="lap" role="dialog" aria-modal="true" aria-label="Igazolólap sora">
         <div className="lap-fej">
           <div>
@@ -195,7 +179,6 @@ export default function SorUrlap({
             </div>
           )}
 
-          {/* A cég saját oszlopai: szöveges mezők. */}
           {sajat.map((o) => (
             <div className="mezo" key={o.key}>
               <label htmlFor={`ig-${o.key}`}>{o.label}</label>

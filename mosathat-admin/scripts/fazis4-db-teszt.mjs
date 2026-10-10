@@ -1,5 +1,3 @@
-// 4. fázis, adatbázis: munkaidő-változások listája, új egyéb szolgáltatás,
-// ügyfél- és jármű-összesítő, cég szerinti nézet, szerződés csomagonként.
 import { adatbazis, tesztelo, TULAJ, ALK } from './_db.mjs'
 
 const db = await adatbazis()

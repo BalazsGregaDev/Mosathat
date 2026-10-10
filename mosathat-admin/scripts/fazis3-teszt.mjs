@@ -1,8 +1,3 @@
-// A v37 3. fázisának ellenőrzése Playwrighttal: napi, heti, havi nézet,
-// áthúzás, a nap kártyája, kattintható figyelmeztetések, tablet menü.
-//
-// Futtatás:  npm run dev -- --port 5180   (másik ablakban)
-//            node scripts/fazis3-teszt.mjs
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -23,7 +18,6 @@ async function belep(p, email = 'tulaj@mosathat.hu') {
 }
 const rendszamok = (p) => p.locator('.napi-lista .kartya .rendszam').allInnerTexts()
 
-// =============================================================================
 const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } })
 const p = await ctx.newPage()
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
@@ -51,7 +45,6 @@ console.log('=== 1) napi lista: egy lista, kártya tartalma ===\n')
   ok('a csomag és utána az egyéb szolgáltatás', ['Premium', '+ Felni'],
     [(await abc.locator('.csomag').innerText()).trim(),
      (await abc.locator('.extrak').innerText()).trim().slice(0, 7)])
-  // A csomag a rendszámmal és az idővel EGY sorban áll, felül
   const sor = await abc.evaluate((k) => {
     const y = (s) => Math.round(k.querySelector(s).getBoundingClientRect().top
       + k.querySelector(s).getBoundingClientRect().height / 2)
@@ -61,10 +54,6 @@ console.log('=== 1) napi lista: egy lista, kártya tartalma ===\n')
     Math.abs(sor.rendszam - sor.csomag) <= 6 && Math.abs(sor.ido - sor.csomag) <= 6)
   ok('nincs állapot-felirat a kártyán', 0,
     await p.locator('.napi-lista .kartya .cimke-pill').filter({ hasText: /Várjuk|Dolgozunk|Megérkezett|Kész|Lezárva/ }).count())
-  // A kártya nem lett nagyobb, csak a betűk: egy sima (egynapos, extra és
-  // megjegyzés nélküli) kártya két sor — fent a rendszám, idő, csomag, lent
-  // az ár és a gombok —, és nem magasabb, mint a régi, kis betűs kártya volt
-  // (kb. 130 px).
   const sima = p.locator('.napi-lista .kartya')
     .filter({ hasNot: p.locator('.extrak, .kartya-tobbnap, .kartya-megj') }).first()
   ok('a kártya alacsony maradt', true, (await sima.boundingBox()).height <= 130)
@@ -102,19 +91,16 @@ console.log('\n=== 3) áthúzás egérrel ===\n')
   const utana = await rendszamok(p)
   ok('a harmadik kártya az első helyre került', [elotte[2], elotte[0], elotte[1]], utana.slice(0, 3))
 
-  // Másik napra és vissza: az adatbázisból jön, és ugyanaz.
   await p.locator('.napvalto .nyil').last().click(); await p.waitForTimeout(1200)
   await p.locator('.napvalto .nyil').first().click(); await p.waitForTimeout(1500)
   ok('napváltás után is megmaradt (az adatbázisban van)', utana, await rendszamok(p))
 
-  // Billentyűzet: a fogón a lefelé nyíl egy hellyel lejjebb tesz
   await p.locator('.napi-lista .fogo').first().focus()
   await p.keyboard.press('ArrowDown')
   await p.waitForTimeout(1200)
   const bill = await rendszamok(p)
   ok('billentyűzettel is: le nyíl', [utana[1], utana[0]], bill.slice(0, 2))
 
-  // Az állapotgomb nem rendezi át
   const kartya = p.locator('.napi-lista .kartya').filter({ has: p.locator('.kartya-muvelet .btn-fo', { hasText: 'Megérkezett' }) }).first()
   await kartya.locator('.kartya-muvelet .btn-fo').click()
   await p.waitForTimeout(1500)
@@ -161,7 +147,6 @@ console.log('\n=== 6) havi nézet: az aznapi autók száma (v50) ===\n')
 await p.locator('.fejlec .nezetvalto button').filter({ hasText: 'Hónap' }).click()
 await p.waitForTimeout(1500)
 {
-  // v50 óta a cellában nem egyenként állnak az autók, hanem egy nagy szám.
   ok('a cellákban nincs egyenkénti kártya', 0, await p.locator('.honapnap .minikartya').count())
   ok('van „autó" szám', true, (await p.locator('.honap-autok').count()) > 0)
 }
@@ -169,7 +154,6 @@ await p.locator('.fejlec .nezetvalto button').filter({ hasText: /^Nap$/ }).click
 await p.waitForTimeout(1200)
 
 console.log('\n=== 7) figyelmeztetés: telefonszám nélkül → a mező írásra kész ===\n')
-// Egy telefonszám nélküli foglalás, csak rendszámmal
 await p.locator('.fejlec .btn-fo').filter({ hasText: 'Új időpont' }).click()
 await p.waitForTimeout(1200)
 await p.locator('#rendszam').fill('NOT-777')
@@ -221,7 +205,6 @@ await p.waitForTimeout(2000)
 }
 await ctx.close()
 
-// =============================================================================
 console.log('\n=== 9) alkalmazott: nem látja a bevételt ===\n')
 const ctx2 = await b.newContext({ viewport: { width: 1280, height: 800 }, isMobile: true, hasTouch: true })
 const t = await ctx2.newPage()
@@ -262,8 +245,6 @@ console.log('\n=== 10) tablet: hamburger menü, áthúzás ujjal ===\n')
   ok('ujjal húzva a második az első helyre került', [elotte[1], elotte[0]], (await rendszamok(t)).slice(0, 2))
 }
 
-// Érintőképernyőn: a figyelmeztetésből nyitva a telefon mező kapja a fókuszt
-// (a billentyűzetet egy ideiglenes mező hívja elő, ami utána eltűnik).
 await t.locator('.fejlec .btn-fo').filter({ hasText: 'Új időpont' }).click()
 await t.waitForTimeout(1200)
 await t.locator('#rendszam').fill('NOT-888')
@@ -284,7 +265,6 @@ await t.waitForTimeout(1500)
 await t.screenshot({ path: '/tmp/f3-tablet.png' })
 await ctx2.close()
 
-// =============================================================================
 console.log('\n=== 11) telefon: heti nézet egy oszlopban ===\n')
 const ctx3 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 const m = await ctx3.newPage()

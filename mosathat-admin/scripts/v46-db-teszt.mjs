@@ -1,10 +1,3 @@
-// v46, adatbázis: flottás autók.
-//
-// Amit néz: szerződés kapcsolója; csoport felvétele rendszám nélkül (N
-// foglalás, egy ügyfél, nap eleji sorrend, végső időpont, darabszám szerinti
-// ár és munkaidő); még egy autó; közös adatok módosítása; rendszám utólag
-// (új és már ismert autó); méret autónként; állapot autónként; igazolólap sor
-// helyőrző rendszám nélkül.
 import { adatbazis, tesztelo, TULAJ, ALK } from './_db.mjs'
 
 const db = await adatbazis()
@@ -67,7 +60,6 @@ console.log('\n=== D) Rendszám utólag, méret autónként ===\n')
 await q(`select fleet_set_plate($1, 'rai-001')`, [tg[0].id])
 tg = await tagok()
 t.ok('új rendszám: a helyőrző kapja, nagybetűvel', 'RAI-001', tg[0].plate_raw)
-// Ismert autó: már járt itt, SUV
 await belep(TULAJ)
 const ismert = (await egy(`select create_booking($1::jsonb) as id`, [JSON.stringify({
   category: 'SUV', scope: 'TELJES', booking_type: 'LEADOS', service_date: ma, drop_off_time: '09:00',

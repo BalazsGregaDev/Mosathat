@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
-import { ft, honapCim, honapElseje, honapPlusz, maStr } from '../../lib/format'
+import { ft, helyiNap, hibaSzoveg, honapCim, honapElseje, honapPlusz, maStr } from '../../lib/format'
 import { cellaSzoveg, idoszakCim, idoszakNapok, lablecArak, naptariHonap } from '../../lib/igazolo'
 import { igazoloLetolt } from '../../lib/igazoloWord'
 import type { SheetDetail, SheetRow } from '../../lib/types'
@@ -11,29 +11,6 @@ import SorUrlap from './SorUrlap'
 import LapBeallitas from './LapBeallitas'
 import HonapUgras from './HonapUgras'
 
-// ---------------------------------------------------------------------------
-//  Egy cég igazolólapja — havonta egy
-//
-//  Ez váltja ki a cégenkénti Word fájlt. A lap sorai az átadott autók:
-//  dátum, rendszám, km óra állás, nettó ár, név, aláírás (és amit a cég még
-//  kér: saját oszlopok). A lap alján a szerződés árai és egy szabad szöveg.
-//
-//  Hogyan kerül sor a lapra:
-//    - a napi nézetből, a foglalás „Igazolólap" gombjával (előre kitöltve);
-//    - itt, a „+ Új sor" gombbal (kézzel, pl. egy régi, papíros tételhez).
-//
-//  A hónap végén a tulajdonos lezárja a lapot: onnantól csak olvasható. A
-//  következő hónap lapja az első sorral magától megnyílik — nincs külön
-//  „új lap" teendő. Ha mégis javítani kell, a lezárt lap újranyitható.
-//
-//  A Word letöltés is innen indul (a fájlt a böngésző állítja össze, lásd
-//  lib/igazoloWord.ts) — a lezárt és a nyitott hónapé is.
-// ---------------------------------------------------------------------------
-
-/**
- * Új, üres sor: ha a mai nap az időszakba esik, a mai nappal, különben az
- * időszak első napjával (15-i fordulónál pl. okt. 15.).
- */
 function uresSor(kezdet: string, veg: string): SheetRow {
   const ma = maStr()
   return {
@@ -53,34 +30,28 @@ export default function IgazoloLap({
 }: {
   cegId: string
   cegNev: string
-  /** Melyik hónappal nyíljon (alapból a mostani). */
   kezdoHonap?: string
-  /** Betöltés után rögtön egy új sor nyíljon (az Igazolólap menü „+ Sor" gombja). */
   ujSorral?: boolean
   onBezar: () => void
 }) {
   const { data, user } = useApp()
   const tulaj = user?.canEditCustomers === true
   const [kerdesAblak, kerdez] = useKerdes()
-  // Amit az adatbázistól kérünk: egy hónap elseje (a választó hónapja), vagy
-  // egy nap (akkor az az időszak jön, amelyikbe esik). Alapból a MAI nap: így
-  // 15-i fordulónál okt. 4-én a szept. 15. – okt. 14. lap nyílik, nem a
-  // még el sem kezdődött októberi.
   const [kert, setKert] = useState(() => kezdoHonap ?? maStr())
   const [lap, setLap] = useState<SheetDetail | null>(null)
   const [hiba, setHiba] = useState<string | null>(null)
-  // A megnyitott sor (szerkesztés vagy új), és a beállítások ablaka.
   const [sor, setSor] = useState<SheetRow | null>(null)
   const [beallit, setBeallit] = useState(false)
-  // A Word fájl készül (pár tized másodperc, nagy lapnál egy-két másodperc).
   const [wordKeszul, setWordKeszul] = useState(false)
 
-  // Az új sor csak az ELSŐ betöltés után nyílik meg magától, később nem.
   const ujSorKell = useRef(ujSorral === true)
 
+  const kerSzam = useRef(0)
   const betolt = useCallback(async () => {
+    const n = ++kerSzam.current
     try {
       const d = await data.getSheet(cegId, kert)
+      if (n !== kerSzam.current) return
       setLap(d)
       setHiba(null)
       if (ujSorKell.current) {
@@ -88,34 +59,25 @@ export default function IgazoloLap({
         if (!d.sheet?.closed_at) setSor(uresSor(d.period_start, d.period_end))
       }
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      if (n === kerSzam.current) setHiba(hibaSzoveg(e))
     }
   }, [data, cegId, kert])
 
   useEffect(() => { void betolt() }, [betolt])
-  // Ha a tableten aláírnak, a pultnál nyitott lap is frissül.
   useEffect(() => data.subscribe(() => void betolt()), [data, betolt])
 
-  // Esc: csak ha nincs felette másik ablak (sor, beállítások).
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !sor && !beallit) onBezar() }
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
   }, [onBezar, sor, beallit])
 
-  /**
-   * Egy másik hónapra lép (nyíl, választó, a lapok listája). A régi hónap
-   * adata azonnal eltűnik — különben a betöltés alatt egy pillanatra az előző
-   * hónap sorai és állapota látszana az új hónap neve alatt.
-   */
   function lep(uj: string) {
     if (uj === kert) return
     setKert(uj)
     setLap(null)
   }
 
-  // A látott hónap (a nyilak és a választó ebből lépnek): a betöltött lap
-  // választó-hónapja; betöltés közben a kért dátum hónapja.
   const honap = lap ? lap.month.slice(0, 10) : honapElseje(kert)
 
   const zarva = Boolean(lap?.sheet?.closed_at)
@@ -129,11 +91,8 @@ export default function IgazoloLap({
   function ujSor(): SheetRow {
     return lap ? uresSor(lap.period_start, lap.period_end) : uresSor(honap, honap)
   }
-  // Az időszak neve: naptári hónapnál „2026. október", 15-i fordulónál
-  // „2026. okt. 15. – nov. 14.".
   const idoszak = lap ? idoszakCim(lap.period_start, lap.period_end) : honapCim(honap)
 
-  /** A Word fájl: a böngésző állítja össze a lap mostani állapotából. */
   async function word() {
     if (!lap || wordKeszul) return
     setWordKeszul(true)
@@ -141,7 +100,7 @@ export default function IgazoloLap({
     try {
       await igazoloLetolt(lap)
     } catch (e) {
-      setHiba(`A Word fájl nem készült el: ${e instanceof Error ? e.message : String(e)}`)
+      setHiba(`A Word fájl nem készült el: ${hibaSzoveg(e)}`)
     } finally {
       setWordKeszul(false)
     }
@@ -158,11 +117,10 @@ export default function IgazoloLap({
       igen: 'Lezárás', nem: 'Mégse',
     }))) return
     try {
-      // Az időszak első napját küldjük: így pontosan ez a lap zárul le.
       await data.closeSheet(cegId, lap?.period_start ?? honap)
       await betolt()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     }
   }
 
@@ -176,15 +134,14 @@ export default function IgazoloLap({
       await data.reopenSheet(cegId, lap?.period_start ?? honap)
       await betolt()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     }
   }
 
-  // A lap állapota egy szóval, a hónap mellett.
   const allapot = !lap
     ? null
     : zarva
-      ? `lezárva ${lap.sheet?.closed_at?.slice(0, 10) ?? ''}`
+      ? `lezárva ${helyiNap(lap.sheet?.closed_at)}`
         + (lap.sheet?.closed_by_name ? ` · ${lap.sheet.closed_by_name}` : '')
       : lap.sheet ? 'nyitott' : 'még nincs sora'
 
@@ -201,7 +158,6 @@ export default function IgazoloLap({
         </div>
 
         <div className="lap-torzs">
-          {/* --- hónap és állapot ------------------------------------------- */}
           <div className="igazolo-fejsor">
             <div className="honap-lepteto">
               <button className="btn btn-kicsi" aria-label="Előző hónap"
@@ -214,7 +170,6 @@ export default function IgazoloLap({
               <span className="cimke-pill igazolo-allapot" data-zarva={zarva}>{allapot}</span>
             )}
           </div>
-          {/* Nem naptári hónap (fordulónap): a pontos időszak a hónap alatt. */}
           {lap && !naptariHonap(lap.period_start) && (
             <div className="igazolo-idoszak">
               Időszak: <strong>{idoszakNapok(lap.period_start, lap.period_end)}</strong>
@@ -222,19 +177,14 @@ export default function IgazoloLap({
             </div>
           )}
 
-          {/* Bármelyik korábbi (vagy későbbi) hónap, korlát nélkül: az év
-              szabadon beírható, a hónap választható. A nyilakkal egyesével
-              lehet lépni, a lap alján pedig ott vannak a cég eddigi lapjai. */}
           <HonapUgras honap={honap} onLep={lep} />
 
           {hiba && <div className="hibauzenet">{hiba}</div>}
 
-          {/* --- teendők ----------------------------------------------------- */}
           <div className="igazolo-eszkozok">
             {!zarva && (
               <button className="btn btn-fo" onClick={() => setSor(ujSor())}>+ Új sor</button>
             )}
-            {/* Lezárt hónapnál nincs: annak a kinézete a lezáráskor rögzült. */}
             {tulaj && !zarva && (
               <button className="btn" onClick={() => setBeallit(true)}>Oszlopok és lábléc</button>
             )}
@@ -260,7 +210,6 @@ export default function IgazoloLap({
             </div>
           )}
 
-          {/* --- a sorok ------------------------------------------------------ */}
           {!lap && !hiba && <div className="betolt">Betöltés…</div>}
           {lap && sorok.length === 0 && (
             <div className="ures">
@@ -275,9 +224,6 @@ export default function IgazoloLap({
               </thead>
               <tbody>
                 {sorok.map((r) => (
-                  // Az egész sor kattintható: megnyitja szerkesztésre (lezárt
-                  // lapnál megnézésre). Billentyűvel a sor első cellájában
-                  // lévő gomb érhető el.
                   <tr key={r.id ?? r.day} onClick={() => setSor(r)}>
                     {oszlopok.map((o, i) => (
                       <td key={o.key} data-kulcs={o.key} data-cimke={o.label}>
@@ -307,7 +253,6 @@ export default function IgazoloLap({
             </div>
           )}
 
-          {/* --- a lábléc, ahogy a Wordbe kerül ------------------------------ */}
           {lap && (arSorok.length > 0 || lap.footer_text) && (
             <div className="igazolo-lablec">
               <div className="szakasz-cim">Lábléc</div>
@@ -316,14 +261,11 @@ export default function IgazoloLap({
             </div>
           )}
 
-          {/* --- a korábbi hónapok ------------------------------------------- */}
           {lap && lap.months.length > 0 && (
-            <div className="igazolo-honapok">
+            <div>
               <div className="szakasz-cim">Lapok</div>
               <div className="honap-gombok">
                 {lap.months.map((m) => (
-                  // Az időszak első napjára lépünk: ha a fordulónap közben
-                  // változott, így is pontosan ez a lap nyílik meg.
                   <button key={m.start} className="btn btn-kicsi"
                           data-aktiv={m.start.slice(0, 10) === lap.period_start.slice(0, 10)}
                           onClick={() => lep(m.start.slice(0, 10))}>
@@ -337,8 +279,6 @@ export default function IgazoloLap({
         </div>
 
         <div className="lap-lab">
-          {/* Üres hónapnál is letölthető: akkor üres sorokkal készül, papíron
-              kitölthető. */}
           <span className="halk igazolo-lab-szoveg">
             {lap && lap.rows.length === 0
               ? 'Üres hónap: a Word üres sorokkal készül, papíron kitölthető.'

@@ -1,5 +1,3 @@
-// v48: „Kész van" kipipálja a munkalistát (napi kártyán és munkalapon is);
-// a Visszanyit a Kész van előtti állapotba és pipákba állít vissza.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -21,7 +19,6 @@ await p.waitForTimeout(2500)
 await p.locator('aside.oldalsav button').filter({ hasText: 'Időpontok' }).first().click()
 await p.waitForTimeout(1500)
 
-// Egy magánautó, ami már bent van (ABC-123, folyamatban): a kártyáról Kész van
 const k = p.locator('.napi-lista .kartya').filter({ hasText: 'ABC-123' }).first()
 const allas = async () => (await k.locator('.lista-jelzo').innerText()).trim()
 const elotte = await allas()
@@ -31,7 +28,7 @@ console.log(`         előtte: ${elotte}, ${elotteAllapot}`)
 console.log('=== 1) Kész van a napi kártyán ===\n')
 await k.getByRole('button', { name: 'Kész van' }).click()
 await p.waitForTimeout(800)
-await p.locator('.kesz-ablak').getByRole('button', { name: 'Minden kész' }).click()   // v49: az ablakban
+await p.locator('.kesz-ablak').getByRole('button', { name: 'Minden kész' }).click()
 await p.locator('.kerdes-gombok .btn-fo').click()
 await p.waitForTimeout(1800)
 const [kesz, osszes] = (await allas()).split('/').map(Number)
@@ -54,7 +51,7 @@ await p.waitForTimeout(1200)
 console.log('\n=== 3) Kész van a munkalapon, Átvette, Visszanyit ===\n')
 await lab.getByRole('button', { name: 'Kész van' }).click()
 await p.waitForTimeout(800)
-await p.locator('.kesz-ablak').getByRole('button', { name: 'Minden kész' }).click()   // v49: az ablakban
+await p.locator('.kesz-ablak').getByRole('button', { name: 'Minden kész' }).click()
 await p.locator('.kerdes-gombok .btn-fo').click()
 await p.waitForTimeout(1500)
 ok('a munkalapon is: Átvette a következő lépés', 1, await lab.getByRole('button', { name: 'Átvette' }).count())

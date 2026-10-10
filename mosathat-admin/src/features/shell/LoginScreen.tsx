@@ -1,14 +1,8 @@
 import { useState } from 'react'
 import { useApp } from '../../state/AppContext'
-import { DEMO_BELEPOK } from '../../data/demo'
+import { DEMO_BELEPOK } from '../../data/demoBelepok'
 import { ROLE_LABEL } from '../../lib/types'
-
-// A demó mód jelszó nélkül lép be. A képernyő azért van meg most is, mert
-// élesben ez lesz az első dolog, amit a dolgozó lát reggel.
-//
-// Demóban a három szerepkör közül lehet választani. Nem játék: a három
-// belépő ugyanaz a három szerepkör, ami élesben lesz, és az adatbázis is
-// annak látja, aki belép — vagyis tényleg az látszik, mit tud egy alkalmazott.
+import { hibaSzoveg } from '../../lib/format'
 
 export default function LoginScreen() {
   const { data, signIn } = useApp()
@@ -24,7 +18,7 @@ export default function LoginScreen() {
     try {
       await signIn(email, jelszo)
     } catch (err) {
-      setHiba(err instanceof Error ? err.message : String(err))
+      setHiba(hibaSzoveg(err))
     } finally {
       setFut(false)
     }

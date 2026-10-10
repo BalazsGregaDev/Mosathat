@@ -1,29 +1,11 @@
-/* Alapok: reset, tipográfia, űrlapelemek, gombok. */
-
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body, #root { height: 100%; }
-
-/* Mobilon az oldal ne mozduljon el oldalra.
-   A "semmibe tekerés" oldalirányban visszaugrott az eredeti állapotba —
-   ezt az overscroll-behavior-x szünteti meg. A függőleges irányt
-   szándékosan NEM korlátozzuk: a lap tetején a lehúzásos frissítésnek
-   működnie kell. */
 html, body {
   overflow-x: hidden;
   overscroll-behavior-x: none;
   max-width: 100%;
 }
-
-/* A csippentéses nagyítás kikapcsolása — a szabvány szerinti mód.
-
-   A `pan-x pan-y` azt mondja: görgetni mindkét irányba lehet, nagyítani nem.
-   (A `manipulation` kulcsszó ugyanez volna, plusz a nagyítás — az nem kell.)
-   A dupla koppintásos nagyítás is elmarad, és vele a koppintás utáni 300 ms
-   várakozás: a felület ettől érezhetően gyorsabban reagál.
-
-   Ez a lapon belüli vízszintes görgetést NEM érinti: az árlista táblázata
-   ugyanúgy húzható oldalra, mert az a saját dobozán belüli görgetés. */
 body { touch-action: pan-x pan-y; }
 
 body {
@@ -42,8 +24,6 @@ p { margin: 0; }
 
 button { font: inherit; color: inherit; cursor: pointer; }
 input, select, textarea { font: inherit; color: inherit; }
-
-/* --- gombok ---------------------------------------------------------------- */
 
 .btn {
   display: inline-flex;
@@ -73,8 +53,6 @@ input, select, textarea { font: inherit; color: inherit; }
 .btn-csendes:hover:not(:disabled) { background: var(--lap-2); color: var(--szoveg); }
 
 .btn-kicsi { padding: 5px 10px; font-size: var(--m-xs); border-radius: var(--r-sm); }
-
-/* --- űrlapelemek ------------------------------------------------------------ */
 
 .mezo { display: flex; flex-direction: column; gap: 5px; }
 
@@ -112,21 +90,11 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 
 textarea.beviteli { resize: vertical; min-height: 64px; font-size: var(--m-alap); }
-
-/* Dátum- és időmező: ne lógjon ki a dobozából.
-   A böngésző ezeknek a mezőknek saját legkisebb szélességet ad (a naptár
-   ikon és a „éééé. hh. nn." minta miatt), és egy keskeny oszlopban ez
-   nagyobb lehet, mint a hely — telefonon a „Szerződés vége" mező így lógott
-   ki a képernyő jobb szélén. */
 input[type='date'].beviteli,
 input[type='time'].beviteli {
   min-width: 0;
   max-width: 100%;
 }
-/* iPhone / iPad (Safari): ott a mező beépített megjelenése a hibás — a
-   saját megjelenés nélkül már tartja a 100%-ot. A min-height azért kell,
-   mert üresen különben összeesne egy vonallá. Ez a szabály csak Safarin
-   él (-webkit-touch-callout csak ott van), máshol a mező nem változik. */
 @supports (-webkit-touch-callout: none) {
   input[type='date'].beviteli,
   input[type='time'].beviteli {
@@ -137,8 +105,6 @@ input[type='time'].beviteli {
     text-align: left;
   }
 }
-
-/* --- választósor (méret, terjedelem, típus) ---------------------------------- */
 
 .valaszto { display: flex; gap: var(--t2); flex-wrap: wrap; }
 
@@ -161,8 +127,6 @@ input[type='time'].beviteli {
   color: #fff;
 }
 
-/* --- jelölők ---------------------------------------------------------------- */
-
 .jelolo {
   display: flex;
   align-items: center;
@@ -179,8 +143,6 @@ input[type='time'].beviteli {
 .jelolo input[type='checkbox'],
 .jelolo input[type='radio'] { width: 17px; height: 17px; accent-color: var(--zold); flex: none; }
 
-/* --- apró elemek ------------------------------------------------------------ */
-
 .cimke-pill {
   display: inline-flex;
   align-items: center;
@@ -194,9 +156,6 @@ input[type='time'].beviteli {
 }
 
 .szam { font-family: var(--betu-szam); font-variant-numeric: tabular-nums; }
-
-/* Csak felolvasónak: ami látványban a szín vagy a sáv hossza, azt itt szóban
-   is elmondjuk. A `display: none` nem jó, mert azt a felolvasó sem látja. */
 .csak-felolvaso {
   position: absolute; width: 1px; height: 1px;
   margin: -1px; padding: 0; border: 0;
@@ -205,10 +164,6 @@ input[type='time'].beviteli {
 
 .halk { color: var(--szoveg-halk); }
 .halvany { color: var(--szoveg-halvany); }
-
-hr.valaszto-vonal { border: none; border-top: 1px solid var(--keret); margin: var(--t4) 0; }
-
-/* --- állapotjelzés ---------------------------------------------------------- */
 
 .betolt, .ures, .hibauzenet {
   padding: var(--t6) var(--t4);
@@ -228,15 +183,8 @@ hr.valaszto-vonal { border: none; border-top: 1px solid var(--keret); margin: va
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
-
-/* Visszafordítható, de kellemetlen művelet: lemondás. Nem piros tömb — az a
-   „soha ne nyomd meg" üzenete volna, pedig ez egy hétköznapi lépés. Csak
-   annyira más, hogy a szem ne tévessze össze a mellette lévő „Kész van"-nal. */
 .btn-veszelyes { color: var(--v-baj); border-color: #f2d3cd; }
 .btn-veszelyes:hover:not(:disabled) { background: #fdf1ef; border-color: var(--v-baj); }
-
-/* --- Be/Ki csúszka ---------------------------------------------------------
-   Azonnal hatnak: nincs alattuk mentés gomb. A forma ezt mondja el. */
 .csuszka {
   display: inline-flex;
   align-items: center;
@@ -275,18 +223,12 @@ hr.valaszto-vonal { border: none; border-top: 1px solid var(--keret); margin: va
 .csuszka[data-be] .csuszka-szo { color: var(--zold-sotet); font-weight: var(--vastag-kozep); }
 .csuszka:focus-visible .csuszka-sav { outline: 2px solid var(--zold); outline-offset: 2px; }
 .csuszka-szo { min-width: 1.4em; text-align: left; }
-
-/* A csúszka alatti egy mondat: mit jelent, ha be van kapcsolva. Nem tooltip —
-   ez az a fajta információ, amit minden ránézésnél újra el kell olvasni. */
 .csuszka-alatt {
   font-size: var(--m-xs);
   color: var(--szoveg-halvany);
   margin-top: 2px;
 }
 .csuszka-sor { display: flex; align-items: baseline; gap: var(--t3); flex-wrap: wrap; }
-
-/* Aláhúzott szöveg-gomb: ritka, visszavonó jellegű művelet, aminek egy teljes
-   gomb túl nagy hangsúly lenne — pl. „vissza a szerepköréhez". */
 .szoveg-gomb {
   background: none;
   border: 0;
@@ -299,20 +241,14 @@ hr.valaszto-vonal { border: none; border-top: 1px solid var(--keret); margin: va
 }
 .szoveg-gomb:hover:not(:disabled) { color: var(--szoveg); }
 .szoveg-gomb:disabled { cursor: default; opacity: .5; }
-
-/* --- Kérdőjeles („???") és „nem fért be" --------------------------------------
-   A rendszám mellett, minden nézetben. A „???" sárgás (figyelem: feltételes),
-   a „nem fért be" szürke (lezárva, nem csináltuk meg). */
 .cimke-pill.kerdojel {
   background: #fff3cd; color: #7a5a14; border: 1px solid #f0d58a;
   font-weight: var(--vastag-fej); letter-spacing: .08em;
 }
 .cimke-pill.nem-fert-be { background: var(--lap-2); color: var(--szoveg-halk); border: 1px solid var(--keret); }
-/* A gomb: nem veszélyes (nem töröl), de nem is a fő lépés. */
 .btn-kerdojel { border-color: #f0d58a; color: #7a5a14; background: #fffaf0; }
 .btn-kerdojel:hover { background: #fff3cd; }
 .kerdojel-sor { display: inline-flex; align-items: center; gap: var(--t3); flex-wrap: wrap; }
-/* A kis kártyákon és sávokon kisebb. */
 .minikartya .cimke-pill.kerdojel, .minikartya .cimke-pill.nem-fert-be,
 .hetsav .cimke-pill, .honap-sav .cimke-pill {
   font-size: 9px; padding: 0 4px; line-height: 1.4; flex: none;

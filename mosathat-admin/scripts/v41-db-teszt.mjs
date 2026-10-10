@@ -1,13 +1,3 @@
-// v41, adatbázis: fordulónap a szerződésben — az igazolólap időszaka.
-//
-// Amit néz:
-//   - a szerződés fordulónapja mentődik (alap 1, 1–28 között);
-//   - 15-i fordulónál a sor a 15-étől 14-éig tartó időszak lapjára kerül;
-//   - a hónap lapja (sheet_detail) a kezdő és záró nappal jön;
-//   - lezárás az időszakot zárja;
-//   - fordulónap-váltás: nyitott, sorokkal teli lap mellett tiltva, lezárás
-//     után mehet; az üres nyitott lap magától törlődik;
-//   - a céglista és a napi gomb is az időszak szerint számol.
 import { adatbazis, tesztelo, TULAJ, ALK } from './_db.mjs'
 
 const db = await adatbazis()
@@ -76,7 +66,6 @@ t.ok('nyitott, sorokkal teli lap mellett nem váltható', true,
   (await hiba(`select save_contract($1::jsonb)`, [JSON.stringify({ id, company_id: ceg, cycle_day: 1, prices: ar })]))
     ?.includes('le vannak zárva'))
 await q(`select sheet_close($1, $2::date)`, [ceg, '2026-10-01'])
-// egy üres nyitott lap (pl. lezárták a sorait máshová): magától törlődik
 await q(`insert into company_sheets (company_id, month) values ($1, '2026-12-15')`, [ceg])
 t.ok('lezárás után váltható', null,
   await hiba(`select save_contract($1::jsonb)`, [JSON.stringify({ id, company_id: ceg, cycle_day: 1, prices: ar })]))

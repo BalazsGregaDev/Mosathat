@@ -1,7 +1,3 @@
-// Az „éles indulás előtti ellenőrzés" lekérdezés kipróbálása.
-//
-// Lefuttatja a migrációkat, betölti a demó adatokat, kiüríti őket a törlő
-// paranccsal, és megnézi, mit jelent az ellenőrzés egy friss adatbázison.
 import { PGlite } from '@electric-sql/pglite'
 import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -40,7 +36,6 @@ await db.exec(`
 `)
 await db.exec(await readFile(join(GYOKER, 'supabase', 'demo', 'demo_adatok.sql'), 'utf8'))
 
-// a törlő parancs
 await db.exec(`
   begin;
   update public.bookings set moved_to_booking_id = null;

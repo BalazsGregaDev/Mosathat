@@ -1,5 +1,3 @@
-// Közös tesztkörnyezet: igazi PostgreSQL (PGlite), az összes migrációval,
-// Supabase auth-csonkkal és három belépővel. A tesztek ezt töltik be.
 import { PGlite } from '@electric-sql/pglite'
 import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -12,7 +10,7 @@ export const FEJL = '00000000-0000-4000-8000-000000000001'
 export const TULAJ = '00000000-0000-4000-8000-000000000002'
 export const ALK = '00000000-0000-4000-8000-000000000003'
 
-export async function adatbazis({ demo = false, belepok = true } = {}) {
+export async function adatbazis({ demo = false, belepok = true, elotte = '' } = {}) {
   const db = await PGlite.create()
   await db.exec(`
     create schema if not exists auth;
@@ -32,6 +30,7 @@ export async function adatbazis({ demo = false, belepok = true } = {}) {
     create or replace function extensions.crypt(pw text, salt text) returns text
       language sql immutable as $$ select salt || md5(pw) $$;
   `)
+  if (elotte) await db.exec(elotte)
   for (const f of (await readdir(MIG)).filter((f) => f.endsWith('.sql')).sort()) {
     try {
       await db.exec(await readFile(join(MIG, f), 'utf8'))

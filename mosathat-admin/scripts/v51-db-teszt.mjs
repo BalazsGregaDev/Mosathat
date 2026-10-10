@@ -1,4 +1,3 @@
-// v51, adatbázis: szabadság — rögzítés, jogok, listák, kapacitás.
 import { adatbazis, tesztelo, ALK, TULAJ } from './_db.mjs'
 
 const db = await adatbazis()
@@ -7,7 +6,6 @@ const q = async (sql, p = []) => (await db.query(sql, p)).rows
 const egy = async (sql, p = []) => (await q(sql, p))[0]
 const belep = (id) => db.exec(`select set_config('app.uid','${id}',false)`)
 const hiba = async (sql, p = []) => { try { await q(sql, p); return null } catch (e) { return e.message } }
-// Egy biztosan munkanap (a jövő hét szerdája)
 const szerda = (await egy(`select (date_trunc('week', current_date) + interval '9 days')::date::text d`)).d
 const nap = async (n) => (await egy(`select ($1::date + $2::int)::text d`, [szerda, n])).d
 
@@ -28,7 +26,6 @@ console.log('\n=== a kapacitás csökken ===\n')
 const kap1 = await egy(`select capacity_minutes c, staff_pct p from day_capacity($1::date)`, [szerda])
 t.ok('a szabadság napján kisebb a kapacitás', true, kap1.c < kap0.c)
 t.ok('a jelenlét 100% alatt', true, Number(kap1.p) < 100)
-// (a szabadság szerdától péntekig tart; a kedd egy munkanap előtte)
 const kap0kedd = await egy(`select capacity_minutes c from day_capacity($1::date)`, [await nap(-1)])
 t.ok('az előtte lévő munkanapon teljes a kapacitás', '100.0',
   String((await egy(`select staff_pct p from day_capacity($1::date)`, [await nap(-1)])).p))

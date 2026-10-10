@@ -2,14 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react'
 
 import { createDataSource } from '../data'
+import { hibaSzoveg } from '../lib/format'
 import type { Catalog, DataSource, SessionUser } from '../data'
-
-// ---------------------------------------------------------------------------
-//  Az alkalmazás közös állapota: adatforrás, bejelentkezett dolgozó, katalógus.
-//
-//  A katalógus (csomagok, árak, extrák) egyszer töltődik be, mert ritkán
-//  változik, és a foglalási űrlap minden kattintásnál hozzányúl.
-// ---------------------------------------------------------------------------
 
 interface AppValue {
   data: DataSource
@@ -17,40 +11,13 @@ interface AppValue {
   catalog: Catalog | null
   signIn(email: string, password: string): Promise<void>
   signOut(): Promise<void>
-  /** Számláló: ha nő, a nap újratöltődik. Mentés után ezt kell hívni. */
-  revision: number
   refresh(): void
-  /**
-   * A bejelentkezett dolgozó adatainak újrakérdezése. Akkor kell, ha menet
-   * közben változott a jogosultsága — enélkül a képernyő a belépéskori
-   * állapotot mutatná, és a felhasználó azt hinné, nem történt semmi.
-   */
   refreshUser(): Promise<void>
-  /**
-   * A katalógus újratöltése — a Szolgáltatások képernyő hívja, ha valamit
-   * átírtak vagy felvettek (pl. új egyéb szolgáltatás). Enélkül az új tétel
-   * csak a következő belépés után jelenne meg a foglalási űrlapon.
-   */
   refreshCatalog(): Promise<void>
 }
 
 const Ctx = createContext<AppValue | null>(null)
-
-// ---------------------------------------------------------------------------
-//  Az adatforrás CSAK EGYSZER jöhet létre.
-//
-//  React fejlesztői módban (StrictMode) minden effekt kétszer fut le — ez
-//  szándékos, így derülnek ki a rosszul megírt effektek. Itt viszont ez azt
-//  jelentené, hogy KÉT PostgreSQL indul el a böngészőben, és mindkettő
-//  ugyanazt a WASM fájlt próbálja betölteni. Ilyenkor az egyik elhasal
-//  ezzel: "Cannot compile WebAssembly.Module from an already read Response",
-//  és az alkalmazás beragad az "Adatbázis indítása…" feliratnál.
-//
-//  A megoldás: az indítást egyetlen ígéretben (Promise) tároljuk modulszinten.
-//  A második hívás ugyanazt az ígéretet kapja vissza, új adatbázis nem indul.
-//  Élesben ez nem fordulna elő, de a fejlesztés közbeni véletlenszerű
-//  beragadás pont olyan hiba, amit senki nem tud megismételni.
-// ---------------------------------------------------------------------------
+const RevCtx = createContext(0)
 
 let indulas: Promise<DataSource> | null = null
 
@@ -61,7 +28,7 @@ function adatforras(): Promise<DataSource> {
       await ds.init()
       return ds
     })().catch((e) => {
-      indulas = null // hiba esetén legyen újrapróbálható
+      indulas = null
       throw e
     })
   }
@@ -82,12 +49,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const ds = await adatforras()
         if (!el) return
         const u = await ds.currentUser()
+        const c = u ? await ds.getCatalog() : null
         if (!el) return
+        setCatalog(c)
         setUser(u)
-        if (u) setCatalog(await ds.getCatalog())
-        if (el) setData(ds)
+        setData(ds)
       } catch (e) {
-        if (el) setHiba(e instanceof Error ? e.message : String(e))
+        if (el) setHiba(hibaSzoveg(e))
       }
     })()
     return () => {
@@ -99,8 +67,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       if (!data) return
       const u = await data.signIn(email, password)
+      const c = await data.getCatalog()
+      setCatalog(c)
       setUser(u)
-      setCatalog(await data.getCatalog())
     },
     [data],
   )
@@ -126,9 +95,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppValue | null>(
     () => (data
-      ? { data, user, catalog, signIn, signOut, revision, refresh, refreshUser, refreshCatalog }
+      ? { data, user, catalog, signIn, signOut, refresh, refreshUser, refreshCatalog }
       : null),
-    [data, user, catalog, signIn, signOut, revision, refresh, refreshUser, refreshCatalog],
+    [data, user, catalog, signIn, signOut, refresh, refreshUser, refreshCatalog],
   )
 
   if (hiba) {
@@ -147,7 +116,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     )
   }
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  return (
+    <Ctx.Provider value={value}>
+      <RevCtx.Provider value={revision}>{children}</RevCtx.Provider>
+    </Ctx.Provider>
+  )
+}
+
+export function useRevizio(): number {
+  return useContext(RevCtx)
 }
 
 export function useApp(): AppValue {
@@ -156,7 +133,6 @@ export function useApp(): AppValue {
   return v
 }
 
-/** A katalógus akkor kell, amikor már biztosan betöltött. */
 export function useCatalog(): Catalog {
   const { catalog } = useApp()
   if (!catalog) throw new Error('A katalógus még nem töltött be.')

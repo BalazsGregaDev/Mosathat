@@ -1,16 +1,3 @@
-// v39, adatbázis: a lezárt igazolólap végleg rögzül.
-//
-// Igazi PostgreSQL-en (PGlite), az összes migrációval.
-//
-// Amit néz:
-//   - lezáráskor az oszlopok, a lábléc szövege és a szerződés árai rögzülnek;
-//   - ha UTÁNA átírják a beállítást vagy az árakat, a lezárt hónap a régit
-//     mutatja, a nyitott hónap az újat;
-//   - a szerződés törlése után is megmaradnak a lezárt hónap árai;
-//   - újranyitáskor a rögzítés törlődik (a mostani beállítás jön);
-//   - a napi nézet gombja (sheet_for_booking) lezárt hónapnál a rögzített
-//     oszlopokat adja;
-//   - régi hónap: korlát nélkül megnyitható és írható (ha nincs lezárva).
 import { adatbazis, tesztelo, TULAJ, ALK } from './_db.mjs'
 
 const db = await adatbazis()
@@ -33,7 +20,6 @@ const alap = (await egy(`select sheet_alap_oszlopok() o`)).o
 await q(`select sheet_settings_save($1, $2::jsonb)`, [ceg, JSON.stringify({
   columns: alap, footer_text: 'Régi szöveg' })])
 
-// Egy sor egy régi hónapba (két éve) és egy a mostaniba
 const regi = (await egy(`select (date_trunc('month', current_date) - interval '24 months')::date::text m`)).m
 const most = (await egy(`select date_trunc('month', current_date)::date::text m`)).m
 await belep(ALK)
@@ -53,7 +39,6 @@ t.ok('a lezárt lapon a rögzítés megvan', true,
   (await egy(`select frozen is not null f from company_sheets where company_id = $1 and month = $2::date`,
     [ceg, regi])).f)
 
-// Utána mindent átírunk: oszlopnév, lábléc, ár
 await q(`select sheet_settings_save($1, $2::jsonb)`, [ceg, JSON.stringify({
   columns: alap.map((o) => (o.key === 'KM' ? { ...o, label: 'Kilométer' } : o)),
   footer_text: 'Új szöveg' })])
@@ -77,7 +62,6 @@ n = await lapja(ceg, most)
 t.ok('a nyitott hónapnak már nincs ára', 0, n.prices.length)
 
 console.log('\n=== D) A napi nézet gombja ===\n')
-// Egy foglalás a régi (lezárt) hónapban: az oszlopok a rögzítettek.
 await q(`select save_contract($1::jsonb)`, [JSON.stringify({
   company_id: ceg,
   prices: [{ package_id: csomag.PREMIUM, size: 'NORMAL', kind: 'FLOTTA', price_huf: 12700 }] })])

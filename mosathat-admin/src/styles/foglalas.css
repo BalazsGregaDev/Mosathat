@@ -1,10 +1,3 @@
-/* ===========================================================================
-   Időpontfoglalás — a publikus oldal foglalási modulja (próba, v56)
-   ===========================================================================
-   Szándékosan egyszerűbb és „ügyfélbarátabb", mint az admin: nagy, jól
-   koppintható kártyák, egy oszlop, alul mindig látszó összegzés. A végső
-   kinézet a publikus oldallal együtt dől el — a működés ugyanez marad. */
-
 .fogl {
   max-width: 860px; margin: 0 auto;
   display: flex; flex-direction: column; gap: var(--t4);
@@ -33,8 +26,6 @@
   width: 28px; height: 28px; border-radius: 50%;
   background: var(--zold); color: #fff; font-size: var(--m-sm); flex: none;
 }
-
-/* választó gombok (autó, terjedelem, megvárja / itt hagyja) */
 .fogl-valaszto { display: grid; gap: var(--t2); }
 .fogl-valaszto.harom { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .fogl-valaszto.ketto { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -52,15 +43,11 @@
   border-color: var(--zold); background: var(--zold-halvany);
 }
 .fogl-valaszto button:disabled, .fogl-csomag:disabled { opacity: .45; cursor: not-allowed; }
-
-/* csomagok */
 .fogl-csomagok { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--t2); }
 .fogl-csomag .nev { font-size: var(--m-lg); }
 .fogl-csomag .ar { color: var(--zold-sotet); }
 .fogl-csomag .ido { font-size: var(--m-xs); font-weight: 400; color: var(--szoveg-halk); }
 .fogl-csomag .leiras { font-size: var(--m-xs); font-weight: 400; color: var(--szoveg-halk); line-height: 1.4; }
-
-/* extrák */
 .fogl-extrak { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--t2); }
 .fogl-extra {
   display: flex; align-items: center; gap: var(--t2);
@@ -70,8 +57,6 @@
 .fogl-extra input { width: 20px; height: 20px; accent-color: var(--narancs); }
 .fogl-extra .nev { flex: 1; }
 .fogl-extra .ar { font-family: var(--betu-szam); font-size: var(--m-sm); color: var(--narancs-sotet); }
-
-/* naptár */
 .fogl-lapozo { display: flex; align-items: center; gap: var(--t3); }
 .fogl-lapozo span { flex: 1; text-align: center; font-weight: var(--vastag-eros); }
 .fogl-naptar { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
@@ -101,8 +86,6 @@
 .fogl-jelmagyarazat [data-allapot='szabad']::before { background: #eef8f2; border-color: #9fd1b6; }
 .fogl-jelmagyarazat [data-allapot='keves']::before  { background: #fdf5e4; border-color: #e8c27c; }
 .fogl-jelmagyarazat [data-allapot='tele']::before   { background: var(--lap-2); }
-
-/* időpontok */
 .fogl-idok { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--t2); }
 .fogl-idok button { font-family: var(--betu-szam); }
 
@@ -113,14 +96,10 @@
 }
 .fogl-erkezes a { color: inherit; font-weight: var(--vastag-eros); white-space: nowrap; }
 .fogl-figyel { margin: 0; padding: var(--t2) var(--t3); border-radius: var(--r); background: #fdf5e4; color: #7a4e0d; }
-
-/* adatok */
 .fogl-urlap { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--t3); }
 .fogl-urlap .szeles { grid-column: 1 / -1; }
 .fogl-feltetel { display: flex; gap: var(--t2); align-items: flex-start; font-size: var(--m-sm); cursor: pointer; }
 .fogl-feltetel input { width: 20px; height: 20px; flex: none; accent-color: var(--zold); margin-top: 1px; }
-
-/* összegzés — alul tapad, hogy az ár és a küldés gomb mindig látsszon */
 .fogl-osszeg {
   position: sticky; bottom: var(--t3); z-index: 5;
   display: grid; grid-template-columns: 1fr auto auto; gap: var(--t4); align-items: center;
@@ -146,8 +125,6 @@
   .fogl-naptar { gap: 4px; }
   .fogl-nap { padding: 8px 2px; }
   .fogl-nap .allapot { font-size: 9px; }
-  /* telefonon az alsó sáv kompakt: ár és gomb egy sorban, a részletek
-     (csomag, nap) a kártyákon úgyis látszanak */
   .fogl-osszeg { grid-template-columns: auto 1fr; gap: var(--t3); padding: var(--t2) var(--t3); bottom: var(--t2); }
   .fogl-osszeg .sorok, .fogl-osszeg .kuld small { display: none; }
   .fogl-osszeg .osszeg { align-items: flex-start; }

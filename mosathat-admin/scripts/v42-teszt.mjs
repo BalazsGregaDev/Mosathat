@@ -1,11 +1,3 @@
-// v42 ellenőrzése Playwrighttal: Igazolólap menü → „Szerződés részletei".
-//
-// Futtatás:  npm run dev -- --port 5180   (másik ablakban)
-//            node scripts/v42-teszt.mjs
-//
-// Amit néz: a cég sorában a gomb átvált a Cégek és bérletesek oldalra, a
-// Szerződéses cégek fülön a cég kártyája nyitva, kiemelve, látható helyen;
-// alkalmazottnál is; a menüből odalépve nincs kinyitva semmi.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })

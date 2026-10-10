@@ -2,31 +2,11 @@
 <html lang="hu">
   <head>
     <meta charset="UTF-8" />
-    <!-- A nagyítás SZÁNDÉKOSAN le van tiltva.
-
-         Ez nem esztétikai döntés. Ha a telefonon két ujjal belenagyítasz, a
-         böngésző egy kisebb ablakon át mutatja a lapot, és onnantól az
-         ujjmozdulat nem a listát görgeti, hanem ezt az ablakot tologatja.
-         Így lehet oldalra elhúzni a képet (és nem áll vissza), és így fagy
-         be a munkalap görgetése is: a lap görög, csak nem látszik belőle,
-         mert a nagyított kivágás nem mozdul.
-
-         Ez egy munkaeszköz, amit egész nap, félkézzel, vizes ujjal
-         használnak — ott a véletlen nagyítás naponta többször elrontja a
-         görgetést. A szövegméretet ezért a felület adja meg elég nagyra,
-         nem a nagyítás. -->
-    <!-- Az `interactive-widget=resizes-content` a képernyő-billentyűzetről
-         szól: amikor feljön, a böngésző ne a lapot tolja el alatta (mert
-         akkor a lista elugrik, és a billentyűzet helyén üres hely marad),
-         hanem egyszerűen kisebbnek vegye a látható területet. Amelyik
-         böngésző még nem ismeri, az figyelmen kívül hagyja. -->
     <meta name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no,
                    viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#14181a" />
 
-    <!-- Beágyazott ikon: külön fájl nélkül is van favicon, és nem kér a
-         böngésző egy nem létező /favicon.ico-t (az a 404 a konzolban). -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314181a'/%3E%3Cpath d='M16 6c3.8 5 6.4 8.4 6.4 11.4A6.4 6.4 0 0 1 16 24a6.4 6.4 0 0 1-6.4-6.6C9.6 14.4 12.2 11 16 6z' fill='%232f9c63'/%3E%3C/svg%3E" />
 
     <title>Mosathat — Admin</title>

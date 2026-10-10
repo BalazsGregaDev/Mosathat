@@ -2,58 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
-import { ft } from '../../lib/format'
+import { ft, hibaSzoveg } from '../../lib/format'
 import type { BookingTask, FinishPreview } from '../../lib/types'
-
-// ---------------------------------------------------------------------------
-//  „Kész van" ablak — a munkalistával
-//
-//      Kész van?  ABC-123
-//      Pipáld ki, ami elkészült. Ami üresen marad, kimaradt:
-//      nem számít bele az árba.                        [Minden kész]
-//
-//      KÜLSŐ                                [Mind kész]
-//        [x] Előmosás
-//        [ ] Felni
-//      BELSŐ                                [Mind kész]
-//        [ ] Porszívózás …
-//      EGYÉB SZOLGÁLTATÁSOK
-//        [ ] Ózonos kezelés
-//
-//      Ár: 32 600 Ft   (38 100 Ft helyett — kimaradt: Belső terület)
-//
-//      [Mégse]  [Mindennel elkészültünk]  [Kész van, a többi kimaradt]
-//
-//  A „Mindennel elkészültünk" minden még nyitott pontot kipipál (csomag,
-//  egyéb szolgáltatás), és úgy zár, mintha semmi sem maradt volna ki.
-//
-//  A már kész pontok pipája áll, és itt nem vehető le (azt a munkalapon
-//  lehet, a Kész van előtt). A többi üresen indul: ami elkészült, azt itt
-//  kell kipipálni — egyenként, csoportonként („Mind kész") vagy egyben
-//  („Minden kész").
-//
-//  Az árat az adatbázis számolja (booking_finish_preview), ugyanúgy, ahogy
-//  a lezáráskor is fogja:
-//    egyéb szolgáltatás   ami kimaradt, a saját árával esik ki
-//    Külső / Belső        ha a terület EGYETLEN pontja sincs kész, a csomag
-//                         a „Csak belül" / „Csak kívül" árán megy; ha csak
-//                         néhány pontja maradt ki, a terület ára marad
-//
-//  Használat (mint a useKerdes):
-//
-//      const [keszAblak, keszVan] = useKeszAblak()
-//      const eredmeny = await keszVan(b.id, 'ABC-123')
-//      if (!eredmeny) return            // Mégse
-//      …                                 // az autó Kész van állapotban
-//      return <>…{keszAblak}</>
-//
-//  Az ablak maga menti a lezárást (booking_finish): a hívónak csak frissítenie
-//  kell utána. Mégse esetén nem történik semmi.
-// ---------------------------------------------------------------------------
 
 interface Kerdes {
   bookingId: string
-  /** Az autó azonosítója a címben (rendszám). */
   felirat: string
 }
 
@@ -62,7 +15,7 @@ export function useKeszAblak(): [React.ReactNode, (bookingId: string, felirat: s
   const valasz = useRef<((v: FinishPreview | null) => void) | null>(null)
 
   const keszVan = useCallback((bookingId: string, felirat: string) => {
-    valasz.current?.(null) // egy előző, nyitva maradt ablak: Mégse
+    valasz.current?.(null)
     setKerdes({ bookingId, felirat })
     return new Promise<FinishPreview | null>((resolve) => { valasz.current = resolve })
   }, [])
@@ -73,14 +26,12 @@ export function useKeszAblak(): [React.ReactNode, (bookingId: string, felirat: s
     setKerdes(null)
   }, [])
 
-  // A dokumentum gyökerébe: így a munkalap ablaka fölött is felül van.
   const ablak = kerdes
     ? createPortal(<KeszAblak k={kerdes} onVege={lezar} />, document.body)
     : null
   return [ablak, keszVan]
 }
 
-/** A munkalista három csoportja az ablakban. */
 interface Csoport {
   kulcs: 'KULSO' | 'BELSO' | 'EGYEB'
   cim: string
@@ -90,32 +41,29 @@ interface Csoport {
 function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null) => void }) {
   const { data } = useApp()
   const [lista, setLista] = useState<BookingTask[] | null>(null)
-  // Az ablakban kipipált pontok (a már eddig is kész pontok nincsenek benne).
   const [pipalt, setPipalt] = useState<Set<string>>(new Set())
   const [elonezet, setElonezet] = useState<FinishPreview | null>(null)
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
+  const megyRef = useRef(false)
+  const megse = useCallback(() => { if (!megyRef.current) onVege(null) }, [onVege])
 
-  // A munkalista betöltése.
   useEffect(() => {
     let el = true
     data.getTasks(k.bookingId)
       .then((t) => { if (el) setLista(t) })
-      .catch((e) => { if (el) setHiba(e instanceof Error ? e.message : String(e)) })
+      .catch((e) => { if (el) setHiba(hibaSzoveg(e)) })
     return () => { el = false }
   }, [data, k.bookingId])
 
-  // Escape = Mégse (a munkalap ablaka ne kapja meg).
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onVege(null) }
+      if (e.key === 'Escape') { e.stopPropagation(); megse() }
     }
     window.addEventListener('keydown', f, true)
     return () => window.removeEventListener('keydown', f, true)
-  }, [onVege])
+  }, [megse])
 
-  // Csoportok: a csomag külső és belső pontjai, és az egyéb (külön kért)
-  // szolgáltatások. Üres csoport nem jelenik meg.
   const csoportok = useMemo<Csoport[]>(() => {
     if (!lista) return []
     const rend = (a: BookingTask, b: BookingTask) => a.sort_order - b.sort_order
@@ -131,15 +79,13 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
   const nyitott = (lista ?? []).filter((t) => !t.done)
   const mindKesz = nyitott.every((t) => pipalt.has(t.id))
 
-  // Az ár előnézete minden pipa után. Ha közben újabb pipa jött, a régi
-  // válasz nem írja felül az újat (sorszám).
   const kor = useRef(0)
   useEffect(() => {
     if (!lista) return
     const sajat = ++kor.current
     data.finishPreview(k.bookingId, [...pipalt])
       .then((p) => { if (sajat === kor.current) setElonezet(p) })
-      .catch((e) => { if (sajat === kor.current) setHiba(e instanceof Error ? e.message : String(e)) })
+      .catch((e) => { if (sajat === kor.current) setHiba(hibaSzoveg(e)) })
   }, [data, k.bookingId, lista, pipalt])
 
   function valt(t: BookingTask) {
@@ -151,7 +97,6 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
     })
   }
 
-  // Egy csoport (vagy minden) kész / vissza.
   function csoportValt(pontok: BookingTask[], kell: boolean) {
     setPipalt((s) => {
       const u = new Set(s)
@@ -163,17 +108,17 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
     })
   }
 
-  // `mind`: „Mindennel elkészültünk" — minden még nyitott pont kipipálva
-  // (csomag és egyéb szolgáltatás is), semmi sem marad ki.
   async function ment(mind = false) {
-    if (megy) return
+    if (megyRef.current) return
+    megyRef.current = true
     setMegy(true)
     setHiba(null)
     try {
       const pipak = mind ? (lista ?? []).filter((t) => !t.done).map((t) => t.id) : [...pipalt]
       onVege(await data.finishBooking(k.bookingId, pipak))
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
+      megyRef.current = false
       setMegy(false)
     }
   }
@@ -182,7 +127,7 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
 
   return (
     <div className="fedo kerdes-fedo" role="presentation"
-         onMouseDown={(e) => { if (e.target === e.currentTarget) onVege(null) }}>
+         onMouseDown={(e) => { if (e.target === e.currentTarget) megse() }}>
       <div className="kerdes-ablak kesz-ablak" role="dialog" aria-modal="true" aria-labelledby="kesz-cim">
         <div className="kesz-fej">
           <h2 id="kesz-cim">Kész van? <span className="rendszam">{k.felirat}</span></h2>
@@ -237,7 +182,6 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
           })}
         </div>
 
-        {/* Az ár: ha valami kimarad, az eredeti áthúzva mellette. */}
         {elonezet && lista && lista.length > 0 && (
           <div className="kesz-ar" data-csokken={csokken ? 'true' : 'false'}>
             <span>Ár (lista szerint):</span>
@@ -261,8 +205,7 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
         {hiba && <div className="kartya-hiba" role="alert">{hiba}</div>}
 
         <div className="kerdes-gombok">
-          <button type="button" className="btn" onClick={() => onVege(null)}>Mégse</button>
-          {/* Ha még nincs minden kipipálva: egy gombbal minden pont kész. */}
+          <button type="button" className="btn" disabled={megy} onClick={megse}>Mégse</button>
           {!mindKesz && (
             <button type="button" className="btn btn-fo" disabled={megy || lista === null}
                     onClick={() => void ment(true)}>

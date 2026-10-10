@@ -1,4 +1,3 @@
-// v56: befér-e számítás (src/lib/befer.ts), böngésző nélkül.
 import { build } from 'esbuild'
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -59,8 +58,6 @@ console.log('\n=== 4) ebédszünet: 11:15–12:45 nem kínálunk időpontot (v57
 
 console.log('\n=== 5) tűréshatár: 10 percen belüli csúszás nem gond (v58) ===\n')
 {
-  // egy hely; az A 9:10-re kell (1 óra munka). Egy 15 perces megvárós 8:00-kor
-  // → az A 9:15-re lesz kész: 5 perc csúszás → még befér. 30 perces → 20 perc → nem.
   const n = nap(o(8), o(12), 1)
   const a = [M('A', 'RUGALMAS', o(8), o(9, 10), 60)]
   ok('5 perces csúszás: befér', true, ujMunkaEllenoriz(n, a, M('UJ', 'FIX', o(8), o(8, 15), 15)).befer)

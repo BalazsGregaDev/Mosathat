@@ -1,41 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 
-// ---------------------------------------------------------------------------
-//  Aláírás a képernyőn, ujjal (vagy egérrel, tollal)
-//
-//  Egy fehér mező: aki átveszi az autót, ujjal aláírja. A rajzból PNG kép
-//  lesz (csak maga az aláírás, az üres széle levágva), ez kerül a Word lap
-//  Aláírás oszlopába.
-//
-//  Ha már van mentett aláírás, azt mutatja; az „Újra aláírás" gombbal lehet
-//  újat kérni (a régi csak mentéskor cserélődik). A „Törlés" üresre teszi —
-//  akkor a Wordben üres marad a cella, és kinyomtatva papíron aláírható.
-//
-//  Miért pointer események: ugyanaz a kód kezeli az ujjat, az egeret és a
-//  tollat. A `touch-action: none` (CSS) miatt a mezőn húzott ujj nem görgeti
-//  a lapot — különben aláírás közben elcsúszna az egész ablak.
-// ---------------------------------------------------------------------------
+const MAGASSAG = 150
+const KEP_MAX_SZEL = 600
 
-const MAGASSAG = 150      // a mező magassága (CSS px)
-const KEP_MAX_SZEL = 600  // a mentett kép legfeljebb ilyen széles (képpont)
-
-/**
- * A rajzból csak az aláírást tartjuk meg, a körülötte lévő üres részt
- * levágjuk (kis szegéllyel), és legfeljebb 600 képpont szélesre kicsinyítjük.
- *
- * Miért: a vászon széles és alacsony; egy kis aláírás a közepén levágás
- * nélkül a Word cellájában apró pötty lenne a sok üres hely között. Így a
- * kép az aláírás maga — a cellában és a lap kis előnézetében is jól látszik,
- * és a mentett adat is kisebb.
- *
- * Ha a vászon üres, null-t ad.
- */
 function levagott(c: HTMLCanvasElement): string | null {
   const ctx = c.getContext('2d')
   if (!ctx) return null
   const { width: w, height: h } = c
   const px = ctx.getImageData(0, 0, w, h).data
-  // A rajzolt pontok határai (ahol a képpont nem átlátszó).
   let bal = w, jobb = -1, fent = h, lent = -1
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -48,7 +20,6 @@ function levagott(c: HTMLCanvasElement): string | null {
     }
   }
   if (jobb < 0) return null
-  // Egy kis szegély, hogy a vonal ne érjen a kép széléig.
   const sz = Math.round(6 * (window.devicePixelRatio || 1))
   bal = Math.max(0, bal - sz); fent = Math.max(0, fent - sz)
   jobb = Math.min(w - 1, jobb + sz); lent = Math.min(h - 1, lent + sz)
@@ -67,38 +38,49 @@ export default function AlairasRajzolo({
   onValt,
   zarolt,
 }: {
-  /** A mentett aláírás (data URL), vagy null. */
   ertek: string | null
-  /** Új kép (data URL), vagy null, ha törölték. */
   onValt: (kep: string | null) => void
-  /** Lezárt lapnál csak megnézni lehet. */
   zarolt?: boolean
 }) {
   const vaszon = useRef<HTMLCanvasElement>(null)
   const rajzol = useRef(false)
   const utolso = useRef<{ x: number; y: number } | null>(null)
-  // Rajzolunk-e most (új aláírás), vagy a mentett képet mutatjuk.
   const [rajzMod, setRajzMod] = useState(!ertek)
   const [ures, setUres] = useState(true)
 
-  // A vászon a képernyő sűrűségéhez igazodik (telefonon 2-3×), különben a
-  // vonal recésen, homályosan látszana.
   useEffect(() => {
     if (!rajzMod) return
     const c = vaszon.current
     if (!c) return
-    const dpr = window.devicePixelRatio || 1
-    const w = c.clientWidth
-    c.width = Math.round(w * dpr)
-    c.height = Math.round(MAGASSAG * dpr)
-    const ctx = c.getContext('2d')
-    if (!ctx) return
-    ctx.scale(dpr, dpr)
-    ctx.lineWidth = 2.4
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.strokeStyle = '#111'
+    const beallit = (megtart: boolean) => {
+      const dpr = window.devicePixelRatio || 1
+      const ujSzel = Math.round(c.clientWidth * dpr)
+      const ujMag = Math.round(MAGASSAG * dpr)
+      if (megtart && c.width === ujSzel && c.height === ujMag) return
+      let regi: HTMLCanvasElement | null = null
+      if (megtart && c.width > 0 && c.height > 0) {
+        regi = document.createElement('canvas')
+        regi.width = c.width
+        regi.height = c.height
+        regi.getContext('2d')?.drawImage(c, 0, 0)
+      }
+      c.width = ujSzel
+      c.height = ujMag
+      const ctx = c.getContext('2d')
+      if (!ctx) return
+      if (regi) ctx.drawImage(regi, 0, 0)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.lineWidth = 2.4
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.strokeStyle = '#111'
+    }
+    beallit(false)
     setUres(true)
+    if (typeof ResizeObserver === 'undefined') return
+    const figyelo = new ResizeObserver(() => beallit(true))
+    figyelo.observe(c)
+    return () => figyelo.disconnect()
   }, [rajzMod])
 
   function pont(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -112,7 +94,6 @@ export default function AlairasRajzolo({
     e.currentTarget.setPointerCapture(e.pointerId)
     rajzol.current = true
     utolso.current = pont(e)
-    // Egy koppintás is hagyjon nyomot (pont), ne csak a húzás.
     const ctx = e.currentTarget.getContext('2d')
     if (ctx && utolso.current) {
       ctx.beginPath()
@@ -139,8 +120,6 @@ export default function AlairasRajzolo({
     rajzol.current = false
     utolso.current = null
     setUres(false)
-    // Minden vonás után elküldjük a képet: így a „Mentés" mindig a
-    // legfrissebbet viszi, külön „Kész" gomb nélkül.
     const c = vaszon.current
     if (c) onValt(levagott(c))
   }
@@ -153,7 +132,6 @@ export default function AlairasRajzolo({
     onValt(null)
   }
 
-  // --- a mentett aláírás ---------------------------------------------------
   if (!rajzMod && ertek) {
     return (
       <div className="alairas">
@@ -179,7 +157,6 @@ export default function AlairasRajzolo({
     return <div className="alairas-ures halvany">nincs aláírva</div>
   }
 
-  // --- rajzolás ------------------------------------------------------------
   return (
     <div className="alairas">
       <canvas

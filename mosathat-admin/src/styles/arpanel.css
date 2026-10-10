@@ -1,11 +1,6 @@
-/* A lebegő árlista.
-
-   Szándékosan NEM modális: nincs mögötte fedő réteg, ami letiltaná a többit.
-   Ez a különbség a lényege — a foglalás közben kell látni, nem helyette. */
-
 .arpanel {
   position: fixed;
-  z-index: 70;                 /* a foglalási ablak (60) FÖLÖTT */
+  z-index: 70;
   display: flex;
   flex-direction: column;
   background: var(--lap);
@@ -16,8 +11,6 @@
   min-width: 320px;
   min-height: 220px;
 }
-
-/* --- fejléc: ez a fogantyú --------------------------------------------------- */
 
 .arpanel-fej {
   display: flex; align-items: center; gap: var(--t3);
@@ -30,8 +23,6 @@
 }
 .arpanel-fej:active { cursor: grabbing; }
 .arpanel-fej strong { font-size: var(--m-sm); letter-spacing: .02em; }
-
-/* Két rövid vonal: a fogantyú jele. Enélkül nem derül ki, hogy mozgatható. */
 .arpanel-fej .fogo {
   width: 12px; height: 12px;
   background-image:
@@ -64,11 +55,9 @@
 }
 .arpanel-fej .bezar:hover { color: #fff; }
 
-/* --- törzs ------------------------------------------------------------------- */
-
 .arpanel-torzs {
   flex: 1 1 auto;
-  min-height: 0;           /* enélkül a flexbox nem engedi görgetni */
+  min-height: 0;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   padding: var(--t3);
@@ -76,28 +65,12 @@
 }
 .arpanel-torzs .panel { box-shadow: none; }
 .arpanel-torzs .panelek-szeles { margin-bottom: var(--t3); }
-
-/* Szűk ablakban a táblázat is összébb húzódik — enélkül minden méretnél
-   vízszintesen kellene görgetni, ami pont a gyors megnézést lehetetlenítené el. */
 .arlista.tomor { min-width: 420px; }
 .arlista.tomor th, .arlista.tomor td { padding: 5px 8px; }
 .arlista.tomor .ar { font-size: var(--m-sm); }
 .arpanel-torzs .lista thead th,
 .arpanel-torzs .lista tbody td,
 .arpanel-torzs .lista tbody th { padding: var(--t2) var(--t3); }
-
-/* --- Egyéb szolgáltatások: inkább törjön két sorba, mint hogy kilógjon -------
-
-   Ez a panel keskeny — telefonon a képernyő teljes szélessége, asztali gépen
-   is csak egy hasáb. A táblázatnak eddig 460px volt a legkisebb szélessége,
-   hogy a szolgáltatás neve egy sorba férjen; egy 390px-es telefonon ettől
-   vízszintesen ki kellett görgetni a nevekért és az árakért. Pont akkor,
-   amikor telefonálás közben gyorsan meg kellene mondani.
-
-   Most a táblázat a panelhez igazodik: az ár és az idő annyi helyet kap,
-   amennyi a számoknak kell, a maradék a névé, és a hosszú név két sorba
-   törik. A CSOMAGOK fül táblázata ettől nem változik: annak más az
-   osztálya (.arlista.tomor), és az marad, ahogy volt. */
 .arpanel-torzs .lista.extra-tomor {
   min-width: 0;
   width: 100%;
@@ -106,20 +79,15 @@
 .arpanel-torzs .lista.extra-tomor thead th,
 .arpanel-torzs .lista.extra-tomor tbody th,
 .arpanel-torzs .lista.extra-tomor tbody td {
-  white-space: normal;      /* ez engedi a kétsoros törést */
-  overflow-wrap: anywhere;  /* egy hosszú szó se lógjon ki */
+  white-space: normal;
+  overflow-wrap: anywhere;
   vertical-align: top;
 }
-/* Az ár és az idő számok: szűk, fix oszlop elég nekik. A maradék a névé. */
 .arpanel-torzs .lista.extra-tomor thead th:nth-child(2),
 .arpanel-torzs .lista.extra-tomor tbody td:nth-child(2) { width: 30%; }
 .arpanel-torzs .lista.extra-tomor thead th:nth-child(3),
 .arpanel-torzs .lista.extra-tomor tbody td:nth-child(3) { width: 26%; }
-/* Az időt egy sorban akarjuk látni: a „30 perc" kettétörve lassabban
-   olvasható, mint amennyi helyet megspórolna. */
 .arpanel-torzs .lista.extra-tomor tbody td:nth-child(3) { white-space: nowrap; }
-
-/* --- méretező sarok ----------------------------------------------------------- */
 
 .arpanel-meret {
   position: absolute; right: 0; bottom: 0;
@@ -129,11 +97,6 @@
     linear-gradient(135deg, transparent 0 40%, var(--keret-eros) 40% 50%, transparent 50% 65%,
                     var(--keret-eros) 65% 75%, transparent 75%);
 }
-
-/* --- telefon ------------------------------------------------------------------
-   Mozgatni és méretezni ujjal nincs értelme, és a lebegő ablak úgyis eltakarná
-   az egész képernyőt. Ott alulról feljövő lap: fix helyen, a képernyő alsó
-   kétharmadán, ugyanúgy csak az X-szel zárható. */
 @media (max-width: 760px) {
   .arpanel {
     left: 0 !important; right: 0;
@@ -146,55 +109,28 @@
   .arpanel-fej { cursor: default; }
   .arpanel-fej .fogo { display: none; }
   .arpanel-meret { display: none; }
-
-  /* Amíg az árlista nyitva van, csak ŐT lehet görgetni.
-
-     Enélkül az ujj a panelen mozog, de a nap/hét/hónap nézet görög alatta:
-     a panel törzse hamar a végére ér, és onnantól a mozdulat átcsordul a
-     mögötte lévő listára. A `touch-action: none` az ujjat állítja meg, az
-     `overflow: hidden` az egeret és a billentyűt — kettő kell, mert kétféle
-     úton lehet görgetni. */
   body.arlista-nyitva .tartalom,
   body.arlista-nyitva .lap-torzs {
     overflow: hidden;
     touch-action: none;
   }
-
-  /* A panel saját törzse viszont görögjön, és a végén ne adja tovább a
-     mozdulatot senkinek. */
   .arpanel-torzs {
     touch-action: pan-y;
     overscroll-behavior: contain;
   }
-
-  /* Telefonon 2 ponttal kisebb betű és szűkebb belső margó: ennyi kellett
-     ahhoz, hogy a hosszú nevek is elférjenek két sorban. */
   .arpanel-torzs .lista.extra-tomor { font-size: calc(var(--m-sm) - 2px); }
   .arpanel-torzs .lista.extra-tomor thead th,
   .arpanel-torzs .lista.extra-tomor tbody th,
   .arpanel-torzs .lista.extra-tomor tbody td { padding: var(--t2); }
 }
 
-/* --- a gombok a foglalási ablakok fejlécében ---------------------------------
-   Ott a hely szűkebb, és az ablak fejléce világos háttéren áll: kisebb,
-   visszafogottabb változat kell, ami nem viszi el a figyelmet a rendszámról. */
-
 .lap-fej .arlista-gombok.rovid { margin-left: auto; margin-right: var(--t2); }
 .lap-fej .arlista-gombok.rovid button {
   padding: 5px 11px;
   font-size: var(--m-xs);
 }
-
-/* --- osztott elrendezés -------------------------------------------------------
-   Ha van megnyitott foglalás és nyitva az árlista, egyik sem takarja a másikat:
-   a foglalás a bal, az árlista a jobb oldalt kapja. Fix helyen, mert itt a
-   húzogatás csak elrontaná — a lényeg pont az, hogy egyszerre lássuk a kettőt. */
-
-/* Az arányok: 10% margó kétoldalt, 5% hézag a kettő közt, marad 37,5–37,5%.
-   A fél-fél képernyő túl sok volt — két teleírt ablak egymás mellett
-   fárasztó, és a mögötte lévő naptárból sem látszott semmi. */
 .arpanel.osztott {
-  left: 52.5%;                  /* 10% margó + 37,5% ablak + 5% hézag */
+  left: 52.5%;
   right: 10%;
   top: 72px;
   bottom: 12px;
@@ -202,12 +138,6 @@
   height: auto;
 }
 .arpanel.osztott .arpanel-fej { cursor: default; }
-
-/* A foglalási ablak balra húzódik. A fedő réteg ilyenkor nem középre igazít,
-   hanem a bal félre — a jobb fél az árlistáé.
-
-   Az oldalsó kitöltés nulla, a margót a .lap adja: így a 10% és a 37,5% a
-   teljes képernyőre értendő, nem egy már megvágott sávra. */
 .fedo.osztott {
   justify-content: flex-start;
   align-items: stretch;
@@ -221,17 +151,9 @@
   max-height: none;
   height: 100%;
 }
-
-/* Szűkebb hasábban a háromoszlopos űrlapsor már nem fér el kényelmesen —
-   osztott nézetben az ablak mindig keskeny, ezért itt mindig kettő. */
-.fedo.osztott .sor-3 { grid-template-columns: 1fr 1fr; }
 @media (max-width: 1200px) {
-  .fedo.osztott .sor-2,
-  .fedo.osztott .sor-3 { grid-template-columns: 1fr; }
+  .fedo.osztott .sor-2 { grid-template-columns: 1fr; }
 }
-
-/* Keskeny képernyőn nincs értelme kettéosztani: ott az árlista marad alul
-   feljövő lap, a foglalás pedig a szokásos helyén. */
 @media (max-width: 1024px) {
   .arpanel.osztott {
     left: 0; right: 0; top: auto; bottom: 0;

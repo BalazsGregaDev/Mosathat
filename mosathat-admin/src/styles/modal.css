@@ -1,12 +1,7 @@
-/* Az "Új időpont" lap és a foglalás részletei. */
-
 .fedo {
   position: fixed; inset: 0;
   background: rgba(20, 24, 26, .48);
   display: flex; align-items: center; justify-content: center;
-  /* A térköz a képernyő szélétől: alap 24 px, de a telefon/tablet „nem
-     rajzolható" sávjai (kamera-kivágás, alsó navigációs gombok) ezen FELÜL
-     jönnek. Enélkül a munkalap alja a rendszergombok alá csúszott. */
   padding:
     calc(var(--t5) + env(safe-area-inset-top))
     calc(var(--t5) + env(safe-area-inset-right))
@@ -14,14 +9,6 @@
     calc(var(--t5) + env(safe-area-inset-left));
   z-index: 60;
 }
-
-/* A látható képernyő magassága — nem a teljes.
-
-   Telefonon és tableten a böngésző címsora hol látszik, hol nem. A régi
-   100vh a NAGYOBBIK méret (címsor nélkül): amikor a címsor látszik, az
-   ablak alja ennyivel a képernyő alá lógott — pont a gombok. A 100dvh
-   mindig az éppen látható magasság, a címsorral és a billentyűzettel
-   együtt változik. Ahol a böngésző nem ismeri, ott marad az inset: 0. */
 @supports (height: 100dvh) {
   .fedo { bottom: auto; height: 100dvh; }
 }
@@ -31,11 +18,9 @@
   border-radius: var(--r-lg);
   box-shadow: var(--arnyek-lg);
   width: min(620px, 100%);
-  /* A fedő belső magasságához mérve: ott már benne van a térköz és a
-     rendszersávok helye. */
   max-height: 100%;
   display: flex;
-  flex-direction: column;   /* fej / görgethető törzs / láb — nem sticky */
+  flex-direction: column;
   overflow: hidden;
 }
 .lap-szeles { width: min(820px, 100%); }
@@ -56,23 +41,10 @@
 
 .lap-torzs {
   flex: 1 1 auto;
-  min-height: 0;            /* enélkül a flexbox nem engedi görgetni */
+  min-height: 0;
   overflow-y: auto;
-  /* Oldalra SEMMI.
-
-     Ha az overflow-y auto, a böngésző az overflow-x-et is `auto`-ra
-     számolja — vagyis a doboz vízszintesen is görgethető lesz, iPhone-on
-     pedig akkor is el lehet húzni ujjal, ha semmi nem lóg ki (rugózás).
-     Így lehetett az ablakot oldalra tolni.
-
-     A `hidden` megszünteti a vízszintes görgetést, a `touch-action: pan-y`
-     pedig az ujjmozdulatot: ebben az ablakban csak fel-le lehet húzni.
-     Vízszintesen görgethető tartalom (széles táblázat) nincs benne — az
-     árlista külön ablak. */
   overflow-x: hidden;
   touch-action: pan-y;
-  /* A görgetés az ablak alján ne adódjon tovább a mögötte lévő listának:
-     enélkül a munkalap végén továbbhúzva a nap nézet indul el alatta. */
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   padding: var(--t5);
@@ -93,17 +65,10 @@
 }
 .lap-lab .osszeg .alatta { font-size: var(--m-xs); color: var(--szoveg-halk); }
 .lap-lab .gombok { margin-left: auto; display: flex; gap: var(--t2); }
-
-/* --- a munkalap lába ---------------------------------------------------------
-   Két csoport: fent az ár és a Szerkesztés (ennyibe kerül — itt tudod
-   átírni), lent a munka haladása (Törlés, a következő állapot, Bezárás).
-   Nagy képernyőn a kettő egy sorba fér; telefonon két sor lesz belőle. */
 .munkalap-lab { flex-wrap: wrap; }
 .munkalap-lab .lab-fent {
   display: flex; align-items: center; gap: var(--t4);
 }
-
-/* --- szakaszok az űrlapon ---------------------------------------------------- */
 
 .szakasz { display: flex; flex-direction: column; gap: var(--t3); }
 .szakasz > .fej {
@@ -114,23 +79,12 @@
 .szakasz > .fej .jobbra { margin-left: auto; text-transform: none; letter-spacing: 0; }
 
 .sor-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--t3); }
-.sor-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--t3); }
-
-/* A rácsban ülő elem alapból nem mehet a saját legkisebb szélessége alá, egy
-   beviteli mezőnek pedig van ilyen (kb. 20 karakternyi). Három mező egy
-   sorban így simán szélesebb lehet a képernyőnél, és a doboz oldalra
-   görgethetővé válik — ez volt az „el tudom húzni oldalra" mozgás. */
-.sor-2 > *, .sor-3 > * { min-width: 0; }
-.sor-2 .beviteli, .sor-3 .beviteli { width: 100%; }
+.sor-2 > * { min-width: 0; }
+.sor-2 .beviteli { width: 100%; }
 
 @media (max-width: 560px) {
-  .sor-2, .sor-3 { grid-template-columns: 1fr; }
+  .sor-2 { grid-template-columns: 1fr; }
 }
-
-/* --- Hozza / Viszi: nap + óra egy sorban -------------------------------------
-   Bal oldalt a sor neve (Hozza, Viszi), mellette a két mező. A nap és az óra
-   telefonon is egymás mellett marad: összetartoznak, és így a két sor
-   egymás alatt pont úgy olvasható, mint egy kis menetrend. */
 .napora-sor {
   display: grid;
   grid-template-columns: 52px 1fr;
@@ -140,14 +94,12 @@
 .napora-cim {
   font-weight: var(--vastag-eros);
   font-size: var(--m-sm);
-  padding-bottom: 10px;          /* a mezők szövegvonalához igazítva */
+  padding-bottom: 10px;
 }
 .napora-sor .sor-2 { grid-template-columns: 1.3fr 1fr; }
 @media (max-width: 560px) {
   .napora-sor .sor-2 { grid-template-columns: 1.3fr 1fr; }
 }
-
-/* Többnapos jelzés: nem hiba, csak tudnivaló — halvány keret, nem piros. */
 .tobbnapos-jelzes {
   font-size: var(--m-sm);
   padding: var(--t2) var(--t3);
@@ -156,8 +108,6 @@
   color: var(--narancs-sotet);
   border-radius: 0 var(--r) var(--r) 0;
 }
-
-/* --- rendszám találat -------------------------------------------------------- */
 
 .talalat {
   border: 1px solid var(--zold);
@@ -186,8 +136,6 @@
 .elozmeny .arat { margin-left: auto; font-family: var(--betu-szam); color: var(--szoveg-halk); }
 .elozmeny .kerem { color: var(--zold); font-weight: var(--vastag-eros); font-size: var(--m-xs); }
 
-/* --- csomagválasztó ---------------------------------------------------------- */
-
 .csomagok { display: flex; flex-direction: column; gap: var(--t2); }
 
 .csomagok .csomag {
@@ -211,8 +159,6 @@
 .csomagok .csomag .arblokk { margin-left: auto; text-align: right; flex: none; }
 .csomagok .csomag .arblokk .ar { font-family: var(--betu-szam); font-weight: var(--vastag-eros); }
 .csomagok .csomag .arblokk .ido { font-size: var(--m-xs); color: var(--szoveg-halk); }
-
-/* --- extrák ------------------------------------------------------------------ */
 
 .extrak { display: flex; flex-direction: column; gap: 5px; }
 
@@ -242,8 +188,6 @@
 }
 .mennyiseg .magyarazat { font-size: var(--m-xs); color: var(--szoveg-halk); }
 
-/* --- figyelmeztető sáv az űrlapon -------------------------------------------- */
-
 .figyelmeztet {
   display: flex; gap: var(--t2); align-items: flex-start;
   background: #fdf7ea; border: 1px solid #f0e0bd;
@@ -251,8 +195,6 @@
   font-size: var(--m-sm); color: #7a5a14;
 }
 .figyelmeztet strong { font-weight: var(--vastag-eros); }
-
-/* --- munkalista a részletekben ------------------------------------------------ */
 
 .munkalista { display: flex; flex-direction: column; gap: 2px; }
 .munka {
@@ -263,12 +205,6 @@
 .munka input { width: 17px; height: 17px; accent-color: var(--zold); flex: none; }
 .munka .nev { flex: 1; font-size: var(--m-sm); }
 .munka[data-kesz='true'] .nev { color: var(--szoveg-halvany); text-decoration: line-through; }
-.munka .terulet {
-  font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--szoveg-halvany); flex: none;
-}
-
-/* --- mobil ------------------------------------------------------------------- */
 
 @media (max-width: 700px) {
   .fedo { padding: 0; align-items: stretch; }
@@ -279,27 +215,12 @@
   }
   .lap-fej { padding: var(--t3) var(--t4); padding-top: calc(var(--t3) + env(safe-area-inset-top)); }
   .lap-torzs { padding: var(--t4); gap: var(--t4); }
-
-  /* Telefonon két mező egy sorban már szorongana, három pedig kilógna.
-     A kétmezős sor egymás alá kerül; a hármasból kettő marad egy sorban —
-     ott dátum és órák állnak, azok elférnek. */
   .sor-2 { grid-template-columns: 1fr; }
-  .sor-3 { grid-template-columns: 1fr 1fr; }
   .lap-lab {
     padding: var(--t3) var(--t4);
     padding-bottom: calc(var(--t3) + env(safe-area-inset-bottom));
   }
   .lap-lab .gombok .btn { padding: 11px 16px; }
-
-  /* A munkalap lába telefonon két sor.
-
-     Eddig egy sorban állt mind a hat gomb, és a jobb szélső egyszerűen
-     lelógott a képernyőről — pont a Bezárás és a következő lépés gombja,
-     tehát az a kettő, amit a legtöbbször megnyomnak.
-
-     A gombok itt szétosztják maguk közt a szélességet, és ha négynél többen
-     vannak, új sorba törnek. Így akárhány állapotgomb jön később, nem lóg le
-     semmi. */
   .munkalap-lab {
     flex-direction: column;
     align-items: stretch;
@@ -320,8 +241,6 @@
     white-space: nowrap;
   }
 }
-
-/* --- munkalista csoportok (Kívül / Belül / Csomagon kívül) -------------------- */
 
 .munkacsoport {
   border: 1px solid var(--keret);
@@ -351,8 +270,6 @@
   border-top: 1px dashed var(--keret);
   margin-top: var(--t2);
 }
-
-/* A külön kért szolgáltatás szemet szúr: ezt tényleg nyugtázni kell. */
 .munka-extra { background: var(--narancs-halvany); }
 .munka-extra:hover { background: #fbe3c8; }
 .munka-extra input[type='checkbox'] { accent-color: var(--narancs); }
@@ -360,8 +277,6 @@
 .munka input:disabled { opacity: .4; cursor: not-allowed; }
 .munka:has(input:disabled) { cursor: default; }
 .munka:has(input:disabled):hover { background: transparent; }
-
-/* --- azonnali kereső lebegő találatlistával ---------------------------------- */
 
 .kereso { position: relative; }
 
@@ -394,8 +309,6 @@
 .talalatsor .nev { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .talalatsor .auto { flex: none; font-size: var(--m-xs); }
 
-/* --- összecsukható szakasz (egyéb szolgáltatások, korábbi vásárlás) ---------- */
-
 .osszecsuk {
   display: flex; align-items: center; gap: var(--t3);
   width: 100%; text-align: left;
@@ -412,7 +325,7 @@
 }
 .osszecsuk .db {
   font-family: var(--betu-szam); font-size: var(--m-xs); font-weight: var(--vastag-eros);
-  background: var(--narancs); color: #fff;   /* ugyanaz a narancs, mint a kiválasztott sor */
+  background: var(--narancs); color: #fff;
   border-radius: var(--r-kor); padding: 1px 8px;
 }
 .osszecsuk .nyil { font-size: var(--m-lg); line-height: 1; color: var(--szoveg-halk); }
@@ -425,11 +338,7 @@
   letter-spacing: .06em; text-transform: uppercase; color: var(--zold-sotet);
 }
 .elozmeny-nyito .nyil { margin-left: auto; font-size: var(--m-md); line-height: 1; }
-
-/* A Kívül csoportban nincs számláló, ezért a csomagnév tolja jobbra a gombot. */
 .munkacsoport-fej .csomagnev { margin-right: auto; }
-
-/* --- mennyiséges tételek a munkalapon ---------------------------------------- */
 
 .mennyisegsor {
   display: flex; align-items: center; gap: var(--t3);
@@ -441,19 +350,10 @@
 .mennyisegsor input { width: 78px; text-align: center; padding: 6px; }
 .mennyisegsor .egyseg { font-size: var(--m-xs); color: var(--szoveg-halk); width: 42px; }
 .mennyisegsor .ar { font-weight: var(--vastag-eros); min-width: 78px; text-align: right; }
-
-/* A szolgáltatás neve mellett a karikás „i" — a leírás ott van, de csak
-   akkor foglal helyet, amikor kérik. A címkén kívül ül, hogy a megnyitása
-   ne pipálja ki a szolgáltatást. */
 .extra-sav { display: flex; align-items: center; gap: 6px; }
 .extra-sav .extra { flex: 1; min-width: 0; }
-
-/* --- megerősítő kérdés („Biztosan elkészült?") -------------------------------
-   Kicsi, középre igazított doboz minden képernyőn — telefonon sem teljes
-   képernyős, mert egy kérdés, nem egy űrlap. A gombok nagyok: vizes ujjal is
-   el kell találni őket, és nem lóghatnak egymásba. */
 .fedo.kerdes-fedo {
-  z-index: 90;                       /* a munkalap és az árlista fölött */
+  z-index: 90;
   align-items: center;
   justify-content: center;
   padding: var(--t4);
@@ -477,8 +377,6 @@
 @media (max-width: 700px) {
   .fedo.kerdes-fedo { padding: var(--t4); align-items: center; }
 }
-
-/* --- Cég mező ----------------------------------------------------------------- */
 .ceg-kereso { position: relative; display: flex; flex-direction: column; gap: 3px; }
 .ceg-allapot { font-size: var(--m-xs); }
 .ceg-allapot.meglevo { color: var(--zold-sotet); }
@@ -486,10 +384,6 @@
 .szerzodes-pill { background: #eaf2fa; color: #1f5285; flex: none; }
 .ceg-jeloltek { display: flex; flex-direction: column; gap: var(--t2); margin-top: var(--t2); }
 .ceg-jeloltek .btn { justify-content: flex-start; text-align: left; padding: 12px 14px; }
-
-/* --- időválasztó (érintőképernyőn) -------------------------------------------
-   A mező egy gomb, ami ezt a panelt nyitja: nagy gombokban az órák és a
-   percek. Kesztyűben, vizes kézzel is eltalálható. A többi ablak FÖLÖTT. */
 .ido-gomb {
   text-align: left; cursor: pointer;
   min-height: 40px;
@@ -526,7 +420,6 @@
   font-family: var(--betu-szam); font-size: 18px; font-weight: var(--vastag-eros);
   touch-action: manipulation;
 }
-/* A negyedórák (:00, :15, :30, :45) a leggyakoribbak: kicsit hangsúlyosabbak. */
 .ido-percek button[data-negyed] { background: var(--lap-2); }
 .ido-racs button[aria-pressed='true'] {
   background: var(--zold); border-color: var(--zold); color: #fff;
@@ -538,15 +431,11 @@
   .ido-orak { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .ido-percek { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-
-/* --- Új időpont: flottás autók („+ Autó hozzáadása") --------------------------- */
 .flotta-hozzaad {
   display: flex; align-items: center; flex-wrap: wrap; gap: var(--t2) var(--t3);
 }
 .flotta-hozzaad .flotta-osszeg { display: inline-flex; align-items: center; gap: var(--t2); }
 .flotta-hozzaad .halk { font-size: var(--m-xs); flex-basis: 100%; }
-
-/* --- Flottás csoport munkalapja: autónként egy sor ------------------------------ */
 .flotta-sorok { display: flex; flex-direction: column; gap: var(--t2); }
 .flotta-sor {
   display: grid;
@@ -571,17 +460,12 @@
   .flotta-sor { grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr); }
   .flotta-ar, .flotta-allapot { grid-column: 2 / -1; }
 }
-/* A soron lévő autó (a léptető szerint) kiemelve. */
 .flotta-sor[data-soron] { border-color: var(--zold); box-shadow: 0 0 0 1px var(--zold); }
 .flotta-sor[data-allapot='COMPLETED'] .flotta-allapot { color: var(--zold-sotet); font-weight: var(--vastag-eros); }
 .flotta-munkalap .flotta-lepteto { margin: var(--t2) 0; }
 @media (max-width: 560px) {
   .kartya-muvelet .flotta-lepteto { width: 100%; }
 }
-
-/* --- „Kész van" ablak a munkalistával (v49) -----------------------------------
-   Szélesebb, mint egy sima kérdés: benne a munkalista. Ha hosszú, a lista
-   görget, a cím és a gombok helyben maradnak. */
 .kerdes-ablak.kesz-ablak {
   width: min(560px, 100%);
   max-height: calc(100dvh - 2 * var(--t4));
@@ -591,7 +475,7 @@
 .kesz-fej .rendszam { font-size: var(--m-md); margin-left: var(--t2); }
 .kesz-lista { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
 .kesz-lista .munkacsoport { margin-bottom: var(--t2); }
-.kesz-lista .munka { padding: 7px var(--t2); }         /* ujjal is eltalálható */
+.kesz-lista .munka { padding: 7px var(--t2); }
 .kesz-lista .munka input { width: 22px; height: 22px; }
 .kimaradt-cimke {
   font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
@@ -605,14 +489,10 @@
 .kesz-ar strong { font-size: var(--m-md); }
 .kesz-ar[data-csokken='true'] { background: var(--narancs-halvany); }
 .kesz-ar-ok { flex-basis: 100%; }
-
-/* A munkalapon, kész autónál: ami kimaradt (üres négyzet, piros felirat). */
 .kimaradt-sor {
   font-size: var(--m-sm); padding: var(--t2) var(--t3); border-radius: var(--r);
   background: var(--narancs-halvany); margin-bottom: var(--t2);
 }
-
-/* --- „Befér-e?" az Új időpont űrlapon (fejlesztői próba, v56) -------------- */
 .befer-sor {
   padding: var(--t2) var(--t3); border-radius: var(--r);
   font-size: var(--m-sm); background: var(--lap-2);

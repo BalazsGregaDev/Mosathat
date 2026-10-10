@@ -1,11 +1,5 @@
 import type { Absence, AbsenceKind } from './types'
 
-// ---------------------------------------------------------------------------
-//  Munkaidő-változások szövegei — egy helyen, hogy a Profilom és a napi
-//  kártya ugyanazt mondja ugyanarról.
-// ---------------------------------------------------------------------------
-
-/** A választó gombjai: mi változik. */
 export const VALTOZAS_FAJTAK: { kind: AbsenceKind; cimke: string }[] = [
   { kind: 'KESOBB_ERKEZIK', cimke: 'Később érkezik' },
   { kind: 'KORABBAN_TAVOZIK', cimke: 'Korábban megy el' },
@@ -13,7 +7,6 @@ export const VALTOZAS_FAJTAK: { kind: AbsenceKind; cimke: string }[] = [
   { kind: 'EGESZ_NAP', cimke: 'Egész nap nincs bent' },
 ]
 
-/** „16:00-ig van bent" — egy munkaidő-változás egy sorban. */
 export function valtozasSzoveg(a: Pick<Absence, 'kind' | 'starts' | 'ends'>): string {
   switch (a.kind) {
     case 'KESOBB_ERKEZIK':   return `${a.ends}-tól van bent`

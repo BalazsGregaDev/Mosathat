@@ -1,6 +1,6 @@
-// v50: a heti nézet a napi sorrendet követi; a havi nézetben az aznapi
-// autók száma nagyban („+ 8 autó"), a többnapos sávok alatt.
 import { chromium } from 'playwright'
+
+import { hetkoznapra } from './_munkanap.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -12,6 +12,7 @@ const ok = (mit, v, k) => {
 const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } })
 const p = await ctx.newPage()
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
+await hetkoznapra(p)
 await p.goto('http://localhost:5180/')
 await p.waitForSelector('input[type="email"]', { timeout: 60000 })
 await p.fill('input[type="email"]', 'tulaj@mosathat.hu')
@@ -25,7 +26,6 @@ const nezet = async (n) => {
   await p.waitForTimeout(1500)
 }
 
-// A napi lista egynapos autói (a többnaposak a heti nézetben sávok)
 const napiSor = async () => p.evaluate(() => [...document.querySelectorAll('.napi-lista .kartya')]
   .filter((k) => !k.querySelector('.kartya-tobbnap'))
   .map((k) => k.querySelector('.rendszam').textContent.trim()))
@@ -35,12 +35,10 @@ const hetiMa = async () => p.evaluate(() => [...document.querySelectorAll('.napo
 console.log('=== 1) A heti nézet a napi sorrendben ===\n')
 const elotte = await napiSor()
 await nezet(/^Hét$/)
-// (a heti oszlopban legfeljebb 10 kártya fér, a többi „+N további")
 ok('ma: a heti oszlop = a napi lista', elotte.slice(0, 10), await hetiMa())
 
 console.log('\n=== 2) Átrendezés a napiban → a heti követi ===\n')
 await nezet(/^Nap$/)
-// Billentyűvel: az utolsó egynapos autó kettővel feljebb
 const utolso = elotte[elotte.length - 1]
 await p.locator('.napi-lista .sor-elem').filter({ has: p.locator('.rendszam', { hasText: utolso }) })
   .locator('.fogo').first().focus()

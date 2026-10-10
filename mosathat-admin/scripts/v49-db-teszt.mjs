@@ -1,4 +1,3 @@
-// v49, adatbázis: „Kész van" ablak — ami kimaradt, nem számít bele az árba.
 import { adatbazis, tesztelo, ALK } from './_db.mjs'
 
 const db = await adatbazis()

@@ -2,28 +2,6 @@ import { ft, idoRovid, idotartam, napokRovid } from '../../lib/format'
 import type { DayAbsence, DayCapacity, VacationRow, WorkWindow } from '../../lib/types'
 import { valtozasSzoveg } from '../../lib/munkaido'
 
-// ---------------------------------------------------------------------------
-//  A nap kártyája: kapacitás + a nap számai + ki mikor van bent
-//
-//  Eddig két külön kártya volt (Kapacitás és A nap), és a kettő mást
-//  számolt: az egyik csak a mosóba beálló munkát, a másik minden foglalást.
-//  Így a „7 autó" mellett 40% állt, ami nem stimmelt. Most mindkét szám
-//  ugyanabból a day_capacity()-ből jön, és egy kártyán van.
-//
-//  A kapacitás egyszerű mérleg:
-//
-//      munkaidő × párhuzamosan mosható autók × 1,2
-//      × a jelenlét szorzója (ha valaki hiányzik: 1 fő → 80%, 2 fő → 40%)
-//
-//  Ki mit lát:
-//    - mindenki: a százalék, a szabad idő, a munkaidő, az autók száma, és
-//      kinek változik aznap a munkaideje („Gábor: 16:00-ig")
-//    - mindenki: a szabadságok a következő egy hónapban, emberenként
-//      összesítve („Gábor: nov. 10–13.")
-//    - csak a tulajdonos és a fejlesztő: a várható bevétel és a lekötött
-//      munka órában — ezek üzleti számok, az Áttekintésben is ott vannak
-// ---------------------------------------------------------------------------
-
 export default function CapacityPanel({
   c,
   windows,
@@ -36,13 +14,9 @@ export default function CapacityPanel({
   c: DayCapacity
   windows: WorkWindow[]
   valtozasok: DayAbsence[]
-  /** Szabadságok a naptól egy hónapig (Profilomban írják be). */
   szabadsagok?: VacationRow[]
-  /** Hány autó készült el aznap (a lista állapotaiból). */
   kesz: number
-  /** Tulajdonos vagy fejlesztő: látja a bevételt és a lekötött órákat. */
   teljesJogu: boolean
-  /** A mai napot nézzük-e („Gábor ma: 16:00-ig"). */
   ma: boolean
 }) {
   const zarva = c.capacity_minutes === 0 && windows.length === 0
@@ -103,8 +77,6 @@ export default function CapacityPanel({
           </>
         )}
 
-        {/* Ha valaki hiányzik, a kapacitás kisebb a szokásosnál — ki kell
-            mondani, mennyivel, különben a százalék „magától" ugrik. */}
         {letszamCsokken && (
           <div className="adatsor">
             <span>Létszám</span>
@@ -116,8 +88,6 @@ export default function CapacityPanel({
         )}
       </div>
 
-      {/* Ki mikor van bent. Az alkalmazottak a Profilom alatt írják be;
-          itt mindenki látja, és a kapacitás is ebből számol. */}
       {valtozasok.length > 0 && (
         <ul className="munkaido-valtozasok">
           {valtozasok.map((a) => (
@@ -129,14 +99,12 @@ export default function CapacityPanel({
         </ul>
       )}
 
-      {/* Szabadság a következő egy hónapban, emberenként egy sor:
-            Gábor: nov. 10–13., nov. 24. */}
       {szabadsagok.length > 0 && (
         <div className="szabadsag-blokk">
           <div className="cimke">Szabadság</div>
           <ul>
             {szabadsagSorok(szabadsagok).map((s) => (
-              <li key={s.nev}>
+              <li key={s.id}>
                 <strong>{s.nev}:</strong> {s.idoszakok.join(', ')}
               </li>
             ))}
@@ -152,13 +120,12 @@ export default function CapacityPanel({
   )
 }
 
-/** Emberenként összesítve, az első szabadság szerinti sorrendben. */
-function szabadsagSorok(lista: VacationRow[]): { nev: string; idoszakok: string[] }[] {
-  const m = new Map<string, string[]>()
+function szabadsagSorok(lista: VacationRow[]): { id: string; nev: string; idoszakok: string[] }[] {
+  const m = new Map<string, { id: string; nev: string; idoszakok: string[] }>()
   for (const v of lista) {
-    const sor = m.get(v.staff_name) ?? []
-    sor.push(napokRovid(v.from_day, v.to_day))
-    m.set(v.staff_name, sor)
+    const sor = m.get(v.staff_id) ?? { id: v.staff_id, nev: v.staff_name, idoszakok: [] }
+    sor.idoszakok.push(napokRovid(v.from_day, v.to_day))
+    m.set(v.staff_id, sor)
   }
-  return [...m].map(([nev, idoszakok]) => ({ nev, idoszakok }))
+  return [...m.values()]
 }

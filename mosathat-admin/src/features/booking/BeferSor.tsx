@@ -1,41 +1,20 @@
 import { useMemo } from 'react'
 
-import { idoPercbe, type Munka } from '../../lib/beosztas'
-import { leadosHozasok, ora, ujMunkaEllenoriz, varosKezdesek } from '../../lib/befer'
+import type { Munka } from '../../lib/beosztas'
+import { leadosHozasok, ujMunkaEllenoriz, varosKezdesek } from '../../lib/befer'
+import { idoPercbe, percIdo, percOra } from '../../lib/format'
 import { useNapBeosztas } from '../../state/napBeosztas'
 import type { BookingType } from '../../lib/types'
-
-// ---------------------------------------------------------------------------
-//  „Befér-e?" az Új időpont űrlapon (egyelőre csak a fejlesztői fióknak)
-//
-//      Befér — kész kb. 13:30
-//      Nem fér be: PQR-450 40 perccel később lenne kész.
-//        Szabad kezdések ezen a napon:  [8:00] [13:00] [13:30] …
-//
-//  A napi nézet idővonalával ugyanaz a számítás (lib/befer.ts): a nap
-//  beosztása az új autóval és nélküle. Egy szabad időpontra koppintva az
-//  űrlap kezdés / hozza mezője átíródik.
-//
-//  Többnapos foglalásnál nem mond semmit: azt a munkát a napokra osztjuk,
-//  a beosztás a napi nézetben látszik.
-// ---------------------------------------------------------------------------
 
 export default function BeferSor({ datum, tipus, kezdes, hozza, visziNap, viszi, perc, kihagy, onIdo }: {
   datum: string
   tipus: BookingType
-  /** Megvárja: a kezdés ("09:00"). */
   kezdes: string
-  /** Itt hagyja / hozom-viszem: mikor hozza. */
   hozza: string
-  /** A Viszi napja (üres: ugyanaz a nap). */
   visziNap: string
-  /** A Viszi órája (üres: zárásig). */
   viszi: string
-  /** A munka ideje percben (az árajánlatból). */
   perc: number | null | undefined
-  /** Szerkesztésnél: maga a szerkesztett foglalás ne számítson. */
   kihagy: string | null
-  /** Egy szabad időpontra koppintva: az űrlap mezője átíródik. */
   onIdo: (mezo: 'startTime' | 'dropOffTime', ertek: string) => void
 }) {
   const tobbnapos = Boolean(visziNap && visziNap !== datum)
@@ -64,11 +43,11 @@ export default function BeferSor({ datum, tipus, kezdes, hozza, visziNap, viszi,
     <div className="befer-sor" data-ok={e.befer}>
       <div className="befer-fej">
         <strong>{e.befer ? 'Befér' : 'Nem fér be'}</strong>
-        {e.befer && e.kesz !== null && <span> — kész kb. {ora(e.kesz)}</span>}
+        {e.befer && e.kesz !== null && <span> — kész kb. {percOra(e.kesz)}</span>}
         <span className="befer-jel" title="Fejlesztői próba: a napi nézet idővonalával azonos számítás">próba</span>
       </div>
       {!e.befer && (
-        <ul>{e.gondok.map((g) => <li key={g}>{g}</li>)}</ul>
+        <ul>{e.gondok.map((g, i) => <li key={i}>{g}</li>)}</ul>
       )}
       {!e.befer && (
         lehet.length > 0 ? (
@@ -76,9 +55,8 @@ export default function BeferSor({ datum, tipus, kezdes, hozza, visziNap, viszi,
             <span>{varos ? 'Szabad kezdések ezen a napon:' : 'Ha ekkor hozza, befér:'}</span>
             {lehet.slice(0, 10).map((l) => (
               <button key={l.tol} type="button" className="btn btn-kicsi"
-                      onClick={() => onIdo(varos ? 'startTime' : 'dropOffTime',
-                        `${String(Math.floor(l.tol / 60)).padStart(2, '0')}:${String(l.tol % 60).padStart(2, '0')}`)}>
-                {ora(l.tol)}
+                      onClick={() => onIdo(varos ? 'startTime' : 'dropOffTime', percIdo(l.tol))}>
+                {percOra(l.tol)}
               </button>
             ))}
           </div>

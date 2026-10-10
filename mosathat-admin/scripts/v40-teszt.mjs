@@ -1,16 +1,3 @@
-// v40 ellenőrzése Playwrighttal.
-//
-// Futtatás:  npm run dev -- --port 5180   (másik ablakban)
-//            node scripts/v40-teszt.mjs
-//
-// Amit néz:
-//   1. Új menüpont: Igazolólap — minden szerepkörnek. A cégek listája a hónap
-//      állásával; „+ Sor" rögtön új sorral nyitja a lapot; a hónapválasztón
-//      az év fel-le nyíllal is léptethető.
-//   2. Alkalmazott: kitölt, aláírat — de oszlopot nem állít, nem zár le.
-//      Tulajdonos: a teljes szerkesztés (Oszlopok és lábléc, lezárás).
-//   3. Kész van → megnyílik az aláírás; Átvette csak kitöltött sor után;
-//      lezárt (átvett) időpontnál is aláírható.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -45,7 +32,6 @@ async function rajzol(p, vaszon) {
   await p.mouse.up()
 }
 
-// =============================================================================
 console.log('=== 1-2) Alkalmazott: Igazolólap menüpont ===\n')
 const ctx = await b.newContext({ viewport: { width: 1280, height: 950 } })
 const a = await ctx.newPage()
@@ -60,7 +46,6 @@ await menu(a, 'Igazolólap')
   ok('a listában a szerződéses cég', 1, await sor.count())
   ok('a hónap állása: még nincs sora', true, (await sor.innerText()).includes('nincs sora'))
 
-  // Év fel-le nyíllal
   const ev = Number(ma.slice(0, 4))
   await a.getByRole('button', { name: 'Következő év' }).click()
   await a.waitForTimeout(600)
@@ -73,7 +58,6 @@ await menu(a, 'Igazolólap')
   await a.getByRole('button', { name: 'Következő év' }).click()
   await a.waitForTimeout(800)
 
-  // + Sor: rögtön új sorral nyílik
   await sor.getByRole('button', { name: '+ Sor' }).click()
   const urlap = a.locator('[aria-label="Igazolólap sora"]')
   await urlap.waitFor()
@@ -86,7 +70,6 @@ await menu(a, 'Igazolólap')
   ok('a sor a lapon', 1, await lap.locator('.igazolo-tabla tbody tr').count())
   ok('alkalmazott: nincs Oszlopok és lábléc', 0, await lap.getByRole('button', { name: 'Oszlopok és lábléc' }).count())
   ok('alkalmazott: nincs Hónap lezárása', 0, await lap.getByRole('button', { name: 'Hónap lezárása' }).count())
-  // Aláíratás utólag: a sorra kattintva
   await lap.locator('.igazolo-tabla tbody tr').first().click()
   await urlap.waitFor()
   await rajzol(a, urlap.locator('.alairas-vaszon'))
@@ -101,7 +84,6 @@ await menu(a, 'Igazolólap')
 }
 await ctx.close()
 
-// =============================================================================
 console.log('\n=== 2) Tulajdonos: teljes szerkesztés a menüpontból ===\n')
 const ctx2 = await b.newContext({ viewport: { width: 1280, height: 950 } })
 const t = await ctx2.newPage()
@@ -122,7 +104,6 @@ await menu(t, 'Igazolólap')
 console.log('\n=== 3) Kész van → aláírás; Átvette csak kitöltött sor után ===\n')
 await menu(t, 'Időpontok')
 {
-  // Az Autó Trans mai hozom-viszem autója: még „Megérkezett" a következő lépés.
   const kartya = t.locator('.napi-lista .kartya')
     .filter({ has: t.locator('button', { hasText: /^Igazolólap$/ }) })
     .filter({ has: t.locator('button', { hasText: /^Megérkezett$/ }) }).first()
@@ -134,7 +115,7 @@ await menu(t, 'Időpontok')
 
   await ez.getByRole('button', { name: 'Kész van' }).click()
   await t.waitForTimeout(300)
-  await t.locator('.kerdes-gombok .btn-fo').click()        // „Biztosan elkészült?" — Igen
+  await t.locator('.kerdes-gombok .btn-fo').click()
   await t.waitForTimeout(1500)
   const urlap = t.locator('[aria-label="Igazolólap sora"]')
   ok('Kész van után megnyílik az aláírás', 1, await urlap.count())
@@ -143,7 +124,6 @@ await menu(t, 'Időpontok')
   await urlap.getByRole('button', { name: 'Mégse' }).click()
   await t.waitForTimeout(400)
 
-  // Átvette: a sor még nincs kitöltve → előbb a sor
   await ez.getByRole('button', { name: 'Átvette' }).click()
   await t.waitForTimeout(1200)
   ok('Átvette: előbb a sor nyílik', 1, await urlap.count())
@@ -163,7 +143,6 @@ await menu(t, 'Időpontok')
   await t.waitForTimeout(1500)
   ok('lezárva (átvette)', 'COMPLETED', await ez.getAttribute('data-allapot'))
 
-  // Lezárt időpontnál is aláírható
   await ez.getByRole('button', { name: 'Igazolólap' }).click()
   await urlap.waitFor()
   ok('lezárt időpontnál is nyílik, a km megvan', '77000', await urlap.locator('#ig-km').inputValue())
@@ -178,7 +157,6 @@ await menu(t, 'Időpontok')
 }
 await ctx2.close()
 
-// =============================================================================
 console.log('\n=== 4) Telefon: a lista nem lóg ki ===\n')
 const ctx3 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 const m = await ctx3.newPage()

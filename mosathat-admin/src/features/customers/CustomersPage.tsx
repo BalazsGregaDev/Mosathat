@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { ft } from '../../lib/format'
+import { ft, hibaSzoveg } from '../../lib/format'
 import {
-  BILLING_LABEL, CATEGORY_LABEL, CATEGORY_SHORT, KIND_LABEL,
+  BILLING_LABEL, CATEGORY_LABEL, CATEGORY_SHORT, KATEGORIAK, KIND_LABEL,
   type CompanySummary, type CustomerSummary, type VehicleSummary,
 } from '../../lib/types'
 import Szerkesztheto, { type Valaszthato } from '../common/Szerkesztheto'
@@ -11,30 +11,9 @@ import { urlapMegnyilt } from '../../lib/kepernyo'
 import KartyaFej from '../common/KartyaFej'
 import IgazoloLap from '../igazolo/IgazoloLap'
 
-// ---------------------------------------------------------------------------
-//  Ügyfelek — egy oldal, három rendezés: jármű, ügyfél és cég szerint.
-//
-//  Nem három menüpont. Az adat egyetlen lánc: cég → ügyfél (sofőr) → jármű →
-//  foglalások. Külön listák ugyanannak a láncnak a különböző pontjait
-//  mutatnák, és minden ügyfél többször szerepelne a rendszerben.
-//
-//  A Cég szerinti nézet azért kell, mert egy flottánál az autók különböző
-//  sofőrök nevén vannak: ügyfél szerint öt kártyán szétszórva, cég szerint
-//  egy helyen, mind.
-//
-//  Amit a soron látni kell, az nem a nyers adat, hanem a történet: hányszor
-//  járt itt, mennyit költött, milyen sűrűn jár. Ezt az adatbázis számolja —
-//  így a szám mindenhol ugyanaz.
-//
-//  Minden adat helyben szerkeszthető. Telefonszám, e-mail, cégnév és
-//  rendszám folyamatosan változik; ha nincs hol átírni, az adat lassan
-//  elavul, és pont attól lesz használhatatlan a rendszer.
-// ---------------------------------------------------------------------------
-
 type Nezet = 'jarmu' | 'ugyfel' | 'ceg'
 
-const KATEGORIAK: Valaszthato[] = (['SZEMELYAUTO', 'SUV', 'KISBUSZ'] as const)
-  .map((v) => ({ ertek: v, cimke: CATEGORY_LABEL[v] }))
+const MERET_VALASZTO: Valaszthato[] = KATEGORIAK.map((v) => ({ ertek: v, cimke: CATEGORY_LABEL[v] }))
 
 const TIPUSOK: Valaszthato[] = [
   { ertek: 'MAGAN', cimke: 'Magánszemély' },
@@ -43,14 +22,6 @@ const TIPUSOK: Valaszthato[] = [
 
 export default function CustomersPage() {
   const { data, user } = useApp()
-  // Ez a képernyő alapból OLVASHATÓ az alkalmazottnak, nem szerkeszthető: a
-  // napi munkájához tartozó adatokat a foglalási ablakban írja át — ott az a
-  // foglalásé, itt viszont a törzsadat, ami minden későbbi foglalásra hat.
-  //
-  // „Alapból", mert a Felhasználók képernyőn ez szerepkörre és fiókra
-  // bekapcsolható — régi adatok feltöltésekor erre szükség van. A jogot nem
-  // itt számoljuk ki: az adatbázis mondja meg, és ugyanaz a szabály őrzi a
-  // mentést is (save_customer, save_vehicle, add_customer).
   const szerkesztheto = user?.canEditCustomers === true
   const [nezet, setNezet] = useState<Nezet>('jarmu')
   const [q, setQ] = useState('')
@@ -61,37 +32,42 @@ export default function CustomersPage() {
   const [hiba, setHiba] = useState<string | null>(null)
   const [ujUgyfel, setUjUgyfel] = useState(false)
 
-  // A „Betöltés…" csak az első alkalommal jelenik meg. Egy mentés utáni
-  // újratöltésnél nem: olyankor a lista egy pillanatra eltűnne, a kártyák
-  // újra létrejönnének — és a kinyitott kártya becsukódna az orrunk előtt,
-  // pont amikor épp szerkesztjük. A lista helyben cserélődik.
-  const betolt = useCallback(async (keres: string, elso = false) => {
-    if (elso) setTolt(true)
+  const kerSzam = useRef(0)
+  const betolt = useCallback(async (keres: string) => {
+    const n = ++kerSzam.current
     try {
-      if (nezet === 'ugyfel') setUgyfelek(await data.listCustomers(keres))
-      else if (nezet === 'ceg') setCegek(await data.listCompanies(keres))
-      else setJarmuvek(await data.listVehicles(keres))
-      setHiba(null)
+      if (nezet === 'ugyfel') {
+        const r = await data.listCustomers(keres)
+        if (n === kerSzam.current) setUgyfelek(r)
+      } else if (nezet === 'ceg') {
+        const r = await data.listCompanies(keres)
+        if (n === kerSzam.current) setCegek(r)
+      } else {
+        const r = await data.listVehicles(keres)
+        if (n === kerSzam.current) setJarmuvek(r)
+      }
+      if (n === kerSzam.current) setHiba(null)
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      if (n === kerSzam.current) setHiba(hibaSzoveg(e))
     } finally {
-      if (elso) setTolt(false)
+      if (n === kerSzam.current) setTolt(false)
     }
   }, [data, nezet])
 
-  // Gépelés közben keres, 250 ms csend után. Az első betöltés (és a
-  // nézetváltás) mutatja a „Betöltés…" feliratot, a többi nem.
-  const voltMar = useRef(false)
+  const azonnal = useRef(true)
   useEffect(() => {
-    const t = window.setTimeout(() => {
-      void betolt(q, !voltMar.current)
-      voltMar.current = true
-    }, 250)
+    const kesleltetes = azonnal.current ? 0 : 250
+    azonnal.current = false
+    const t = window.setTimeout(() => void betolt(q), kesleltetes)
     return () => window.clearTimeout(t)
   }, [q, betolt])
 
-  // Nézetváltásnál más a lista, ott jogos a betöltésjelzés.
-  useEffect(() => { voltMar.current = false }, [nezet])
+  function fulValt(uj: Nezet) {
+    if (uj === nezet) return
+    azonnal.current = true
+    setTolt(true)
+    setNezet(uj)
+  }
 
   const ujra = () => void betolt(q)
 
@@ -100,13 +76,13 @@ export default function CustomersPage() {
       <div className="oldal-fej">
         <h2>Ügyfelek</h2>
         <div className="fulek">
-          <button className={nezet === 'jarmu' ? 'aktiv' : ''} onClick={() => setNezet('jarmu')}>
+          <button className={nezet === 'jarmu' ? 'aktiv' : ''} onClick={() => fulValt('jarmu')}>
             Jármű szerint
           </button>
-          <button className={nezet === 'ugyfel' ? 'aktiv' : ''} onClick={() => setNezet('ugyfel')}>
+          <button className={nezet === 'ugyfel' ? 'aktiv' : ''} onClick={() => fulValt('ugyfel')}>
             Ügyfél szerint
           </button>
-          <button className={nezet === 'ceg' ? 'aktiv' : ''} onClick={() => setNezet('ceg')}>
+          <button className={nezet === 'ceg' ? 'aktiv' : ''} onClick={() => fulValt('ceg')}>
             Cég szerint
           </button>
         </div>
@@ -130,8 +106,6 @@ export default function CustomersPage() {
       {hiba && <div className="hibauzenet">{hiba}</div>}
       {tolt && <div className="betolt">Betöltés…</div>}
 
-      {/* Ez a figyelmeztetés egyszer áll itt, nem minden kártyán. Harminc
-          kártyán harmincszor ugyanaz a mondat már nem figyelmeztetés, hanem zaj. */}
       {!tolt && nezet === 'jarmu' && jarmuvek.length > 0 && (
         <p className="halk" style={{ fontSize: 'var(--m-xs)', marginBottom: 'var(--t3)' }}>
           Kattints bármelyik adatra az átíráshoz. Ha a méretet írod át, az adott
@@ -181,18 +155,6 @@ export default function CustomersPage() {
   )
 }
 
-// ---------------------------------------------------------------------------
-//  Új ügyfél — ez a régi, papíros adatok feltöltésének az útja.
-//
-//  Az autó MELLÉ került, nem külön lépésbe: egy papíron egy sor egy autó és
-//  egy név. Ha két külön ablakban kellene felvenni, minden ügyfélnél kétszer
-//  kellene megkeresni ugyanazt.
-//
-//  A telefonszám az, amin az ügyfelet később megtalálják, ezért kötelező. Ha
-//  már van vele ügyfél, az adatbázis megmondja, kinél — ilyenkor nem
-//  tiltunk, hanem megkérdezzük: egy családban közös szám is előfordul.
-// ---------------------------------------------------------------------------
-
 function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void }) {
   const { data } = useApp()
   const [name, setName] = useState('')
@@ -208,38 +170,38 @@ function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   const [category, setCategory] = useState('SZEMELYAUTO')
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
-  // Ha a telefonszám már szerepel valakinél, a mentés nem megy át magától.
-  // Ez a kapcsoló mondja meg, hogy már láttuk a figyelmeztetést.
   const [ismetles, setIsmetles] = useState(false)
   const nevMezo = useRef<HTMLInputElement>(null)
+  const felvett = useRef<string | null>(null)
   useEffect(() => { urlapMegnyilt(nevMezo.current) }, [])
+
+  const bezar = () => (felvett.current ? onKesz() : onBezar())
+  const piszkos = Boolean(name || phone || email || ceg || adoszam || notes || plate || brand || model)
 
   async function ment(megis = false) {
     if (!name.trim() || !phone.trim() || megy) return
     setMegy(true)
     setHiba(null)
     try {
-      const id = await data.addCustomer({
+      const id = felvett.current ?? await data.addCustomer({
         name, phone, email, notes, megis,
         type: tipus,
         company_name: tipus === 'CEG' ? ceg : '',
         tax_number: tipus === 'CEG' ? adoszam : '',
       })
-      // Az autó már nem bukhat el a telefonszámon: az ügyfél megvan. Ha a
-      // rendszám ütközik, azt külön mondjuk meg — de az ügyfél marad.
+      felvett.current = id
       if (plate.trim()) {
         try {
           await data.addVehicle({ customer_id: id, plate_raw: plate, brand, model, category })
         } catch (e) {
-          setHiba(`Az ügyfél felvéve, de az autó nem: ${e instanceof Error ? e.message : String(e)}`)
+          setHiba(`Az ügyfél felvéve, de az autó nem: ${hibaSzoveg(e)}. Javítsd, vagy töröld a rendszámot, és nyomd meg újra a gombot.`)
           setMegy(false)
-          setPlate('')
           return
         }
       }
       onKesz()
     } catch (e) {
-      const uzenet = e instanceof Error ? e.message : String(e)
+      const uzenet = hibaSzoveg(e)
       setHiba(uzenet)
       setIsmetles(uzenet.includes('telefonszámmal már van ügyfél'))
       setMegy(false)
@@ -250,11 +212,11 @@ function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
 
   return (
     <div className="fedo" role="presentation"
-         onMouseDown={(e) => e.target === e.currentTarget && onBezar()}>
+         onMouseDown={(e) => { if (e.target === e.currentTarget && !piszkos && !megy) bezar() }}>
       <div className="lap" role="dialog" aria-modal="true" aria-label="Ügyfél hozzáadása">
         <div className="lap-fej">
           <h2>Ügyfél hozzáadása</h2>
-          <button className="bezar" onClick={onBezar} aria-label="Bezárás">×</button>
+          <button className="bezar" onClick={bezar} aria-label="Bezárás">×</button>
         </div>
 
         <div className="lap-torzs">
@@ -328,7 +290,6 @@ function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
                       onChange={(e) => setNotes(e.target.value)} />
           </label>
 
-          {/* Az első autó itt, nem külön ablakban: a papíron is egy sorban van. */}
           <div className="valaszto-vonal-vekony" />
           <p className="halk" style={{ fontSize: 'var(--m-xs)' }}>
             Az autója mindjárt felvehető. Ha most nincs kéznél, hagyd üresen — a
@@ -357,7 +318,7 @@ function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
             <div className="mezo">
               <span className="cimke">Méret</span>
               <div className="ertek-gombok" style={{ justifyContent: 'flex-start' }}>
-                {KATEGORIAK.map((k) => (
+                {MERET_VALASZTO.map((k) => (
                   <button key={k.ertek} type="button" disabled={megy}
                           className={k.ertek === category ? 'aktiv' : ''}
                           aria-pressed={k.ertek === category}
@@ -371,7 +332,7 @@ function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
 
           <div className="lap-lab">
             <div className="gombok">
-              <button className="btn" onClick={onBezar} disabled={megy}>Mégse</button>
+              <button className="btn" onClick={bezar} disabled={megy}>Mégse</button>
               <button className="btn btn-fo" disabled={!keszEnged || megy}
                       onClick={() => void ment()}>
                 {megy ? 'Felvétel…' : 'Felvétel'}
@@ -383,8 +344,6 @@ function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
 
 function JarmuKartya({ v, onValtozas, szerkesztheto }: {
   v: VehicleSummary; onValtozas: () => void; szerkesztheto: boolean
@@ -412,14 +371,10 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
         )}
       </KartyaFej>
       <div className="panel-torzs">
-        {/* A rendszám a kártya címe — itt a tulajdonos és a telefonszám az,
-            ami csukott állapotban is kell. */}
         <Szerkesztheto zarolt={!szerkesztheto} cimke="Tulajdonos" ertek={v.customer_name}
                        onMent={(x) => ugyfel({ name: x })} />
         <Szerkesztheto zarolt={!szerkesztheto} cimke="Telefon" ertek={v.customer_phone} tipus="telefon"
                        onMent={(x) => ugyfel({ phone: x })} />
-        {/* A cégnév csukva is látszik: egy flottás autónál a cég az első
-            kérdés („kinek számlázzuk?"), nem a sofőr neve. */}
         {v.company_name && (
           <Szerkesztheto zarolt={!szerkesztheto} cimke="Cégnév" ertek={v.company_name}
                          onMent={(x) => ugyfel({ company_name: x })}
@@ -440,12 +395,11 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
                            onMent={(x) => ment({ brand: x })} />
             <Szerkesztheto zarolt={!szerkesztheto} cimke="Modell" ertek={v.model} ures="nincs megadva"
                            onMent={(x) => ment({ model: x })} />
-            <Szerkesztheto zarolt={!szerkesztheto} cimke="Méret" ertek={v.category} valaszthato={KATEGORIAK}
+            <Szerkesztheto zarolt={!szerkesztheto} cimke="Méret" ertek={v.category} valaszthato={MERET_VALASZTO}
                            onMent={(x) => ment({ category: x })} />
             <Szerkesztheto zarolt={!szerkesztheto} cimke="Megjegyzés" ertek={v.notes} sor={2} ures="nincs"
                            onMent={(x) => ment({ notes: x })} />
 
-            {/* Cég nélküli autónál itt lehet hozzáadni. */}
             {!v.company_name && (
               <Szerkesztheto zarolt={!szerkesztheto} cimke="Cégnév" ertek="" ures="nincs"
                              onMent={(x) => ugyfel({ company_name: x })} />
@@ -469,10 +423,6 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
               </span>
             </div>
 
-            {/* Ugyanannak a tulajdonosnak a következő autója. Itt is kell,
-                nem csak az ügyfélnézetben: a listát alapból jármű szerint
-                nézik, és ha csak amott volna, négy kattintásra lenne a
-                felvétel — vagyis gyakorlatilag sehol. */}
             {szerkesztheto && (
               ujAuto ? (
                 <UjJarmu
@@ -494,8 +444,6 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
 
 function UgyfelKartya({ c, onValtozas, szerkesztheto }: {
   c: CustomerSummary
@@ -526,9 +474,6 @@ function UgyfelKartya({ c, onValtozas, szerkesztheto }: {
         <Szerkesztheto zarolt={!szerkesztheto} cimke="Telefon" ertek={c.phone} tipus="telefon"
                        onMent={(x) => ment({ phone: x })} />
 
-        {/* A rendszámok, nem a darabszám: „Járművei: 2" semmit nem mond, az
-            „ABC-123, LMN-882" alapján viszont egy pillantással megvan, kié
-            az autó, ami épp beállt. Nyitva a teljes lista van lent. */}
         {!reszletek && (
           <div className="adatsor">
             <span>Járművei</span>
@@ -594,9 +539,6 @@ function UgyfelKartya({ c, onValtozas, szerkesztheto }: {
           </p>
         )}
 
-        {/* A kinyitott ügyfélnél a járművei rögtön ott vannak — nincs
-            külön „Járművei" gomb. Aki kinyitja, az többnyire épp az autóit
-            keresi. */}
         <div className="szakasz-cim">Járművei ({c.jarmuvek})</div>
         <UgyfelJarmuvei customerId={c.id} onValtozas={onValtozas}
                        revizio={revizio} szerkesztheto={szerkesztheto} />
@@ -614,7 +556,7 @@ function UgyfelKartya({ c, onValtozas, szerkesztheto }: {
             customerId={c.id}
             onKesz={() => {
               setUjAuto(false)
-              setRevizio((n) => n + 1)   // a járműlista olvassa újra magát
+              setRevizio((n) => n + 1)
               onValtozas()
             }}
             onMegse={() => setUjAuto(false)}
@@ -627,21 +569,8 @@ function UgyfelKartya({ c, onValtozas, szerkesztheto }: {
   )
 }
 
-// ---------------------------------------------------------------------------
-//  Cég szerint: egy cég, az összes autója
-//
-//  Csukva: a cég neve, van-e szerződése, és az autók rendszámai. Nyitva
-//  autónként egy sor: rendszám, típus, kinek a nevén van (a sofőr és a
-//  telefonszáma), és szerződéses cégnél, hogy Céges vagy Magán áron megy.
-//
-//  Itt nincs szerkesztés: az autó és a sofőr adatai a Jármű és az Ügyfél
-//  nézetben írhatók át — ez a nézet az áttekintésre való, hogy egy flotta
-//  minden autója egy helyen legyen.
-// ---------------------------------------------------------------------------
-
 function CegKartya({ c }: { c: CompanySummary }) {
   const [nyitva, setNyitva] = useState(false)
-  // Az igazolólap ablaka (csak szerződéses / bérletes cégnél).
   const [lapNyitva, setLapNyitva] = useState(false)
   return (
     <div className="panel" data-nyitva={nyitva}>
@@ -660,9 +589,6 @@ function CegKartya({ c }: { c: CompanySummary }) {
           </span>
         </div>
 
-        {/* Az igazolólap: a szerződéses és bérletes cégek havi lapja. Ezek a
-            cégek a lista elején állnak — őket keresik a leggyakrabban. A
-            gomb csukott kártyán is látszik: egy mozdulat legyen megnyitni. */}
         {c.lapos && (
           <div className="ceg-lap-sor">
             <button className="btn" onClick={() => setLapNyitva(true)}>Igazolólap</button>
@@ -732,25 +658,32 @@ function CegKartya({ c }: { c: CompanySummary }) {
   )
 }
 
-/** Egy ügyfél autói — a teljes listából szűrve, hogy ne legyen külön lekérdezés. */
 function UgyfelJarmuvei({ customerId, onValtozas, revizio, szerkesztheto }: {
   customerId: string
   onValtozas: () => void
-  /** Nő, valahányszor új autót vettek fel — ilyenkor újra kell olvasni. */
   revizio: number
   szerkesztheto: boolean
 }) {
   const { data } = useApp()
   const [sorok, setSorok] = useState<VehicleSummary[] | null>(null)
+  const [hiba, setHiba] = useState<string | null>(null)
+  const [sajatRev, setSajatRev] = useState(0)
 
   useEffect(() => {
     let el = true
-    data.listVehicles('').then((v) => {
-      if (el) setSorok(v.filter((x) => x.customer_id === customerId))
-    })
+    data.listVehicles('')
+      .then((v) => { if (el) { setSorok(v.filter((x) => x.customer_id === customerId)); setHiba(null) } })
+      .catch((e) => { if (el) setHiba(hibaSzoveg(e)) })
     return () => { el = false }
-  }, [data, customerId, revizio])
+  }, [data, customerId, revizio, sajatRev])
 
+  const ment = async (id: string, patch: Record<string, unknown>) => {
+    await data.saveVehicle({ id, ...patch })
+    setSajatRev((n) => n + 1)
+    onValtozas()
+  }
+
+  if (hiba && !sorok) return <div className="hibauzenet">{hiba}</div>
   if (!sorok) return <div className="betolt">Betöltés…</div>
 
   return (
@@ -758,20 +691,13 @@ function UgyfelJarmuvei({ customerId, onValtozas, revizio, szerkesztheto }: {
       {sorok.map((v) => (
         <div key={v.id} className="alkartya">
           <Szerkesztheto zarolt={!szerkesztheto} cimke="Rendszám" ertek={v.plate_raw} tipus="rendszam"
-                         onMent={async (x) => {
-                           await data.saveVehicle({ id: v.id, plate_raw: x }); onValtozas()
-                         }} />
-          <Szerkesztheto zarolt={!szerkesztheto} cimke="Autó" ertek={[v.brand, v.model].filter(Boolean).join(' ')}
-                         ures="nincs megadva"
-                         onMent={async (x) => {
-                           const [marka, ...t] = x.split(' ')
-                           await data.saveVehicle({ id: v.id, brand: marka ?? '', model: t.join(' ') })
-                           onValtozas()
-                         }} />
-          <Szerkesztheto zarolt={!szerkesztheto} cimke="Méret" ertek={v.category} valaszthato={KATEGORIAK}
-                         onMent={async (x) => {
-                           await data.saveVehicle({ id: v.id, category: x }); onValtozas()
-                         }} />
+                         onMent={(x) => ment(v.id, { plate_raw: x })} />
+          <Szerkesztheto zarolt={!szerkesztheto} cimke="Márka" ertek={v.brand} ures="nincs megadva"
+                         onMent={(x) => ment(v.id, { brand: x })} />
+          <Szerkesztheto zarolt={!szerkesztheto} cimke="Modell" ertek={v.model} ures="nincs megadva"
+                         onMent={(x) => ment(v.id, { model: x })} />
+          <Szerkesztheto zarolt={!szerkesztheto} cimke="Méret" ertek={v.category} valaszthato={MERET_VALASZTO}
+                         onMent={(x) => ment(v.id, { category: x })} />
           <div className="adatsor">
             <span>Munkák</span>
             <span className="ertek szam">{v.latogatas} · {CATEGORY_SHORT[v.category]}</span>
@@ -784,12 +710,8 @@ function UgyfelJarmuvei({ customerId, onValtozas, revizio, szerkesztheto }: {
   )
 }
 
-/** Új autó felvétele egy meglévő ügyfélhez. A rendszám elég hozzá — a többit
- *  úgyis a foglaláskor látják, amikor ott áll az autó. */
 function UjJarmu({ customerId, kinek, onKesz, onMegse }: {
   customerId: string
-  /** Kinek a nevére kerül. Ki van írva, mert a járműnézetben egy autó
-   *  kártyájáról indul a felvétel — ott nem magától értetődő, kihez megy. */
   kinek?: string
   onKesz: () => void
   onMegse: () => void
@@ -801,9 +723,6 @@ function UjJarmu({ customerId, kinek, onKesz, onMegse }: {
   const [category, setCategory] = useState('SZEMELYAUTO')
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
-  // A fókusz nem autoFocus attribútummal megy: az a képernyőolvasót
-  // használóknak ugrálásnak tűnik. Megnyitás után tesszük a mezőbe, egyszer —
-  // és telefonon nem is a mezőbe, csak az űrlapot görgetjük a képbe.
   const rendszamMezo = useRef<HTMLInputElement>(null)
   useEffect(() => { urlapMegnyilt(rendszamMezo.current) }, [])
 
@@ -817,7 +736,7 @@ function UjJarmu({ customerId, kinek, onKesz, onMegse }: {
       })
       onKesz()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
       setMegy(false)
     }
   }
@@ -851,7 +770,7 @@ function UjJarmu({ customerId, kinek, onKesz, onMegse }: {
       <div className="mezo">
         <span>Méret</span>
         <div className="ertek-gombok" style={{ justifyContent: 'flex-start' }}>
-          {KATEGORIAK.map((k) => (
+          {MERET_VALASZTO.map((k) => (
             <button key={k.ertek} type="button" disabled={megy}
                     className={k.ertek === category ? 'aktiv' : ''}
                     aria-pressed={k.ertek === category}

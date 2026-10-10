@@ -1,14 +1,6 @@
 import type { BookingStatus, DayBooking } from '../../lib/types'
 import type { KerdesBeallitas } from './Kerdes'
 
-// ---------------------------------------------------------------------------
-//  A kérdések — közösek a kártyával és a munkalappal, hogy ugyanaz a gomb
-//  mindkét helyen ugyanazt kérdezze.
-// ---------------------------------------------------------------------------
-
-/** Melyik lépés előtt kérdezünk rá. A „Megérkezett" nem: az a nap leggyakoribb
- *  mozdulata, és ha téves, a munkalista egyszerűen még üres. A „Kész van"
- *  sem itt van: az a munkalistás ablakot nyitja (booking/KeszAblak.tsx). */
 export const ALLAPOT_KERDES: Partial<Record<BookingStatus, KerdesBeallitas>> = {
   COMPLETED: {
     cim: 'Biztosan átvette?',
@@ -16,7 +8,6 @@ export const ALLAPOT_KERDES: Partial<Record<BookingStatus, KerdesBeallitas>> = {
   },
 }
 
-/** „Nem fért be": a kérdőjeles autó lezárása 0 Ft-tal. */
 export function NEM_FERT_BE_KERDES(b: Pick<DayBooking, 'plate_raw'>): KerdesBeallitas {
   return {
     cim: `Nem fért be? ${(b.plate_raw ?? '').toUpperCase()}`,
@@ -33,6 +24,16 @@ export function TORLES_KERDES(b: Pick<DayBooking, 'plate_raw'>): KerdesBeallitas
     szoveg: 'Az időpont felszabadul. Az ügyfél és az autó adata megmarad, '
       + 'és a törlés visszavonható.',
     igen: 'Törlés',
+    nem: 'Mégse',
+    veszelyes: true,
+  }
+}
+
+export function ELUTASITAS_KERDES(nev: string): KerdesBeallitas {
+  return {
+    cim: `Elutasítod? ${nev}`,
+    szoveg: 'A kérés elutasítva kerül a napba; a „Mégis jön" gombbal visszavehető.',
+    igen: 'Elutasít',
     nem: 'Mégse',
     veszelyes: true,
   }

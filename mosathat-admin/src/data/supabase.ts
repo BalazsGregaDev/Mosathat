@@ -3,40 +3,18 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type {
   AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
   SheetColumn, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput,
-  BookingStatus, BookingTask, CalcInput, CalcResult, DashboardSummary, DayBooking, DayCapacity,
+  BookingStatus, BookingTask, CalcInput, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
-  NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, PlateLookup, SearchHit, ServiceArea,
+  NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
-import { calcArgs, idoRovidit, num, numOrNull, toCalcResult, toQuote } from './source'
+import { idoRovidit, num, numOrNull, toQuote } from './source'
 import { EloFrissites } from './elo'
 import { tokenFetch } from './tokenFetch'
 
-// ---------------------------------------------------------------------------
-//  Éles mód — Supabase
-//
-//  Ugyanazok a hívások, mint demóban, csak a hálózaton át. A táblákat és
-//  nézeteket a PostgREST szolgálja ki, a függvényeket az .rpc().
-//
-//  Amit itt kapunk meg ráadásként: az RLS. A böngészőben futó kulcs
-//  (anon key) önmagában semmit nem lát — a szabályok a bejelentkezett
-//  felhasználóhoz kötik a hozzáférést. Ezért nem baj, hogy a kulcs benne
-//  van a kiszállított JavaScriptben.
-// ---------------------------------------------------------------------------
-
-/**
- * A Supabase angol hibaüzenetei közül az, amelyikkel a műhelyben tényleg
- * találkozni fognak. Nem fordítás: az kell, hogy MIT KELL TENNI.
- *
- * Az "email rate limit exceeded" a leggyakoribb. A Supabase beépített
- * levélküldője óránként KÉT levelet enged ki, és csak a projekt tagjainak
- * kézbesít — vagyis dolgozók felvételére eleve alkalmatlan. A megoldás nem a
- * várakozás, hanem az, hogy vagy kikapcsolod az e-mailes megerősítést, vagy
- * beállítasz saját levélküldőt.
- */
 function emberiHiba(uzenet: string): string {
   const m = uzenet.toLowerCase()
 
@@ -70,8 +48,6 @@ export class SupabaseSource implements DataSource {
   readonly label = 'Supabase'
   readonly isDemo = false
   private sb: SupabaseClient
-  // Új felhasználó felvételéhez kell egy második, eldobható kliens — lásd
-  // a createStaff() magyarázatát.
   private readonly url: string
   private readonly anonKey: string
 
@@ -80,20 +56,15 @@ export class SupabaseSource implements DataSource {
     this.anonKey = anonKey
     this.sb = createClient(url, anonKey, {
       auth: { persistSession: true, autoRefreshToken: true },
-      // Lejárt token (alvó tablet után): egy csendes tokencsere és újrapróbálás.
       global: { fetch: tokenFetch(() => this.sb) },
     })
     this.elo = new EloFrissites(this.sb)
   }
 
-  /** Az élő frissítés közös csatornája (lásd elo.ts). */
   private readonly elo: EloFrissites
 
   async init(): Promise<void> {
-    /* a kliens azonnal használható */
   }
-
-  // --- belépés --------------------------------------------------------------
 
   async signIn(email: string, password: string): Promise<SessionUser> {
     const { data, error } = await this.sb.auth.signInWithPassword({ email, password })
@@ -120,17 +91,12 @@ export class SupabaseSource implements DataSource {
       .eq('id', id)
       .maybeSingle()
     if (!data || !data.active) return null
-    // A szerkesztési jogot nem a szerepkörből következtetjük ki: a szerepkör
-    // alapértéke és az erre a fiókra szóló külön döntés együtt adja ki, és
-    // ugyanez a függvény őrzi a mentést is.
     const { data: jog } = await this.sb.rpc('can_edit_customers')
     return {
       id: data.id, name: data.full_name, role: data.role, email,
       canEditCustomers: jog === true,
     }
   }
-
-  // --- katalógus ------------------------------------------------------------
 
   async getCatalog(): Promise<Catalog> {
     const [pk, pp, fs, ex, su, mx, tb] = await Promise.all([
@@ -164,12 +130,6 @@ export class SupabaseSource implements DataSource {
     }
   }
 
-  // --- nap ------------------------------------------------------------------
-
-  // A nap foglalásai a day_bookings()-ból: a többnapos autók minden napjukon
-  // ott vannak, és a sorrendet az adatbázis adja (a kézi rendezéssel együtt).
-  // Eddig a lekérdezés csak idő szerint rendezett, és az egyforma idejű
-  // foglalások sorrendje egy állapotváltás után összekeveredhetett.
   async getDay(date: string): Promise<DayBooking[]> {
     const { data, error } = await this.sb.rpc('day_bookings', { p_day: date })
     if (error) fail('Napi foglalások', error)
@@ -228,13 +188,10 @@ export class SupabaseSource implements DataSource {
     if (error) fail('Szabadság törlése', error)
   }
 
-
   async getRange(from: string, to: string): Promise<DayBooking[]> {
     const { data, error } = await this.sb
       .from('v_day_bookings')
       .select('*')
-      // Ami az időszakba belelóg: előtte vagy közben kezdődik, és nem ér
-      // véget előtte.
       .lte('service_date', to)
       .gte('last_day', from)
       .order('service_date')
@@ -317,14 +274,6 @@ export class SupabaseSource implements DataSource {
     })) as StandingCar[]
   }
 
-  // --- foglalás -------------------------------------------------------------
-
-  async lookupPlate(plate: string): Promise<PlateLookup | null> {
-    const { data, error } = await this.sb.rpc('lookup_plate', { p_plate: plate })
-    if (error) fail('Rendszám keresés', error)
-    return (data as PlateLookup | null) ?? null
-  }
-
   async searchCustomers(q: string, limit = 5, mezo: KeresesMezo = 'MIND'): Promise<SearchHit[]> {
     const { data, error } = await this.sb.rpc('search_customers',
       { p_q: q, p_limit: limit, p_mezo: mezo })
@@ -348,12 +297,6 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('ceg_jeloltek', { p_nev: name })
     if (error) fail('Cégnév egyeztetése', error)
     return (data ?? []) as CompanyCandidate[]
-  }
-
-  async calcService(input: CalcInput): Promise<CalcResult> {
-    const { data, error } = await this.sb.rpc('calc_service', calcArgs(input))
-    if (error) fail('Árszámítás', error)
-    return toCalcResult((data as any[])?.[0])
   }
 
   async createBooking(input: NewBookingInput): Promise<string> {
@@ -389,7 +332,6 @@ export class SupabaseSource implements DataSource {
     if (error) fail('Kész van', error)
     return data as FinishPreview
   }
-
 
   async setContractFleet(contractId: string, value: boolean): Promise<void> {
     const { error } = await this.sb.rpc('set_contract_fleet', { p_contract: contractId, p_value: value })
@@ -461,9 +403,6 @@ export class SupabaseSource implements DataSource {
     if (error) fail('Végleges ár', error)
   }
 
-
-  // --- szolgáltatások szerkesztése -------------------------------------------
-
   async updateExtra(id: string, patch: Partial<Extra>): Promise<void> {
     const { error } = await this.sb.from('extras').update(patch).eq('id', id)
     if (error) fail('Szolgáltatás mentése', error)
@@ -495,13 +434,6 @@ export class SupabaseSource implements DataSource {
       .upsert({ package_id: packageId, category, ...patch }, { onConflict: 'package_id,category' })
     if (error) fail('Full Service ár mentése', error)
   }
-
-  async updatePackage(id: string, patch: { name?: string; description?: string | null }): Promise<void> {
-    const { error } = await this.sb.from('packages').update(patch).eq('id', id)
-    if (error) fail('Csomag mentése', error)
-  }
-
-  // --- ügyfelek és járművek ---------------------------------------------------
 
   async patchBooking(bookingId: string, patch: Record<string, unknown>): Promise<void> {
     const { error } = await this.sb.rpc('patch_booking',
@@ -549,8 +481,6 @@ export class SupabaseSource implements DataSource {
     return (data ?? []) as CompanySummary[]
   }
 
-  // --- igazolólap ---------------------------------------------------------------
-
   async listSheetCompanies(month: string): Promise<SheetCompany[]> {
     const { data, error } = await this.sb.rpc('sheet_cegek', { p_month: month })
     if (error) fail('Igazolólapok', error)
@@ -595,8 +525,6 @@ export class SupabaseSource implements DataSource {
     if (error) fail('Oszlopok mentése', error)
   }
 
-  // --- áttekintés -------------------------------------------------------------
-
   async getDashboard(date: string): Promise<DashboardSummary> {
     const { data, error } = await this.sb.rpc('dashboard_summary', { p_day: date })
     if (error) fail('Áttekintés', error)
@@ -619,8 +547,6 @@ export class SupabaseSource implements DataSource {
       .sort((a, b) => a.hetfotol - b.hetfotol)
   }
 
-  // --- beállítások ------------------------------------------------------------
-
   async getOpening(): Promise<OpeningDay[]> {
     const { data, error } = await this.sb.from('v_opening').select('*').order('weekday')
     if (error) fail('Nyitvatartás', error)
@@ -633,7 +559,9 @@ export class SupabaseSource implements DataSource {
   }
 
   async getShopSettings(): Promise<ShopSettings> {
-    const { data, error } = await this.sb.from('shop_settings').select('*').single()
+    const { data, error } = await this.sb.from('shop_settings')
+      .select('drop_off_from, default_parallel_slots, default_travel_minutes, pass_validity_kind, pass_validity_value')
+      .single()
     if (error) fail('Beállítások', error)
     return data as ShopSettings
   }
@@ -660,29 +588,12 @@ export class SupabaseSource implements DataSource {
     if (error) fail('Kivételnap törlése', error)
   }
 
-  // --- felhasználók -----------------------------------------------------------
-
   async listStaff(): Promise<StaffRow[]> {
     const { data, error } = await this.sb.rpc('list_staff')
     if (error) fail('Felhasználók', error)
     return (data ?? []) as StaffRow[]
   }
 
-  /**
-   * Új felhasználó két lépésben.
-   *
-   * Supabase-en belépőt létrehozni csak a service role kulccsal lehet, azt
-   * pedig soha nem szabad a böngészőbe tenni — aki megnyitja a fejlesztői
-   * eszközöket, mindenhez hozzáférne. Marad a rendes regisztráció.
-   *
-   * Csakhogy a signUp() bejelentkeztetné az ÚJ felhasználót, és a tulaj
-   * kiesne a saját munkamenetéből. Ezért a regisztráció egy külön, eldobható
-   * klienssel megy, ami nem ment el semmit (persistSession: false). A bent
-   * ülő felhasználó munkamenetéhez ez hozzá sem ér.
-   *
-   * A szerepkör közben NEM utazik a böngészőn át: azt az előbb felvett
-   * meghívó sor hordozza az adatbázisban.
-   */
   async createStaff(input: NewStaffInput): Promise<string | null> {
     const email = input.email.trim().toLowerCase()
 
@@ -691,8 +602,6 @@ export class SupabaseSource implements DataSource {
     })
     if (meghivoHiba) fail('Meghívó', meghivoHiba)
 
-    // Ha már volt fiók ezzel a címmel, az adatbázis összekapcsolta a
-    // szerepkörrel. Nincs mit regisztrálni, és a jelszava is a régi marad.
     const v = data as { mod?: string; uzenet?: string } | null
     if (v?.mod === 'osszekapcsolva') return v.uzenet ?? null
 
@@ -702,8 +611,6 @@ export class SupabaseSource implements DataSource {
     const { error } = await eldobhato.auth.signUp({ email, password: input.password })
 
     if (error) {
-      // A meghívó maradjon meg: így a képernyőn látszik, hogy elkezdődött a
-      // felvétel, és nem tűnik el nyomtalanul egy félresikerült regisztráció.
       throw new Error(`Fiók létrehozása: ${emberiHiba(error.message)}`)
     }
     return null
@@ -733,15 +640,6 @@ export class SupabaseSource implements DataSource {
     if (error) fail('Meghívó törlése', error)
   }
 
-  /**
-   * A saját jelszó átírása.
-   *
-   * A Supabase updateUser() NEM kéri a régi jelszót — ha csak azt hívnánk,
-   * egy nyitva felejtett gépnél bárki átvehetné a fiókot. Ezért előbb
-   * megpróbálunk belépni a mostanival, egy ELDOBHATÓ klienssel: az nem ment
-   * el semmit (persistSession: false), tehát a bent ülő munkamenethez hozzá
-   * sem ér, akkor sem, ha a próba sikerül.
-   */
   async changeOwnPassword(mostani: string, uj: string): Promise<void> {
     const { data: most } = await this.sb.auth.getUser()
     const email = most.user?.email
@@ -765,8 +663,6 @@ export class SupabaseSource implements DataSource {
     })
     if (error) fail('Jelszó beállítása', error)
   }
-
-  // --- bérletek és szerződések -----------------------------------------------
 
   async listPasses(): Promise<PassBalanceRow[]> {
     const { data, error } = await this.sb.from('v_pass_balance').select('*')
@@ -816,8 +712,6 @@ export class SupabaseSource implements DataSource {
   }
 
   subscribe(onValtozas: () => void): () => void {
-    // Egy közös csatorna, összevont jelzésekkel, ébredéskor újranyitva —
-    // a részletek az elo.ts-ben.
     return this.elo.feliratkoz(onValtozas)
   }
 

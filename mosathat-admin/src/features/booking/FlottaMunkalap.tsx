@@ -1,39 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { ft, napRovidCim } from '../../lib/format'
-import { aktualisAuto, csoportNev, csoportOsszeg, elo, HELYORZO, vanRendszam } from '../../lib/flotta'
+import { ft, helyiOra, hibaSzoveg, napRovidCim } from '../../lib/format'
+import { aktualisAuto, autoNev, csoportNev, csoportOsszeg, elo, HELYORZO, vanRendszam } from '../../lib/flotta'
 import FlottaLepteto from '../day/FlottaLepteto'
 import {
-  CATEGORY_LABEL, TYPE_LABEL,
+  CATEGORY_LABEL, KATEGORIAK, TYPE_LABEL,
   type BookingType, type DayBooking, type VehicleCategory,
 } from '../../lib/types'
 import Szerkesztheto from '../common/Szerkesztheto'
 import IdoMezo from '../common/IdoMezo'
+import DatumMezo from '../common/DatumMezo'
 import { NEM_FERT_BE_KERDES } from '../common/kerdesek'
 import { useKerdes } from '../common/Kerdes'
 import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
 
-// ---------------------------------------------------------------------------
-//  Flottás csoport munkalapja — egy cég, egy nap, több autó
-//
-//  Ami KÖZÖS (egyszer kell megadni, mind a csoport minden autójára érvényes):
-//    cég, ügyfél (név, telefonszám), nap, típus (itt hagyja / hozom-viszem),
-//    csomag, és egy VÉGSŐ IDŐPONT: amikorra az utolsó autónak is el kell
-//    készülnie (hozom-viszemnél: amikorra vissza kell érni vele).
-//
-//  Ami AUTÓNKÉNT más — egy sor autónként:
-//    rendszám (ha megtudjuk; ha már járt itt az autó, a régi adataihoz
-//    kötjük), méret (az ár ehhez igazodik), állapot (Megérkezett / Kész van /
-//    Átvette), igazolólap, és a részletek (munkalista, megjegyzés).
-//
-//  Állapot autónként NINCS (Megérkezett / Kész van / Átvette): a flottás autók
-//  gyors munkák, jönnek-mennek. Helyette fent a léptető: hányadik autónál
-//  tartunk; a „Kész, jöhet a következő" a soron lévő autót zárja le (és
-//  szerződéses cégnél megnyitja az igazolólap sorát).
-// ---------------------------------------------------------------------------
-
-const MERETEK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
 const TIPUSOK: BookingType[] = ['LEADOS', 'HOZOMVISZEM']
 
 export default function FlottaMunkalap({
@@ -43,7 +24,6 @@ export default function FlottaMunkalap({
 }: {
   groupId: string
   onBezar: () => void
-  /** Egy autó saját munkalapja (munkalista, megjegyzés) — a hívó rajzolja. */
   reszletek: (bookingId: string, bezar: () => void) => React.ReactNode
 }) {
   const { data, catalog, refresh } = useApp()
@@ -51,21 +31,26 @@ export default function FlottaMunkalap({
   const [tagok, setTagok] = useState<DayBooking[] | null>(null)
   const [hiba, setHiba] = useState<string | null>(null)
   const [megy, setMegy] = useState(false)
-  // Egy autó részletei (a saját munkalapja) nyitva.
   const [reszletId, setReszletId] = useState<string | null>(null)
 
   const betolt = useCallback(async () => {
     try {
       setTagok(await data.getFleetGroup(groupId))
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     }
   }, [data, groupId])
+
+  const elso = tagok ? (tagok.find(elo) ?? tagok[0]) : null
+  const vegso = elso?.pick_up_at ?? elso?.deadline_at
+  const vegsoOra = vegso ? helyiOra(vegso) : ''
+  const [oraVazlat, setOraVazlat] = useState(vegsoOra)
+  const [oraAlap, setOraAlap] = useState(vegsoOra)
+  if (vegsoOra !== oraAlap) { setOraAlap(vegsoOra); setOraVazlat(vegsoOra) }
 
   useEffect(() => { void betolt() }, [betolt])
   useEffect(() => data.subscribe(() => void betolt()), [data, betolt])
 
-  // Bezáráskor a nap nézete is frissüljön.
   const bezar = useCallback(() => { refresh(); onBezar() }, [refresh, onBezar])
 
   useEffect(() => {
@@ -74,22 +59,25 @@ export default function FlottaMunkalap({
     return () => window.removeEventListener('keydown', k)
   }, [bezar, reszletId])
 
-  /** Egy művelet: hibát mutat, és utána újratölt. */
-  async function muvelet(fn: () => Promise<unknown>) {
-    if (megy) return
+  async function muvelet(fn: () => Promise<unknown>, dob = false) {
+    if (megy) {
+      if (dob) throw new Error('Még tart az előző mentés, próbáld újra.')
+      return
+    }
     setMegy(true)
     setHiba(null)
     try {
       await fn()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      if (dob) throw e
+      setHiba(hibaSzoveg(e))
     } finally {
       setMegy(false)
       await betolt()
     }
   }
 
-  if (!tagok) {
+  if (!tagok || !elso) {
     return (
       <div className="fedo" role="presentation">
         <div className="lap lap-szeles" role="dialog" aria-modal="true" aria-label="Flottás csoport">
@@ -101,14 +89,9 @@ export default function FlottaMunkalap({
     )
   }
 
-  const elso = tagok.find(elo) ?? tagok[0]
   const o = csoportOsszeg(tagok)
   const szerkesztheto = tagok.some((t) => elo(t) && t.status !== 'COMPLETED')
-  const vegso = elso?.pick_up_at ?? elso?.deadline_at
-  const vegsoOra = vegso
-    ? new Intl.DateTimeFormat('hu-HU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Budapest' }).format(new Date(vegso))
-    : ''
-  const hozomViszem = elso?.booking_type === 'HOZOMVISZEM'
+  const hozomViszem = elso.booking_type === 'HOZOMVISZEM'
   const kozos = (patch: Record<string, unknown>) => muvelet(() => data.fleetPatch(groupId, patch))
 
   async function torol(t: DayBooking) {
@@ -120,7 +103,6 @@ export default function FlottaMunkalap({
     await muvelet(() => data.setStatus(t.id, 'CANCELLED_BY_CUSTOMER'))
   }
 
-  // „Nem fért be": ha túlvállaltuk magunkat — az autó 0 Ft-tal lezárva.
   async function nemFert(t: DayBooking) {
     if (!(await kerdez(NEM_FERT_BE_KERDES(t)))) return
     await muvelet(() => data.notFitted(t.id))
@@ -147,15 +129,14 @@ export default function FlottaMunkalap({
         <div className="lap-torzs">
           {hiba && <div className="hibauzenet">{hiba}</div>}
 
-          {/* --- közös: egyszer kell megadni ------------------------------------- */}
           <div className="szakasz">
             <div className="fej">Közös — minden autóra</div>
 
             <Szerkesztheto cimke="Név" ertek={elso.customer_name} zarolt={!szerkesztheto}
-                           onMent={(v) => muvelet(() => data.patchBooking(elso.id, { customer_name: v }))} />
+                           onMent={(v) => muvelet(() => data.patchBooking(elso.id, { customer_name: v }), true)} />
             <Szerkesztheto cimke="Telefon" ertek={elso.customer_phone} tipus="telefon"
                            zarolt={!szerkesztheto}
-                           onMent={(v) => muvelet(() => data.patchBooking(elso.id, { customer_phone: v }))}
+                           onMent={(v) => muvelet(() => data.patchBooking(elso.id, { customer_phone: v }), true)}
                            utotag={elso.customer_phone && (
                              <a href={`tel:${elso.customer_phone}`} className="hivas">Hívás</a>
                            )} />
@@ -163,9 +144,9 @@ export default function FlottaMunkalap({
             <div className="adatsor">
               <span>Nap</span>
               <span className="ertek">
-                <input type="date" className="beviteli" aria-label="A csoport napja"
-                       value={elso.service_date.slice(0, 10)} disabled={!szerkesztheto || megy}
-                       onChange={(e) => e.target.value && void kozos({ service_date: e.target.value })} />
+                <DatumMezo ariaLabel="A csoport napja" ertek={elso.service_date.slice(0, 10)}
+                           disabled={!szerkesztheto || megy}
+                           onMent={(d) => void kozos({ service_date: d })} />
               </span>
             </div>
 
@@ -173,8 +154,8 @@ export default function FlottaMunkalap({
               <span>{hozomViszem ? 'Visszaérni' : 'Kész legyen'}</span>
               <span className="ertek">
                 <IdoMezo ariaLabel="Végső időpont" cim={hozomViszem ? 'Visszaérni' : 'Kész legyen'}
-                         value={vegsoOra}
-                         onChange={() => { /* a mentés a választás végén */ }}
+                         value={oraVazlat}
+                         onChange={setOraVazlat}
                          onKesz={(v) => { if (v && v !== vegsoOra) void kozos({ pick_up_time: v }) }} />
                 <span className="halk"> — amikorra az utolsó autónak is {hozomViszem ? 'vissza kell érnie' : 'el kell készülnie'}</span>
               </span>
@@ -207,13 +188,11 @@ export default function FlottaMunkalap({
             </div>
           </div>
 
-          {/* --- autónként ----------------------------------------------------- */}
           <div className="szakasz">
             <div className="fej">
               Autók
               <span className="jobbra halvany">a rendszám ráér: ha megtudod, írd be</span>
             </div>
-            {/* A léptető: hányadik autónál tartunk. */}
             <FlottaLepteto groupId={groupId} tagok={tagok} onValtozas={() => void betolt()} />
 
             <div className="flotta-sorok">
@@ -254,18 +233,9 @@ export default function FlottaMunkalap({
   )
 }
 
-/** Egy autó neve a kérdésekben: a rendszáma, vagy „2. autó". */
-function autoNev(t: DayBooking): string {
-  return vanRendszam(t) ? (t.plate_raw ?? '').toUpperCase() : `${t.fleet_index}. autó`
-}
-
-// ---------------------------------------------------------------------------
-//  Egy autó sora
-// ---------------------------------------------------------------------------
 function AutoSor({ t, megy, soron, onRendszam, onMeret, onTorol, onNemFert, onMegisJon, onReszletek }: {
   t: DayBooking
   megy: boolean
-  /** Ennél az autónál tartunk most (a léptető szerint). */
   soron: boolean
   onRendszam: (r: string) => void
   onMeret: (m: VehicleCategory) => void
@@ -276,7 +246,6 @@ function AutoSor({ t, megy, soron, onRendszam, onMeret, onTorol, onNemFert, onMe
 }) {
   const kezdo = vanRendszam(t) ? (t.plate_raw ?? '').toUpperCase() : ''
   const [rsz, setRsz] = useState(kezdo)
-  // Ha máshol változott (élő frissítés), kövesse — gépelés közben nem.
   const [elozo, setElozo] = useState(kezdo)
   if (kezdo !== elozo) { setElozo(kezdo); setRsz(kezdo) }
 
@@ -301,7 +270,7 @@ function AutoSor({ t, megy, soron, onRendszam, onMeret, onTorol, onNemFert, onMe
       <select className="beviteli" aria-label={`${t.fleet_index}. autó mérete`}
               value={t.category} disabled={lemondott || lezart || megy}
               onChange={(e) => onMeret(e.target.value as VehicleCategory)}>
-        {MERETEK.map((m) => <option key={m} value={m}>{CATEGORY_LABEL[m]}</option>)}
+        {KATEGORIAK.map((m) => <option key={m} value={m}>{CATEGORY_LABEL[m]}</option>)}
       </select>
       <span className="flotta-ar szam">{ft(t.final_price_huf ?? t.estimated_price_huf)}</span>
       <span className="flotta-allapot">

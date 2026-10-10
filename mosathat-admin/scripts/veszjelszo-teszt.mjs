@@ -1,8 +1,3 @@
-// A vészhelyzeti jelszó-visszaállítás ellenőrzése.
-//
-// Két dolgot kell bizonyítani, és a második a fontosabb:
-//   1. a gazdaként futtatva működik
-//   2. a FELÜLETRŐL nem hívható — se alkalmazottként, se tulajként
 import { PGlite } from '@electric-sql/pglite'
 import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -24,7 +19,6 @@ await db.exec(`
     if not exists (select 1 from pg_roles where rolname='anon') then create role anon; end if;
     if not exists (select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if;
   end $$;
-  -- A PGlite-ban nincs pgcrypto; csak a teszt kedvéért utánozzuk.
   create schema if not exists extensions;
   create or replace function extensions.gen_salt(a text, b int) returns text
     language sql immutable as $$ select '$2a$' || b || '$teszt' $$;
@@ -38,7 +32,6 @@ for (const f of (await readdir(MIG)).filter((f) => f.endsWith('.sql')).sort()) {
 }
 const q = async (s, p = []) => (await db.query(s, p)).rows
 
-// három fiók
 await q(`insert into auth.users (id,email) values
    ('00000000-0000-4000-8000-000000000001','fejlesztő@mosathat.hu'),
    ('00000000-0000-4000-8000-000000000002','tulaj@mosathat.hu'),
@@ -53,7 +46,7 @@ await q(`insert into staff (id, full_name, role, active) values
 console.log('=== 1) gazdaként (Supabase SQL Editor) ===')
 for (const [email, jelszo] of [
   ['tulaj@mosathat.hu', 'ideiglenes123'],
-  ['FEJLESZTŐ@mosathat.hu', 'masikjelszo1'],   // nagybetűvel is megtalálja
+  ['FEJLESZTŐ@mosathat.hu', 'masikjelszo1'],
 ]) {
   const [r] = await q(`select public.jelszo_visszaallitas($1,$2) as v`, [email, jelszo])
   console.log('   ' + r.v)
@@ -90,7 +83,6 @@ for (const szerep of ['authenticated', 'anon']) {
   await q(`reset role`)
 }
 
-// és a felületi függvény továbbra is a helyén van
 console.log('\n=== 5) a felületi „Új jelszó" gomb útja változatlan ===')
 await q(`select set_config('app.uid','00000000-0000-4000-8000-000000000002',false)`)
 try {

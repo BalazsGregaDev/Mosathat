@@ -1,4 +1,3 @@
-// A hozom-viszem díja: szerződésben tárolva, a munkalapon látszik.
 import { PGlite } from '@electric-sql/pglite'
 import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -73,7 +72,6 @@ await q(`select save_contract($1::jsonb)`, [JSON.stringify({
   ok('a díj sem maradt ott', null, r.pickup_delivery_fee_huf)
 }
 
-// vissza
 await q(`select save_contract($1::jsonb)`, [JSON.stringify({
   id: (await q(`select id from contracts where customer_id=$1`, [ceg]))[0].id,
   customer_id: ceg, pickup_delivery: true, pickup_delivery_fee_huf: 4500, prices: [],
@@ -91,8 +89,6 @@ const le = await foglal('LEADOS', '13:00')
   const [b] = await q(`select pickup_fee_huf, estimated_price_huf from v_day_bookings where id=$1`, [le])
   ok('hozom-viszem foglalásnál ott a díj', 4500, a.pickup_fee_huf)
   ok('a lehozott autónál nincs', null, b.pickup_fee_huf)
-  // A 2026-10-03-i migráció óta a fuvar a foglalás ÁRÁBA is bekerül, külön
-  // tételsorként — a két foglalás közti különbség pontosan a fuvardíj.
   ok('a fuvar benne van a hozom-viszem árában', 4500, a.estimated_price_huf - b.estimated_price_huf)
   console.log(`         ár fuvarral: ${a.estimated_price_huf} Ft, nélküle: ${b.estimated_price_huf} Ft`)
 }

@@ -1,43 +1,18 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
-// ---------------------------------------------------------------------------
-//  Súgó buborék — a kis karikás „i"
-//
-//  Egy szolgáltatás neve nem mindig mondja meg, mi van benne. Telefon közben
-//  viszont pont ezt kérdezik: „és az mit takar?". Ezért a név mellett ott a
-//  leírás, de csak akkor foglal helyet, amikor kérik.
-//
-//  Két módon kérhető, mert két módon használják a rendszert:
-//
-//    - egérrel: elég ráállni, nem kell kattintani
-//    - érintéssel (a műhelyben tableten): koppintás nyitja és zárja
-//
-//  A buborék fixen pozicionált és a képernyőhöz igazodik. Ez azért kell, mert
-//  a harmadik oszlopban lévő szolgáltatásnál egy egyszerű „a gomb alá"
-//  megoldás kilógna az ablakból — és pont a hosszú leírásoknál lógna ki a
-//  legjobban, tehát ott lenne olvashatatlan, ahol a legtöbbet érne.
-// ---------------------------------------------------------------------------
-
-const SZELES = 280      // a buborék legnagyobb szélessége
-const RES = 8           // ennyit hagyunk a képernyő szélétől
+const SZELES = 280
+const RES = 8
 
 export default function Sugo({ cim, szoveg }: { cim: string; szoveg: string }) {
   const [nyitva, setNyitva] = useState(false)
   const [hely, setHely] = useState<{ top: number; left: number } | null>(null)
   const gomb = useRef<HTMLButtonElement>(null)
   const buborek = useRef<HTMLDivElement>(null)
-  // Kattintásra nyitottuk-e ki. Ez a kettő különbsége:
-  //   egérrel ráállva  → az egeret elvéve eltűnik
-  //   rákattintva/tappolva → kint marad, amíg újra rá nem nyomnak
-  // Enélkül érintőképernyőn semmi nem látszana: a koppintás előtt a böngésző
-  // egy egérrel-ráállást is küld, ami kinyitná, a koppintás meg becsukná.
   const kattintva = useRef(false)
 
   function helyre() {
     const g = gomb.current?.getBoundingClientRect()
     if (!g) return
-    // Alapból a gomb alá, a jobb szélét a gombhoz igazítva — így a jobb
-    // oldali oszlopoknál befelé nyílik.
     const left = Math.min(
       Math.max(RES, g.right - SZELES),
       window.innerWidth - SZELES - RES,
@@ -45,8 +20,6 @@ export default function Sugo({ cim, szoveg }: { cim: string; szoveg: string }) {
     setHely({ top: g.bottom + 6, left })
   }
 
-  // Ha alul nem fér el, a gomb fölé kerül. Ezt csak akkor tudjuk eldönteni,
-  // amikor a buborék már megvan és látszik a magassága.
   useLayoutEffect(() => {
     if (!nyitva || !hely) return
     const b = buborek.current?.getBoundingClientRect()
@@ -58,8 +31,6 @@ export default function Sugo({ cim, szoveg }: { cim: string; szoveg: string }) {
     }
   }, [nyitva, hely])
 
-  // Kívülre kattintás, Escape és görgetés zárja. A görgetés azért, mert a
-  // buborék fix helyen áll, az oldal meg elmozdul alatta.
   useEffect(() => {
     if (!nyitva) return
     const zar = () => { kattintva.current = false; setNyitva(false) }
@@ -92,7 +63,6 @@ export default function Sugo({ cim, szoveg }: { cim: string; szoveg: string }) {
         aria-label={`${cim} — leírás`}
         aria-expanded={nyitva}
         onClick={(e) => {
-          // A gomb egy pipálható sorban ül: a kattintás ne pipálja ki.
           e.preventDefault()
           e.stopPropagation()
           if (kattintva.current) { kattintva.current = false; setNyitva(false) }

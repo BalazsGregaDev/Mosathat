@@ -1,19 +1,3 @@
-// v39 ellenőrzése Playwrighttal.
-//
-// Futtatás:  npm run dev -- --port 5180   (másik ablakban)
-//            node scripts/v39-teszt.mjs
-//
-// Amit néz:
-//   1. Cégek és bérletesek: a Szerződéses cégek az első, alapértelmezett fül.
-//   2. A szerződéses cég kártyáján (csukva is) Igazolólap gomb: megnyílik a
-//      lap, onnan beállítás és Word letöltés.
-//   3. Igazolólap: bármelyik korábbi hónap megnyitható (év + hónap), oda is
-//      vehető fel sor; a lezárt hónap csak olvasható és letölthető (nincs
-//      Oszlopok és lábléc, nincs Új sor, a sor mezői tiltva).
-//   4. Szerződés űrlap: Bruttó / Nettó csúszka fent; átvált minden mezőt (a
-//      fuvarét is), alatta a másik ár; nettóban beírt ár bruttóként mentődik;
-//      a böngésző megjegyzi a módot.
-//   5. Alkalmazott: a szerződéses cégek elöl, az igazolólap megnyitható.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -41,7 +25,6 @@ async function menu(p, nev) {
   await p.waitForTimeout(1500)
 }
 
-// =============================================================================
 const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } })
 const p = await ctx.newPage()
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
@@ -94,7 +77,6 @@ console.log('\n=== 3) Korábbi hónap, korlát nélkül; lezárt csak olvasható
   ok('a lapok listájában ott a régi hónap', true,
     (await lap.locator('.honap-gombok').innerText()).includes(`${ev}. március`))
 
-  // Lezárás
   await lap.getByRole('button', { name: 'Hónap lezárása' }).click()
   await p.waitForTimeout(300)
   await p.locator('.kerdes-gombok button').filter({ hasText: 'Lezárás' }).click()
@@ -118,7 +100,6 @@ console.log('\n=== 3) Korábbi hónap, korlát nélkül; lezárt csak olvasható
   await urlap.locator('.lap-lab button').filter({ hasText: 'Bezárás' }).click()
   await p.waitForTimeout(300)
 
-  // Vissza a mostani hónapra a lapok listájából / nyíllal: ott újra van beállítás
   await lap.locator('.honap-ugras input[aria-label="Év"]').fill(ma.slice(0, 4))
   await lap.locator('.honap-ugras select[aria-label="Hónap"]').selectOption(String(Number(ma.slice(5, 7))))
   await p.waitForTimeout(800)
@@ -130,8 +111,10 @@ console.log('\n=== 3) Korábbi hónap, korlát nélkül; lezárt csak olvasható
 }
 
 console.log('\n=== 4) Szerződés: Bruttó / Nettó csúszka ===\n')
-await kartya.locator('.kartya-nyito').click()
-await p.waitForTimeout(300)
+if ((await kartya.getAttribute('data-nyitva')) !== 'true') {
+  await kartya.locator('.kartya-nyito').click()
+  await p.waitForTimeout(300)
+}
 await kartya.getByRole('button', { name: 'Szerkesztés' }).click()
 await p.waitForTimeout(800)
 {
@@ -151,7 +134,6 @@ await p.waitForTimeout(800)
   ok('alatta a bruttó', true, (await alatta.innerText()).replace(/\s/g, '').startsWith('bruttó10500'))
   ok('a fuvar is nettó (4000 / 1,27)', '3150', await urlap.getByLabel('Fuvar ára alkalmanként').inputValue())
 
-  // Nettóban beírt ár: bruttóként mentődik
   await mezo.fill('10000')
   await p.waitForTimeout(100)
   ok('beírva 10 000 nettó: a mező nem ugrik el', '10000', await mezo.inputValue())
@@ -159,12 +141,13 @@ await p.waitForTimeout(800)
   await csuszka.click()
   await p.waitForTimeout(200)
   ok('vissza bruttóra: 12 700', '12700', await mezo.inputValue())
-  await csuszka.click()             // nettóban hagyjuk: ezt jegyzi meg a böngésző
+  await csuszka.click()
   await urlap.getByRole('button', { name: 'Mentés' }).click()
   await p.waitForTimeout(1500)
-  // Mentés után a lista újratöltődik, a kártya csukva jön vissza.
-  await kartya.locator('.kartya-nyito').click()
-  await p.waitForTimeout(300)
+  if ((await kartya.getAttribute('data-nyitva')) !== 'true') {
+    await kartya.locator('.kartya-nyito').click()
+    await p.waitForTimeout(300)
+  }
   ok('mentve: a kártyán bruttó 12 700 Ft', true,
     (await kartya.locator('.szerzodes-arak').innerText()).replace(/\s/g, '').includes('12700Ft'))
 
@@ -179,7 +162,6 @@ await p.waitForTimeout(800)
   await p.waitForTimeout(300)
 }
 
-// Az igazolólap lábléce is a nettót mutatja: 10 000 Ft + ÁFA
 await kartya.locator('.ceg-lap-sor button').click()
 await p.waitForSelector('.lap-igazolo')
 await p.waitForTimeout(800)
@@ -187,7 +169,6 @@ ok('az igazolólap láblécében a beírt nettó', true,
   (await p.locator('.lap-igazolo .igazolo-lablec').innerText()).replace(/\s/g, '').includes('Start–Céges:10000Ft'))
 await ctx.close()
 
-// =============================================================================
 console.log('\n=== 5) Alkalmazott, telefonon ===\n')
 const ctx2 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 const m = await ctx2.newPage()

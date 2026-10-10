@@ -1,7 +1,3 @@
-// v57: heti nézet (többnaposak legfelül), idővonal rendszám pontok nélkül,
-// „Nem fért be" minden autónál, „Mindennel elkészültünk", és a tulajdonos /
-// fejlesztő bárkinek beírhatja, módosíthatja, törölheti a munkaidejét és a
-// szabadságát.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })

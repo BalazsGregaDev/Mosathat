@@ -1,5 +1,3 @@
-// v51: Szabadság a Profilomban; a napi kártyán a következő hónap
-// összesítve; a havi naptárban rózsaszín sáv.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -44,7 +42,6 @@ ok('az időszak röviden kiírva', true, /–\d+\.|\. – /.test(await panel.loc
 await panel.getByRole('button', { name: 'Szabadság rögzítése' }).click()
 await p.waitForTimeout(1200)
 ok('a listában: Gábor', true, (await panel.locator('.valtozas-lista').innerText()).includes('Gábor'))
-// egy nap: csak az első nap megadva
 await panel.locator('#sz-tol').fill(nap(20))
 await panel.getByRole('button', { name: 'Szabadság rögzítése' }).click()
 await p.waitForTimeout(1200)

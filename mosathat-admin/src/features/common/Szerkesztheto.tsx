@@ -1,37 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { billentyuzetTakarit } from '../../lib/billentyuzet'
-
-// ---------------------------------------------------------------------------
-//  Helyben szerkeszthető adat
-//
-//  Rákattintok az értékre, átírom, Enter. Nincs külön szerkesztő ablak,
-//  nincs Mentés gomb, nincs „biztos?".
-//
-//  Négy szabály tartja használhatóan:
-//
-//  1. **Escape visszavon.** Enélkül a véletlen kattintás után nem lehet
-//     kilépni anélkül, hogy valamit elrontanánk.
-//  2. **A mellé kattintás ment.** Nem csak a mezőből kilépés: bárhova
-//     kattintok a mezőn kívül, a beírt érték elmegy. Ez azért kell külön,
-//     mert a foglalási ablak a háttérre kattintásra bezárul — és a bezárás
-//     hamarabb futna le, mint a mező mentése. Így a mentés indul előbb.
-//  3. **A választható értékek gombok, nem legördülő lista.** Egy legördülő
-//     három kattintás (nyit, választ, zár), a gomb egy. Telefonálás közben
-//     ez a különbség érezhető.
-//
-//     Hogy a gombsor rögtön látszik-e, az a képernyőtől függ. Egy megnyitott
-//     foglalásnál igen (`gombok`): ott négy ilyen sor van, és számít a
-//     másodperc. Egy harminc autós listában nem: ott ugyanez háromszor
-//     harminc gomb lenne, és az már nem gyorsabb, csak zajosabb — ott a
-//     gombsor a kattintásra jelenik meg.
-//  4. **Ha a mentés hibára fut, a mező NYITVA marad** a beírt értékkel.
-//     A legrosszabb, amit tehetne: bezárul, visszaáll a régi érték, és
-//     valahol megjelenik egy piros felirat, amit senki nem néz meg.
-//
-//  Ami nem változott, azt el sem küldjük: a felesleges mentés
-//  újraszámoltatná az árat és az időt.
-// ---------------------------------------------------------------------------
+import { hibaSzoveg } from '../../lib/format'
 
 type Tipus = 'szoveg' | 'telefon' | 'email' | 'szam' | 'ido' | 'datum' | 'rendszam'
 
@@ -54,51 +24,32 @@ export default function Szerkesztheto({
   kezdetbenNyitva,
 }: {
   cimke: string
-  /** A megjelenített és szerkesztett érték. Üres is lehet. */
   ertek: string | null | undefined
   onMent: (uj: string) => Promise<void>
   tipus?: Tipus
-  /** Ha meg van adva, gombsor lesz belőle beviteli mező helyett. */
   valaszthato?: Valaszthato[]
-  /** A gombsor rögtön látszik, nem kattintásra nyílik. Egy megnyitott
-   *  foglalásnál igen, egy hosszú listában nem. */
   gombok?: boolean
-  /** Lezárt foglalásnál nem szerkeszthető — ilyenkor csak szöveg. */
   zarolt?: boolean
-  /** Mi álljon ott, ha üres az érték. */
   ures?: string
-  /** Az érték után álló halk kiegészítés (pl. „· 2 óra"). */
   utotag?: React.ReactNode
-  /** Több soros szöveg (megjegyzés). */
   sor?: number
-  /**
-   * Szerkesztésre nyitva jelenik meg, a meglévő érték kijelölve. A „Figyelmet
-   * igényel" listából jövet: „nincs telefonszám" → a mezőbe rögtön írni lehet.
-   */
   kezdetbenNyitva?: boolean
 }) {
   const [nyitva, setNyitva] = useState(Boolean(kezdetbenNyitva && !zarolt))
   const [piszkozat, setPiszkozat] = useState(kezdetbenNyitva ? (ertek ?? '') : '')
-  // Csak az első, kívülről kért nyitásnál jelöljük ki a szöveget: ha később
-  // valaki rákattint, ott tartja a kurzort, ahová bökött.
   const kijelol = useRef(Boolean(kezdetbenNyitva))
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
   const mezo = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const doboz = useRef<HTMLDivElement>(null)
-  // A piszkozat friss értéke a dokumentumszintű figyelőnek: az a függvény
-  // egyszer jön létre, a beírt szöveg viszont minden leütésnél változik.
-  const friss = useRef('')
+  const megyRef = useRef(false)
 
-  useEffect(() => { friss.current = piszkozat }, [piszkozat])
   useEffect(() => {
     if (!nyitva) return
     mezo.current?.focus()
     if (kijelol.current) {
       kijelol.current = false
       mezo.current?.select()
-      // A telefon billentyűzete már az ideiglenes mezőn fent van (lásd
-      // billentyuzet.ts) — most, hogy a valódi mezőé a fókusz, az eltűnhet.
       billentyuzetTakarit()
     }
   }, [nyitva])
@@ -111,33 +62,28 @@ export default function Szerkesztheto({
   }
 
   const ment = useCallback(async (uj: string) => {
+    if (megyRef.current) return
     const v = uj.trim()
     if (v === (ertek ?? '').trim()) { setNyitva(false); return }
+    megyRef.current = true
     setMegy(true)
     try {
       await onMent(v)
       setNyitva(false)
       setHiba(null)
     } catch (e) {
-      // Nyitva marad a beírt értékkel — így nem vész el, amit begépelt.
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
+      megyRef.current = false
       setMegy(false)
     }
   }, [ertek, onMent])
 
-  // Mentés a mezőn kívüli kattintásra. A pointerdown a legkorábbi esemény,
-  // ami a kattintásból keletkezik — hamarabb fut le, mint a foglalási ablak
-  // háttérre-kattintás kezelője, így a mentés akkor is elindul, ha az ablak
-  // közben bezárul.
-  // A beírt szöveget a mezőből kilépés menti (onBlur) — ez a böngésző saját
-  // működése, és mindig helyes. A gombsor viszont nem kap fókuszt, azt
-  // külön be kell csukni, ha valaki mellé kattint.
   useEffect(() => {
     if (!nyitva || !valaszthato) return
     const kint = (ev: PointerEvent) => {
       if (doboz.current?.contains(ev.target as Node)) return
-      setNyitva(false)   // a választás maga a mentés — itt nincs mit menteni
+      setNyitva(false)
     }
     document.addEventListener('pointerdown', kint, true)
     return () => document.removeEventListener('pointerdown', kint, true)
@@ -148,7 +94,6 @@ export default function Szerkesztheto({
     if (e.key === 'Enter' && !sor) { e.preventDefault(); void ment(piszkozat) }
   }
 
-  // --- választható értékek: gombsor, egy kattintás ---------------------------
   if (valaszthato && !zarolt && (gombok || nyitva)) {
     return (
       <div className={`adatsor szerk-sor valaszto-sor${nyitva ? ' szerk-nyilt' : ''}`}
@@ -163,7 +108,7 @@ export default function Szerkesztheto({
                 className={v.ertek === (ertek ?? '') ? 'aktiv' : ''}
                 aria-pressed={v.ertek === (ertek ?? '')}
                 disabled={megy}
-                onClick={() => { setNyitva(false); void ment(v.ertek) }}
+                onClick={() => void ment(v.ertek)}
               >
                 {v.cimke}
               </button>

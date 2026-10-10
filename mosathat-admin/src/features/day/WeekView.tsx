@@ -2,54 +2,27 @@ import { useEffect, useMemo, useState } from 'react'
 import Kerdojel from './Kerdojel'
 import { flottaCsoportosit } from '../../lib/flotta'
 
-import { useApp } from '../../state/AppContext'
-import { hetHetfoje, maE, napPlusz, napRovidCim, ora } from '../../lib/format'
+import { useApp, useRevizio } from '../../state/AppContext'
+import { hetHetfoje, hibaSzoveg, maE, napPlusz, napRovidCim, ora } from '../../lib/format'
 import { STATUS_LABEL, type DayBooking } from '../../lib/types'
 import MiniKartya, { azonosito } from './MiniKartya'
 import { hetiSavok, tobbnaposE } from '../../lib/savok'
-
-// ---------------------------------------------------------------------------
-//  Heti nézet
-//
-//  Öt oszlop, hétfőtől péntekig. Nem naptár: nincs órarács, nincs arányos
-//  magasság. Az a kérdés, hogy MELYIK NAPON MENNYI autó van, nem az, hogy
-//  pontosan hogyan helyezkednek el egymáshoz képest — arra ott a napi nézet.
-//
-//  A TÖBBNAPOS munkák legfelül, a napok neve FÖLÖTT állnak (a napnevek sora
-//  választja el őket az aznapi foglalásoktól): egy-egy hosszú
-//  sávként, ami pontosan azokon a napokon fut végig, amikor az autó nálunk
-//  van. Így egy pillantással látszik, hogy a KER-100 hétfőtől csütörtökig
-//  itt áll — nem kell négy oszlopban négyszer megtalálni. A sávok egymás
-//  alá sorolódnak; ha kettő nem fedi egymást, egy sorba kerülnek.
-//
-//  Naponta legfeljebb tíz kártya látszik. A tizenegyedik nem eltűnik, hanem
-//  egy sorrá válik: „+3 további" — ami átvisz arra a napra.
-//
-//  A hétvége nem oszlop, de ha mégis van rajta munka (ledolgozós szombat),
-//  akkor alul megjelenik egy sorban.
-// ---------------------------------------------------------------------------
 
 const NAPOK = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
 const MAX = 10
 
 export default function WeekView({ nap, onMegnyit, onNapra }: {
-  /** Bármelyik nap a hétből — a hétfőt magunk számoljuk ki belőle. */
   nap: string
   onMegnyit: (id: string) => void
   onNapra: (nap: string) => void
 }) {
-  const { data, revision, refresh } = useApp()
+  const { data, refresh } = useApp()
+  const revision = useRevizio()
   const hetfo = hetHetfoje(nap)
   const [sorok, setSorok] = useState<DayBooking[] | null>(null)
-  // A napi nézet sorrendje (nap|foglalás → sorszám): a heti oszlopok
-  // pontosan úgy állnak, mint a napi lista — ha ott áthúznak egy kártyát,
-  // itt is átkerül.
   const [rend, setRend] = useState<Map<string, number>>(new Map())
   const [hiba, setHiba] = useState<string | null>(null)
 
-  // A betöltés közvetlenül az effektben van, nem külön függvényben. Így van
-  // takarítása: ha gyorsan lapozol kettőt, a régebbi válasz már nem írja
-  // felül az újabbat.
   useEffect(() => {
     let el = true
     ;(async () => {
@@ -59,23 +32,19 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
           data.getRangeOrder(hetfo, napPlusz(hetfo, 6)),
         ])
         if (!el) return
-        // Flottás csoport: egy kártya („Raiffeisen 3 db"), nem három.
         setSorok(flottaCsoportosit(r))
         setRend(o)
         setHiba(null)
       } catch (e) {
         if (!el) return
-        setHiba(e instanceof Error ? e.message : String(e))
+        setHiba(hibaSzoveg(e))
       }
     })()
     return () => { el = false }
   }, [data, hetfo, revision])
 
-  // Élő frissítés: nem itt töltünk újra, hanem növeljük a számlálót, és a
-  // fenti effekt végzi a munkát — így egy helyen van a betöltés.
   useEffect(() => data.subscribe(() => refresh()), [data, refresh])
 
-  // Egynaposak naponként; a többnaposak sávként.
   const { napok, savok, savSorok } = useMemo(() => {
     const m = new Map<string, DayBooking[]>()
     for (let i = 0; i < 7; i++) m.set(napPlusz(hetfo, i), [])
@@ -85,14 +54,11 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
       else m.get(b.service_date.slice(0, 10))?.push(b)
     }
 
-    // Naponként a napi nézet sorrendjében. Ami nincs a sorrendben (nem
-    // várt eset), a nap végére kerül, az eddigi (idő szerinti) rendben.
-    for (const [nap, lista] of m) {
-      const hely = (b: DayBooking) => rend.get(`${nap}|${b.id}`) ?? Number.MAX_SAFE_INTEGER
+    for (const [d, lista] of m) {
+      const hely = (b: DayBooking) => rend.get(`${d}|${b.id}`) ?? Number.MAX_SAFE_INTEGER
       lista.sort((a, z) => hely(a) - hely(z))
     }
 
-    // A sávok elhelyezése a közös számítással (lib/savok.ts): öt oszlop.
     const { savok: ki, sorok: savSor } = hetiSavok(tobb, hetfo, 5)
     return { napok: m, savok: ki, savSorok: savSor }
   }, [sorok, hetfo, rend])
@@ -100,7 +66,6 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
   if (hiba) return <div className="hibauzenet">{hiba}</div>
   if (!sorok) return <div className="betolt">Betöltés…</div>
 
-  // A hétvégén is lehet munka — egynapos, vagy egy többnapos, ami átnyúlik.
   const hetvegeDb = (d: string) =>
     (napok.get(d) ?? []).length
     + (sorok ?? []).filter((b) => tobbnaposE(b)
@@ -109,14 +74,12 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
     .map((i) => napPlusz(hetfo, i))
     .filter((d) => hetvegeDb(d) > 0)
 
-  /** Egy nap összes autója: az aznapiak és a rajta átfutó többnaposak. */
   const napiDb = (i: number) =>
     (napok.get(napPlusz(hetfo, i)) ?? []).length
     + savok.filter((s) => s.tol <= i && i <= s.ig).length
 
   return (
-    <div className="hetnezet">
-      {/* ---------- legfelül: többnapos munkák, egy-egy sáv a napokon át ---------- */}
+    <div>
       {savok.length > 0 && (
         <div className="hetsavok" style={{ gridTemplateRows: `repeat(${savSorok}, auto)` }}>
           {savok.map((s) => {
@@ -148,7 +111,6 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
         </div>
       )}
 
-      {/* ---------- a napok neve: elválasztja a többnaposakat az aznapiaktól ---------- */}
       <div className="hetracs hetfejsor">
         {[0, 1, 2, 3, 4].map((i) => {
           const d = napPlusz(hetfo, i)
@@ -163,7 +125,6 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
         })}
       </div>
 
-      {/* ---------- egynapos munkák, naponként ---------- */}
       <div className="hetracs">
         {[0, 1, 2, 3, 4].map((i) => {
           const d = napPlusz(hetfo, i)
@@ -173,9 +134,6 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
 
           return (
             <section className="naposzlop" key={d} data-ma={maE(d) || undefined}>
-              {/* Keskeny képernyőn az oszlopok egymás alá kerülnek — ott a
-                  fenti közös fejléc nem látszik, minden oszlop a sajátját
-                  mutatja. */}
               <button className="oszlopfej oszlopfej-sajat" onClick={() => onNapra(d)}>
                 <span className="nev">{NAPOK[i]}</span>
                 <span className="datum">{napRovidCim(d)}</span>

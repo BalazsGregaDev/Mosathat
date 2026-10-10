@@ -2,41 +2,21 @@ import { useMemo } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { useDay } from '../../state/useDay'
-import { helyiNap, maE, ora } from '../../lib/format'
+import { helyiNap, idoPercbe, maE, ora, percEjfeltol } from '../../lib/format'
 import { billentyuzetElore } from '../../lib/billentyuzet'
-import type { DayBooking, MunkalapFokusz } from '../../lib/types'
+import { eloE, type DayBooking, type MunkalapFokusz } from '../../lib/types'
+import { munkaCimke } from '../../state/napBeosztas'
 import CapacityPanel from './CapacityPanel'
 import NapiLista from './NapiLista'
 import { flottaCsoportosit } from '../../lib/flotta'
 import StandingCars from './StandingCars'
 import Idovonal from './Idovonal'
 
-// ---------------------------------------------------------------------------
-//  A nap.
-//
-//  Bal oldalt a nap EGY listája, abban a sorrendben, ahogy dolgozunk —
-//  kézzel átrendezhető (NapiLista). A többnapos munkák a nap minden napján
-//  ott vannak, nem csak az elsőn.
-//
-//  Jobb oldalt (telefonon alatta) a nap kártyája: kapacitás, autók, ki
-//  mikor van bent; alatta ami figyelmet igényel, és a nálunk álló autók.
-// ---------------------------------------------------------------------------
-
-/** Ami nem él: lemondott, nem jött el. Ezek nem számítanak sehova. */
-const NEM_EL = ['CANCELLED_BY_CUSTOMER', 'CANCELLED_BY_SHOP', 'NO_SHOW', 'REJECTED']
-
-/** Egy figyelmeztetés a napi listán, és mire lehet kattintani benne. */
 interface NapiGond {
   szoveg: string
   sulyos: boolean
-  /** Az érintett foglalások — mindegyik egy gomb a rendszámával. */
   foglalasok?: DayBooking[]
-  /** Mit nyisson meg a munkalap rögtön (pl. a telefonszám mezőt). */
   fokusz?: MunkalapFokusz
-}
-
-function oraSzam(t: string): number {
-  return Number(t.slice(0, 2))
 }
 
 export default function DayView({
@@ -59,38 +39,23 @@ export default function DayView({
     [bookings],
   )
 
-  // --- nyitvatartáson kívül végzett munka ------------------------------------
-  //  Nem kell hozzá külön adatrögzítés: a munkalépések kipipálásának
-  //  időpontja megmondja, mikor készült a munka. Ha az első vagy az utolsó
-  //  pipa a munkaidő-sávokon kívülre esik, az kereskedős / hajnali munka.
   const idonKivul = useMemo(() => {
     if (windows.length === 0) return []
-    const nyit = Math.min(...windows.map((w) => oraSzam(w.starts)))
-    const zar = Math.max(...windows.map((w) => oraSzam(w.ends)))
-    const oraIsobol = (iso: string) =>
-      Number(
-        new Intl.DateTimeFormat('en-GB', {
-          hour: '2-digit', hour12: false, timeZone: 'Europe/Budapest',
-        }).format(new Date(iso)),
-      )
+    const nyit = Math.min(...windows.map((w) => idoPercbe(w.starts)))
+    const zar = Math.max(...windows.map((w) => idoPercbe(w.ends)))
     return bookings.filter((b) => {
       if (!b.first_done_at || !b.last_done_at) return false
-      // Csak az aznapi pipák számítanak: a többnapos munka tegnapi pipái
-      // nem mondanak semmit a mai napról.
       if (helyiNap(b.last_done_at) !== nap) return false
-      return oraIsobol(b.first_done_at) < nyit || oraIsobol(b.last_done_at) >= zar
+      return percEjfeltol(b.first_done_at) < nyit || percEjfeltol(b.last_done_at) >= zar
     })
   }, [bookings, windows, nap])
 
-  // --- figyelmet igényel ----------------------------------------------------
-  //  Minden sor, ami foglaláshoz kötődik, kattintható: a rendszámra bökve
-  //  megnyílik a munkalap. A telefonszám nélkülinél rögtön a telefon mezővel.
+  const csoportositott = useMemo(() => flottaCsoportosit(bookings), [bookings])
+
   const gondok = useMemo(() => {
     const ki: NapiGond[] = []
-    const elo = bookings.filter((b) => !NEM_EL.includes(b.status))
+    const elo = bookings.filter((b) => eloE(b.status))
 
-    // Ha a calc_service nem tudta az időt (csak kívül / csak belül), nulla
-    // kerül be — és a nulla azt jelentené, hogy a munka nem foglal helyet.
     const nincsIdo = elo.filter((b) => b.planned_duration_minutes === 0 && b.status !== 'COMPLETED')
     if (nincsIdo.length) {
       ki.push({
@@ -124,7 +89,6 @@ export default function DayView({
             ? `${s.plate_raw} határideje lejárt (${Math.abs(s.days_left)} napja)`
             : `${s.plate_raw} határideje ${s.days_left === 0 ? 'ma' : 'holnap'} jár le`,
         sulyos: s.days_left < 0,
-        // A nálunk álló autó listájából elég az azonosító a megnyitáshoz.
         foglalasok: [{ id: s.id, plate_raw: s.plate_raw } as DayBooking],
       })
     }
@@ -132,10 +96,7 @@ export default function DayView({
     return ki
   }, [bookings, capacity, standing])
 
-  /** Kattintás egy figyelmeztetés rendszámára. */
   function gondMegnyit(id: string, fokusz?: MunkalapFokusz) {
-    // A telefon billentyűzetét MOST kell előhívni, a kattintáson belül —
-    // a munkalap csak egy pillanat múlva jelenik meg.
     if (fokusz === 'telefon') billentyuzetElore('tel')
     onMegnyit(id, fokusz)
   }
@@ -157,8 +118,6 @@ export default function DayView({
           </div>
         )}
 
-        {/* Az első kártya helyén: a nap beosztása negyedórás bontásban, és
-            hogy hány Start autó fér még be (lásd Idovonal.tsx). */}
         <Idovonal nap={nap} foglalasok={bookings} savok={lanes} startPerc={startPerc}
                   onMegnyit={(id) => onMegnyit(id)} />
 
@@ -177,7 +136,7 @@ export default function DayView({
             </div>
           </div>
         ) : (
-          <NapiLista nap={nap} bookings={flottaCsoportosit(bookings)}
+          <NapiLista nap={nap} bookings={csoportositott}
                      onMegnyit={(id) => onMegnyit(id)}
                      onModosit={modosit} onAtrendez={atrendez} />
         )}
@@ -207,7 +166,7 @@ export default function DayView({
                                     title={g.fokusz === 'telefon'
                                       ? 'Megnyitás, a telefonszám rögtön beírható'
                                       : 'A munkalap megnyitása'}>
-                              {b.plate_raw?.toUpperCase()}
+                              {munkaCimke(b)}
                             </button>
                           ))}
                         </span>
@@ -228,7 +187,7 @@ export default function DayView({
             <div className="panel-torzs">
               {idonKivul.map((b) => (
                 <div className="adatsor" key={b.id}>
-                  <span className="szam">{b.plate_raw?.toUpperCase()}</span>
+                  <span className="szam">{munkaCimke(b)}</span>
                   <span className="ertek">
                     {ora(b.first_done_at)}–{ora(b.last_done_at)}
                   </span>

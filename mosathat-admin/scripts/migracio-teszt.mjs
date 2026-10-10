@@ -1,25 +1,11 @@
-// ---------------------------------------------------------------------------
-//  Migrációk próbafuttatása — mielőtt felmennek a Supabase-re
-// ---------------------------------------------------------------------------
-//  Lefuttatja az ÖSSZES migrációt egy igazi PostgreSQL-en (PGlite, ugyanaz,
-//  ami a demó mögött fut), és kiírja a csomagok tartalmát. Ha egy migrációban
-//  elgépelés van, itt derül ki, nem az éles adatbázison.
-//
-//  Futtatás a mosathat-admin mappából:
-//      node scripts/migracio-teszt.mjs
-//
-//  Ha hibát ír ki, a db:push-t ne is próbáld: előbb javítsd a migrációt.
-// ---------------------------------------------------------------------------
 import { PGlite } from '@electric-sql/pglite'
 import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// a szkript helyéhez képest, hogy bárhonnan futtatható legyen
 const MIG = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'supabase', 'migrations')
 const db = await PGlite.create()
 
-// az auth séma csonkja, ahogy a demó is csinálja
 await db.exec(`
   create schema if not exists auth;
   create table if not exists auth.users (
@@ -43,7 +29,6 @@ console.log(`${fajlok.length} migráció lefutott.\n`)
 
 const q = async (sql, p = []) => (await db.query(sql, p)).rows
 
-// --- 1. a régi függvény viselkedése nem változott ---
 console.log('=== 1) resolve_package_items (a munkalista ebből él) ===')
 for (const kod of ['START', 'PREMIUM', 'ELIT']) {
   const r = await q(
@@ -59,7 +44,6 @@ for (const kod of ['START', 'PREMIUM', 'ELIT']) {
   }
 }
 
-// --- 2. a mátrix ---
 console.log('\n=== 2) v_package_matrix — a táblázat ===')
 const sorok = await q(`select * from v_package_matrix order by area, sort_order, package_sort`)
 console.log('   összes sor:', sorok.length)
@@ -88,7 +72,6 @@ for (const s of slotok) {
   console.log(sorNev.padEnd(34) + cellak.join(''))
 }
 
-// --- 3. amit ellenőrizni akarunk ---
 console.log('\n=== 3) ellenőrzések ===')
 const falc = slotok.find(s => s.nev === 'Falc áttörlés')
 const viasz = slotok.find(s => s.nev === 'Gyors viasz')
@@ -103,8 +86,6 @@ const elitDb = sorok.filter(s => s.package_code === 'ELIT').length
 console.log('   Elit sorainak száma a mátrixban = 14:', elitDb === 14)
 console.log('   minden sornak van slot_name:', slotok.every(s => !!s.nev))
 
-
-// --- 4. „mivel több az előzőnél" ---
 console.log('\n=== 4) v_package_extra — az árlista fejlécébe ===')
 let tobblet = []
 try {

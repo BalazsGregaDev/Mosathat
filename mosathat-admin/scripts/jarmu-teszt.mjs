@@ -1,4 +1,3 @@
-// További jármű felvétele + az ügyféltörzs védelme.
 import { PGlite } from '@electric-sql/pglite'
 import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'

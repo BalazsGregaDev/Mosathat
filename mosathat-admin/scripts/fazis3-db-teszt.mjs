@@ -1,13 +1,3 @@
-// 3. fázis, adatbázis: az Áttekintés „Ma" számai és a kattintható
-// figyelmeztetések.
-//
-// Amit néz:
-//   - a „Ma" panel ugyanazt mondja, mint a napi nézet kapacitás-kártyája
-//     (day_capacity) — a többnapos autó is benne van
-//   - a telefonszám nélküli foglalások egyenként, azonosítóval jönnek, és a
-//     cél „telefon" (a munkalap a telefon mezővel nyílik)
-//   - a határidő-figyelmeztetés a dátumokból ismeri fel a többnapost
-//     (hozom-viszem is lehet az), egy sor = egy foglalás
 import { adatbazis, tesztelo, TULAJ } from './_db.mjs'
 
 const db = await adatbazis()
@@ -26,8 +16,6 @@ const foglal = async (adat) => (await egy(`select create_booking($1::jsonb) as i
   drop_off_time: '09:00', package_id: csomag.START, extras: [], ...adat,
 })])).id
 
-// Egy mai, telefonszámmal; egy mai telefon nélkül; egy többnapos hozom-viszem,
-// ami tegnapelőtt jött és holnap megy; egy lejárt többnapos.
 const f1 = await foglal({ customer_name: 'Telefonos Tamás', customer_phone: '+36301112233', plate_raw: 'TEL-001' })
 const f2 = await foglal({ customer_name: 'Szám Nélkül', plate_raw: 'NOT-001' })
 const f3 = await foglal({ customer_name: 'Hozom Viszem', customer_phone: '+36301112234',
@@ -58,7 +46,6 @@ t.ok('soronként egy foglalás, munkalapot nyit', true,
   hat.every((g) => g.cel === 'munkalap' && g.foglalasok.length === 1))
 t.ok('a lejárt súlyosabb', 3, hat.find((g) => g.foglalasok[0].id === f4)?.suly)
 
-// Ha elkészült (READY), a határidő már nem gond: csak el kell vinni.
 await db.query(`update bookings set status = 'READY' where id = $1`, [f3])
 const d2 = (await egy(`select dashboard_summary(current_date) as d`)).d
 t.ok('a kész autó határideje nem figyelmeztet', ['LEJ-001'],

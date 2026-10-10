@@ -1,6 +1,3 @@
-// v49: „Kész van" ablak a munkalistával. Ami kimaradt, nem számít bele az
-// árba; a munkalapon üres négyzettel, „kimaradt" jelöléssel látszik;
-// Visszanyit után az ár és a pipák visszaállnak.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -40,10 +37,8 @@ await ablak.getByRole('button', { name: 'Minden kész' }).click()
 await p.waitForTimeout(600)
 ok('Minden kész: nincs árcsökkenés', 'false', await ablak.locator('.kesz-ar').getAttribute('data-csokken'))
 ok('a gomb: Kész van', 1, await ablak.getByRole('button', { name: 'Kész van', exact: true }).count())
-// az egyéb szolgáltatás kimarad
 await csoport('EGYEB').locator('label.munka').first().click()
 await p.waitForTimeout(700)
-// (a demóban ennek az extrának 0 Ft az ára: az ár nem változik, de kiírja)
 ok('az extra kimarad: kiírja', true, /Kimarad: Felni és gumi/.test(await ablak.locator('.kesz-ar-ok').innerText()))
 ok('a pont mellett: kimarad', 1, await csoport('EGYEB').locator('.kimaradt-cimke').count())
 ok('a gomb: Kész van, a többi kimaradt', 1, await ablak.getByRole('button', { name: 'Kész van, a többi kimaradt' }).count())

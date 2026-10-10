@@ -1,30 +1,15 @@
-/* Áttekintés és Beállítások. */
-
-/* Négy panel, két hasábban — a képernyő teljes szélességében.
-
-     Ma                  |  A hét kapacitása
-     Leggyakoribb        |  Figyelmet igényel
-
-   Felül az, ami MOST van: a mai bevétel és a hét terhelése. Alul az, ami a
-   döntést segíti: mit rendelnek, és mi az, ami közbeszólhat.
-
-   A panelek a tetejükhöz igazodnak (align-items: start), tehát egy hosszabb
-   panel nem nyújtja meg a mellette állót üres helyre. */
 .attekintes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--t4);
   align-items: start;
 }
-/* Ha nincs figyelmeztetés, a mellette álló panel átveszi a helyét. */
 .attekintes .teljes-sor { grid-column: 1 / -1; }
 
 @media (max-width: 1000px) {
   .attekintes { grid-template-columns: 1fr; }
   .attekintes .teljes-sor { grid-column: auto; }
 }
-
-/* --- a nagy szám ------------------------------------------------------------ */
 
 .hos { padding-bottom: var(--t4); border-bottom: 1px solid var(--keret); }
 
@@ -33,9 +18,6 @@
   letter-spacing: .06em; text-transform: uppercase;
   color: var(--szoveg-halk);
 }
-
-/* Szándékosan NEM tabular-nums: ekkora méretben a nulla szélességére
-   igazított számjegyek szétesnek. Az igazítás a táblázatok dolga. */
 .hos-szam {
   font-family: var(--betu);
   font-size: var(--m-hos);
@@ -46,8 +28,6 @@
 }
 
 .hos-alatt { font-size: var(--m-sm); color: var(--szoveg-halk); }
-
-/* --- támogató csempék ------------------------------------------------------- */
 
 .csempek {
   display: grid; grid-template-columns: repeat(3, 1fr);
@@ -67,8 +47,6 @@
 }
 .het-osszeg strong { color: var(--szoveg); font-weight: var(--vastag-eros); }
 
-/* --- figyelmeztetések ------------------------------------------------------- */
-
 .gondok { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--t3); }
 
 .gondok li {
@@ -78,8 +56,6 @@
   align-items: baseline;
   font-size: var(--m-sm);
 }
-
-/* A súly nem csak színnel látszik: van jele és szöveges címkéje is. */
 .gondok .jel {
   font-weight: var(--vastag-fej);
   text-align: center;
@@ -94,8 +70,6 @@
   white-space: nowrap;
 }
 .gondok .szoveg { color: var(--szoveg); }
-
-/* Kattintható sor: az egész sor egy gomb, ugyanabban a rácsban. */
 .gondok li.kattinthato { display: block; }
 .gond-sor {
   display: grid;
@@ -116,11 +90,7 @@
 }
 .gond-sor:hover { background: var(--lap-2); border-color: var(--keret); }
 .gond-sor .szoveg { text-decoration: underline; text-decoration-color: var(--keret-eros); text-underline-offset: 3px; }
-
-/* Több foglalásnál a rendszámok a szöveg alatt, a harmadik oszlopban. */
 .gondok li > .gond-rendszamok { grid-column: 3; }
-
-/* --- heti kapacitás -------------------------------------------------------- */
 
 .meterek { display: flex; flex-direction: column; gap: var(--t2); }
 
@@ -130,7 +100,6 @@
   grid-template-columns: 120px 1fr 58px;
   gap: var(--t3);
   align-items: center;
-  /* Elég magas ahhoz, hogy telefonon is el lehessen találni. */
   min-height: 40px;
 }
 
@@ -146,16 +115,10 @@
 .meter-nap .datum { font-size: var(--m-xs); color: var(--szoveg-halk); }
 .meter-nap:hover .nev { color: var(--zold); text-decoration: underline; }
 .meter-sor[data-allapot='zarva'] .meter-nap .nev { color: var(--szoveg-halvany); }
-
-/* A mai nap: nem szín, hanem egy jelölés a sor elején — a színek a
-   terhelést jelentik, azt nem szabad felülírni. */
 .meter-sor[data-ma] .meter-nap .nev { font-weight: var(--vastag-fej); }
 .meter-sor[data-ma] .meter-nap .datum::after {
   content: ' · ma'; color: var(--zold); font-weight: var(--vastag-eros);
 }
-
-/* A sáv 14px vastag — jóval a 24px-es felső határ alatt, mert hét sorból
-   áll a blokk, és ott a vékony sáv olvashatóbb. */
 .meter-sav {
   height: 14px;
   border-radius: var(--r-sm);
@@ -173,8 +136,6 @@
 .meter-sor[data-allapot='szoros'] .meter-toltes  { background: var(--tr-szoros); }
 .meter-sor[data-allapot='tele']   .meter-sav     { background: var(--tr-tele-halk); }
 .meter-sor[data-allapot='tele']   .meter-toltes  { background: var(--tr-tele); }
-
-/* Zárva: a sáv üres és halvány, nem hamis nulla százalék. */
 .meter-sor[data-allapot='zarva'] .meter-sav {
   background: repeating-linear-gradient(
     135deg, var(--lap-2) 0 5px, var(--hatter) 5px 10px);
@@ -198,21 +159,15 @@
 }
 .meter-sugo strong { color: #fff; }
 
-/* --- rangsor (leggyakoribb csomagok) ---------------------------------------- */
-
 .rangsor { display: flex; flex-direction: column; gap: 2px; }
 
 .rangsor-sor {
   display: grid; grid-template-columns: 180px 1fr 42px;
   gap: var(--t3); align-items: center;
-  /* A 2px-es rés a sávok között a lap színéből jön, nem keretből. */
   padding: 2px 0;
 }
 .rangsor-nev { font-size: var(--m-sm); }
 .rangsor-sav { height: 18px; }
-
-/* Egy sorozat, egy szín. A hosszúság mutatja a mennyiséget — ha a szín is
-   azt mutatná, ugyanazt kódolnánk kétszer. */
 .rud {
   height: 100%;
   background: var(--zold);
@@ -231,13 +186,6 @@
   .csempek { grid-template-columns: repeat(3, 1fr); gap: var(--t2); }
   .hos-szam { font-size: 44px; }
 }
-
-/* ===========================================================================
-   Beállítások
-   =========================================================================== */
-
-/* A címke lehet <span> is, ha a .mezo maga egy <label> — így nem kell
-   minden mezőnek kitalált id-t adni, és a kattintás mégis a mezőre visz. */
 .mezo > span:first-child {
   font-size: var(--m-xs);
   font-weight: var(--vastag-eros);
@@ -246,17 +194,9 @@
   color: var(--szoveg-halk);
 }
 .mezo small { font-size: var(--m-xs); color: var(--szoveg-halk); line-height: 1.5; }
-
-/* Egymás ALATTI mezők közti térköz.
-   A gyerek-kiválasztó (>) itt nem részletkérdés: enélkül a szabály minden
-   egymás melletti mezőre is ráült, és a rácsban a második oszlopot 16
-   pixellel lejjebb lökte. Az új időpont űrlapján ezért állt a Telefonszám
-   a Név alatt, a Típus a Márka alatt, a Leadás a Nap alatt — ugyanabban a
-   sorban, mégis elcsúszva.
-   Így csak azokra vonatkozik, amik tényleg egymás alatt következnek. */
 .panel-torzs > .mezo + .mezo,
 .lap-torzs > .mezo + .mezo,
-/* Űrlapon belül is: a mezők ott is egymás alatt következnek. */
+
 .lap-torzs > form > .mezo + .mezo { margin-top: var(--t4); }
 
 .mezo-sor {
@@ -288,8 +228,6 @@
 .beall-tabla tbody th { font-size: var(--m-sm); font-weight: var(--vastag-kozep); white-space: nowrap; }
 .beall-tabla tr[data-zarva] tbody th,
 .beall-tabla tr[data-zarva] th { color: var(--szoveg-halvany); }
-
-/* Az időmezők keskenyebbek: nyolc számjegy sosem lesz bennük. */
 .beviteli.ido { width: auto; min-width: 92px; padding: 6px 8px; font-size: var(--m-sm); }
 .beall-tabla .beviteli { padding: 6px 8px; font-size: var(--m-sm); }
 .beall-tabla input[type='checkbox'] { width: 18px; height: 18px; accent-color: var(--zold); }
@@ -307,10 +245,6 @@
 .cimke-pill[data-b='baj'] { background: #fdf1ef; color: var(--v-baj); }
 .cimke-pill:not([data-b]) { background: var(--lap-2); color: var(--szoveg-halk); }
 
-/* ===========================================================================
-   Felhasználók és szerepkörök
-   =========================================================================== */
-
 .cimke-pill[data-r='SUPERADMIN']  { background: #eae7f6; color: #4a3f8f; }
 .cimke-pill[data-r='TULAJDONOS']  { background: var(--zold-halvany); color: var(--zold-sotet); }
 .cimke-pill[data-r='STAFF']       { background: var(--lap-2); color: var(--szoveg-halk); }
@@ -326,9 +260,6 @@
   color: var(--v-baj); font-size: var(--m-xs); font-weight: 400;
   margin-top: var(--t1);
 }
-
-/* A szerepkör választása: nem legördülő lista, mert a három közötti
-   különbséget el kell olvasni, nem kitalálni a nevükből. */
 .szerep-valaszto { display: flex; flex-direction: column; gap: var(--t2); }
 .szerep-valaszto button {
   display: flex; flex-direction: column; gap: 2px;
@@ -349,15 +280,11 @@
 .szerepek { display: flex; flex-direction: column; gap: var(--t3); }
 .szerepek > div { display: grid; grid-template-columns: 130px 1fr; gap: var(--t3); align-items: baseline; }
 .szerepek dd { font-size: var(--m-sm); color: var(--szoveg-halk); }
-
-/* Az oldalsáv láblécében a szerepkör a név alatt. */
 .oldalsav-lab .szerep {
   font-size: var(--m-xs);
   color: var(--sotet-halk);
   margin-top: 1px;
 }
-
-/* --- demó belépők ----------------------------------------------------------- */
 
 .demo-belepok { display: flex; flex-direction: column; gap: var(--t2); }
 .demo-belepok .cimke { margin-bottom: 2px; }
@@ -371,10 +298,6 @@
 }
 .demo-belepok button span { color: var(--szoveg-halk); font-size: var(--m-xs); }
 .demo-belepok button.aktiv { border-color: var(--zold); background: var(--zold-halvany); }
-
-/* ===========================================================================
-   Alkalmazotti nézetek — árlista, cégkártya
-   =========================================================================== */
 
 .arlista { width: 100%; border-collapse: collapse; min-width: 560px; }
 .arlista th, .arlista td { padding: var(--t2) var(--t3); text-align: left; }
@@ -395,17 +318,7 @@
 .ceg-kartya { padding: var(--t3) 0; border-bottom: 1px solid var(--keret); }
 .ceg-kartya:last-child { border-bottom: none; }
 .ceg-fej { display: flex; align-items: center; gap: var(--t2); margin-bottom: var(--t2); }
-
-/* A szerepkör-választó a táblázatban: ne terüljön szét az oszlopban. */
 .lista select.beviteli { width: auto; min-width: 150px; padding: 6px 10px; font-size: var(--m-sm); }
-
-/* ===========================================================================
-   Helyben szerkeszthető adat
-   =========================================================================== */
-
-/* Az érték gomb, de nem néz ki gombnak — amíg rá nem viszed az egeret.
-   Egy adatlapon húsz doboz keret zajos lenne; a szerkeszthetőséget a
-   hover és a kurzor mutatja meg, nem egy állandó keret. */
 .szerk-ertek {
   background: none;
   border: 1px dashed transparent;
@@ -441,9 +354,6 @@
   color: var(--v-baj); font-size: var(--m-xs); line-height: 1.4;
   text-align: left;
 }
-
-/* Hívás link a telefonszám mellett. Mobilon ez a leggyakoribb művelet:
-   a szám látszik, de egy kattintással hívható is. */
 .hivas {
   margin-left: var(--t2);
   font-size: var(--m-xs);
@@ -465,15 +375,9 @@
   margin-bottom: var(--t2);
   background: var(--lap-2);
 }
-
-/* Az érték oszlopa kapja a maradék helyet, különben a gomb a saját
-   tartalmára zsugorodik, és a „Nagy Anita" két sorba törik. */
 .adatsor.szerk-sor { align-items: baseline; }
 .adatsor.szerk-sor .szerk-cimke { flex: 0 0 auto; white-space: nowrap; }
 .adatsor.szerk-sor .ertek { flex: 1 1 auto; min-width: 0; text-align: right; }
-
-/* Hozza / Viszi a munkalapon: a nap és az óra mindig nyitott mező, egymás
-   mellett, jobbra zárva — ugyanabban az oszlopban, ahol a többi érték áll. */
 .adatsor.napora-adat { align-items: center; }
 .napora-mezok {
   display: inline-flex; align-items: center; justify-content: flex-end;
@@ -486,23 +390,11 @@
 }
 .napora-mezok input[type='date'] { min-width: 132px; }
 .napora-mezok input[type='time'] { min-width: 84px; }
-
-/* „3 nap" a Viszi mellett: tudnivaló, ugyanazzal a narancssal, mint az űrlap jelzése. */
 .cimke-pill.tobbnapos-pill {
   border-color: var(--narancs);
   color: var(--narancs-sotet);
   background: var(--narancs-halvany);
 }
-
-/* ---------------------------------------------------------------------------
-   Választható értékek gombsorként
-   ---------------------------------------------------------------------------
-   Ahol eddig legördülő lista volt. Egy legördülő három művelet: nyit,
-   választ, zár — és közben eltakarja azt, amit épp olvasunk. Itt minden
-   lehetőség egyszerre látszik, a választás egy kattintás.
-
-   A sorok jobbra záródnak, hogy a szemnek ugyanott legyen az értékek
-   oszlopa, mint a beírt adatoknál. */
 .adatsor.valaszto-sor { align-items: flex-start; }
 .ertek-gombok {
   display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end;
@@ -522,8 +414,6 @@
 .ertek-gombok button:hover:not(:disabled) {
   border-color: var(--zold); color: var(--szoveg);
 }
-/* A kiválasztott nem csak színnel válik el: vastagabb is, és a kerete
-   teljes. Így akkor is látszik, ha valaki nem különbözteti meg a zöldet. */
 .ertek-gombok button.aktiv {
   border-color: var(--zold);
   background: var(--zold-halvany);
@@ -531,10 +421,6 @@
   font-weight: var(--vastag-eros);
 }
 .ertek-gombok button:disabled { opacity: .55; cursor: default; }
-
-/* ---------------------------------------------------------------------------
-   Egyéb szolgáltatás a foglaláson
-   --------------------------------------------------------------------------- */
 
 .adatsor.extra-sor { align-items: flex-start; }
 .adatsor.extra-sor .ertek {
@@ -566,16 +452,9 @@ button.extra-cimke:hover:not(:disabled) {
 button.extra-cimke:disabled { opacity: .55; cursor: default; }
 
 .extra-hozzaad { flex: 0 0 auto; }
-
-/* Nem görgethető: minden egyéb szolgáltatás egyszerre látszik. Ami nem
-   látszik, azt nem is ajánlja fel az ember telefon közben. Három oszlop —
-   ennél többnél a nevek törnének. */
 .extra-valaszto {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  /* A sorok magasságát a leghosszabb név adja. A tételek a sor tetejéhez
-     igazodnak, különben a rövid nevek a hosszúak mellett a levegőben
-     lógnának, és a pipák nem egy vonalban állnának. */
   align-items: start;
   gap: 4px var(--t3);
   margin: var(--t2) 0 var(--t3);
@@ -584,11 +463,6 @@ button.extra-cimke:disabled { opacity: .55; cursor: default; }
   border-radius: var(--r);
   background: var(--lap-2);
 }
-/* Egy tétel: [pipa név] [i]
-                    ár
-   A név és az ár egymás alatt — a nevek hosszúak, egy sorban az ár elvenné
-   a helyet és minden második név három sorba törne. A súgógomb a jobb felső
-   sarokban, mindig ugyanott, akármilyen hosszú a név. */
 .extra-tetel {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -607,7 +481,6 @@ button.extra-cimke:disabled { opacity: .55; cursor: default; }
   display: flex; align-items: start; gap: 9px;
   cursor: pointer; min-width: 0;
 }
-/* Nagyobb pipa: a mosóállásban vizes kézzel használják. */
 .extra-tetel input {
   flex: 0 0 auto;
   width: 16px; height: 16px;
@@ -617,20 +490,14 @@ button.extra-cimke:disabled { opacity: .55; cursor: default; }
 .extra-tetel .nev { min-width: 0; }
 .extra-tetel .ar {
   grid-column: 1; grid-row: 2;
-  padding-left: 25px;                /* a pipa szélessége + a rés */
+  padding-left: 25px;
   font-size: var(--m-xs); color: var(--szoveg-halk);
   font-variant-numeric: tabular-nums;
 }
-/* Nincs megadva ár: a foglaláshoz nulla forintot adna hozzá. Nem rejtjük
-   el — a Szolgáltatásoknál ezt pótolni kell. */
 .extra-tetel .ar.nincs-ar { color: var(--v-baj); }
 .extra-tetel[data-kert='true'] { background: var(--narancs-halvany); }
 .extra-tetel[data-kert='true'] .nev { font-weight: var(--vastag-eros); color: var(--narancs-sotet); }
 .extra-valaszto .ures { grid-column: 1 / -1; }
-
-/* ---------------------------------------------------------------------------
-   Súgó: a karikás „i" és a buborék
-   --------------------------------------------------------------------------- */
 
 .sugo-gomb {
   grid-column: 2; grid-row: 1;
@@ -654,9 +521,6 @@ button.extra-cimke:disabled { opacity: .55; cursor: default; }
   border-color: var(--zold); color: var(--zold-sotet); background: var(--zold-halvany);
 }
 .sugo-gomb:focus-visible { outline: 2px solid var(--zold); outline-offset: 1px; }
-
-/* A buborék a képernyőhöz képest áll (a helyét a Sugo.tsx számolja ki), így
-   a szélső oszlopoknál sem lóg ki. */
 .sugo-buborek {
   position: fixed;
   z-index: 90;
@@ -667,16 +531,13 @@ button.extra-cimke:disabled { opacity: .55; cursor: default; }
   box-shadow: 0 8px 24px rgb(0 0 0 / .14);
   font-size: var(--m-sm);
   line-height: 1.45;
-  pointer-events: none;      /* ne akadjon az egér útjába, csak mutat */
+  pointer-events: none;
 }
 .sugo-cim {
   font-weight: var(--vastag-eros);
   margin-bottom: 3px;
 }
 .sugo-szoveg { color: var(--szoveg-halk); }
-
-/* Az osztott elrendezésben (foglalás balra, árlista jobbra) a foglalás fele
-   olyan széles. Három oszlop ott már nem fér el olvashatóan. */
 .fedo.osztott .extra-valaszto { grid-template-columns: repeat(2, 1fr); }
 
 @media (max-width: 720px) {
@@ -687,20 +548,11 @@ button.extra-cimke:disabled { opacity: .55; cursor: default; }
   .ertek-gombok, .extra-cimkek { justify-content: flex-start; }
 }
 
-/* ---------------------------------------------------------------------------
-   Melyik napról szól, ami látszik
-   ---------------------------------------------------------------------------
-   Az Áttekintés mindig a mai napot mutatja. Hogy ezt ne kelljen elhinni,
-   ki is van írva — a lap fejlécében teljes dátummal, a paneleken röviden. */
-
 .oldal-datum {
   font-size: var(--m-sm);
   color: var(--szoveg-halk);
   align-self: baseline;
 }
-
-/* A panel fejlécében a dátum jobbra ül. A panelcím nagybetűs és ritkított,
-   a dátum nem: az egy adat, nem rovatcím. */
 .panel > h3 .fej-datum {
   margin-left: auto;
   font-size: var(--m-xs);

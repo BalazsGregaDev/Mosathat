@@ -1,46 +1,32 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
-import { idoMezo, maStr, napRovidCim } from '../../lib/format'
+import { hibaSzoveg, idoMezo, maStr, napRovidCim } from '../../lib/format'
 import IdoMezo from '../common/IdoMezo'
 import type { DayOverride, OpeningDay, ShopSettings, ValidityKind } from '../../lib/types'
 
-// ---------------------------------------------------------------------------
-//  Beállítások
-//
-//  Három dolog van itt, és a sorrend nem véletlen:
-//
-//    1. Nyitvatartás és munkaidő — ebből jön a kapacitás. Ez a legfontosabb.
-//    2. Általános — leadás legkorábban, párhuzamos autók, bérlet alapérték.
-//    3. Kivételnapok — ünnep, szabadság, ledolgozós szombat.
-//
-//  Egy fontos egyszerűsítés: az adatbázisban külön van "zárva a bolt" és
-//  "nem dolgozunk" jelző. A felületen EGY pipa van, ami mindkettőt állítja.
-//  Aki nyitva van, de nem dolgozik, annak a foglalórendszer nulla időpontot
-//  tud ajánlani — ez nem beállítás, hanem hiba. Ne legyen kikattintható.
-//
-//  A munkaidő viszont marad külön: nyolckor már dolgozunk, kilencre nyitunk.
-//  A kapacitás a munkaidőből számol, és ez nem elírás.
-// ---------------------------------------------------------------------------
-
 type Ful = 'ido' | 'altalanos' | 'kivetel'
 
-/** A fejléc jobb oldala: ide portálozzák a nézetek a saját mentés gombjukat. */
 const FejHely = createContext<HTMLElement | null>(null)
+const AktivFul = createContext(true)
 
-/** A gyereket a lap fejlécébe teszi. Amíg nincs meg a hely (első render),
- *  nem rajzol semmit — a következő renderben már ott lesz. */
 function Fejbe({ children }: { children: React.ReactNode }) {
   const hely = useContext(FejHely)
-  return hely ? createPortal(children, hely) : null
+  const aktiv = useContext(AktivFul)
+  return hely && aktiv ? createPortal(children, hely) : null
+}
+
+function FulTartalom({ aktiv, children }: { aktiv: boolean; children: React.ReactNode }) {
+  return (
+    <AktivFul.Provider value={aktiv}>
+      <div hidden={!aktiv}>{children}</div>
+    </AktivFul.Provider>
+  )
 }
 
 export default function SettingsPage() {
   const [ful, setFul] = useState<Ful>('ido')
-  // A mentés gomb helye a fejlécben, a fülek mellett. Azért portál, mert a
-  // gomb ahhoz a nézethez tartozik, amelyik ment — de ott állna jól, ahol a
-  // többi gomb. Korábban külön kártyán ült, üres fejléccel, a lap alján.
   const [fejHely, setFejHely] = useState<HTMLElement | null>(null)
 
   return (
@@ -62,25 +48,27 @@ export default function SettingsPage() {
       </div>
 
       <FejHely.Provider value={fejHely}>
-        {ful === 'ido' && <Nyitvatartas />}
-        {ful === 'altalanos' && <Altalanos />}
-        {ful === 'kivetel' && <Kivetelnapok />}
+        <FulTartalom aktiv={ful === 'ido'}><Nyitvatartas /></FulTartalom>
+        <FulTartalom aktiv={ful === 'altalanos'}><Altalanos /></FulTartalom>
+        <FulTartalom aktiv={ful === 'kivetel'}><Kivetelnapok /></FulTartalom>
       </FejHely.Provider>
     </div>
   )
 }
 
-/** Közös mentés-visszajelzés: a gomb melletti szöveg, nem felugró ablak. */
 function useMentes() {
   const [allapot, setAllapot] = useState<'' | 'megy' | 'kesz' | string>('')
+  const idozito = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(idozito.current), [])
   const fut = useCallback(async (f: () => Promise<void>) => {
+    window.clearTimeout(idozito.current)
     setAllapot('megy')
     try {
       await f()
       setAllapot('kesz')
-      window.setTimeout(() => setAllapot(''), 2500)
+      idozito.current = window.setTimeout(() => setAllapot(''), 2500)
     } catch (e) {
-      setAllapot(e instanceof Error ? e.message : String(e))
+      setAllapot(hibaSzoveg(e))
     }
   }, [])
   return { allapot, fut }
@@ -93,10 +81,6 @@ function MentesJelzo({ allapot }: { allapot: string }) {
   return <span style={{ color: 'var(--v-baj)' }}>{allapot}</span>
 }
 
-// ===========================================================================
-//  1. Nyitvatartás és munkaidő
-// ===========================================================================
-
 function Nyitvatartas() {
   const { data } = useApp()
   const [napok, setNapok] = useState<OpeningDay[] | null>(null)
@@ -104,19 +88,17 @@ function Nyitvatartas() {
   const { allapot, fut } = useMentes()
 
   useEffect(() => {
-    data.getOpening().then(setNapok).catch((e) => setHiba(String(e.message ?? e)))
+    data.getOpening().then(setNapok).catch((e) => setHiba(hibaSzoveg(e)))
   }, [data])
 
   function modosit(weekday: number, patch: Partial<OpeningDay>) {
     setNapok((e) => e?.map((d) => (d.weekday === weekday ? { ...d, ...patch } : d)) ?? null)
   }
 
-  /** A pipa mindkét zárva-jelzőt állítja. Lásd a fájl fejében. */
   function zarvaAllit(d: OpeningDay, zarva: boolean) {
     modosit(d.weekday, {
       business_closed: zarva,
       work_closed: zarva,
-      // Nyitáskor adjunk használható kezdőértéket, hogy ne üres mezőket mentsen.
       ...(zarva ? {} : {
         opens: d.opens ?? '09:00:00',
         closes: d.closes ?? '17:00:00',
@@ -174,17 +156,11 @@ function Nyitvatartas() {
                 return (
                   <tr key={d.weekday} data-zarva={zarva || undefined}>
                     <th scope="row">{d.nev}</th>
-                    {/* A pipa azt jelenti, hogy aznap dolgozunk. Fordítva
-                        („Zárva" bepipálva = zárva) minden bejelölt sor egy
-                        tiltást jelentett volna, és a hét legtöbb napja
-                        üresen állt. A pipa jelentse azt, ami a gyakoribb. */}
                     <td>
                       <input type="checkbox" checked={!zarva}
                              onChange={(e) => zarvaAllit(d, !e.target.checked)}
                              aria-label={`${d.nev} nyitva`} />
                     </td>
-                    {/* Zárt napon nincs mit beállítani. Négy letiltott, üres
-                        mező helyett egy szó — az legalább mond valamit. */}
                     {zarva ? (
                       <td colSpan={5} className="zarva-cella">Ezen a napon nem dolgozunk.</td>
                     ) : (
@@ -259,10 +235,6 @@ function Nyitvatartas() {
   )
 }
 
-// ===========================================================================
-//  2. Általános
-// ===========================================================================
-
 const LEJARAT: { v: ValidityKind; cimke: string }[] = [
   { v: 'EV', cimke: 'év' },
   { v: 'NAP', cimke: 'nap' },
@@ -276,7 +248,7 @@ function Altalanos() {
   const { allapot, fut } = useMentes()
 
   useEffect(() => {
-    data.getShopSettings().then(setS).catch((e) => setHiba(String(e.message ?? e)))
+    data.getShopSettings().then(setS).catch((e) => setHiba(hibaSzoveg(e)))
   }, [data])
 
   if (hiba) return <div className="hibauzenet">{hiba}</div>
@@ -350,9 +322,6 @@ function Altalanos() {
         </div>
       </div>
 
-      {/* Itt korábban egy külön kártya állt, üres fejléccel, benne semmi
-          más, csak a mentés gomb. A gomb a lap fejlécébe került, a fülek
-          mellé — a kártya így fölöslegessé vált. */}
       <Fejbe>
         <MentesJelzo allapot={allapot} />
         <button className="btn btn-fo" disabled={allapot === 'megy'}
@@ -367,24 +336,20 @@ function Altalanos() {
   )
 }
 
-// ===========================================================================
-//  3. Kivételnapok
-// ===========================================================================
-
-const URES: DayOverride = {
+const ures = (): DayOverride => ({
   day: maStr(), closed: true, opens: null, closes: null,
   work_starts: null, work_ends: null, parallel_slots: null, note: null,
-}
+})
 
 function Kivetelnapok() {
   const { data } = useApp()
   const [sorok, setSorok] = useState<DayOverride[] | null>(null)
-  const [uj, setUj] = useState<DayOverride>(URES)
+  const [uj, setUj] = useState<DayOverride>(ures)
   const [hiba, setHiba] = useState<string | null>(null)
   const { allapot, fut } = useMentes()
 
   const betolt = useCallback(() => {
-    data.listDayOverrides(maStr()).then(setSorok).catch((e) => setHiba(String(e.message ?? e)))
+    data.listDayOverrides(maStr()).then(setSorok).catch((e) => setHiba(hibaSzoveg(e)))
   }, [data])
 
   useEffect(betolt, [betolt])
@@ -474,7 +439,7 @@ function Kivetelnapok() {
             <button className="btn btn-fo" disabled={allapot === 'megy'}
                     onClick={() => void fut(async () => {
                       await data.saveDayOverride(uj)
-                      setUj({ ...URES, day: uj.day })
+                      setUj({ ...ures(), day: uj.day })
                       betolt()
                     })}>
               Felvétel

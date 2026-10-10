@@ -1,5 +1,3 @@
-// v52: havi nézet — a „+" a szám fölött; a szám és az „autó" a cellán belül
-// marad, a sávok alá kerül (asztalon, tableten, telefonon).
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -22,8 +20,6 @@ for (const [nev, vp] of [['asztal', { width: 1440, height: 1000 }], ['tablet', {
   await p.fill('input[type="password"]', 'x')
   await p.getByRole('button', { name: /Belépés/ }).click()
   await p.waitForTimeout(2500)
-  // Az Időpontok menüpont: asztalon az oldalsávban, tableten és telefonon a
-  // menü gombja mögött.
   const menupont = p.locator('aside.oldalsav button').filter({ hasText: 'Időpontok' }).first()
   if (await menupont.isVisible()) {
     await menupont.click()
@@ -46,15 +42,12 @@ for (const [nev, vp] of [['asztal', { width: 1440, height: 1000 }], ['tablet', {
       if (!a) continue
       const cr = c.getBoundingClientRect()
       const sor = a.querySelector('.sor').getBoundingClientRect()
-      // a szám + „autó" a cellán belül (vízszintesen és függőlegesen)
       const szo = a.querySelector('.szo')
       const szoR = szo.getBoundingClientRect()
       if (sor.left < cr.left - 0.5 || szoR.right > cr.right + 0.5 || sor.bottom > cr.bottom + 0.5) kilog++
       if (szo.scrollWidth > szo.clientWidth + 1 || a.querySelector('.sor').scrollWidth > a.querySelector('.sor').clientWidth + 1) kilog++
-      // a „+" a szám fölött
       const pl = a.querySelector('.plusz')
       if (pl) { plusz++; if (pl.getBoundingClientRect().bottom <= sor.top + 2) pluszAlatt++ }
-      // egyik sáv sem lóg rá a számra
       const sorElem = c.closest('.honapsor')
       for (const s of sorElem.querySelectorAll('.honap-sav')) {
         const sr = s.getBoundingClientRect()

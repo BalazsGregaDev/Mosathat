@@ -1,4 +1,3 @@
-// v50, adatbázis: range_order() — a heti nézet a napi sorrendet kapja.
 import { adatbazis, tesztelo, ALK } from './_db.mjs'
 
 const db = await adatbazis({ demo: true })
@@ -9,7 +8,6 @@ await db.exec(`select set_config('app.uid','${ALK}',false)`)
 const ma = (await egy(`select current_date::text d`)).d
 const het = (await egy(`select (date_trunc('week', current_date))::date::text d`)).d
 
-// A napi sorrend a day_bookings() szerint
 const napi = async (d) => (await q(`select (x->>'id') id from day_bookings($1::date) x`, [d])).map((r) => r.id)
 const heti = async (d) => (await q(
   `select booking_id::text id from range_order($1::date, ($1::date + 6)) where day = $2::date order by sorrend`,

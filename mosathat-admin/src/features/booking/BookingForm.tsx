@@ -1,45 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useApp, useCatalog } from '../../state/AppContext'
 import BeferSor from './BeferSor'
 import { useBookingForm } from '../../state/useBookingForm'
 import { useMentetlen } from '../../state/useMentetlen'
-import { ft, idotartam, napRovidCim } from '../../lib/format'
+import { ft, hibaSzoveg, idotartam, napRovidCim } from '../../lib/format'
 import {
-  CATEGORY_LABEL, SCOPE_LABEL, type BookingScope, type BookingType,
-  type Extra, type LatestStart, type VehicleCategory,
+  CATEGORY_LABEL, EGYSEG, KATEGORIAK, SCOPE_LABEL, TERJEDELMEK, type BookingType,
+  type Extra, type LatestStart,
 } from '../../lib/types'
 import Sugo from '../common/Sugo'
 import IdoMezo from '../common/IdoMezo'
 import { CegValaszto, useCegEgyeztetes } from '../common/Ceg'
 
-const MERETEK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
-const TERJEDELEM: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
-
-// "Itt hagyja" elöl, mert ez a gyakoribb eset. „Több napos" gomb nincs:
-// azt a Viszi napja dönti el.
 const TIPUSOK: { id: BookingType; cimke: string }[] = [
   { id: 'LEADOS', cimke: 'Itt hagyja' },
   { id: 'VAROS', cimke: 'Megvárja' },
   { id: 'HOZOMVISZEM', cimke: 'Hozom-viszem' },
 ]
-
-// ---------------------------------------------------------------------------
-//  Időpont felvétele és módosítása — ugyanaz az űrlap.
-//
-//  A mezők sorrendje a telefonbeszélgetés sorrendje, nem esztétikai döntés.
-//  Legfelül a rendszám: a hívás első másodperceiben dől el, hogy ismerjük-e
-//  az autót. Ez a mező EGYBEN kereső is — nincs külön kereső doboz, amibe
-//  előbb be kellene írni ugyanazt. Ha van találat, egy koppintás kitölti a
-//  többi mezőt; ha nincs, a beírt rendszám ott marad, ahova való.
-//
-//  Ugyanígy keres a Név mező is, csak az a nevek közt. Ugyanaz a két betű
-//  mást jelent a kettőben: az „AB" a rendszámnál ABC-123, a névnél Abonyi.
-//
-//  Ami szándékosan NINCS itt: az „erősen szennyezett" felár és a fix felár.
-//  Telefonon nem látjuk az autót — ezek a munkalapra kerültek, ahol a kocsi
-//  már ott áll.
-// ---------------------------------------------------------------------------
 
 export default function BookingForm({
   nap,
@@ -50,34 +28,28 @@ export default function BookingForm({
   osztott,
 }: {
   nap: string
-  /** Ha meg van adva, szerkesztés. Ha nincs, új foglalás. */
   bookingId?: string | null
   onBezar: () => void
   onKesz: () => void
-  /** Az árlistát nyitó gombok. A héj adja át, mert ő tartja az állapotot. */
   arlistaGombok?: React.ReactNode
-  /** Nyitva az árlista: ilyenkor ez az ablak a bal oldalra húzódik. */
   osztott?: boolean
 }) {
   const { data, user } = useApp()
   const katalogus = useCatalog()
-  // A 'Befér-e?' sor egyelőre csak a fejlesztői fióknak (próba).
   const fejleszto = user?.role === 'SUPERADMIN'
   const {
     f, set, calc, menthetE, ment, mentes, hiba, setHiba, tolt, szerkesztes, szerzodeses,
     flottas, flottaDarab,
     talalatok, keres, keresMezo, keresoIras, keresoZar,
     valasztott, talalatValaszt, ezcKeri,
-  } = useBookingForm(true, nap, bookingId)
+  } = useBookingForm(nap, bookingId)
   const [cegAblak, cegEgyeztet] = useCegEgyeztetes()
+  const [kuld, setKuld] = useState(false)
+  const kuldRef = useRef(false)
 
-  // Ha bármit beírtak, egy véletlen oldalfrissítés (mobilon a lehúzás)
-  // ne vigye el szó nélkül. (A csomag nem számít: a Start alapból ott van.)
   useMentetlen(Boolean(f.name || f.plate || f.phone || f.ceg.nev
     || Object.keys(f.extras).length))
 
-  // A találatlista egy sora. Ugyanaz a rendszám és a név mező alatt, csak
-  // más keresésből — ezért egy helyen van megírva.
   const talalatLista = talalatok.length === 0 ? null : (
     <div className="talalatlista">
       {talalatok.map((h) => (
@@ -98,7 +70,6 @@ export default function BookingForm({
 
   const [sav, setSav] = useState<LatestStart[]>([])
   const [extrakNyitva, setExtrakNyitva] = useState(false)
-  // Telefonon a korábbi vásárlás alapból ne foglalja a helyet.
   const [elozmenyNyitva, setElozmenyNyitva] = useState(
     () => typeof window === 'undefined' || window.matchMedia('(min-width: 701px)').matches,
   )
@@ -109,7 +80,6 @@ export default function BookingForm({
     return () => window.removeEventListener('keydown', kezel)
   }, [onBezar])
 
-  // Szerkesztéskor nyitva legyenek az extrák, ha van választva.
   useEffect(() => {
     if (szerkesztes && Object.keys(f.extras).length > 0) setExtrakNyitva(true)
   }, [szerkesztes, f.extras])
@@ -130,7 +100,6 @@ export default function BookingForm({
     )
   }
 
-  // Belefér-e a munkaidőbe? Az ebédszünet-szabály az adatbázisból jön.
   useEffect(() => {
     if (f.bookingType !== 'VAROS' || !calc?.work_minutes) {
       setSav([])
@@ -170,20 +139,26 @@ export default function BookingForm({
   const valasztottExtrak = Object.keys(f.extras).length
 
   async function mentesGomb() {
-    // A beírt (nem kiválasztott) cégnevet előbb összevetjük a meglévőkkel:
-    // azonosnál csendben ahhoz kötjük, hasonlónál megkérdezzük.
-    let ceg = f.ceg
+    if (kuldRef.current) return
+    kuldRef.current = true
+    setKuld(true)
     try {
-      const e = await cegEgyeztet(f.ceg)
-      if (e === null) return          // meggondolta magát: marad az űrlapon
-      ceg = e
-      set('ceg', e)
-    } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
-      return
+      let ceg = f.ceg
+      try {
+        const e = await cegEgyeztet(f.ceg)
+        if (e === null) return
+        ceg = e
+        set('ceg', e)
+      } catch (e) {
+        setHiba(hibaSzoveg(e))
+        return
+      }
+      const id = await ment(ceg)
+      if (id) onKesz()
+    } finally {
+      kuldRef.current = false
+      setKuld(false)
     }
-    const id = await ment(ceg)
-    if (id) onKesz()
   }
 
   const viszi = f.pickUpDate && f.pickUpDate > f.date
@@ -196,8 +171,6 @@ export default function BookingForm({
         <div className="lap-fej">
           <h2>{szerkesztes ? 'Időpont módosítása' : 'Új időpont'}</h2>
           <span className="halk" style={{ fontSize: 'var(--m-sm)' }}>{napRovidCim(f.date)}</span>
-          {/* Az árlista innen is nyitható: amíg ez az ablak nyitva van, a
-              mögötte lévő fejléc nem kattintható. */}
           {arlistaGombok}
           <button className="bezar" onClick={onBezar} aria-label="Bezárás">×</button>
         </div>
@@ -205,9 +178,6 @@ export default function BookingForm({
         <div className="lap-torzs">
           {tolt && <div className="betolt">Betöltés…</div>}
 
-          {/* ---------- ISMERJÜK MÁR? — ügyfél és autó egy blokkban ----------
-              A rendszám és a név mező EGYBEN kereső. Nincs külön kereső doboz:
-              oda is ugyanezt kellett beírni, aztán még egyszer ide. */}
           <div className="szakasz">
             <div className="fej">
               {szerkesztes ? 'Ügyfél' : 'Ismerjük már?'}
@@ -222,7 +192,12 @@ export default function BookingForm({
                        disabled={flottaDarab > 0}
                        placeholder={flottaDarab > 0 ? 'utólag, autónként' : undefined}
                        onChange={(e) => keresoIras('RENDSZAM', e.target.value)}
-                       onKeyDown={(e) => e.key === 'Escape' && keresoZar()}
+                       onKeyDown={(e) => {
+                         if (e.key === 'Escape' && keresMezo === 'RENDSZAM' && talalatok.length > 0) {
+                           e.stopPropagation()
+                           keresoZar()
+                         }
+                       }}
                        autoFocus={!szerkesztes}
                        autoComplete="off" spellCheck={false} />
                 {keresMezo === 'RENDSZAM' && talalatLista}
@@ -231,7 +206,12 @@ export default function BookingForm({
                 <label htmlFor="nev">Név</label>
                 <input id="nev" className="beviteli" value={f.name}
                        onChange={(e) => keresoIras('NEV', e.target.value)}
-                       onKeyDown={(e) => e.key === 'Escape' && keresoZar()}
+                       onKeyDown={(e) => {
+                         if (e.key === 'Escape' && keresMezo === 'NEV' && talalatok.length > 0) {
+                           e.stopPropagation()
+                           keresoZar()
+                         }
+                       }}
                        autoComplete="off" />
                 {keresMezo === 'NEV' && talalatLista}
               </div>
@@ -249,8 +229,6 @@ export default function BookingForm({
               </div>
             </div>
 
-            {/* Flottás cég (a szerződésben „Flottás autók"): több autó egyszerre,
-                rendszám nélkül. Minden nyomással eggyel több autó aznapra. */}
             {flottas && !szerkesztes && (
               <div className="flotta-hozzaad">
                 <button type="button" className="btn" onClick={() => set('flottaDarab', flottaDarab + 1)}>
@@ -273,7 +251,6 @@ export default function BookingForm({
             )}
           </div>
 
-          {/* ---------- KORÁBBI VÁSÁRLÁS ---------- */}
           {valasztott?.utolso_csomag && (
             <div className="talalat">
               <button
@@ -295,18 +272,9 @@ export default function BookingForm({
             </div>
           )}
 
-          {/* ---------- MIKOR ----------
-              Közvetlenül az ügyfél (telefonszám, cég) alatt: telefonon ez a
-              második kérdés — „mikor hozná?" —, a jármű részletei ráérnek.
-              Hozza és Viszi, mindkettő nappal. Ha a Viszi későbbi napra esik,
-              a foglalás többnapos — és minden napján megjelenik a napi
-              nézetben. Megvárja esetén nincs Viszi: akkor viszi, amikor kész. */}
           {flottaDarab > 0 ? (
           <div className="szakasz">
             <div className="fej">Mikor</div>
-            {/* Flottás csoport: nap, típus, és EGY végső időpont — amikorra az
-                utolsó autónak is el kell készülnie (hozom-viszemnél vissza kell
-                érni vele). Hozza óra nincs: a csoport a nap elején áll. */}
             <div className="valaszto">
               {TIPUSOK.filter((t) => t.id !== 'VAROS').map((t) => (
                 <button key={t.id} type="button"
@@ -404,9 +372,6 @@ export default function BookingForm({
               </>
             )}
 
-            {/* Kérdőjeles: extra, külön választható. Az autót itt hagyják, de
-                csak feltételesen vállaltuk el — ha befér, megcsináljuk, ha
-                nem, nem. A nézetekben „???" jelzi a rendszám mellett. */}
             <div className="valaszto">
               <button type="button" className="kerdojel-gomb" aria-pressed={f.tentative}
                       onClick={() => set('tentative', !f.tentative)}>
@@ -423,7 +388,6 @@ export default function BookingForm({
               </div>
             )}
 
-            {/* Befér-e a nap beosztásába (fejlesztői próba, lásd BeferSor.tsx) */}
             {fejleszto && (
               <BeferSor datum={f.date} tipus={f.bookingType} kezdes={f.startTime}
                         hozza={f.dropOffTime} visziNap={f.pickUpDate} viszi={f.pickUpTime}
@@ -442,13 +406,9 @@ export default function BookingForm({
           </div>
           )}
 
-          {/* ---------- JÁRMŰ ---------- */}
           <div className="szakasz">
             <div className="fej">Jármű</div>
 
-            {/* Csak szerződéses cégnél: a cég autója (céges ár), vagy a dolgozó
-                saját autója (magán ár). Az autó megjegyzi, legközelebb már
-                ezzel nyílik. */}
             {szerzodeses && (
               <div className="mezo">
                 <span className="cimke">Jármű típus</span>
@@ -471,15 +431,13 @@ export default function BookingForm({
             )}
 
             <div className="valaszto">
-              {MERETEK.map((m) => (
+              {KATEGORIAK.map((m) => (
                 <button key={m} type="button" aria-pressed={f.category === m}
                         onClick={() => set('category', m)}>
                   {CATEGORY_LABEL[m]}
                 </button>
               ))}
             </div>
-            {/* Az ülések száma kikerült: a Full Service öt ülésig szól, az
-                ennél nagyobb autó kisbusz — a méret már megmondja. */}
             <div className="sor-2">
               <div className="mezo">
                 <label htmlFor="marka">Márka</label>
@@ -494,21 +452,14 @@ export default function BookingForm({
             </div>
           </div>
 
-          {/* ---------- CSOMAG ---------- */}
           <div className="szakasz">
             <div className="fej">Csomag</div>
             <div className="csomagok">
               {katalogus.packages.map((p) => {
                 const ar = csomagAr(p.id)
                 const kivalasztott = f.packageId === p.id
-                // Szerződéses cégnél minden kártyán a cég ára áll (a választott
-                // méretre és Flotta / Saját fajtára) — nem a listaár, ami
-                // telefonban félrevezetne. Ahol nincs megállapodott ár, ott a
-                // listaár marad, és a foglalás is azon megy.
                 const szerzAr = calc?.contract_prices[p.id]
                 return (
-                  // Csomag nélkül nem lehet foglalni: a kiválasztottra kattintva
-                  // nem vész el a választás, csak egy másikra váltani lehet.
                   <button key={p.id} type="button" className="csomag" aria-label={p.name}
                           aria-pressed={kivalasztott}
                           onClick={() => set('packageId', p.id)}>
@@ -552,7 +503,7 @@ export default function BookingForm({
             )}
 
             <div className="valaszto">
-              {TERJEDELEM.map((s) => (
+              {TERJEDELMEK.map((s) => (
                 <button key={s} type="button" aria-pressed={f.scope === s} onClick={() => set('scope', s)}>
                   {SCOPE_LABEL[s]}
                 </button>
@@ -570,14 +521,12 @@ export default function BookingForm({
             )}
           </div>
 
-          {/* ---------- MEGJEGYZÉS ---------- */}
           <div className="szakasz">
             <div className="fej">Megjegyzés</div>
             <textarea className="beviteli" value={f.notes}
                       onChange={(e) => set('notes', e.target.value)} />
           </div>
 
-          {/* ---------- EGYÉB SZOLGÁLTATÁSOK — legalul, összecsukva ---------- */}
           <div className="szakasz">
             <button type="button" className="osszecsuk" onClick={() => setExtrakNyitva((v) => !v)}>
               <span className="cim">Egyéb szolgáltatások</span>
@@ -592,8 +541,6 @@ export default function BookingForm({
                   const darabos = e.price_unit === 'ULES' || e.price_unit === 'AJTO' || e.price_unit === 'LITER'
                   return (
                     <div key={e.id}>
-                      {/* A súgó a címkén KÍVÜL van: ha belül lenne, a leírás
-                          megnyitása egyben fel is venné a szolgáltatást. */}
                       <div className="extra-sav">
                         <label className="extra" data-aktiv={aktiv}>
                           <input type="checkbox" checked={aktiv}
@@ -604,11 +551,7 @@ export default function BookingForm({
                               ? 'árajánlat'
                               : e.price_huf == null
                                 ? 'ár hiányzik'
-                                : `${ft(e.price_huf)}${
-                                    e.price_unit === 'ULES' ? ' / ülés'
-                                    : e.price_unit === 'AJTO' ? ' / ajtó'
-                                    : e.price_unit === 'LITER' ? ' / liter' : ''
-                                  }`}
+                                : `${ft(e.price_huf)}${darabos ? ` / ${EGYSEG[e.price_unit]}` : ''}`}
                           </span>
                         </label>
                         {e.description?.trim() && (
@@ -628,12 +571,8 @@ export default function BookingForm({
                               <span className="magyarazat">vagy</span>
                             </>
                           )}
-                          <input className="darab" type="number" inputMode="numeric"
-                                 min={1} max={9} value={f.extras[e.id]}
-                                 onChange={(ev) => darabAllit(e.id, Number(ev.target.value))} />
-                          <span className="magyarazat">
-                            {e.price_unit === 'ULES' ? 'ülés' : e.price_unit === 'AJTO' ? 'ajtó' : 'liter'}
-                          </span>
+                          <DarabMezo ertek={f.extras[e.id]} onValt={(n) => darabAllit(e.id, n)} />
+                          <span className="magyarazat">{EGYSEG[e.price_unit]}</span>
                         </div>
                       )}
                     </div>
@@ -679,10 +618,10 @@ export default function BookingForm({
           </div>
 
           <div className="gombok">
-            <button className="btn" onClick={onBezar} disabled={mentes}>Mégse</button>
+            <button className="btn" onClick={onBezar} disabled={mentes || kuld}>Mégse</button>
             <button className="btn btn-fo" onClick={() => void mentesGomb()}
-                    disabled={!menthetE || mentes}>
-              {mentes ? 'Mentés…' : szerkesztes ? 'Módosítás mentése'
+                    disabled={!menthetE || mentes || kuld}>
+              {mentes || kuld ? 'Mentés…' : szerkesztes ? 'Módosítás mentése'
                 : flottaDarab > 0 ? `${flottaDarab} autó rögzítése` : 'Foglalás rögzítése'}
             </button>
           </div>
@@ -690,5 +629,21 @@ export default function BookingForm({
       </div>
       {cegAblak}
     </div>
+  )
+}
+
+function DarabMezo({ ertek, onValt }: { ertek: number; onValt: (n: number) => void }) {
+  const [szoveg, setSzoveg] = useState(String(ertek))
+  const [alap, setAlap] = useState(ertek)
+  if (ertek !== alap) { setAlap(ertek); setSzoveg(String(ertek)) }
+  return (
+    <input className="darab" type="number" inputMode="numeric" min={1} max={9} value={szoveg}
+           onChange={(ev) => {
+             const s = ev.target.value
+             setSzoveg(s)
+             const n = Number(s)
+             if (s !== '' && Number.isInteger(n) && n >= 1 && n <= 9) onValt(n)
+           }}
+           onBlur={() => setSzoveg(String(ertek))} />
   )
 }

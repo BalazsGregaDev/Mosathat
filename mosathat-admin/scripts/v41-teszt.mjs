@@ -1,16 +1,3 @@
-// v41 ellenőrzése Playwrighttal: fordulónap a szerződésben.
-//
-// Futtatás:  npm run dev -- --port 5180   (másik ablakban)
-//            node scripts/v41-teszt.mjs
-//
-// Amit néz:
-//   1. Szerződés űrlap: Igazolólap fordulónapja (1–28), alatta a magyarázat;
-//      mentés után a kártyán az időszak.
-//   2. Igazolólap: a mai napot tartalmazó időszak nyílik (15-i fordulónál a
-//      15-étől 14-éig tartó), kiírva; új sor oda kerül; a nyíl a következő
-//      időszakra lép; a Word fájl neve az időszak első napjával.
-//   3. Fordulónap-váltás kitöltött, nyitott lap mellett: érthető hibaüzenet.
-//   4. Igazolólap menü: a cég sorában az időszak.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -32,6 +19,12 @@ async function menu(p, nev) {
   await p.locator('aside.oldalsav button').filter({ hasText: nev }).first().click()
   await p.waitForTimeout(1500)
 }
+async function nyit(k) {
+  if ((await k.getAttribute('data-nyitva')) !== 'true') {
+    await k.locator('.kartya-nyito').click()
+    await k.page().waitForTimeout(300)
+  }
+}
 const ket = (n) => String(n).padStart(2, '0')
 const rovid = new Intl.DateTimeFormat('hu-HU', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 const nap = (d) => rovid.format(new Date(`${d}T12:00:00Z`))
@@ -43,7 +36,6 @@ p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); 
 await belep(p)
 const ma = await p.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest' }).format(new Date()))
 
-// A mai napot tartalmazó 15-i időszak és a következő
 let ev = Number(ma.slice(0, 4)), ho = Number(ma.slice(5, 7))
 if (Number(ma.slice(8, 10)) < 15) { ho--; if (ho === 0) { ho = 12; ev-- } }
 const kezd = `${ev}-${ket(ho)}-15`
@@ -55,8 +47,7 @@ const kovVeg = new Date(Date.UTC(ev, ho + 1, 14)).toISOString().slice(0, 10)
 console.log('=== 1) Szerződés: fordulónap ===\n')
 await menu(p, 'Cégek és bérletesek')
 const kartya = p.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).first()
-await kartya.locator('.kartya-nyito').click()
-await p.waitForTimeout(300)
+await nyit(kartya)
 ok('a kártyán: naptári hónap (alap)', true,
   (await kartya.locator('.adatsor').filter({ hasText: 'Igazolólap időszaka' }).innerText()).includes('naptári hónap'))
 await kartya.getByRole('button', { name: 'Szerkesztés' }).click()
@@ -72,8 +63,7 @@ await p.waitForTimeout(800)
   await p.waitForTimeout(1500)
   ok('mentve, az űrlap bezárult', 0, await p.locator('[aria-label="Szerződés"]').count())
 }
-await kartya.locator('.kartya-nyito').click()
-await p.waitForTimeout(300)
+await nyit(kartya)
 ok('a kártyán az időszak', true,
   (await kartya.locator('.adatsor').filter({ hasText: 'Igazolólap időszaka' }).innerText())
     .includes('15. naptól a következő hónap 14. napjáig'))
@@ -115,11 +105,7 @@ const lap = p.locator('.lap-igazolo')
 }
 
 console.log('\n=== 3) Fordulónap-váltás kitöltött, nyitott lap mellett ===\n')
-await kartya.locator('.kartya-nyito').click().catch(() => {})
-await p.waitForTimeout(300)
-if (!(await kartya.getByRole('button', { name: 'Szerkesztés' }).isVisible())) {
-  await kartya.locator('.kartya-nyito').click(); await p.waitForTimeout(300)
-}
+await nyit(kartya)
 await kartya.getByRole('button', { name: 'Szerkesztés' }).click()
 await p.waitForTimeout(800)
 {

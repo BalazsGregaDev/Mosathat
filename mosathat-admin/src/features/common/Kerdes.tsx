@@ -1,37 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-// ---------------------------------------------------------------------------
-//  Megerősítő kérdés: „Biztosan elkészült?"  [Nem]  [Igen]
-//
-//  Miért nem a böngésző saját ablaka (window.confirm):
-//
-//    • telefonon apró, a böngésző címével kezdődik („localhost üzenete"),
-//      és a gombjai kisebbek, mint amit vizes ujjal el lehet találni
-//    • nem lehet megmondani, melyik gomb mit jelent — mindig OK / Mégse
-//    • egyes böngészők egy idő után felajánlják, hogy „ne mutassa többet"
-//      az oldal ablakait — onnantól a kérdés csendben elmarad
-//
-//  Használat egy komponensben:
-//
-//      const [kerdesAblak, kerdez] = useKerdes()
-//      …
-//      if (!(await kerdez({ cim: 'Biztosan elkészült?' }))) return
-//      …
-//      return <>…{kerdesAblak}</>
-//
-//  A kérdés egy ígéretet (Promise) ad vissza: igaz, ha Igen, hamis, ha Nem
-//  vagy mellékattintás / Escape. Így a hívó kód sorban olvasható marad.
-// ---------------------------------------------------------------------------
-
 export interface KerdesBeallitas {
-  /** A kérdés maga. Rövid: „Biztosan elkészült?" */
   cim: string
-  /** Egy-két mondat alatta, ha kell. */
   szoveg?: string
   igen?: string
   nem?: string
-  /** Törlésnél: az Igen gomb a „veszélyes" színt kapja. */
   veszelyes?: boolean
 }
 
@@ -40,7 +14,6 @@ export function useKerdes(): [React.ReactNode, (k: KerdesBeallitas) => Promise<b
   const valasz = useRef<((v: boolean) => void) | null>(null)
 
   const kerdez = useCallback((k: KerdesBeallitas) => {
-    // Ha egy előző kérdés még nyitva lenne, azt nemmel zárjuk le.
     valasz.current?.(false)
     setKerdes(k)
     return new Promise<boolean>((resolve) => { valasz.current = resolve })
@@ -52,9 +25,6 @@ export function useKerdes(): [React.ReactNode, (k: KerdesBeallitas) => Promise<b
     setKerdes(null)
   }, [])
 
-  // A dokumentum gyökerébe kerül, nem oda, ahol a hívó áll: így egy másik
-  // ablak (munkalap) belsejéből is felül van, és annak a háttérre-kattintás
-  // kezelője sem kapja meg az itteni kattintásokat.
   const ablak = kerdes
     ? createPortal(<KerdesAblak k={kerdes} onValasz={lezar} />, document.body)
     : null
@@ -64,8 +34,6 @@ export function useKerdes(): [React.ReactNode, (k: KerdesBeallitas) => Promise<b
 function KerdesAblak({ k, onValasz }: { k: KerdesBeallitas; onValasz: (v: boolean) => void }) {
   const igenGomb = useRef<HTMLButtonElement>(null)
 
-  // Escape = Nem. A fókusz az Igen gombra kerül, így billentyűzetről egy
-  // Enter elég — telefonon ez nem hoz fel semmit, csak kijelöli a gombot.
   useEffect(() => {
     igenGomb.current?.focus()
     const f = (e: KeyboardEvent) => {

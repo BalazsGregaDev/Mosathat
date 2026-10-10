@@ -1,12 +1,3 @@
-// Az ügyfélszerkesztési jog kipróbálása igazi PostgreSQL-en.
-//
-// Amit ellenőriz:
-//   – alkalmazott alapból nem vehet fel és nem írhat át ügyfelet
-//   – a szerepkör kapcsolója egyszerre mozdítja az összes alkalmazottat
-//   – a fiók szintű döntés felülírja a szerepkörét, és visszavonható
-//   – szerepkörváltásnál a fiók szintű döntés elesik
-//   – a tulajdonos nem nyúlhat a fejlesztői szinthez
-//   – az ügyfél felvétele figyelmeztet az ismétlődő telefonszámra
 import { PGlite } from '@electric-sql/pglite'
 import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -60,7 +51,6 @@ function ok(mit, varjuk, kaptuk) {
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(kaptuk)} (várt: ${JSON.stringify(varjuk)})`}`)
 }
 
-/** Lefuttat egy utasítást, és a hibaüzenetet adja vissza — vagy null-t, ha lefutott. */
 async function futtat(sql, params = []) {
   try {
     const { rows } = await db.query(sql, params)
@@ -264,8 +254,6 @@ await belep(TULAJ)
 
 console.log('\n=== 11) bérlet és szerződés: ugyanez a jog ===\n')
 {
-  // Külön ügyfél a bérletnek és a szerződésnek: egy szerződéses cég
-  // szándékosan nem kaphat bérletet is, és most nem azt vizsgáljuk.
   await belep(TULAJ)
   const [{ id: pkg }] = (await db.query(`select id from packages where code='PREMIUM'`)).rows
   const bUgyfel = (await ujUgyfel('Bérletes Bea', '+36 20 300 4001')).rows[0].id
@@ -281,7 +269,6 @@ console.log('\n=== 11) bérlet és szerződés: ugyanez a jog ===\n')
     customer_id: szUgyfel, name: 'Teszt szerződés', prices: [],
   })])
 
-  // A 7. pontban tulajdonos lett belőle; a visszaminősítés a fejlesztő dolga.
   await belep(FEJL)
   await db.query(`select set_staff($1::jsonb)`,
     [JSON.stringify({ id: ALK, role: 'STAFF', can_edit_customers: null })])
@@ -298,8 +285,6 @@ console.log('\n=== 11) bérlet és szerződés: ugyanez a jog ===\n')
   ok('a tulajdonosnak megy a bérlet', true, !!b.rows?.[0]?.id)
   ok('és a szerződés is', true, !!(await szerzodes()).rows?.[0]?.id)
 
-  // A bérlet levonása napi munka: azt az alkalmazottnak is tudnia kell. Egy
-  // bérletes autó foglalását fel kell tudnia venni és le is tudnia zárni.
   await belep(ALK)
   const fogl = await futtat(`select create_booking($1::jsonb) as id`, [JSON.stringify({
     customer_id: bUgyfel, vehicle_id: bAuto, category: 'SZEMELYAUTO',

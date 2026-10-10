@@ -1,18 +1,3 @@
-// v46 ellenőrzése Playwrighttal: flottás autók.
-//
-// Futtatás:  npm run dev -- --port 5180   (másik ablakban)
-//            node scripts/v46-teszt.mjs
-//
-// Amit néz:
-//   1. Szerződés: „Flottás autók" csúszka; a kártyán „Flottás autók: igen".
-//   2. Új időpont: a cég kiválasztása után „+ Autó hozzáadása"; többször
-//      nyomva nő a darabszám; a rendszám mező tiltva; a Mikor csak nap +
-//      végső idő; az ár a darabszám szerint.
-//   3. Napi nézet: egy kártya („AUTÓ TRANS KFT. 3 darab"), a nap elején,
-//      autónként címke.
-//   4. A csoport munkalapja: közös adatok egyszer, autónként sor; rendszám
-//      utólag (a kártyán is megjelenik); még egy autó; állapot autónként
-//      (Megérkezett); méret autónként; részletek (egy autó munkalapja).
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -49,7 +34,9 @@ await menu(p, 'Cégek és bérletesek')
   ok('a csúszka alapból ki', 'false', await cs.getAttribute('aria-checked'))
   await cs.click()
   await urlap.getByRole('button', { name: 'Mentés' }).click(); await p.waitForTimeout(1500)
-  await kartya.locator('.kartya-nyito').click(); await p.waitForTimeout(300)
+  if ((await kartya.getAttribute('data-nyitva')) !== 'true') {
+    await kartya.locator('.kartya-nyito').click(); await p.waitForTimeout(300)
+  }
   ok('a kártyán: Flottás autók igen', true,
     (await kartya.locator('.adatsor').filter({ hasText: 'Flottás autók' }).innerText()).includes('igen'))
 }
@@ -104,23 +91,19 @@ const ml = p.locator('[aria-label="Flottás csoport"]')
   ok('a munkalap nyílt, 3 autósor', 3, await ml.locator('.flotta-sor').count())
   ok('közös: a végső idő egyszer', 1, await ml.getByRole('button', { name: 'Végső időpont' }).count()
     || await ml.locator('input[aria-label="Végső időpont"]').count())
-  // Rendszám utólag
   const r1 = ml.getByLabel('1. autó rendszáma')
   await r1.fill('rai-101'); await r1.press('Enter')
   await p.waitForTimeout(1500)
   ok('a rendszám mentve, nagybetűvel', 'RAI-101', await ml.getByLabel('1. autó rendszáma').inputValue())
-  // Méret autónként
   await ml.getByLabel('2. autó mérete').selectOption('SUV')
   await p.waitForTimeout(1500)
   ok('a 2. autó SUV, az 1. marad', ['SUV', 'SZEMELYAUTO'],
     [await ml.getByLabel('2. autó mérete').inputValue(), await ml.getByLabel('1. autó mérete').inputValue()])
-  // v47: állapotgombok helyett léptető
   ok('autósorokon nincs Megérkezett gomb', 0, await ml.locator('.flotta-sor').getByRole('button', { name: 'Megérkezett' }).count())
   ok('a léptető: 0 / 3 kész, most az 1. autó', true,
     (await ml.locator('.flotta-lepteto').innerText()).includes('0 / 3') && (await ml.locator('.flotta-lepteto').innerText()).includes('RAI-101'))
   await ml.locator('.flotta-lepteto').getByRole('button', { name: 'Kész, jöhet a következő' }).click()
   await p.waitForTimeout(1500)
-  // Szerződéses cég: megnyílt az igazolólap sora — most bezárjuk (nem kötelező)
   ok('kész autóhoz megnyílt az igazolólap sora', 1, await p.locator('[aria-label="Igazolólap sora"]').count())
   await p.locator('[aria-label="Igazolólap sora"]').getByRole('button', { name: 'Mégse' }).click()
   await p.waitForTimeout(1200)
@@ -132,12 +115,10 @@ const ml = p.locator('[aria-label="Flottás csoport"]')
   await ml.locator('.flotta-lepteto').getByRole('button', { name: 'Vissza egy autót' }).click()
   await p.waitForTimeout(1200)
   ok('−: vissza 0 / 3-ra', true, (await ml.locator('.flotta-lepteto').innerText()).includes('0 / 3'))
-  // Még egy autó
   await ml.getByRole('button', { name: '+ Autó hozzáadása' }).click()
   await p.waitForTimeout(1500)
   ok('+ autó: 4 sor', 4, await ml.locator('.flotta-sor').count())
   ok('a fejlécben 4 darab', true, (await ml.locator('.lap-fej').innerText()).includes('4 darab'))
-  // Részletek: egy autó munkalapja
   await ml.locator('.flotta-sor').first().getByRole('button', { name: 'Részletek' }).click()
   await p.waitForTimeout(1500)
   ok('egy autó munkalapja nyílik (a rendszámával)', true,

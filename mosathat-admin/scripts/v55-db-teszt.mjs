@@ -1,5 +1,3 @@
-// v55, adatbázis: a többnapos autók napi terhe (pipák szerint), a negyedórás
-// helyek száma (day_lanes), a Start munkaideje, és a day_bookings új mezői.
 import { adatbazis, tesztelo, ALK } from './_db.mjs'
 
 const db = await adatbazis()
@@ -13,7 +11,6 @@ const munkanap = async (d) => (await egy(`select munkanap($1::date) m`, [d])).m
 const terhe = async (id, d) => Number((await egy(
   `select foglalas_napi_terhe(b, $2::date) t from bookings b where b.id = $1`, [id, d])).t)
 const kozel = (a, b) => Math.abs(a - b) < 0.01
-// v57: a maradék a még elérhető munkaidő arányában oszlik el
 const eler = async (id, d) => Number((await egy(
   `select elerheto_perc(b, $2::date) e from bookings b where b.id = $1`, [id, d])).e)
 
@@ -65,14 +62,13 @@ console.log('\n=== 4) elmúlt napok: csak ami aznap pipálva lett ===\n')
 const b = await tobbnapos(await nap(-3), await nap(3), 'TOB-502')
 const bp = await q(`select fp.task_id, fp.perc::float p from feladat_percek($1) fp`, [b])
 await q(`select set_booking_status($1, 'ARRIVED')`, [b])
-// egy pontot tegnapelőtt pipáltak
 await q(`update booking_tasks set done = true, done_at = now() - interval '2 days' where id = $1`, [bp[0].task_id])
 t.ok('tegnapelőtt: a kipipált pont ideje', true, kozel(await terhe(b, await nap(-2)), bp[0].p))
 t.ok('három napja (nem pipáltak): nulla', 0, await terhe(b, await nap(-3)))
 t.ok('tegnap (nem pipáltak): nulla', 0, await terhe(b, await nap(-1)))
 
 console.log('\n=== 5) negyedórás helyek ===\n')
-const sz = (await egy(`select (date_trunc('week', current_date) + interval '9 days')::date::text d`)).d  // jövő szerda
+const sz = (await egy(`select (date_trunc('week', current_date) + interval '9 days')::date::text d`)).d
 const sav = await q(`select starts::text s, ends::text e, lanes from day_lanes($1::date)`, [sz])
 t.ok('negyedórák a munkaidőben', true, sav.length > 20 && sav.every((x) => x.lanes === 2))
 await q(`select set_absence($1::jsonb)`, [JSON.stringify({ day: sz, kind: 'KORABBAN_TAVOZIK', starts: '14:00' })])

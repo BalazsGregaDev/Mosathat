@@ -1,4 +1,3 @@
-// v56, adatbázis: online foglalási kérés (online_foglalas).
 import { adatbazis, tesztelo, FEJL } from './_db.mjs'
 
 const db = await adatbazis()
@@ -8,7 +7,6 @@ const egy = async (sql, p = []) => (await q(sql, p))[0]
 const hiba = async (sql, p = []) => { try { await q(sql, p); return null } catch (e) { return e.message } }
 await db.exec(`select set_config('app.uid','${FEJL}',false)`)
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
-// a jövő hét szerdája: biztosan munkanap, és holnapnál később
 const szerda = (await egy(`select (date_trunc('week', current_date) + interval '9 days')::date::text d`)).d
 const ma = (await egy(`select current_date::text d`)).d
 

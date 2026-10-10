@@ -101,11 +101,15 @@ kapcsoló mondja meg a CLI-nek, hogy a `supabase/` mappa eggyel feljebb
 van — ez már bele van építve a scriptekbe.
 
 ```bash
-npx supabase login          # egyszer, böngészőben bejelentkezel
-npm run db:link             # kiválasztod a projektet a listából
-npm run db:status           # mi futott le már, mi hiányzik
-npm run db:push             # a hiányzók lefuttatása
+npx supabase login
+npm run db:link
+npm run db:status
+npm run db:push
 ```
+
+Sorban: egyszer bejelentkezel a böngészőben, kiválasztod a projektet a
+listából, megnézed, mi futott le már és mi hiányzik, végül lefuttatod a
+hiányzókat.
 
 Több autókozmetikánál ugyanez megy projektenként: `db:link` a másikra, majd
 `db:push`. Ezért kell, hogy minden séma-változás fájlként létezzen.
@@ -171,20 +175,36 @@ Ha holnap kiderül, hogy mégis másik arculat kell, az az egy fájl íródik
 **Oxlint** (Rust-alapú, az ESLint helyett). Futtatás:
 
 ```bash
-npm run lint         # ellenőrzés
-npm run lint:fix     # ami automatikusan javítható
+npm run lint
+npm run lint:fix
 ```
+
+Az első ellenőriz, a második kijavítja, ami automatikusan javítható.
 
 A `npm run build` is lefuttatja: ami `correctness` hiba, az nem mehet ki.
 
-A beállítás a `.oxlintrc.json`-ban van, soronként megmagyarázva, hogy
-melyik szabály miért van ki- vagy bekapcsolva. A rövid indoklás: az
-alapértelmezett teljes szabálykészlet 90%-ban zajt ad ennél a projektnél
-(pl. `react-in-jsx-scope`, ami a Vite automatikus JSX-fordítója mellett
-tárgytalan), és egy linter, amit senki nem néz meg, rosszabb a semminél.
+A beállítás a `.oxlintrc.json`-ban van. A kódban nincs komment, ezért a
+szabályok indoklása itt áll:
 
-Jelenleg 0 hiba és 9 figyelmeztetés van. A figyelmeztetések szándékosan
-maradtak benne — dokumentált, halasztott döntések, nem elfelejtett munka.
+- `correctness`: ami majdnem biztosan hiba, ez megállítja a buildet.
+  `suspicious`: gyanús, de lehet szándékos, csak figyelmeztet.
+- `react/react-in-jsx-scope` ki: a Vite automatikus JSX-fordítója mellett
+  nem kell `import React` a fájlok tetejére.
+- `import/no-unassigned-import` ki: a `main.tsx` a CSS-fájlokat értékadás
+  nélkül importálja, Vite-ban így kell.
+- `oxc/no-map-spread` ki: mikro-optimalizálás, rövid listáknál mérhetetlen,
+  a kódot viszont nehezebben olvashatóvá teszi.
+- `react/set-state-in-effect` csak figyelmeztet: néhány helyen szándékos
+  (például az űrlap kiürítése nyitáskor).
+- `jsx-a11y/control-has-associated-label` hiba, de a `td` és `th` kivétel:
+  a cellában lévő saját mezőkomponens ad aria-label-t, amit a statikus
+  elemző nem lát.
+- `jsx-a11y/prefer-tag-over-role` csak figyelmeztet: a natív `<dialog>`
+  jobb lenne (fókuszcsapda, Esc), de az külön átalakítás.
+
+A teljes szabálykészlet 90%-ban zajt adna ennél a projektnél, és egy linter,
+amit senki nem néz meg, rosszabb a semminél. Jelenleg 0 hiba van; a
+figyelmeztetések nagy része a fenti két halasztott témából jön.
 
 ## Ami már működik
 

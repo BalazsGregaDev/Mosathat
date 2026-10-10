@@ -1,63 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { useApp, useCatalog } from '../../state/AppContext'
+import { useApp, useRevizio, useCatalog } from '../../state/AppContext'
 import { napBeosztasBetolt, type NapBeosztas } from '../../state/napBeosztas'
-import { napAllapot, ora, type Lehetoseg, type NapAllapot, type TiltottSav } from '../../lib/befer'
-import { ft, hetHetfoje, idotartam, maStr, napCim, napokRovid, napPlusz } from '../../lib/format'
+import { napAllapot, type Lehetoseg, type NapAllapot, type TiltottSav } from '../../lib/befer'
+import {
+  ft, hetHetfoje, hibaSzoveg, idotartam, maStr, napCim, napokRovid, napPlusz, percIdo, percOra,
+} from '../../lib/format'
 import {
   CATEGORY_LABEL, SCOPE_LABEL,
   type BookingScope, type Quote, type VehicleCategory,
 } from '../../lib/types'
-
-// ---------------------------------------------------------------------------
-//  Időpontfoglalás — a publikus oldal foglalási modulja, próbaüzemben
-//
-//  Ez kerül majd a weboldalra („Foglalás" szekció). Amíg nem tudjuk, hogy
-//  fog kinézni a publikus oldal, itt él, a fejlesztői fiók menüjében: minden
-//  kipróbálható, és amit beküldünk, VALÓDI kérésként jelenik meg a napi
-//  nézetben („Online kérés" — Visszaigazol / Elutasít).
-//
-//  A lépések, ahogy az ügyfél látja:
-//
-//    1. Milyen autó          Személyautó / SUV / Kisbusz
-//    2. Csomag               Start / Premium / Elit — az árral
-//    3. Mit                  Teljes / Csak kívül / Csak belül
-//    4. Extrák               amik online is foglalhatók (fix áruak)
-//    5. Megvárja / Itt hagyja
-//    6. Nap                  naptár: szabad / kevés hely / tele / zárva
-//    7. Időpont              megvárja: kezdés; itt hagyja: mikor hozza
-//    8. Adatok, összegzés, küldés
-//
-//  A naptár színe és a választható időpontok a beosztásból jönnek
-//  (lib/befer.ts): ugyanaz a számítás, mint a napi nézet idővonalán. Csak
-//  olyat lehet kérni, ami befér.
-//
-//  Szabályok (egyelőre itt rögzítve, később a Beállításokba):
-//    - legkorábban holnapra, legfeljebb 8 hétre előre
-//    - csak egynapos „megvárja" és „itt hagyja" (a többnapos és a
-//      hozom-viszem telefonon)
-//    - csak fix áras extrák (az árajánlatosak telefonon)
-//    - a legkorábbi felajánlott időpont 9:00
-//    - ebédszünet: 11:15 és 12:45 között nem kínálunk kezdést / hozást
-// ---------------------------------------------------------------------------
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
 const TERJEDELMEK: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
 const HETEK_OLDALANKENT = 2
 const LEGTOBB_HET = 8
 const HET_NAPJAI = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo']
-/**
- * Nem kínált időpontok: 9:00 előtt (a legkorábbi felajánlott időpont 9:00),
- * és az ebédszünet (11:15–12:45, a két végével együtt).
- */
 const EBED: TiltottSav[] = [
   { tol: 0, ig: 9 * 60 - 1 },
   { tol: 11 * 60 + 15, ig: 12 * 60 + 45 },
 ]
-/**
- * A műhely telefonszáma (késés esetén ezt hívják). Ideiglenes: a valódi
- * számot ide kell beírni — később a Beállításokból jön.
- */
 const UZLET_TELEFON = '+36 __ ___ ____'
 
 type Tipus = 'VAROS' | 'LEADOS'
@@ -78,21 +40,15 @@ const ALLAPOT_NEV: Record<NapAllapot, string> = {
   szabad: 'Szabad', keves: 'Kevés hely', tele: 'Tele', zarva: 'Zárva',
 }
 
-/** 495 → "08:15" (az adatbázisnak) */
-function hhmm(perc: number): string {
-  return `${String(Math.floor(perc / 60)).padStart(2, '0')}:${String(perc % 60).padStart(2, '0')}`
-}
-
 export default function FoglalasModul({ onNapiNezet }: {
-  /** A sikeres kérés után: ugrás a napi nézetre (próbához). */
   onNapiNezet?: (nap: string) => void
 }) {
-  const { data, revision, refresh } = useApp()
+  const { data, refresh } = useApp()
+  const revision = useRevizio()
   const katalogus = useCatalog()
   const holnap = napPlusz(maStr(), 1)
   const utolsoNap = napPlusz(holnap, LEGTOBB_HET * 7)
 
-  // --- a választások ---------------------------------------------------------
   const [kat, setKat] = useState<VehicleCategory>('SZEMELYAUTO')
   const [csomagId, setCsomagId] = useState<string | null>(null)
   const [scope, setScope] = useState<BookingScope>('TELJES')
@@ -118,7 +74,6 @@ export default function FoglalasModul({ onNapiNezet }: {
     const a = ar(pid, s)
     return Boolean(a && a.price_huf != null && !a.requires_quote)
   }
-  // Online csak a fix áras, darabra / alkalomra szóló extrák.
   const onlineExtrak = useMemo(
     () => katalogus.extras
       .filter((e) => e.active && e.price_huf != null && !e.requires_quote
@@ -127,27 +82,25 @@ export default function FoglalasModul({ onNapiNezet }: {
     [katalogus.extras],
   )
 
-  // Ha a választott terjedelem ennél a csomagnál / méretnél nem foglalható,
-  // a teljes számít (a választás megmarad, ha visszavált olyanra, ahol van).
   const sc: BookingScope = csomagId && !foglalhato(csomagId, scope) ? 'TELJES' : scope
 
-  // --- az ár és a munkaidő (ugyanaz az árazás, mint a foglalásnál) ------------
   const [ajanlat, setAjanlat] = useState<Quote | null>(null)
+  const [ajanlatHiba, setAjanlatHiba] = useState<string | null>(null)
   const extraLista = useMemo(() => [...extrak].map((id) => ({ extra_id: id, quantity: 1 })), [extrak])
   useEffect(() => {
-    if (!csomagId) { setAjanlat(null); return }
+    if (!csomagId) { setAjanlat(null); setAjanlatHiba(null); return }
     let el = true
     data.quoteBooking({
       package_id: csomagId, category: kat, scope: sc, full_service: false, extras: extraLista,
       surcharge_pct: 0, surcharge_fix: 0, booking_type: tipus ?? 'LEADOS',
       service_date: nap ?? holnap, company_id: null, company_name: null,
       customer_id: null, vehicle_id: null, contract_kind: null,
-    }).then((q) => { if (el) setAjanlat(q) }).catch(() => { if (el) setAjanlat(null) })
+    }).then((q) => { if (el) { setAjanlat(q); setAjanlatHiba(null) } })
+      .catch((e) => { if (el) { setAjanlat(null); setAjanlatHiba(hibaSzoveg(e)) } })
     return () => { el = false }
   }, [data, csomagId, kat, sc, extraLista, tipus, nap, holnap])
   const perc = ajanlat?.work_minutes ?? null
 
-  // --- a naptár: két hét oldalanként, a beosztásból számolt állapottal ---------
   const elsoHetfo = napPlusz(hetHetfoje(holnap), oldal * HETEK_OLDALANKENT * 7)
   const napok = useMemo(() => {
     const ki: string[] = []
@@ -157,17 +110,18 @@ export default function FoglalasModul({ onNapiNezet }: {
     return ki
   }, [elsoHetfo])
 
-  // A napok beosztása (gyorsítótárral: lapozáskor nem kérdezünk újra).
   const tar = useRef(new Map<string, NapBeosztas>())
   const tarRev = useRef(revision)
   const [napAdat, setNapAdat] = useState<Map<string, NapBeosztas>>(new Map())
+  const [napHiba, setNapHiba] = useState<string | null>(null)
   useEffect(() => {
     if (tarRev.current !== revision) { tar.current = new Map(); tarRev.current = revision }
+    const t = tar.current
     let el = true
-    const kell = napok.filter((d) => d >= holnap && d <= utolsoNap && !tar.current.has(d))
-    Promise.all(kell.map((d) => napBeosztasBetolt(data, d).then((a) => tar.current.set(d, a))))
-      .then(() => { if (el) setNapAdat(new Map(tar.current)) })
-      .catch(() => { if (el) setNapAdat(new Map(tar.current)) })
+    const kell = napok.filter((d) => d >= holnap && d <= utolsoNap && !t.has(d))
+    Promise.all(kell.map((d) => napBeosztasBetolt(data, d).then((a) => { t.set(d, a) })))
+      .then(() => { if (el) { setNapAdat(new Map(t)); setNapHiba(null) } })
+      .catch((e) => { if (el) { setNapAdat(new Map(t)); setNapHiba(hibaSzoveg(e)) } })
     return () => { el = false }
   }, [data, napok, holnap, utolsoNap, revision])
 
@@ -181,13 +135,10 @@ export default function FoglalasModul({ onNapiNezet }: {
     return m
   }, [napok, napAdat, perc, tipus])
 
-  // Ha változik a kérés (csomag, extra, típus), a választott nap/időpont
-  // lehet, hogy már nem jó: az időpontot újra kell választani.
   useEffect(() => { setIdo(null) }, [perc, tipus, nap])
 
   const lehetosegek = nap ? napErtek.get(nap)?.lehetosegek ?? [] : []
 
-  // --- küldés ----------------------------------------------------------------
   const adatokRendben = Boolean(adatok.nev.trim() && adatok.telefon.trim() && adatok.rendszam.trim())
   const kuldheto = Boolean(csomagId && tipus && nap && ido && adatokRendben && elfogad && !kuld)
 
@@ -199,8 +150,8 @@ export default function FoglalasModul({ onNapiNezet }: {
       const id = await data.onlineBooking({
         category: kat, scope: sc, package_id: csomagId, full_service: false, extras: extraLista,
         booking_type: tipus, service_date: nap,
-        start_time: tipus === 'VAROS' ? hhmm(ido.tol) : null,
-        drop_off_time: tipus === 'LEADOS' ? hhmm(ido.tol) : null,
+        start_time: tipus === 'VAROS' ? percIdo(ido.tol) : null,
+        drop_off_time: tipus === 'LEADOS' ? percIdo(ido.tol) : null,
         customer_name: adatok.nev.trim(), customer_phone: adatok.telefon.trim(),
         customer_email: adatok.email.trim() || null, plate_raw: adatok.rendszam.trim(),
         brand: adatok.marka.trim() || null, model: adatok.modell.trim() || null,
@@ -209,7 +160,7 @@ export default function FoglalasModul({ onNapiNezet }: {
       setKesz({ id, nap })
       refresh()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
     } finally {
       setKuld(false)
     }
@@ -222,7 +173,6 @@ export default function FoglalasModul({ onNapiNezet }: {
   const set = <K extends keyof Adatok>(k: K, v: string) => setAdatok((x) => ({ ...x, [k]: v }))
   const csomag = csomagok.find((p) => p.id === csomagId) ?? null
 
-  // --- siker ----------------------------------------------------------------
   if (kesz) {
     return (
       <div className="fogl">
@@ -230,7 +180,7 @@ export default function FoglalasModul({ onNapiNezet }: {
         <section className="fogl-kartya fogl-siker">
           <h2>Köszönjük, megkaptuk a foglalási kérésed!</h2>
           <p>
-            {napCim(kesz.nap)}, {ido && (tipus === 'VAROS' ? `kezdés: ${ora(ido.tol)}` : `hozás: ${ora(ido.tol)}`)}.
+            {napCim(kesz.nap)}, {ido && (tipus === 'VAROS' ? `kezdés: ${percOra(ido.tol)}` : `hozás: ${percOra(ido.tol)}`)}.
             Hamarosan visszaigazoljuk telefonon vagy e-mailben.
           </p>
           <div className="fogl-gombok">
@@ -255,7 +205,6 @@ export default function FoglalasModul({ onNapiNezet }: {
         <p>Válaszd ki, mit szeretnél, és mutatjuk a szabad időpontokat.</p>
       </header>
 
-      {/* 1. autó */}
       <section className="fogl-kartya">
         <h2><span className="lepes">1</span> Milyen autóval jössz?</h2>
         <div className="fogl-valaszto harom">
@@ -267,7 +216,6 @@ export default function FoglalasModul({ onNapiNezet }: {
         </div>
       </section>
 
-      {/* 2. csomag */}
       <section className="fogl-kartya">
         <h2><span className="lepes">2</span> Csomag</h2>
         <div className="fogl-csomagok">
@@ -291,7 +239,6 @@ export default function FoglalasModul({ onNapiNezet }: {
         </div>
       </section>
 
-      {/* 3. terjedelem */}
       {csomagId && (
         <section className="fogl-kartya">
           <h2><span className="lepes">3</span> Mit csináljunk?</h2>
@@ -310,7 +257,6 @@ export default function FoglalasModul({ onNapiNezet }: {
         </section>
       )}
 
-      {/* 4. extrák */}
       {csomagId && onlineExtrak.length > 0 && (
         <section className="fogl-kartya">
           <h2><span className="lepes">4</span> Kérsz még valamit? <small>nem kötelező</small></h2>
@@ -331,7 +277,6 @@ export default function FoglalasModul({ onNapiNezet }: {
         </section>
       )}
 
-      {/* 5. megvárja / itt hagyja */}
       {csomagId && (
         <section className="fogl-kartya">
           <h2><span className="lepes">5</span> Megvárod, vagy itt hagyod?</h2>
@@ -348,11 +293,12 @@ export default function FoglalasModul({ onNapiNezet }: {
         </section>
       )}
 
-      {/* 6–7. nap és időpont */}
       {csomagId && tipus && (
         <section className="fogl-kartya">
           <h2><span className="lepes">6</span> Melyik nap?</h2>
-          {!perc ? (
+          {ajanlatHiba ? (
+            <p className="fogl-figyel">Nem sikerült kiszámolni az árat és az időt: {ajanlatHiba}</p>
+          ) : !perc ? (
             <p className="fogl-figyel">
               Ehhez a választáshoz nincs megadva munkaidő, ezért nem tudunk szabad
               időpontot számolni. Kérjük, hívj minket.
@@ -385,6 +331,7 @@ export default function FoglalasModul({ onNapiNezet }: {
                   )
                 })}
               </div>
+              {napHiba && <p className="fogl-figyel">Nem sikerült betölteni a szabad időpontokat: {napHiba}</p>}
               <div className="fogl-jelmagyarazat">
                 <span data-allapot="szabad">Szabad</span>
                 <span data-allapot="keves">Kevés hely</span>
@@ -402,14 +349,12 @@ export default function FoglalasModul({ onNapiNezet }: {
                     <div className="fogl-idok">
                       {lehetosegek.map((l) => (
                         <button key={l.tol} type="button" aria-pressed={ido?.tol === l.tol} onClick={() => setIdo(l)}>
-                          {/* csak az óra:perc (itt hagyásnál alatta kicsiben, mikorra kész) */}
-                          {ora(l.tol)}
-                          {tipus === 'LEADOS' && <small>kész kb. {l.kesz !== null ? ora(l.kesz) : '—'}</small>}
+                          {percOra(l.tol)}
+                          {tipus === 'LEADOS' && <small>kész kb. {l.kesz !== null ? percOra(l.kesz) : '—'}</small>}
                         </button>
                       ))}
                     </div>
                   )}
-                  {/* érkezés: feltűnően, az időpontok alatt */}
                   <p className="fogl-erkezes">
                     Kérjük, ha lehet, a választott időpont előtt <strong>5–10 perccel</strong> érkezz.
                     Ha késel, kérjük, telefonálj: <a href={`tel:${UZLET_TELEFON.replace(/\s/g, '')}`}>{UZLET_TELEFON}</a>
@@ -421,7 +366,6 @@ export default function FoglalasModul({ onNapiNezet }: {
         </section>
       )}
 
-      {/* 8. adatok */}
       {ido && (
         <section className="fogl-kartya">
           <h2><span className="lepes">8</span> Az adataid</h2>
@@ -454,7 +398,6 @@ export default function FoglalasModul({ onNapiNezet }: {
         </section>
       )}
 
-      {/* összegzés: mindig látszik, amint van csomag */}
       {csomag && (
         <section className="fogl-osszeg">
           <div className="sorok">
@@ -463,7 +406,7 @@ export default function FoglalasModul({ onNapiNezet }: {
               <div className="halk">+ {onlineExtrak.filter((e) => extrak.has(e.id)).map((e) => e.name).join(', ')}</div>
             )}
             {nap && ido && (
-              <div>{napCim(nap)} · {tipus === 'VAROS' ? `kezdés: ${ora(ido.tol)}` : `hozás: ${ora(ido.tol)}`}</div>
+              <div>{napCim(nap)} · {tipus === 'VAROS' ? `kezdés: ${percOra(ido.tol)}` : `hozás: ${percOra(ido.tol)}`}</div>
             )}
           </div>
           <div className="osszeg">
@@ -483,7 +426,6 @@ export default function FoglalasModul({ onNapiNezet }: {
         </section>
       )}
 
-      {/* fejlesztői részletek — a publikus oldalon nem lesz ott */}
       <section className="fogl-fejleszto">
         <label>
           <input type="checkbox" checked={reszletek} onChange={(e) => setReszletek(e.target.checked)} />
@@ -504,7 +446,6 @@ export default function FoglalasModul({ onNapiNezet }: {
   )
 }
 
-/** A próba jelzése a modul tetején. */
 function ProbaSav() {
   return (
     <div className="fogl-proba">

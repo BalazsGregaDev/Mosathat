@@ -1,4 +1,3 @@
-// Mezőnkénti keresés: a rendszám mező rendszámot, a név mező nevet keres.
 import { PGlite } from '@electric-sql/pglite'
 import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -45,7 +44,6 @@ function ok(mit, varjuk, kaptuk) {
 }
 const q = async (sql, params = []) => (await db.query(sql, params)).rows
 
-// Két ügyfél: az egyik NEVE kezdődik úgy, ahogy a másik RENDSZÁMA.
 const [{ id: a }] = await q(`select add_customer('{"name":"Abonyi Péter","phone":"+36301110001"}'::jsonb) as id`)
 const [{ id: b }] = await q(`select add_customer('{"name":"Kiss Tamás","phone":"+36301110002"}'::jsonb) as id`)
 const [{ id: c }] = await q(

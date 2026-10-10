@@ -1,4 +1,3 @@
-// v48, adatbázis: „Kész van" kipipálja a munkalistát; visszanyitás visszaállítja.
 import { adatbazis, tesztelo, ALK } from './_db.mjs'
 
 const db = await adatbazis()
@@ -19,7 +18,6 @@ const kesz = async () => (await lista()).filter((x) => x.done).length
 const osszes = (await lista()).length
 const allapot = async () => (await egy(`select status from bookings where id = $1`, [id])).status
 
-// Megérkezett, és kézzel kipipálunk kettőt
 await q(`select set_booking_status($1, 'ARRIVED')`, [id])
 const [e1, e2] = await lista()
 await q(`update booking_tasks set done = true where id = any($1::uuid[])`, [[e1.id, e2.id]])
@@ -47,7 +45,6 @@ t.ok('Kész van: mind kipipálva', osszes, await kesz())
 await q(`select booking_reopen($1)`, [id])
 t.ok('vissza Dolgozunk-ba, a kézzel kipipáltak maradnak', ['IN_PROGRESS', 2], [await allapot(), await kesz()])
 
-// Közvetlen lezárás (flottás léptető: CONFIRMED → COMPLETED), és a „−"
 const id2 = (await egy(`select create_booking($1::jsonb) as id`, [JSON.stringify({
   category: 'SZEMELYAUTO', scope: 'TELJES', booking_type: 'LEADOS', service_date: ma, drop_off_time: '10:00',
   package_id: csomag.START, extras: [], customer_name: 'Pipa Pál', customer_phone: '+36301232323',

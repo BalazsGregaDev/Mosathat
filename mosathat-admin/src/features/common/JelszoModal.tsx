@@ -1,30 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { urlapMegnyilt } from '../../lib/kepernyo'
-
-// ---------------------------------------------------------------------------
-//  Jelszó megadása
-//
-//  Két helyről nyílik, és a kettő nem ugyanaz:
-//
-//    SAJÁT jelszó  – meg kell adni a mostanit is. Enélkül egy nyitva
-//                    felejtett gépnél bárki átvehetné a fiókot: odaül,
-//                    átírja a jelszót, és onnantól az övé.
-//
-//    MÁSÉ          – a tulaj ad új jelszót annak, aki kizárta magát. Ott
-//                    nincs mit bekérni: a tulajnak nincs meg a dolgozó
-//                    jelszava, épp ezért kell újat adnia.
-//
-//  Az új jelszót kétszer kell beírni. Nem bizalmatlanságból: ha elgépeli és
-//  csak egyszer írja be, akkor a saját fiókjából zárja ki magát, és pont
-//  nincs kitől segítséget kérnie.
-// ---------------------------------------------------------------------------
+import { hibaSzoveg } from '../../lib/format'
 
 const MIN = 8
 
 export default function JelszoModal({ kinek, sajat, onMent, onBezar }: {
-  /** Kinek a jelszavát állítjuk — a fejlécben jelenik meg. */
   kinek: string
-  /** Igaz, ha a saját jelszavunkról van szó: olyankor kell a mostani is. */
   sajat: boolean
   onMent: (mostani: string, uj: string) => Promise<void>
   onBezar: () => void
@@ -43,7 +24,6 @@ export default function JelszoModal({ kinek, sajat, onMent, onBezar }: {
     return () => window.removeEventListener('keydown', k)
   }, [onBezar, megy])
 
-  // Amit a gomb megnyomása előtt meg lehet mondani, azt mondjuk meg előtte.
   const rovid = uj.length > 0 && uj.length < MIN
   const elter = megint.length > 0 && uj !== megint
   const kesz = uj.length >= MIN && uj === megint && (!sajat || mostani.length > 0)
@@ -56,14 +36,14 @@ export default function JelszoModal({ kinek, sajat, onMent, onBezar }: {
       await onMent(mostani, uj)
       onBezar()
     } catch (e) {
-      setHiba(e instanceof Error ? e.message : String(e))
+      setHiba(hibaSzoveg(e))
       setMegy(false)
     }
   }
 
   return (
     <div className="fedo" role="presentation"
-         onMouseDown={(e) => e.target === e.currentTarget && !megy && onBezar()}>
+         onMouseDown={(e) => { if (e.target === e.currentTarget && !megy && !mostani && !uj && !megint) onBezar() }}>
       <div className="lap" role="dialog" aria-modal="true" aria-label="Jelszó megadása">
         <div className="lap-fej">
           <div>

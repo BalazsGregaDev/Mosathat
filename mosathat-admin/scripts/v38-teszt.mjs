@@ -1,23 +1,3 @@
-// v38 ellenőrzése Playwrighttal.
-//
-// Futtatás:  npm run dev -- --port 5180   (másik ablakban)
-//            node scripts/v38-teszt.mjs
-//
-// Amit néz:
-//   1. Havi nézet: a többnapos munka sávként fut végig a napokon (mint a
-//      hetiben), és nem áll ott még egyszer kártyaként.
-//   2. Napi kártya: asztalon a betűk a régi méret kb. 1,4-szerese, telefonon
-//      a régi méret — a kártya szerkezete ugyanaz.
-//   3. Szerződés törlése rákérdezéssel.
-//   4. Napi kártya telefonon.
-//   5. Igazolólap: a napi kártya gombja előre kitöltött sort nyit, aláírás a
-//      vásznon, mentés; a cég lapja (Cég szerint nézet), oszlopok és lábléc,
-//      kézi sor, lezárás és újranyitás.
-//   6. Igazolólap telefonon, alkalmazottként: koppintással aláír, a
-//      tulajdonosi gombok nem látszanak.
-//   7. Word letöltés: valódi .docx (zip), benne a sorok, az átnevezett és a
-//      saját oszlop, az aláírás képe, az Összesen sor, a lábléc árai és
-//      szövege; 7 oszlopnál fekvő lap.
 import { chromium } from 'playwright'
 import { execSync } from 'node:child_process'
 
@@ -46,7 +26,6 @@ async function menu(p, nev) {
   await p.waitForTimeout(1500)
 }
 
-// =============================================================================
 const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } })
 const p = await ctx.newPage()
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
@@ -71,15 +50,12 @@ await p.waitForTimeout(1500)
 {
   const savok = await p.locator('.honap-sav').count()
   ok('vannak sávok', true, savok > 0)
-  // A leghosszabb sáv (az első lehet egy vasárnapi, egynapnyi szakasz is —
-  // a hét végén kezdődő munka a következő sorban folytatódik).
   const r = await p.evaluate(() => {
     let legjobb = { fed: 0, azon: '' }
     for (const s of document.querySelectorAll('.honap-sav')) {
       const sor = s.closest('.honapsor')
       const cellak = [...sor.querySelectorAll('.honapnap')]
       const sr = s.getBoundingClientRect()
-      // hány nap-cellát fed vízszintesen
       const fed = cellak.filter((c) => {
         const cr = c.getBoundingClientRect()
         return cr.right > sr.left + 2 && cr.left < sr.right - 2
@@ -98,16 +74,10 @@ await p.waitForTimeout(1500)
   ok('az utolsó nap és óra közvetlenül a rendszám után', true, szin.rés >= 0 && szin.rés <= 10)
   const cellaban = await p.locator('.honapnap .minikartya .azon').allTextContents()
   const savban = await p.locator('.honap-sav .azon').allTextContents()
-  // ugyanaz a rendszám lehet más foglalás is (pl. H-V egynapos), ezért a
-  // többnapos sáv rendszáma legfeljebb annyiszor szerepeljen kártyaként,
-  // ahány egynapos foglalása van — itt elég, hogy a sáv nem duplikálja magát
-  // minden napon.
   ok('a többnapos nem ismétlődik napról napra kártyaként', true,
     savban.every((x) => cellaban.filter((y) => y === x).length <= 1))
-  // A cella tételei a sávok ALATT kezdődnek (nem takarják egymást)
   const takar = await p.evaluate(() => [...document.querySelectorAll('.honapsor')].some((sor) => {
     const savok = [...sor.querySelectorAll('.honap-sav')].map((s) => s.getBoundingClientRect())
-    // v50: a cellában a tételek helyett az autók száma („+ 8 autó") áll
     const tetelek = [...sor.querySelectorAll('.honapnap .honap-autok')].map((m) => m.getBoundingClientRect())
     return savok.some((s) => tetelek.some((t) =>
       t.top < s.bottom - 1 && t.bottom > s.top + 1 && t.left < s.right && t.right > s.left))
@@ -138,7 +108,6 @@ await p.waitForTimeout(600)
 }
 await ctx.close()
 
-// =============================================================================
 console.log('\n=== 4) Napi kártya telefonon: a régi méret ===\n')
 const ctx2 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 const t = await ctx2.newPage()
@@ -159,7 +128,6 @@ await menu(t, 'Időpontok')
 }
 await ctx2.close()
 
-// =============================================================================
 console.log('\n=== 5) Igazolólap ===\n')
 const ctx3 = await b.newContext({ viewport: { width: 1440, height: 1000 } })
 const g = await ctx3.newPage()
@@ -175,12 +143,10 @@ const ma = await g.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: '
   await kartya.getByRole('button', { name: 'Igazolólap' }).click()
   await g.waitForSelector('[aria-label="Igazolólap sora"]')
   const urlap = g.locator('[aria-label="Igazolólap sora"]')
-  // Az átadás napja: egynaposnál ma, többnaposnál az utolsó nap (ma vagy később).
   ok('előre kitöltve: az átadás napja (ma vagy később)', true, (await urlap.locator('#ig-nap').inputValue()) >= ma)
   ok('előre kitöltve: a rendszám', rendszam.replace(/\s/g, ''), (await urlap.locator('#ig-rsz').inputValue()).replace(/\s/g, ''))
   ok('előre kitöltve: nettó ár', true, Number(await urlap.locator('#ig-netto').inputValue()) > 0)
   await urlap.locator('#ig-km').fill('123456')
-  // Aláírás egérrel a vásznon
   const v = await urlap.locator('.alairas-vaszon').boundingBox()
   await g.mouse.move(v.x + 30, v.y + 80)
   await g.mouse.down()
@@ -191,7 +157,6 @@ const ma = await g.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: '
   await g.waitForTimeout(1200)
   ok('mentés után bezárul', 0, await g.locator('[aria-label="Igazolólap sora"]').count())
 
-  // Másodszorra a mentett sor jön: km és aláírás megvan
   await kartya.getByRole('button', { name: 'Igazolólap' }).click()
   await g.waitForSelector('[aria-label="Igazolólap sora"]')
   ok('újranyitva: a km megmaradt', '123456', await urlap.locator('#ig-km').inputValue())
@@ -199,14 +164,12 @@ const ma = await g.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: '
   await urlap.getByRole('button', { name: 'Mégse' }).click()
   await g.waitForTimeout(300)
 
-  // A munkalapon is ott a gomb
   await kartya.locator('.kartya-nyit').click()
   await g.waitForTimeout(800)
   ok('a munkalapon is van igazolólap gomb (a cég alatt)', 1,
     await g.locator('.adatsor').filter({ hasText: 'Igazolólap' }).getByRole('button', { name: 'Kitöltés, aláírás' }).count())
   ok('a munkalap lába nem lett szélesebb (nincs benne)', 0,
     await g.locator('.munkalap-lab button').filter({ hasText: /Igazolólap/ }).count())
-  // A munkalapról nyitott sor: Escape csak a sort zárja be, a munkalapot nem.
   await g.getByRole('button', { name: 'Kitöltés, aláírás' }).click()
   await g.waitForSelector('[aria-label="Igazolólap sora"]')
   await g.keyboard.press('Escape')
@@ -237,7 +200,6 @@ await g.waitForTimeout(1200)
     (await lap.locator('.igazolo-lablec').innerText()).includes('+ ÁFA'))
   ok('a nyitott lap állapota', 'nyitott', (await lap.locator('.igazolo-allapot').innerText()).trim())
 
-  // Oszlopok és lábléc
   await lap.getByRole('button', { name: 'Oszlopok és lábléc' }).click()
   const be = g.locator('[aria-label="Oszlopok és lábléc"]')
   await be.waitFor()
@@ -255,7 +217,6 @@ await g.waitForTimeout(1200)
   ok('új saját oszlop a fejlécben', true, /munkaszám/i.test(fejlec))
   ok('saját lábléc szöveg', true, (await lap.locator('.igazolo-lablec').innerText()).includes('átutalással'))
 
-  // Kézi sor
   await lap.getByRole('button', { name: '+ Új sor' }).click()
   const uj = g.locator('[aria-label="Igazolólap sora"]')
   await uj.waitFor()
@@ -269,7 +230,6 @@ await g.waitForTimeout(1200)
   ok('a saját oszlop értéke a táblában', true, (await lap.locator('.igazolo-tabla').innerText()).includes('MSZ-77'))
   ok('hiányzó aláírás jelezve', true, (await lap.locator('.igazolo-osszeg').innerText()).includes('1 aláírás hiányzik'))
 
-  // Lezárás
   await lap.getByRole('button', { name: 'Hónap lezárása' }).click()
   await g.waitForTimeout(300)
   ok('lezárás előtt rákérdez (és szól a hiányzó aláírásról)', true,
@@ -318,7 +278,6 @@ await g.waitForTimeout(1200)
 }
 await ctx3.close()
 
-// =============================================================================
 console.log('\n=== 6) Igazolólap telefonon, alkalmazottként ===\n')
 const ctx4 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 const m = await ctx4.newPage()

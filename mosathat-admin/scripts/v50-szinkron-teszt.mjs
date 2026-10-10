@@ -1,6 +1,3 @@
-// v50: az élő szinkron két darabja, valódi Supabase nélkül (hamis klienssel):
-//   1. tokenFetch — „JWT expired" után egy tokencsere és újrapróbálás
-//   2. EloFrissites — összevont jelzés, ébredéskor újranyitás és újratöltés
 import { build } from 'esbuild'
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -14,7 +11,6 @@ const ok = (mit, v, k) => {
 }
 const var_ = (ms) => new Promise((r) => setTimeout(r, ms))
 
-// A két TypeScript modul lefordítása egy ideiglenes mappába
 const dir = await mkdtemp(join(tmpdir(), 'v50-'))
 for (const m of ['tokenFetch', 'elo']) {
   await build({ entryPoints: [`src/data/${m}.ts`], outfile: join(dir, `${m}.mjs`),
@@ -38,7 +34,6 @@ console.log('=== 1) tokenFetch ===\n')
   const f = tokenFetch(() => kliens)
   const fej = { headers: { Authorization: 'Bearer regi', apikey: 'k' } }
 
-  // Öt kérés egyszerre, mind lejárt tokennel (mint a napi nézet betöltése)
   const valaszok = await Promise.all([1, 2, 3, 4, 5].map((i) => f(`https://x/rest/v1/t${i}`, fej)))
   ok('mind az öt sikerült újrapróbálva', [200, 200, 200, 200, 200], valaszok.map((r) => r.status))
   ok('csak EGY tokencsere', 1, csere)
@@ -55,7 +50,6 @@ console.log('=== 1) tokenFetch ===\n')
 
 console.log('\n=== 2) EloFrissites ===\n')
 {
-  // Hamis böngésző: document (láthatóság) és window (online, focus)
   const doc = new EventTarget(); doc.visibilityState = 'visible'
   globalThis.document = doc
   globalThis.window = new EventTarget()
@@ -78,12 +72,10 @@ console.log('\n=== 2) EloFrissites ===\n')
   ok('két feliratkozó, egy csatorna', 1, csatornak.length)
   ok('minden foglalási tábla figyelve', 10, csatornak[0].figyelok.length)
 
-  // Egy mentés: tíz jelzés gyorsan egymás után → egy újratöltés
   for (let i = 0; i < 10; i++) csatornak[0].figyelok[i % 10]()
   await var_(600)
   ok('tíz jelzésből egy újratöltés, mindkét figyelőnek', [1, 1], [a, b])
 
-  // Alvás: a lap 40 másodpercig rejtve (az órát visszaállítjuk)
   doc.visibilityState = 'hidden'; doc.dispatchEvent(new Event('visibilitychange'))
   const most = Date.now; Date.now = () => most() + 40_000
   doc.visibilityState = 'visible'; doc.dispatchEvent(new Event('visibilitychange'))
@@ -93,13 +85,11 @@ console.log('\n=== 2) EloFrissites ===\n')
   ok('ébredés: a régi csatorna zárva, új nyitva', [true, 2, false], [csatornak[0].zarva, csatornak.length, csatornak[1].zarva])
   ok('ébredés: egy újratöltés', [2, 2], [a, b])
 
-  // Rövid háttér (5 mp): csak újratöltés, nincs új csatorna
   doc.visibilityState = 'hidden'; doc.dispatchEvent(new Event('visibilitychange'))
   doc.visibilityState = 'visible'; doc.dispatchEvent(new Event('visibilitychange'))
   await var_(600)
   ok('rövid háttér: újratöltés, csatorna marad', [3, 2], [a, csatornak.length])
 
-  // Nézetváltás: az egyik leiratkozik, a másik rögtön fel — a csatorna marad
   le1()
   le2()
   const le3 = elo.feliratkoz(() => {})

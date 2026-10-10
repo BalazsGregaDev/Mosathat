@@ -1,42 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useApp } from './AppContext'
+import { useApp, useRevizio } from './AppContext'
 import type { DayAbsence, DayBooking, DayCapacity, DayLane, StandingCar, VacationRow, WorkWindow } from '../lib/types'
-import { napPlusz } from '../lib/format'
-
-// ---------------------------------------------------------------------------
-//  Egy nap minden adata egy hívásban.
-//
-//  Négy külön kérdés, de a felület szempontjából egy állapot: vagy megvan
-//  az egész nap, vagy tölt. Külön-külön betöltve villogna a képernyő.
-//
-//  CSENDES FRISSÍTÉS
-//
-//  A „Betöltés…" felirat csak akkor jelenik meg, ha még nincs mit mutatni:
-//  az első betöltéskor és napváltáskor. Minden más frissítés (egy gomb a
-//  kártyán, egy módosítás a másik gépen) a háttérben fut, és a végén
-//  egyszerre cseréli ki a listát. Korábban minden „Kész van" után eltűnt
-//  az egész nap egy pillanatra, és a görgetés is az elejére ugrott —
-//  ez úgy nézett ki, mintha az oldal újratöltődött volna.
-//
-//  HELYBEN MÓDOSÍTÁS
-//
-//  A `modosit` egyetlen foglalás mezőit írja át a meglévő listában, a
-//  sorrend érintése nélkül. Az állapotgomb ezt hívja: a kártya azonnal
-//  átvált, és nem kell megvárni a teljes nap újratöltését.
-// ---------------------------------------------------------------------------
+import { hibaSzoveg, napPlusz } from '../lib/format'
 
 export interface DayData {
   bookings: DayBooking[]
   capacity: DayCapacity | null
   windows: WorkWindow[]
   standing: StandingCar[]
-  /** Aznap kinek változik a munkaideje — a kapacitás-kártyára. */
   absences: DayAbsence[]
-  /** Szabadságok a naptól egy hónapig előre (a kapacitás-kártyára). */
   vacations: VacationRow[]
-  /** Negyedóránként hány autón dolgozhatunk egyszerre (az idővonalhoz). */
   lanes: DayLane[]
-  /** Az alap Start munkaideje („hány fér még be"). */
   startPerc: number | null
   loading: boolean
   error: string | null
@@ -50,10 +24,9 @@ export function useDay(datum: string): DayData & {
   modosit: (id: string, valtozas: Partial<DayBooking>) => void
   atrendez: (ids: string[]) => void
 } {
-  const { data, revision, user, refresh } = useApp()
+  const { data, user, refresh } = useApp()
+  const revision = useRevizio()
   const [state, setState] = useState<DayData>(URES)
-  // Melyik nap adatai vannak most a képernyőn. Ha ugyanazt a napot kérjük
-  // újra, nincs „Betöltés…" — a régi lista marad, amíg az új megjön.
   const betoltottNap = useRef<string | null>(null)
 
   useEffect(() => {
@@ -83,7 +56,7 @@ export function useDay(datum: string): DayData & {
         setState({
           ...URES,
           loading: false,
-          error: e instanceof Error ? e.message : String(e),
+          error: hibaSzoveg(e),
         })
       }
     })()
@@ -92,9 +65,6 @@ export function useDay(datum: string): DayData & {
     }
   }, [data, datum, revision, user])
 
-  // Élő frissítés: ha a másik gépen módosítanak valamit, itt is látszik.
-  // Nem a teljes napot kérdezzük vissza minden eseményre — a refresh()
-  // számlálót növeljük, és a fenti effekt (csendben) tölt újra.
   useEffect(() => {
     if (!user) return
     return data.subscribe(() => refresh())
@@ -107,8 +77,6 @@ export function useDay(datum: string): DayData & {
     }))
   }, [])
 
-  // Áthúzás után: a lista azonnal az új sorrendben áll, a mentés utána megy.
-  // Az azonosítók listája a teljes nap, az új sorrendben.
   const atrendez = useCallback((ids: string[]) => {
     setState((s) => {
       const hely = new Map(ids.map((id, i) => [id, i]))

@@ -1,8 +1,3 @@
-// A v37 4. fázisának ellenőrzése Playwrighttal: Profilom, új egyéb
-// szolgáltatás, Ügyfelek (cég nézet), szerződés űrlap, árlista.
-//
-// Futtatás:  npm run dev -- --port 5180   (másik ablakban)
-//            node scripts/fazis4-teszt.mjs
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -20,7 +15,6 @@ async function belep(p, email = 'tulaj@mosathat.hu') {
   await p.getByRole('button', { name: /Belépés/ }).click()
   await p.waitForTimeout(2500)
 }
-/** Menüpont telefonon (hamburger) vagy asztalon (oldalsáv). */
 async function menu(p, nev) {
   if (await p.locator('.mobil-fejlec .hamburger').isVisible()) {
     await p.locator('.mobil-fejlec .hamburger').click(); await p.waitForTimeout(400)
@@ -31,7 +25,6 @@ async function menu(p, nev) {
   await p.waitForTimeout(1500)
 }
 
-// =============================================================================
 console.log('=== 1) Profilom (alkalmazott, telefon) ===\n')
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 const p = await ctx.newPage()
@@ -48,7 +41,6 @@ await menu(p, 'Profilom')
   await p.waitForTimeout(300)
 
   await p.locator('.valaszto button').filter({ hasText: 'Korábban megy el' }).click()
-  // v43: telefonon az időmező gomb, a saját választóval (óra, majd perc).
   await p.locator('#mv-tol').click()
   await p.locator('.ido-ablak .ido-orak button').filter({ hasText: /^15$/ }).click()
   await p.locator('.ido-ablak .ido-percek button').filter({ hasText: ':00' }).click()
@@ -56,7 +48,7 @@ await menu(p, 'Profilom')
   await p.locator('#mv-megj').fill('teszt-korábban')
   await p.getByRole('button', { name: 'Bejelentés' }).click()
   await p.waitForTimeout(1200)
-  const lista = await p.locator('.valtozas-lista').first().innerText()  // v51: a második a szabadságoké
+  const lista = await p.locator('.valtozas-lista').first().innerText()
   ok('a listában: 15:00-ig van bent', true, lista.includes('15:00-ig van bent') && lista.includes('teszt-korábban'))
 }
 await menu(p, 'Időpontok')
@@ -102,7 +94,6 @@ await p.waitForTimeout(800)
 await p.screenshot({ path: '/tmp/f4-szerzodes-tel.png' })
 await ctx.close()
 
-// =============================================================================
 console.log('\n=== 3) Szolgáltatások: Ft és perc egymás mellett, új szolgáltatás ===\n')
 const ctx2 = await b.newContext({ viewport: { width: 1280, height: 900 } })
 const d = await ctx2.newPage()
@@ -128,7 +119,6 @@ await menu(d, 'Szolgáltatások')
   ok('az új szolgáltatás a listában', true,
     (await d.locator('.szolg-jobb .extralista').innerText()).includes('Fényszóró polírozás'))
 
-  // Az Új időpont űrlapján is rögtön ott van (a katalógus frissült)
   await menu(d, 'Időpontok')
   await d.locator('.fejlec .btn-fo').filter({ hasText: 'Új időpont' }).click()
   await d.waitForTimeout(1000)
@@ -144,7 +134,6 @@ console.log('\n=== 4) Árlista: a leírás egyszer, a cím mellett ===\n')
 await d.locator('.fejlec .arlista-gombok button').filter({ hasText: 'Csomagok' }).click()
 await d.waitForTimeout(1000)
 {
-  // textContent, nem innerText: a cím nagybetűs (CSS), az innerText azt adná vissza.
   const cimek = (await d.locator('.arpanel .csomag-cim').allTextContents())
     .map((x) => x.replace(/\s+/g, ' ').trim())
   console.log(`         ${JSON.stringify(cimek)}`)
@@ -159,13 +148,11 @@ await d.waitForTimeout(300)
 console.log('\n=== 5) Ügyfelek: rendszámok, cég, cég szerinti nézet ===\n')
 await menu(d, 'Ügyfelek')
 {
-  // Jármű szerint: a cégnév csukva is látszik
   await d.locator('.oldal-fej .fulek button').filter({ hasText: 'Jármű szerint' }).click()
   await d.waitForTimeout(1200)
   const ker = d.locator('.panelek-ugyfel .panel').filter({ hasText: 'KER-100' }).first()
   ok('jármű szerint: a cégnév a kártyán', true, (await ker.innerText()).includes('Autó Trans'))
 
-  // Ügyfél szerint: rendszámok, kinyitva a járművek rögtön
   await d.locator('.oldal-fej .fulek button').filter({ hasText: 'Ügyfél szerint' }).click()
   await d.waitForTimeout(1200)
   const kov = d.locator('.panelek-ugyfel .panel').filter({ hasText: 'Kovács Péter' }).first()
@@ -177,7 +164,6 @@ await menu(d, 'Ügyfelek')
     (await kov.locator('.alkartya').count()) > 0
     && (await kov.getByRole('button', { name: /Járművei \(/ }).count()) === 0)
 
-  // Cég szerint
   await d.locator('.oldal-fej .fulek button').filter({ hasText: 'Cég szerint' }).click()
   await d.waitForTimeout(1200)
   const at = d.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).first()

@@ -1,5 +1,3 @@
-// v58: közös fiók (tablet) a Felhasználók oldalon → nem számít a kapacitás-
-// kártyán; az Időpontfoglalás első felajánlott időpontja 9:00.
 import { chromium } from 'playwright'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })

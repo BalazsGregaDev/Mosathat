@@ -1,8 +1,3 @@
-// A „minden próbaadat törlése" parancs kipróbálása.
-//
-// Lefuttatja az összes migrációt, betölti a demó adatokat, majd lefuttatja
-// ugyanazt a parancsot, amit az éles adatbázisra adunk — és megnézi, mi
-// maradt. Egy törlő parancsot nem küldünk el kipróbálás nélkül.
 import { PGlite } from '@electric-sql/pglite'
 import { readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -35,7 +30,6 @@ for (const f of (await readdir(MIG)).filter((f) => f.endsWith('.sql')).sort()) {
   catch (e) { console.error('MIGRÁCIÓ HIBA', f, e.message); process.exit(1) }
 }
 
-// dolgozó, hogy a demó adatok létrejöhessenek
 await db.exec(`
   insert into auth.users (id,email) values ('00000000-0000-4000-8000-000000000001','f@x.hu');
   insert into staff (id, full_name, role, active)
@@ -44,8 +38,6 @@ await db.exec(`
 `)
 await db.exec(await readFile(join(GYOKER, 'supabase', 'demo', 'demo_adatok.sql'), 'utf8'))
 
-// egy áthelyezett foglalás is legyen: ez a legkényesebb eset, mert a
-// bookings saját magára hivatkozik
 await db.exec(`
   update bookings set moved_to_booking_id = (select id from bookings offset 1 limit 1)
    where id = (select id from bookings limit 1);
@@ -71,25 +63,17 @@ const torzsElotte = await szamol(MARAD)
 console.log('=== ELŐTTE ===')
 console.log('   ' + Object.entries(elotte).map(([t, n]) => `${t}:${n}`).join('  '))
 
-// ---- maga a parancs, szó szerint úgy, ahogy elküldjük ----
 const PARANCS = `
 begin;
 
--- Az áthelyezett foglalások egymásra mutatnak. A kapcsolatot előbb
--- elengedjük, különben a törlés önmagába akad.
 update public.bookings set moved_to_booking_id = null;
 
--- A foglalás törlésével megy a tételsora, a munkalistája, a többnapos
--- foglaltsága és a felhasznált bérletalkalma is.
 delete from public.bookings;
 
--- Az ügyféllel megy a járműve és a bérlete is.
 delete from public.customers;
 
--- A céggel megy a szerződése és a szerződéses ára is.
 delete from public.companies;
 
--- A napló a próbaidőszak műveleteiről szól, annak sincs értelme tovább.
 delete from public.audit_log;
 
 commit;
@@ -105,13 +89,11 @@ console.log('\n   minden ügyféladat eltűnt:', Object.values(utana).every((n) 
 console.log('\n=== AMI MEGMARADT (ennek maradnia KELL) ===')
 let baj = 0
 for (const t of MARAD) {
-  // A day_overrides a demóban üres — ott a 0 → 0 a helyes, nem hiány.
   const ok = torzsUtana[t] === torzsElotte[t]
   if (!ok) baj++
   console.log(`   ${t.padEnd(22)} ${torzsElotte[t]} → ${torzsUtana[t]} ${ok ? '' : '  ← BAJ'}`)
 }
 
-// és utána még használható-e a rendszer?
 console.log('\n=== A TÖRLÉS UTÁN IS MŰKÖDIK ===')
 const [{ id: pkg }] = await q(`select id from packages where code='PREMIUM'`)
 const [{ create_booking: uj }] = await q(`select create_booking($1::jsonb)`, [JSON.stringify({
@@ -124,7 +106,6 @@ console.log('   új foglalás felvehető:', !!uj)
 console.log('   ügyfél:', (await q(`select count(*)::int n from customers`))[0].n,
             '| jármű:', (await q(`select count(*)::int n from vehicles`))[0].n,
             '| munkalépés:', (await q(`select count(*)::int n from booking_tasks`))[0].n)
-// Hétköznapra kérdezünk rá: vasárnap zárva van, ott a kapacitás jogosan null.
 const [hetkoznap] = await q(
   `select d::date as nap from generate_series(current_date, current_date + 7, '1 day') d
     where extract(isodow from d) = 3 limit 1`)
