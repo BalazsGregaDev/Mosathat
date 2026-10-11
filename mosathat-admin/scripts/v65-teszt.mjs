@@ -112,13 +112,13 @@ ok('kiírja, mikor viheti', true, /^Elviheted: \d{4}\. \S+ \d{1,2}\., \S+, 8:00 
 await m.locator('.fogl-idok button').first().click(); await p.waitForTimeout(400)
 await adatok('Full Ferenc', '+36 30 999 6501', 'fsv-651')
 ok('összegzés: Full Service kárpittal, elvitel másnap', [true, true],
-  [(await osszegzes()).includes('Premium + Full Service (kárpit)'), /elvitel: .+ 8:00-tól/.test(await osszegzes())])
+  [(await osszegzes()).includes('Premium + Full Service (kárpit)'), /elvitel: .+ 8:00–\d{1,2}:\d{2}/.test(await osszegzes())])
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
 ok('a köszönő oldal is mondja az elvitelt', true, (await m.locator('.fogl-siker p').innerText()).includes('Elviheted:'))
 ok('felugrott a kérés', 1, await POPUP.count())
 const adat = sima(await POPUP.locator('.keres-adatok').innerText())
 ok('a kérésben: Full Service (kárpit), másnapi elvitel', [true, true],
-  [adat.includes('Premium + Full Service (kárpit)'), /viszi .+ 0?8:00-tól/.test(adat)])
+  [adat.includes('Premium + Full Service (kárpit)'), /viszi .+ 0?8:00 után/.test(adat)])
 ok('az ítélet: befér', 'true', await POPUP.locator('.keres-itelet').getAttribute('data-befer'))
 await POPUP.getByRole('button', { name: 'Elfogadom' }).click(); await p.waitForTimeout(1500)
 await m.getByRole('button', { name: 'Megnézem a napi nézetben' }).click(); await p.waitForTimeout(2500)
@@ -140,7 +140,8 @@ await m.locator('.fogl-idok button').first().click(); await p.waitForTimeout(400
 await adatok('Bőr Borbála', '+36 30 999 6502', 'bor-652')
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
 const adat2 = sima(await POPUP.locator('.keres-adatok').innerText())
-ok('a kérésben: bőr, viszi nélkül', [true, false], [adat2.includes('Full Service (bőr)'), adat2.includes('viszi')])
+ok('a kérésben: bőr, aznap zárásig viszi', [true, true, false],
+  [adat2.includes('Full Service (bőr)'), adat2.includes('viszi 17:00'), adat2.includes('után')])
 await POPUP.getByRole('button', { name: 'Elfogadom' }).click(); await p.waitForTimeout(1500)
 
 console.log('\n=== 5) Szolgáltatások: Csomag része ===\n')

@@ -3,6 +3,7 @@ import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
+import { hetkoznapra } from './_munkanap.mjs'
 
 let baj = 0
 const ok = (mit, v, k) => {
@@ -27,6 +28,7 @@ ok('egy héten túl: dátum', 'okt. 15.', relativNap('2026-10-15', ma))
 console.log('\n=== 2) a napi kártyák ===\n')
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 const p = await (await b.newContext({ viewport: { width: 1440, height: 1000 } })).newPage()
+await hetkoznapra(p)
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
 await p.goto('http://localhost:5180/')
 await p.waitForSelector('input[type="email"]', { timeout: 60000 })

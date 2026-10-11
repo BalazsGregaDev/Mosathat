@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useApp, useRevizio, useCatalog } from '../../state/AppContext'
 import { napBeosztasBetolt, type NapBeosztas } from '../../state/napBeosztas'
-import { napAllapot, type Lehetoseg, type NapAllapot, type TiltottSav } from '../../lib/befer'
+import { hataridoLehetosegek, napAllapot, type Lehetoseg, type NapAllapot, type TiltottSav } from '../../lib/befer'
 import { negyedekbol } from '../../lib/beosztas'
 import {
   ft, hetHetfoje, hibaSzoveg, idotartam, maStr, napCim, napokRovid, napPlusz, napRovidCim, percIdo, percOra,
@@ -27,6 +27,7 @@ const UZLET_TELEFON = '+36 1 506 0420'
 const ALAP_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 1, ULES: 5, AJTO: 4, LITER: 1 }
 const LEGTOBB_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 10, ULES: 9, AJTO: 6, LITER: 10 }
 const ELVITEL_KEZDETE = 8 * 60
+const LEGKESOBB_HATARIDO = 17 * 60
 
 type Tipus = 'VAROS' | 'LEADOS'
 type Elvitel = 'AZNAP' | 'MASNAP'
@@ -72,6 +73,7 @@ export default function FoglalasModul({ onNapiNezet }: {
   const [tipus, setTipus] = useState<Tipus | null>(null)
   const [nap, setNap] = useState<string | null>(null)
   const [ido, setIdo] = useState<Lehetoseg | null>(null)
+  const [hatarido, setHatarido] = useState<number | null>(null)
   const [adatok, setAdatok] = useState<Adatok>(URES_ADATOK)
   const [elfogad, setElfogad] = useState(false)
   const [oldal, setOldal] = useState(0)
@@ -196,9 +198,21 @@ export default function FoglalasModul({ onNapiNezet }: {
 
   const lehetosegek = nap ? napErtek.get(nap)?.lehetosegek ?? [] : []
 
+  const hataridoKell = tip === 'LEADOS' && !masnap
+  const hataridok = useMemo(() => {
+    if (!hataridoKell || !ido || !perc || !nap) return []
+    const a = napAdat.get(nap)
+    if (!a || a.negyedek.length === 0) return []
+    const zar = a.negyedek[a.negyedek.length - 1].ig
+    return hataridoLehetosegek(a.negyedek, a.munkak, ido.tol, perc, Math.min(LEGKESOBB_HATARIDO, zar), a.most)
+  }, [hataridoKell, ido, perc, nap, napAdat])
+  const hat = hatarido !== null && hataridok.includes(hatarido) ? hatarido : hataridok[hataridok.length - 1] ?? null
+
   const adatokRendben = Boolean(adatok.nev.trim() && adatok.telefon.trim() && adatok.rendszam.trim())
   const fsRendben = !fsBe || (ules !== null && elvitel !== null)
-  const kuldheto = Boolean(csomagId && tip && nap && ido && adatokRendben && fsRendben && elfogad && !kuld)
+  const hataridoRendben = !hataridoKell || hat !== null
+  const kuldheto = Boolean(csomagId && tip && nap && ido && adatokRendben && fsRendben && hataridoRendben
+    && elfogad && !kuld)
 
   async function kuldes() {
     if (!kuldheto || !csomagId || !tip || !nap || !ido) return
@@ -208,6 +222,7 @@ export default function FoglalasModul({ onNapiNezet }: {
       const id = await data.onlineBooking({
         category: kat, scope: sc, package_id: csomagId, full_service: fsBe,
         seat_material: fsBe ? ules : null, next_day_pick_up: masnap, extras: extraLista,
+        pick_up_time: hataridoKell && hat !== null ? percIdo(hat) : null,
         booking_type: tip, service_date: nap,
         start_time: tip === 'VAROS' ? percIdo(ido.tol) : null,
         drop_off_time: tip === 'LEADOS' ? percIdo(ido.tol) : null,
@@ -218,7 +233,8 @@ export default function FoglalasModul({ onNapiNezet }: {
       })
       setKesz({
         id, nap,
-        mikor: tip === 'VAROS' ? `kezdés: ${percOra(ido.tol)}` : `hozás: ${percOra(ido.tol)}`,
+        mikor: tip === 'VAROS' ? `kezdés: ${percOra(ido.tol)}`
+          : `hozás: ${percOra(ido.tol)}${hataridoKell && hat !== null ? `, határidő: ${percOra(hat)}` : ''}`,
         elvitel: masnap ? elvitelInfo : null,
       })
       refresh()
@@ -493,6 +509,27 @@ export default function FoglalasModul({ onNapiNezet }: {
                       ))}
                     </div>
                   )}
+                  {ido && hataridoKell && (
+                    <div className="fogl-hatarido">
+                      <span className="cimke">Mikorra legyen kész?</span>
+                      {hataridok.length === 0 ? (
+                        <p className="fogl-figyel">Erre a hozási időre nem tudunk határidőt vállalni, válassz korábbit.</p>
+                      ) : (
+                        <>
+                          <p className="fogl-al-szoveg">
+                            Legkorábban {percOra(hataridok[0])}, legkésőbb {percOra(hataridok[hataridok.length - 1])}.
+                          </p>
+                          <div className="fogl-hataridok">
+                            {hataridok.map((t) => (
+                              <button key={t} type="button" aria-pressed={hat === t} onClick={() => setHatarido(t)}>
+                                {percOra(t)}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                   {masnap && lehetosegek.length > 0 && (
                     <p className="fogl-elvitel">
                       {elvitelInfo
@@ -566,7 +603,9 @@ export default function FoglalasModul({ onNapiNezet }: {
             {nap && ido && (
               <div>
                 {napCim(nap)} · {tip === 'VAROS' ? `kezdés: ${percOra(ido.tol)}` : `hozás: ${percOra(ido.tol)}`}
-                {masnap && elvitelInfo && ` · elvitel: ${napRovidCim(elvitelInfo.nap)} ${percOra(elvitelInfo.tol)}-tól`}
+                {hataridoKell && hat !== null && ` · határidő: ${percOra(hat)}`}
+                {masnap && elvitelInfo
+                  && ` · elvitel: ${napRovidCim(elvitelInfo.nap)} ${percOra(elvitelInfo.tol)}–${percOra(elvitelInfo.ig)}`}
               </div>
             )}
           </div>
@@ -580,7 +619,6 @@ export default function FoglalasModul({ onNapiNezet }: {
             <button type="button" className="btn btn-fo" disabled={!kuldheto} onClick={() => void kuldes()}>
               {kuld ? 'Küldés…' : 'Foglalási kérés küldése'}
             </button>
-          
           </div>
         </section>
       )}

@@ -96,6 +96,19 @@ export function leadosHozasok(negyedek: Negyed[], munkak: Munka[], perc: number,
   return ki
 }
 
+export function hataridoLehetosegek(negyedek: Negyed[], munkak: Munka[], hozas: number, perc: number,
+                                    legkesobb: number, most: number | null = null, lepes = 30): number[] {
+  if (!perc || negyedek.length === 0) return []
+  const elso = Math.ceil((hozas + perc) / 15) * 15
+  if (elso > legkesobb) return []
+  const jeloltek = [elso]
+  for (let t = Math.floor(elso / lepes) * lepes + lepes; t < legkesobb; t += lepes) jeloltek.push(t)
+  if (legkesobb > elso) jeloltek.push(legkesobb)
+  const alap = beoszt(negyedek, munkak, most)
+  return jeloltek.filter((t) => ujMunkaEllenoriz(negyedek, munkak,
+    { id: '__uj', cimke: 'Új', fajta: 'RUGALMAS', tol: hozas, hatarido: t, perc }, most, alap).befer)
+}
+
 export type NapAllapot = 'szabad' | 'keves' | 'tele' | 'zarva'
 
 export function napAllapot(negyedek: Negyed[], munkak: Munka[], perc: number,

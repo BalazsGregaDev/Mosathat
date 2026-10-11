@@ -103,7 +103,7 @@ t.ok('kisbusznál a Full Service ára egyeztetés', true, /egyeztetni kell/.test
 const sima = await kuld({ plate_raw: 'SIM-657', full_service: false, seat_material: 'BOR', next_day_pick_up: true,
   pick_up_date: csut, pick_up_time: '15:00' })
 const s = await helyi(sima)
-t.ok('Full Service nélkül a beküldött elvitel és ülés nem számít', [null, szerda, null, false],
+t.ok('Full Service nélkül a másnapi elvitel és az ülés nem számít, csak az aznapi határidő', [`${szerda} 15:00`, szerda, null, false],
   [s.viszi, s.utolso, s.seat_material, s.full_service])
 
 console.log('\n=== 6) Szerkesztés és elfogadás után is megmarad ===\n')

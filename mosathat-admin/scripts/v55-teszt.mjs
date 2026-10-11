@@ -70,6 +70,7 @@ ok('nincs most-vonal', 0, await iv.locator('.iv-most').count())
 
 console.log('\n=== 6) telefonon: vízszintesen görgethető, nem lóg ki ===\n')
 const m = await (await b.newContext({ viewport: { width: 400, height: 900 }, hasTouch: true })).newPage()
+await m.clock.install({ time: helyiIdo(ma, '09:40') })
 await m.goto('http://localhost:5180/')
 await m.waitForSelector('input[type="email"]', { timeout: 60000 })
 await m.fill('input[type="email"]', 'tulaj@mosathat.hu'); await m.fill('input[type="password"]', 'x')

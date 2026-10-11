@@ -29,7 +29,7 @@
 .fogl-valaszto { display: grid; gap: var(--t2); }
 .fogl-valaszto.harom { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .fogl-valaszto.ketto { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.fogl-valaszto button, .fogl-csomag, .fogl-idok button {
+.fogl-valaszto button, .fogl-csomag, .fogl-idok button, .fogl-hataridok button {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
   padding: 14px 16px; border-radius: var(--r);
   border: 2px solid var(--keret); background: var(--lap);
@@ -39,7 +39,8 @@
 .fogl-valaszto button small, .fogl-idok button small {
   font-size: var(--m-xs); font-weight: 400; color: var(--szoveg-halk);
 }
-.fogl-valaszto button[aria-pressed='true'], .fogl-csomag[aria-pressed='true'], .fogl-idok button[aria-pressed='true'] {
+.fogl-valaszto button[aria-pressed='true'], .fogl-csomag[aria-pressed='true'], .fogl-idok button[aria-pressed='true'],
+.fogl-hataridok button[aria-pressed='true'] {
   border-color: var(--zold); background: var(--zold-halvany);
 }
 .fogl-valaszto button:disabled, .fogl-csomag:disabled { opacity: .45; cursor: not-allowed; }
@@ -118,7 +119,12 @@
 .fogl-jelmagyarazat [data-allapot='keves']::before  { background: #fdf5e4; border-color: #e8c27c; }
 .fogl-jelmagyarazat [data-allapot='tele']::before   { background: var(--lap-2); }
 .fogl-idok { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--t2); }
-.fogl-idok button { font-family: var(--betu-szam); }
+.fogl-idok button, .fogl-hataridok button { font-family: var(--betu-szam); }
+.fogl-hatarido { display: flex; flex-direction: column; gap: var(--t2); }
+.fogl-hatarido .cimke { font-size: var(--m-sm); font-weight: var(--vastag-eros); }
+.fogl-hatarido .fogl-al-szoveg { margin: 0; }
+.fogl-hataridok { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--t2); }
+.fogl-hataridok button { padding: 10px 12px; align-items: center; }
 
 .fogl-erkezes {
   margin: 0; padding: var(--t3); border-radius: var(--r);
@@ -142,7 +148,6 @@
 .fogl-osszeg .ar { font-family: var(--betu-szam); font-size: 24px; font-weight: var(--vastag-eros); }
 .fogl-osszeg .kuld { display: flex; flex-direction: column; align-items: stretch; gap: 4px; max-width: 300px; }
 .fogl-osszeg .kuld .btn { padding: 12px 18px; font-size: var(--m-md); }
-.fogl-osszeg .kuld small { font-size: 10px; }
 
 .fogl-siker { text-align: left; }
 .fogl-gombok { display: flex; gap: var(--t2); flex-wrap: wrap; }
@@ -162,7 +167,7 @@
   .fogl-nap { padding: 8px 2px; }
   .fogl-nap .allapot { font-size: 9px; }
   .fogl-osszeg { grid-template-columns: auto 1fr; gap: var(--t3); padding: var(--t2) var(--t3); bottom: var(--t2); }
-  .fogl-osszeg .sorok, .fogl-osszeg .kuld small { display: none; }
+  .fogl-osszeg .sorok { display: none; }
   .fogl-osszeg .osszeg { align-items: flex-start; }
   .fogl-osszeg .ar { font-size: 20px; }
   .fogl-osszeg .kuld .btn { padding: 10px 12px; font-size: var(--m-sm); }

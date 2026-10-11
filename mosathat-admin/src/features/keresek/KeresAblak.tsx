@@ -135,8 +135,10 @@ export default function KeresAblak({
                     {varos && keres.start_at
                       ? `kezdés ${helyiOra(keres.start_at)}, kész ${percOra(percEjfeltol(keres.start_at) + keres.planned_duration_minutes)}`
                       : `hozza ${helyiOra(keres.drop_off_at) || '—'}`}
-                    {!varos && viszi && viszNap && viszNap > nap && (
-                      <>, viszi {napRovidCim(viszNap)} {helyiOra(viszi)}-tól</>
+                    {!varos && viszi && viszNap && (
+                      viszNap > nap
+                        ? <>, viszi {napRovidCim(viszNap)} {helyiOra(viszi)} után</>
+                        : <>, viszi {helyiOra(viszi)}</>
                     )}
                   </dd>
                   <dt>Mit</dt>

@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { hetkoznapra } from './_munkanap.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 const ctx = await b.newContext({
@@ -8,6 +9,7 @@ const ctx = await b.newContext({
   hasTouch: true,
 })
 const p = await ctx.newPage()
+await hetkoznapra(p)
 let baj = 0
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
 

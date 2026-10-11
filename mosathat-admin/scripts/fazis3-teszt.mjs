@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { hetkoznapra } from './_munkanap.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -20,6 +21,7 @@ const rendszamok = (p) => p.locator('.napi-lista .kartya .rendszam').allInnerTex
 
 const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } })
 const p = await ctx.newPage()
+await hetkoznapra(p)
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
 await belep(p)
 await p.locator('aside.oldalsav button').filter({ hasText: 'Időpontok' }).first().click()
@@ -208,6 +210,7 @@ await ctx.close()
 console.log('\n=== 9) alkalmazott: nem látja a bevételt ===\n')
 const ctx2 = await b.newContext({ viewport: { width: 1280, height: 800 }, isMobile: true, hasTouch: true })
 const t = await ctx2.newPage()
+await hetkoznapra(t)
 t.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
 await belep(t, 'alkalmazott@mosathat.hu')
 await t.waitForTimeout(500)
@@ -268,6 +271,7 @@ await ctx2.close()
 console.log('\n=== 11) telefon: heti nézet egy oszlopban ===\n')
 const ctx3 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 const m = await ctx3.newPage()
+await hetkoznapra(m)
 m.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
 await belep(m)
 await m.locator('.mobil-fejlec .hamburger').click(); await m.waitForTimeout(400)

@@ -751,6 +751,7 @@ export interface OnlineBookingInput {
   full_service: boolean
   seat_material: SeatMaterial | null
   next_day_pick_up: boolean
+  pick_up_time: string | null
   extras: { extra_id: string; quantity: number }[]
   booking_type: 'VAROS' | 'LEADOS'
   service_date: string

@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { hetkoznapra } from './_munkanap.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -26,6 +27,7 @@ const osszeg = (p) => p.locator('.lap-lab .osszeg .ertek').innerText()
 
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 const p = await ctx.newPage()
+await hetkoznapra(p)
 p.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
 await belep(p)
 await idopontok(p)
@@ -237,6 +239,7 @@ await ctx.close()
 console.log('\n=== 7) tablet: térköz és a láb a képernyőn belül ===\n')
 const ctx3 = await b.newContext({ viewport: { width: 800, height: 1180 }, isMobile: true, hasTouch: true })
 const t = await ctx3.newPage()
+await hetkoznapra(t)
 t.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ })
 await belep(t)
 await idopontok(t)
