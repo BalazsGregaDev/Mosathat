@@ -17,7 +17,7 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, DontesEredmeny,
+  OnlineKeres, DontesEredmeny, KuldesEredmeny,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { idoRovidit, num, numOrNull, toExtra, toOnlineKeres, toQuote } from './source'
@@ -241,6 +241,10 @@ export class DemoSource implements DataSource {
     const [r] = await this.rows<{ eredmeny: DontesEredmeny }>(
       `select online_keres_dontes($1::uuid, $2::boolean) as eredmeny`, [bookingId, elfogad])
     return r.eredmeny
+  }
+
+  async ertesitesekKuldese(): Promise<KuldesEredmeny | null> {
+    return null
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {
@@ -561,6 +565,7 @@ export class DemoSource implements DataSource {
       default_travel_minutes: num(r.default_travel_minutes),
       pass_validity_kind: r.pass_validity_kind as ShopSettings['pass_validity_kind'],
       pass_validity_value: String(r.pass_validity_value),
+      online_lemondas_ora: num(r.online_lemondas_ora),
     }
   }
 

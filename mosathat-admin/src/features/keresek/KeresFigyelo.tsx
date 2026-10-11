@@ -13,6 +13,7 @@ export default function KeresFigyelo({ onMegnyit }: { onMegnyit: (id: string) =>
   const [halasztva, setHalasztva] = useState<Record<string, number>>({})
   const [ora, setOra] = useState(() => Date.now())
   const [valasztott, setValasztott] = useState<string | null>(null)
+  const [zarolt, setZarolt] = useState<OnlineKeres | null>(null)
   const kerSzam = useRef(0)
 
   const betolt = useCallback(() => {
@@ -30,7 +31,7 @@ export default function KeresFigyelo({ onMegnyit }: { onMegnyit: (id: string) =>
   }, [])
 
   const varo = lista.filter((k) => (halasztva[k.id] ?? 0) <= ora)
-  const mutatott = varo.find((k) => k.id === valasztott) ?? varo[0] ?? null
+  const mutatott = zarolt ?? varo.find((k) => k.id === valasztott) ?? varo[0] ?? null
   const index = mutatott ? varo.indexOf(mutatott) : -1
 
   function kesobb() {
@@ -54,13 +55,14 @@ export default function KeresFigyelo({ onMegnyit }: { onMegnyit: (id: string) =>
         <KeresAblak
           key={mutatott.id}
           keres={mutatott}
-          sorszam={index + 1}
-          osszes={varo.length}
+          sorszam={zarolt ? 1 : index + 1}
+          osszes={zarolt ? 1 : varo.length}
           ugyanarra={lista.filter((k) => k.id !== mutatott.id && k.service_date === mutatott.service_date).length}
           onLapoz={lapoz}
           onKesobb={kesobb}
           onMegnyit={onMegnyit}
-          onDontott={betolt}
+          onZarol={(be) => setZarolt(be ? mutatott : null)}
+          onDontott={() => { setZarolt(null); betolt() }}
         />
       )}
       {!mutatott && lista.length > 0 && (

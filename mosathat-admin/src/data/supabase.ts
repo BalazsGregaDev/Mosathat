@@ -9,7 +9,7 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, DontesEredmeny,
+  OnlineKeres, DontesEredmeny, KuldesEredmeny,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { idoRovidit, num, numOrNull, toExtra, toOnlineKeres, toQuote } from './source'
@@ -237,6 +237,16 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('online_keres_dontes', { p_id: bookingId, p_elfogad: elfogad })
     if (error) fail('Döntés a kérésről', error)
     return data as DontesEredmeny
+  }
+
+  async ertesitesekKuldese(): Promise<KuldesEredmeny | null> {
+    const { data, error } = await this.sb.functions.invoke<KuldesEredmeny>('ertesites', { method: 'POST', body: {} })
+    if (error) {
+      const valasz = (error as { context?: Response }).context
+      const reszlet = valasz ? await valasz.clone().json().catch(() => null) as { hiba?: string } | null : null
+      throw new Error(`Visszaigazoló e-mail: ${reszlet?.hiba ?? error.message}`)
+    }
+    return data
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {
@@ -573,7 +583,7 @@ export class SupabaseSource implements DataSource {
 
   async getShopSettings(): Promise<ShopSettings> {
     const { data, error } = await this.sb.from('shop_settings')
-      .select('drop_off_from, default_parallel_slots, default_travel_minutes, pass_validity_kind, pass_validity_value')
+      .select('drop_off_from, default_parallel_slots, default_travel_minutes, pass_validity_kind, pass_validity_value, online_lemondas_ora')
       .single()
     if (error) fail('Beállítások', error)
     return data as ShopSettings

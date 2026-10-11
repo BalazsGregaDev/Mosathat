@@ -266,6 +266,12 @@ export interface OnlineKeres extends DayBooking {
 
 export type DontesEredmeny = 'OK' | BookingStatus
 
+export interface KuldesEredmeny {
+  kuldve: number
+  hibas: number
+  hibak: string[]
+}
+
 export interface StandingCar {
   id: string
   arrived_at: string | null
@@ -835,6 +841,7 @@ export interface ShopSettings {
   default_travel_minutes: number
   pass_validity_kind: ValidityKind
   pass_validity_value: string
+  online_lemondas_ora: number
 }
 
 export interface DayOverride {

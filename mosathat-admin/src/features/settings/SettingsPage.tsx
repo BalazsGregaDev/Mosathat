@@ -322,6 +322,23 @@ function Altalanos() {
         </div>
       </div>
 
+      <div className="panel">
+        <h3>Online foglalás</h3>
+        <div className="panel-torzs">
+          <label className="mezo">
+            <span>Online lemondás határideje (óra)</span>
+            <input type="number" min={0} max={168} className="beviteli"
+                   value={s.online_lemondas_ora}
+                   onChange={(e) => mod({ online_lemondas_ora: Number(e.target.value) })} />
+            <small>
+              A visszaigazoló e-mailben lévő linkkel az ügyfél eddig tudja lemondani
+              a foglalást, a hozás vagy a kezdés előtt. Utána a link már csak a
+              telefonszámot mutatja.
+            </small>
+          </label>
+        </div>
+      </div>
+
       <Fejbe>
         <MentesJelzo allapot={allapot} />
         <button className="btn btn-fo" disabled={allapot === 'megy'}

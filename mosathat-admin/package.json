@@ -13,7 +13,8 @@
     "db:link": "supabase link --workdir ..",
     "db:push": "supabase db push --workdir ..",
     "db:status": "supabase migration list --workdir ..",
-    "db:types": "supabase gen types typescript --linked --workdir .. > src/lib/database.types.ts"
+    "db:types": "supabase gen types typescript --linked --workdir .. > src/lib/database.types.ts",
+    "fn:deploy": "supabase functions deploy --workdir .."
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.17",

@@ -25,6 +25,7 @@ export default function KeresAblak({
   onLapoz,
   onKesobb,
   onMegnyit,
+  onZarol,
   onDontott,
 }: {
   keres: OnlineKeres
@@ -34,6 +35,7 @@ export default function KeresAblak({
   onLapoz: (irany: 1 | -1) => void
   onKesobb: () => void
   onMegnyit: (id: string) => void
+  onZarol: (be: boolean) => void
   onDontott: () => void
 }) {
   const { data, user, refresh } = useApp()
@@ -44,6 +46,7 @@ export default function KeresAblak({
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
   const [mar, setMar] = useState<BookingStatus | null>(null)
+  const [levelHiba, setLevelHiba] = useState<string | null>(null)
 
   const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
   const rendszam = (keres.plate_raw ?? '').toUpperCase()
@@ -74,20 +77,45 @@ export default function KeresAblak({
     if (!elfogad && !(await kerdez(ELUTASITAS_KERDES(rendszam)))) return
     setMegy(true)
     setHiba(null)
+    onZarol(true)
     try {
       const eredmeny = await data.onlineKeresDontes(keres.id, elfogad)
       refresh()
-      if (eredmeny === 'OK') onDontott()
-      else setMar(eredmeny)
+      if (eredmeny !== 'OK') {
+        setMar(eredmeny)
+        onZarol(false)
+        return
+      }
+      const gond = elfogad && keres.ugyfel_email ? await levelKuldes(keres.ugyfel_email) : null
+      if (gond) setLevelHiba(gond)
+      else onDontott()
     } catch (e) {
       setHiba(hibaSzoveg(e))
+      onZarol(false)
     } finally {
       setMegy(false)
     }
   }
 
+  async function levelKuldes(email: string): Promise<string | null> {
+    try {
+      const r = await data.ertesitesekKuldese()
+      if (!r) return null
+      const sajat = r.hibak.filter((h) => h.startsWith(`${email}:`))
+      return sajat.length > 0 ? sajat.map((h) => h.slice(email.length + 1).trim()).join('; ') : null
+    } catch (e) {
+      return hibaSzoveg(e)
+    }
+  }
+
+  const levelTipp = !keres.ugyfel_email
+    ? 'Nincs e-mail címe, ezért a visszaigazolást telefonon kell megadni.'
+    : data.isDemo
+      ? 'Élesben elfogadáskor visszaigazoló e-mailt kap, benne a lemondó linkkel. Demóban e-mail nem megy ki.'
+      : 'Elfogadáskor visszaigazoló e-mailt kap, benne a lemondó linkkel.'
+
   return (
-    <Ablak cimke="Online foglalási kérés" onEsc={onKesobb}>
+    <Ablak cimke="Online foglalási kérés" onEsc={levelHiba ? onDontott : onKesobb}>
       <div className="lap keres-lap">
         <div className="lap-fej">
           <div>
@@ -116,6 +144,15 @@ export default function KeresAblak({
             </div>
           )}
           {hiba && <div className="hibauzenet">{hiba}</div>}
+          {levelHiba && (
+            <div className="figyelmeztet">
+              <span>
+                <strong>Elfogadva, de a visszaigazoló e-mail nem ment ki.</strong> Hívd fel az ügyfelet:{' '}
+                <a href={`tel:${keres.customer_phone}`}>{keres.customer_phone}</a>.
+                <br /><small>{levelHiba}</small>
+              </span>
+            </div>
+          )}
 
           <div className="keres-racs">
             <div className="keres-bal">
@@ -191,9 +228,7 @@ export default function KeresAblak({
                     <span className="cimke-pill" data-r="figyel">{keres.lemondta_db}× lemondta</span>
                   )}
                 </div>
-                <p className="halk keres-tipp">
-                  Elfogadás után a visszaigazolást még nektek kell megadni, telefonon vagy e-mailben.
-                </p>
+                <p className="halk keres-tipp">{levelTipp}</p>
               </section>
 
               <section className="szakasz">
@@ -228,20 +263,28 @@ export default function KeresAblak({
           )}
         </div>
 
-        <div className="lap-lab keres-lab">
-          <button type="button" className="btn" onClick={onKesobb} disabled={megy}>Később</button>
-          <button type="button" className="btn" onClick={() => onMegnyit(keres.id)} disabled={megy}>Munkalap</button>
-          <div className="gombok">
-            <button type="button" className="btn btn-veszelyes" onClick={() => void dont(false)}
-                    disabled={megy || mar !== null}>
-              Elutasítom
-            </button>
-            <button type="button" className="btn btn-fo" onClick={() => void dont(true)}
-                    disabled={megy || mar !== null}>
-              {megy ? 'Mentés…' : 'Elfogadom'}
-            </button>
+        {levelHiba ? (
+          <div className="lap-lab keres-lab">
+            <div className="gombok">
+              <button type="button" className="btn btn-fo" onClick={onDontott}>Rendben</button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="lap-lab keres-lab">
+            <button type="button" className="btn" onClick={onKesobb} disabled={megy}>Később</button>
+            <button type="button" className="btn" onClick={() => onMegnyit(keres.id)} disabled={megy}>Munkalap</button>
+            <div className="gombok">
+              <button type="button" className="btn btn-veszelyes" onClick={() => void dont(false)}
+                      disabled={megy || mar !== null}>
+                Elutasítom
+              </button>
+              <button type="button" className="btn btn-fo" onClick={() => void dont(true)}
+                      disabled={megy || mar !== null}>
+                {megy ? 'Mentés…' : 'Elfogadom'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {kerdesAblak}
     </Ablak>

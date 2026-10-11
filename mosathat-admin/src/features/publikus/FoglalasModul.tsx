@@ -79,7 +79,7 @@ export default function FoglalasModul({ onNapiNezet }: {
   const [oldal, setOldal] = useState(0)
   const [kuld, setKuld] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
-  const [kesz, setKesz] = useState<{ id: string; nap: string; mikor: string; elvitel: ElvitelAblak | null } | null>(null)
+  const [kesz, setKesz] = useState<{ id: string; nap: string; mikor: string; elvitel: ElvitelAblak | null; email: boolean } | null>(null)
   const [reszletek, setReszletek] = useState(false)
 
   const csomagok = useMemo(
@@ -236,6 +236,7 @@ export default function FoglalasModul({ onNapiNezet }: {
         mikor: tip === 'VAROS' ? `kezdés: ${percOra(ido.tol)}`
           : `hozás: ${percOra(ido.tol)}${hataridoKell && hat !== null ? `, határidő: ${percOra(hat)}` : ''}`,
         elvitel: masnap ? elvitelInfo : null,
+        email: adatok.email.trim() !== '',
       })
       refresh()
     } catch (e) {
@@ -262,7 +263,9 @@ export default function FoglalasModul({ onNapiNezet }: {
           <p>
             {napCim(kesz.nap)}, {kesz.mikor}.
             {kesz.elvitel && <> Elviheted: {elvitelSzoveg(kesz.elvitel)}.</>}
-            {' '}Hamarosan visszaigazoljuk telefonon vagy e-mailben.
+            {kesz.email
+              ? ' Amint visszaigazoltuk, e-mailt küldünk róla, benne a lemondó linkkel.'
+              : ' Hamarosan visszaigazoljuk telefonon.'}
           </p>
           <div className="fogl-gombok">
             <button type="button" className="btn" onClick={ujra}>Új foglalás</button>

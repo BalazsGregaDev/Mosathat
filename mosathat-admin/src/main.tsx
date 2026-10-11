@@ -13,19 +13,29 @@ import './styles/arpanel.css'
 import './styles/igazolo.css'
 import './styles/foglalas.css'
 import './styles/keres.css'
+import './styles/lemondas.css'
 
 import { AppProvider } from './state/AppContext'
 import { nagyitasTiltas } from './lib/nagyitas'
 import { billentyuzetHelyreallitas } from './lib/kepernyo'
 import App from './App'
+import LemondasOldal from './features/publikus/LemondasOldal'
 
-nagyitasTiltas()
-billentyuzetHelyreallitas()
+const lemondas = /^\/lemondas(\/|$)/.test(window.location.pathname)
+
+if (!lemondas) {
+  nagyitasTiltas()
+  billentyuzetHelyreallitas()
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AppProvider>
-      <App />
-    </AppProvider>
+    {lemondas ? (
+      <LemondasOldal />
+    ) : (
+      <AppProvider>
+        <App />
+      </AppProvider>
+    )}
   </StrictMode>,
 )
