@@ -148,7 +148,7 @@ export default function Idovonal({ nap, foglalasok, savok, startPerc, onMegnyit,
             {startPerc ? (
               <>
                 <span className="szam">{befer ? `+${befer}` : '0'}</span>
-                <span className="szo">Start autó<br />fér még be</span>
+                <span className="szo">Start autó{' '}<br />fér még be</span>
                 <span className="halk">{idotartam(startPerc)} / autó</span>
               </>
             ) : (

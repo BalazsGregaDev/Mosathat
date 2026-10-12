@@ -23,14 +23,15 @@ await p.waitForTimeout(1500)
 const fejek = await p.evaluate(() => [...document.querySelectorAll('dialog[aria-label="Új időpont"] .szakasz > .fej')]
   .map((e) => e.textContent.trim().split('\n')[0].trim()))
 console.log(`         ${JSON.stringify(fejek)}`)
-ok('a Mikor a második szakasz (az ügyfél után)', 'Mikor', fejek[1])
-ok('utána a Jármű', 'Jármű', fejek[2])
+ok('bal oszlop: ügyfél, csomag, megjegyzés; jobb oszlop: mikor, jármű', ['Ismerjük már?', 'Csomag', 'Megjegyzés', 'Mikor', 'Jármű'], fejek)
 const r = await p.evaluate(() => {
   const tel = document.querySelector('#tel').getBoundingClientRect()
-  const mikor = [...document.querySelectorAll('.szakasz > .fej')].find((e) => e.textContent.trim() === 'Mikor').getBoundingClientRect()
-  return mikor.top > tel.bottom
+  const fej = (t) => [...document.querySelectorAll('.szakasz > .fej')].find((e) => e.textContent.trim() === t).getBoundingClientRect()
+  const mikor = fej('Mikor')
+  const jarmu = fej('Jármű')
+  return [mikor.left > tel.right, jarmu.top > mikor.bottom, jarmu.left === mikor.left]
 })
-ok('a Mikor a telefonszám sora alatt van', true, r)
+ok('a Mikor a telefonszám mellett, jobbra; alatta a Jármű', [true, true, true], r)
 await p.screenshot({ path: '/tmp/v45.png' })
 await b.close()
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)

@@ -511,3 +511,50 @@
 }
 .befer-sor ul { margin: 4px 0 0; padding-left: 18px; }
 .befer-idok { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; color: var(--szoveg); }
+
+.foglalas-urlap .lap-torzs > * { order: 20; }
+.foglalas-urlap .lap-torzs > .betolt { order: 0; }
+.foglalas-urlap .urlap-oszlopok,
+.foglalas-urlap .urlap-oszlop { display: contents; }
+.foglalas-urlap .urlap-ugyfel { order: 1; }
+.foglalas-urlap .urlap-elozmeny { order: 2; }
+.foglalas-urlap .urlap-mikor { order: 3; }
+.foglalas-urlap .urlap-jarmu { order: 4; }
+.foglalas-urlap .urlap-csomag { order: 5; }
+.foglalas-urlap .urlap-megj { order: 6; }
+.foglalas-urlap .lap-torzs > .urlap-extrak { order: 7; }
+
+@media (min-width: 701px) {
+  .fedo.foglalas-fedo:not(.osztott) {
+    padding:
+      calc(max(8px, 1.5vh) + env(safe-area-inset-top))
+      calc(2.5vw + env(safe-area-inset-right))
+      calc(max(8px, 1.5vh) + env(safe-area-inset-bottom))
+      calc(2.5vw + env(safe-area-inset-left));
+  }
+  .fedo.foglalas-fedo:not(.osztott) .lap.foglalas-urlap { width: 100%; max-width: 1600px; }
+}
+
+@media (min-width: 900px) {
+  .fedo.foglalas-fedo:not(.osztott) .lap-torzs > .urlap-oszlopok {
+    order: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--t5);
+    align-items: start;
+  }
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop {
+    display: flex; flex-direction: column; gap: var(--t5); min-width: 0;
+  }
+  .fedo.foglalas-fedo:not(.osztott) .urlap-extrak .osszecsuk {
+    width: min(100%, 772px);
+    align-self: center;
+  }
+  .fedo.foglalas-fedo:not(.osztott) .urlap-extrak .extrak {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--t5);
+    row-gap: 5px;
+    align-items: start;
+  }
+}
