@@ -266,6 +266,11 @@ export interface OnlineKeres extends DayBooking {
 
 export type DontesEredmeny = 'OK' | BookingStatus
 
+export interface ArculatValasztas {
+  kod: string | null
+  mod: 'VILAGOS' | 'SOTET' | null
+}
+
 export interface KuldesEredmeny {
   kuldve: number
   hibas: number

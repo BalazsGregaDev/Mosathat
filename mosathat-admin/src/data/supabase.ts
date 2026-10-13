@@ -9,7 +9,7 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, DontesEredmeny, KuldesEredmeny,
+  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { idoRovidit, num, numOrNull, toExtra, toOnlineKeres, toQuote } from './source'
@@ -247,6 +247,17 @@ export class SupabaseSource implements DataSource {
       throw new Error(`Visszaigazoló e-mail: ${reszlet?.hiba ?? error.message}`)
     }
     return data
+  }
+
+  async getArculat(): Promise<ArculatValasztas> {
+    const { data, error } = await this.sb.from('shop_settings').select('arculat, arculat_mod').maybeSingle()
+    if (error) fail('Arculat', error)
+    return { kod: data?.arculat ?? null, mod: (data?.arculat_mod as ArculatValasztas['mod']) ?? null }
+  }
+
+  async saveArculat(kod: string, mod: 'VILAGOS' | 'SOTET'): Promise<void> {
+    const { error } = await this.sb.rpc('arculat_valasztas', { p_kod: kod, p_mod: mod })
+    if (error) fail('Arculat mentése', error)
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {

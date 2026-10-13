@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import {
@@ -28,9 +28,11 @@ import FoglalasModul from '../publikus/FoglalasModul'
 import KeresFigyelo from '../keresek/KeresFigyelo'
 import { foglalasModulLatja } from '../../lib/jogok'
 
+const ArculatPage = lazy(() => import('../arculat/ArculatPage'))
+
 type Oldal =
   | 'attekintes' | 'nap' | 'szolgaltatasok' | 'partnerek' | 'ugyfelek'
-  | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo' | 'foglalas'
+  | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo' | 'foglalas' | 'arculat'
 
 const MENU: { id: Oldal; cimke: string; tulaj?: boolean; foglalas?: boolean }[] = [
   { id: 'attekintes', cimke: 'Áttekintés', tulaj: true },
@@ -43,6 +45,7 @@ const MENU: { id: Oldal; cimke: string; tulaj?: boolean; foglalas?: boolean }[] 
   { id: 'beallitasok', cimke: 'Beállítások', tulaj: true },
   { id: 'profilom', cimke: 'Profilom' },
   { id: 'foglalas', cimke: 'Időpontfoglalás', foglalas: true },
+  { id: 'arculat', cimke: 'Arculat', tulaj: true },
 ]
 
 const MENU_2 = [
@@ -280,6 +283,11 @@ export default function AppShell() {
           {oldal === 'profilom' && <ProfilPage onJelszo={() => setJelszoNyitva(true)} />}
           {oldal === 'foglalas' && foglalasJog && (
             <FoglalasModul onNapiNezet={(d) => { setNap(d); setNezet('nap'); setOldal('nap') }} />
+          )}
+          {oldal === 'arculat' && teljesJogu && (
+            <Suspense fallback={<div className="betolt">Betöltés…</div>}>
+              <ArculatPage />
+            </Suspense>
           )}
         </main>
       </div>

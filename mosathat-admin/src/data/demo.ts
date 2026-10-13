@@ -17,7 +17,7 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, DontesEredmeny, KuldesEredmeny,
+  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { idoRovidit, num, numOrNull, toExtra, toOnlineKeres, toQuote } from './source'
@@ -245,6 +245,16 @@ export class DemoSource implements DataSource {
 
   async ertesitesekKuldese(): Promise<KuldesEredmeny | null> {
     return null
+  }
+
+  async getArculat(): Promise<ArculatValasztas> {
+    const [r] = await this.rows<{ arculat: string | null; arculat_mod: ArculatValasztas['mod'] }>(
+      `select arculat, arculat_mod from shop_settings`)
+    return { kod: r?.arculat ?? null, mod: r?.arculat_mod ?? null }
+  }
+
+  async saveArculat(kod: string, mod: 'VILAGOS' | 'SOTET'): Promise<void> {
+    await this.rows(`select arculat_valasztas($1, $2)`, [kod, mod])
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {
