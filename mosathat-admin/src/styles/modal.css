@@ -541,10 +541,26 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--t5);
-    align-items: start;
+    align-items: stretch;
   }
   .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop {
     display: flex; flex-direction: column; gap: var(--t5); min-width: 0;
+  }
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop:first-child { gap: var(--t3); }
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop:first-child > .urlap-ugyfel,
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop:first-child > .urlap-csomag,
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop:first-child .urlap-csomag > .csomagok { display: contents; }
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop:first-child .urlap-csomag > .fej { padding-top: var(--t3); }
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop:first-child .urlap-ugyfel > :not(.fej):not(.fej + *),
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop:first-child > .urlap-elozmeny,
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop:first-child .urlap-csomag > .fej,
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop:first-child .urlap-csomag > .csomagok > :not(:first-child),
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop:first-child .urlap-csomag > :not(.fej):not(.csomagok) {
+    margin-top: auto;
+  }
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop .urlap-megj { flex: 1 1 auto; }
+  .fedo.foglalas-fedo:not(.osztott) .urlap-oszlop .urlap-megj textarea {
+    flex: 1 1 auto; min-height: 64px; resize: none;
   }
   .fedo.foglalas-fedo:not(.osztott) .urlap-extrak .osszecsuk {
     width: min(100%, 772px);

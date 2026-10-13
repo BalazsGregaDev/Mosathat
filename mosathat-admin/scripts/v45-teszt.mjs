@@ -23,7 +23,7 @@ await p.waitForTimeout(1500)
 const fejek = await p.evaluate(() => [...document.querySelectorAll('dialog[aria-label="Új időpont"] .szakasz > .fej')]
   .map((e) => e.textContent.trim().split('\n')[0].trim()))
 console.log(`         ${JSON.stringify(fejek)}`)
-ok('bal oszlop: ügyfél, csomag, megjegyzés; jobb oszlop: mikor, jármű', ['Ismerjük már?', 'Csomag', 'Megjegyzés', 'Mikor', 'Jármű'], fejek)
+ok('bal oszlop: ügyfél, csomag; jobb oszlop: mikor, jármű, megjegyzés', ['Ismerjük már?', 'Csomag', 'Mikor', 'Jármű', 'Megjegyzés'], fejek)
 const r = await p.evaluate(() => {
   const tel = document.querySelector('#tel').getBoundingClientRect()
   const fej = (t) => [...document.querySelectorAll('.szakasz > .fej')].find((e) => e.textContent.trim() === t).getBoundingClientRect()

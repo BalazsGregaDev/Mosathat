@@ -340,12 +340,6 @@ export default function BookingForm({
                   </div>
                 )}
               </div>
-
-              <div className="szakasz urlap-megj">
-                <div className="fej">Megjegyzés</div>
-                <textarea className="beviteli" value={f.notes}
-                          onChange={(e) => set('notes', e.target.value)} />
-              </div>
             </div>
 
             <div className="urlap-oszlop">
@@ -527,6 +521,12 @@ export default function BookingForm({
                            onChange={(e) => set('model', e.target.value)} />
                   </div>
                 </div>
+              </div>
+
+              <div className="szakasz urlap-megj">
+                <div className="fej">Megjegyzés</div>
+                <textarea className="beviteli" value={f.notes}
+                          onChange={(e) => set('notes', e.target.value)} />
               </div>
             </div>
           </div>
