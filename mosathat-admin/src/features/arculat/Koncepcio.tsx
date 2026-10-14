@@ -1,8 +1,42 @@
-import type { ReactNode } from 'react'
+import { createContext, useContext, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 
-import { szam, UZLET, type Cella, type CsomagTabla, type KoncepcioKod, type Mod } from '../../lib/arculat'
+import type { Catalog } from '../../data/source'
+import type { VehicleCategory } from '../../lib/types'
+import {
+  csomagTabla, kategoriaTol, KAT_ALCIM, KAT_NEV, KATEGORIAK, szam, UZLET,
+  type Cella, type CsomagTabla, type KoncepcioKod, type Mod,
+} from '../../lib/arculat'
 
-const MENU = ['Csomagok', 'Árak', 'Galéria', 'Foglalás']
+interface KvAllapot {
+  t: CsomagTabla
+  kat: VehicleCategory
+  setKat: (k: VehicleCategory) => void
+  tol: Record<VehicleCategory, number | null>
+}
+
+const Kv = createContext<KvAllapot | null>(null)
+const useKv = () => useContext(Kv)!
+
+type Cel = 'csomagok' | 'foglalas' | 'hely' | 'kapcsolat'
+
+const CEL_ELEM: Record<Cel, string> = {
+  csomagok: '.kv-csomagok',
+  foglalas: '.kv-foglalas',
+  hely: '.kv-hely',
+  kapcsolat: '.kv-lab',
+}
+
+const MENU: [string, Cel][] = [['Csomagok', 'csomagok'], ['Foglalás', 'foglalas'], ['Hol vagyunk', 'hely'], ['Kapcsolat', 'kapcsolat']]
+
+function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null) {
+  e.preventDefault()
+  if (!cel) return
+  e.currentTarget.closest('.kv')?.querySelector(CEL_ELEM[cel])?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const ADDRESS = `${UZLET.cim.replace(/\.$/, '')}, ${UZLET.irsz}`
+const TERKEP = `https://www.google.com/maps?q=${encodeURIComponent(`${UZLET.nev}, ${ADDRESS}`)}&z=16&output=embed`
+const UTVONAL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ADDRESS)}`
 
 function Nav({ jobbra }: { jobbra?: ReactNode }) {
   return (
@@ -10,15 +44,15 @@ function Nav({ jobbra }: { jobbra?: ReactNode }) {
       <span className="kv-logo">{UZLET.nev}</span>
       {jobbra ?? (
         <nav>
-          {MENU.map((m) => <a key={m} href={`#${m}`} onClick={(e) => e.preventDefault()}>{m}</a>)}
+          {MENU.map(([m, cel]) => <a key={m} href={`#${cel}`} onClick={(e) => ugras(e, cel)}>{m}</a>)}
         </nav>
       )}
     </header>
   )
 }
 
-function Gomb({ children = 'Időpontot kérek' }: { children?: ReactNode }) {
-  return <a className="kv-gomb" href="#foglalas" onClick={(e) => e.preventDefault()}>{children}</a>
+function Gomb({ children = 'Időpontot kérek', cel = 'foglalas' }: { children?: ReactNode; cel?: Cel | null }) {
+  return <a className="kv-gomb" href="#foglalas" onClick={(e) => ugras(e, cel)}>{children}</a>
 }
 
 function Info({ cimke, children }: { cimke: string; children: ReactNode }) {
@@ -36,19 +70,29 @@ function Jel({ c }: { c: Cella }) {
   return <span className="kv-mas" data-kiemelt={c.kiemelt || undefined}>{c.szoveg}</span>
 }
 
-function Tabla({ t, sorszam = false, ft = true, oszlopCim }: {
-  t: CsomagTabla
-  sorszam?: boolean
-  ft?: boolean
-  oszlopCim?: string
-}) {
+function KatValaszto() {
+  const { kat, setKat } = useKv()
+  return (
+    <div className="kv-kat" role="group" aria-label="Járműkategória">
+      {KATEGORIAK.map((k) => (
+        <button key={k} type="button" aria-pressed={kat === k} onClick={() => setKat(k)}>{KAT_NEV[k]}</button>
+      ))}
+    </div>
+  )
+}
+
+function Tabla({ sorszam = false, ft = true }: { sorszam?: boolean; ft?: boolean }) {
+  const { t } = useKv()
   let n = 0
   return (
     <div className="kv-tabla-gorgo">
       <table className="kv-tabla">
         <thead>
           <tr>
-            <th className="kv-csoport-cim" scope="col">{oszlopCim ?? t.csoportok[0]?.cim ?? 'Szolgáltatás'}</th>
+            <th className="kv-fej-bal" scope="col">
+              <span className="kv-csoport-cim">Járműkategória</span>
+              <KatValaszto />
+            </th>
             {t.csomagok.map((c) => (
               <th key={c.id} scope="col">
                 <span className="kv-csomag-nev">{c.nev}</span>
@@ -57,13 +101,11 @@ function Tabla({ t, sorszam = false, ft = true, oszlopCim }: {
             ))}
           </tr>
         </thead>
-        {t.csoportok.map((g, gi) => (
+        {t.csoportok.map((g) => (
           <tbody key={g.terulet}>
-            {gi > 0 && (
-              <tr className="kv-csoport">
-                <th scope="colgroup" colSpan={t.csomagok.length + 1}>{g.cim}</th>
-              </tr>
-            )}
+            <tr className="kv-csoport">
+              <th scope="colgroup" colSpan={t.csomagok.length + 1}>{g.cim}</th>
+            </tr>
             {g.sorok.map((s) => {
               n++
               return (
@@ -83,7 +125,8 @@ function Tabla({ t, sorszam = false, ft = true, oszlopCim }: {
   )
 }
 
-function Labjegyzet({ t }: { t: CsomagTabla }) {
+function Labjegyzet() {
+  const { t } = useKv()
   if (t.kulsoTol == null && t.belsoTol == null) return null
   return (
     <p className="kv-labjegyzet">
@@ -95,9 +138,105 @@ function Labjegyzet({ t }: { t: CsomagTabla }) {
   )
 }
 
-const KATEGORIA = 'Sedan / Kombi / Ferdehátú'
+function Alcim({ utana = '' }: { utana?: string }) {
+  const { kat } = useKv()
+  return <span className="kv-alcim">{KAT_ALCIM[kat]}{utana}</span>
+}
 
-function Adatlap({ t }: { t: CsomagTabla }) {
+const LEPESEK = ['Autó', 'Csomag', 'Időpont', 'Adatok']
+
+function Foglalas() {
+  const { kat, setKat, tol } = useKv()
+  return (
+    <section className="kv-foglalas">
+      <h2>Időpontfoglalás</h2>
+      <p className="kv-bevezeto">Válaszd ki, mit szeretnél, és mutatjuk a szabad időpontokat.</p>
+      <ol className="kv-lepesek">
+        {LEPESEK.map((l, i) => (
+          <li key={l} aria-current={i === 0 ? 'step' : undefined}>
+            <span className="kv-lepes-szam">{i + 1}</span>{l}
+          </li>
+        ))}
+      </ol>
+      <div className="kv-lepes">
+        <h3>Milyen autóval jössz?</h3>
+        <div className="kv-kat-kartyak">
+          {KATEGORIAK.map((k) => (
+            <button key={k} type="button" aria-pressed={kat === k} onClick={() => setKat(k)}>
+              <span className="kv-kat-nev">{KAT_NEV[k]}</span>
+              <span className="kv-kat-ar">{tol[k] != null ? `${szam(tol[k])} Ft-tól` : 'árajánlat alapján'}</span>
+            </button>
+          ))}
+        </div>
+        <div className="kv-lepes-lab">
+          <span className="kv-lepes-kov">Következő: csomag és extrák</span>
+          <Gomb cel={null}>Tovább</Gomb>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Terkep() {
+  return (
+    <section className="kv-hely">
+      <div className="kv-hely-szoveg">
+        <h2>Hol vagyunk</h2>
+        <p className="kv-bevezeto">
+          A {UZLET.haz} mélygarázsában, a −1. szinten. A bejárat a {UZLET.bejarat} nyílik.
+        </p>
+        <Info cimke="Cím">{UZLET.irsz}, {UZLET.cim}</Info>
+        <Info cimke="Nyitvatartás">{UZLET.napok} {UZLET.nyitas}–{UZLET.zaras}</Info>
+        <Info cimke="Leadás legkorábban">{UZLET.leadas}</Info>
+        <Info cimke="Telefon">{UZLET.telefon}</Info>
+        <a className="kv-link" href={UTVONAL} target="_blank" rel="noreferrer">Útvonaltervezés a Google Térképpel</a>
+      </div>
+      <div className="kv-terkep">
+        <iframe title={`${UZLET.nev} a térképen`} src={TERKEP} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+      </div>
+    </section>
+  )
+}
+
+const LAB_MENU = [['Lemondási feltételek', 'feltetelek'], ['Adatkezelés', 'adatkezeles'], ['Impresszum', 'impresszum']]
+
+function Lab() {
+  return (
+    <footer className="kv-lab">
+      <div className="kv-lab-fo">
+        <div className="kv-lab-elso">
+          <span className="kv-logo">{UZLET.nev}</span>
+          <p>Kézi autókozmetika a Váci úti {UZLET.haz} mélygarázsában.</p>
+        </div>
+        <Info cimke="Cím">{UZLET.irsz}, {UZLET.cim}<br />{UZLET.haz}, {UZLET.szint}</Info>
+        <Info cimke="Nyitvatartás">{UZLET.napok} {UZLET.nyitas}–{UZLET.zaras}<br />Leadás legkorábban {UZLET.leadas}</Info>
+        <div className="kv-info">
+          <span className="kv-cimke">Kapcsolat</span>
+          <span className="kv-ertek">{UZLET.telefon}</span>
+          <a className="kv-link" href="#foglalas" onClick={(e) => ugras(e, 'foglalas')}>Időpontot kérek</a>
+        </div>
+      </div>
+      <div className="kv-lab-also">
+        <span>© {new Date().getFullYear()} {UZLET.nev}</span>
+        <nav>
+          {LAB_MENU.map(([m, h]) => <a key={h} href={`#${h}`} onClick={(e) => ugras(e, null)}>{m}</a>)}
+        </nav>
+      </div>
+    </footer>
+  )
+}
+
+function Vege() {
+  return (
+    <>
+      <Foglalas />
+      <Terkep />
+      <Lab />
+    </>
+  )
+}
+
+function Adatlap() {
   return (
     <>
       <Nav />
@@ -121,16 +260,17 @@ function Adatlap({ t }: { t: CsomagTabla }) {
       <section className="kv-csomagok">
         <div className="kv-szakasz-fej">
           <h2>Mit tartalmaznak a csomagok</h2>
-          <span className="kv-alcim">{KATEGORIA} — bruttó</span>
+          <Alcim utana=" — bruttó" />
         </div>
-        <Tabla t={t} sorszam />
-        <Labjegyzet t={t} />
+        <Tabla sorszam />
+        <Labjegyzet />
       </section>
+      <Vege />
     </>
   )
 }
 
-function Melygarazs({ t }: { t: CsomagTabla }) {
+function Melygarazs() {
   return (
     <>
       <Nav />
@@ -152,13 +292,15 @@ function Melygarazs({ t }: { t: CsomagTabla }) {
       <div className="kv-csik" aria-hidden="true" />
       <section className="kv-csomagok">
         <h2>Csomagok</h2>
-        <Tabla t={t} />
+        <Tabla />
       </section>
+      <div className="kv-csik" aria-hidden="true" />
+      <Vege />
     </>
   )
 }
 
-function Magazin({ t }: { t: CsomagTabla }) {
+function Magazin() {
   return (
     <>
       <Nav />
@@ -180,15 +322,16 @@ function Magazin({ t }: { t: CsomagTabla }) {
       <section className="kv-csomagok">
         <div className="kv-szakasz-fej">
           <h2>Csomagok</h2>
-          <span className="kv-alcim">{KATEGORIA}</span>
+          <Alcim />
         </div>
-        <Tabla t={t} />
+        <Tabla />
       </section>
+      <Vege />
     </>
   )
 }
 
-function Showroom({ t }: { t: CsomagTabla }) {
+function Showroom() {
   return (
     <>
       <Nav />
@@ -209,13 +352,14 @@ function Showroom({ t }: { t: CsomagTabla }) {
       </section>
       <section className="kv-csomagok">
         <h2>Csomagok</h2>
-        <Tabla t={t} />
+        <Tabla />
       </section>
+      <Vege />
     </>
   )
 }
 
-function Jelzotabla({ t }: { t: CsomagTabla }) {
+function Jelzotabla() {
   return (
     <>
       <Nav />
@@ -237,13 +381,15 @@ function Jelzotabla({ t }: { t: CsomagTabla }) {
       </section>
       <section className="kv-csomagok">
         <h2>Csomagok</h2>
-        <Tabla t={t} ft={false} />
+        <Tabla ft={false} />
       </section>
+      <Vege />
     </>
   )
 }
 
-function Munkalap({ t }: { t: CsomagTabla }) {
+function Munkalap() {
+  const { kat } = useKv()
   return (
     <>
       <Nav jobbra={<span className="kv-fejszoveg">Munkalap — 1138 Bp., {UZLET.cim}</span>} />
@@ -259,17 +405,18 @@ function Munkalap({ t }: { t: CsomagTabla }) {
       <section className="kv-csomagok">
         <div className="kv-lap">
           <div className="kv-lap-fej">
-            <span>Csomagtartalom / {t.csoportok[0]?.cim ?? 'Mosás'}</span>
-            <span>Sedan — bruttó</span>
+            <span>Csomagtartalom</span>
+            <span>{KAT_NEV[kat]} — bruttó</span>
           </div>
-          <Tabla t={t} ft={false} oszlopCim="Szolgáltatás" />
+          <Tabla ft={false} />
         </div>
       </section>
+      <Vege />
     </>
   )
 }
 
-function Racs({ t }: { t: CsomagTabla }) {
+function Racs() {
   return (
     <>
       <Nav />
@@ -294,13 +441,14 @@ function Racs({ t }: { t: CsomagTabla }) {
       </section>
       <section className="kv-csomagok">
         <h2>Csomagok</h2>
-        <Tabla t={t} ft={false} />
+        <Tabla ft={false} />
       </section>
+      <Vege />
     </>
   )
 }
 
-function Lakk({ t }: { t: CsomagTabla }) {
+function Lakk() {
   return (
     <>
       <Nav />
@@ -323,13 +471,14 @@ function Lakk({ t }: { t: CsomagTabla }) {
       </section>
       <section className="kv-csomagok">
         <h2>Csomagok</h2>
-        <Tabla t={t} ft={false} />
+        <Tabla ft={false} />
       </section>
+      <Vege />
     </>
   )
 }
 
-const OLDALAK: Record<KoncepcioKod, (p: { t: CsomagTabla }) => ReactNode> = {
+const OLDALAK: Record<KoncepcioKod, () => ReactNode> = {
   '01': Adatlap,
   '02': Melygarazs,
   '03': Magazin,
@@ -340,11 +489,16 @@ const OLDALAK: Record<KoncepcioKod, (p: { t: CsomagTabla }) => ReactNode> = {
   '08': Lakk,
 }
 
-export default function Koncepcio({ kod, mod, t }: { kod: KoncepcioKod; mod: Mod; t: CsomagTabla }) {
+export default function Koncepcio({ kod, mod, k }: { kod: KoncepcioKod; mod: Mod; k: Catalog }) {
+  const [kat, setKat] = useState<VehicleCategory>('SZEMELYAUTO')
+  const t = useMemo(() => csomagTabla(k, kat), [k, kat])
+  const tol = useMemo(() => kategoriaTol(k), [k])
   const Oldal = OLDALAK[kod]
   return (
-    <div className="kv" data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
-      <Oldal t={t} />
-    </div>
+    <Kv.Provider value={{ t, kat, setKat, tol }}>
+      <div className="kv" lang="hu" data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
+        <Oldal />
+      </div>
+    </Kv.Provider>
   )
 }

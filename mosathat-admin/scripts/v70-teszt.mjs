@@ -35,9 +35,9 @@ await menu.click(); await p.waitForTimeout(2500)
 const lista = p.locator('.arculat-lista button')
 ok('mind a 8 koncepció a listában', 8, await lista.count())
 ok('alapból az első', '01', await p.locator('.kv').getAttribute('data-k'))
-const fej = (await p.locator('.kv-tabla thead th').allInnerTexts()).map(sima)
-ok('a táblázat fejléce a valódi csomagokkal és árakkal', ['Mosás', 'Start 12 800 Ft', 'Premium 15 600 Ft', 'Elit 19 800 Ft'],
-  fej.map((x) => x.replace(/START|PREMIUM|ELIT/, (m) => m.charAt(0) + m.slice(1).toLowerCase()).replace(/^MOSÁS$/, 'Mosás')))
+const fej = (await p.locator('.kv-tabla thead th:not(.kv-fej-bal)').allInnerTexts()).map(sima)
+ok('a táblázat fejléce a valódi csomagokkal és árakkal', ['Start 12 800 Ft', 'Premium 15 600 Ft', 'Elit 19 800 Ft'],
+  fej.map((x) => x.replace(/START|PREMIUM|ELIT/, (m) => m.charAt(0) + m.slice(1).toLowerCase())))
 ok('benne van a takarítás is', true, (await p.locator('.kv-csoport').allInnerTexts()).map(sima).some((x) => /takarítás/i.test(x)))
 const falc = (await p.locator('.kv-tabla tbody tr').filter({ hasText: 'Falc áttörlés' }).locator('td').allInnerTexts()).map(sima)
 ok('különböző szintű tétel szöveggel', ['áttörlés', 'áttörlés', 'mélytisztítás'], falc)

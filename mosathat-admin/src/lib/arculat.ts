@@ -1,5 +1,5 @@
 import type { Catalog } from '../data/source'
-import type { ServiceArea } from './types'
+import type { ServiceArea, VehicleCategory } from './types'
 
 export type KoncepcioKod = '01' | '02' | '03' | '04' | '05' | '06' | '07' | '08'
 export type Mod = 'VILAGOS' | 'SOTET'
@@ -29,6 +29,20 @@ export const UZLET = {
   leadas: '7:15',
   telefon: '+36 1 506 0420',
   kerulet: 'Budapest XIII.',
+}
+
+export const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
+
+export const KAT_NEV: Record<VehicleCategory, string> = {
+  SZEMELYAUTO: 'Személygépjármű',
+  SUV: 'SUV, Egyterű',
+  KISBUSZ: 'Kisbusz, Furgon',
+}
+
+export const KAT_ALCIM: Record<VehicleCategory, string> = {
+  SZEMELYAUTO: 'Személygépjármű — sedan, kombi, ferdehátú',
+  SUV: 'SUV, egyterű',
+  KISBUSZ: 'Kisbusz, furgon',
 }
 
 export type Cella = { tipus: 'van' } | { tipus: 'nincs' } | { tipus: 'mas'; szoveg: string; kiemelt: boolean }
@@ -65,12 +79,30 @@ function valtozatok(nevek: (string | undefined)[]): Cella[] {
     : { tipus: 'nincs' }))
 }
 
-export function csomagTabla(k: Catalog): CsomagTabla {
-  const aktiv = k.packages.filter((p) => p.active).sort((a, b) => a.sort_order - b.sort_order)
-  const ar = (id: string, scope: 'TELJES' | 'KULSO' | 'BELSO') => {
-    const r = k.packagePricing.find((x) => x.package_id === id && x.category === 'SZEMELYAUTO' && x.scope === scope)
+function aktivCsomagok(k: Catalog) {
+  return k.packages.filter((p) => p.active).sort((a, b) => a.sort_order - b.sort_order)
+}
+
+function arKereso(k: Catalog, kat: VehicleCategory) {
+  return (id: string, scope: 'TELJES' | 'KULSO' | 'BELSO') => {
+    const r = k.packagePricing.find((x) => x.package_id === id && x.category === kat && x.scope === scope)
     return r && !r.requires_quote ? r.price_huf : null
   }
+}
+
+export function kategoriaTol(k: Catalog): Record<VehicleCategory, number | null> {
+  const aktiv = aktivCsomagok(k)
+  const tol = (kat: VehicleCategory) => {
+    const ar = arKereso(k, kat)
+    const ertekek = aktiv.map((p) => ar(p.id, 'TELJES')).filter((v): v is number => v != null)
+    return ertekek.length ? Math.min(...ertekek) : null
+  }
+  return { SZEMELYAUTO: tol('SZEMELYAUTO'), SUV: tol('SUV'), KISBUSZ: tol('KISBUSZ') }
+}
+
+export function csomagTabla(k: Catalog, kat: VehicleCategory = 'SZEMELYAUTO'): CsomagTabla {
+  const aktiv = aktivCsomagok(k)
+  const ar = arKereso(k, kat)
   const minimum = (scope: 'KULSO' | 'BELSO') => {
     const ertekek = aktiv.map((p) => ar(p.id, scope)).filter((v): v is number => v != null)
     return ertekek.length ? Math.min(...ertekek) : null

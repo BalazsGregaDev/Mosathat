@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import './betuk'
 import './koncepciok.css'
 import './arculat-oldal.css'
 import { useApp } from '../../state/AppContext'
 import { hibaSzoveg } from '../../lib/format'
-import { csomagTabla, KONCEPCIOK, type KoncepcioKod, type Mod } from '../../lib/arculat'
+import { KONCEPCIOK, type KoncepcioKod, type Mod } from '../../lib/arculat'
 import type { ArculatValasztas } from '../../lib/types'
 import Koncepcio from './Koncepcio'
 
@@ -51,7 +51,6 @@ export default function ArculatPage() {
     return () => ro.disconnect()
   }, [szel])
 
-  const tabla = useMemo(() => (catalog ? csomagTabla(catalog) : null), [catalog])
   const aktiv = KONCEPCIOK.find((k) => k.kod === kod)!
   const ezAValasztott = valasztott.kod === kod && valasztott.mod === mod
 
@@ -123,18 +122,19 @@ export default function ArculatPage() {
           </div>
 
           <div className="arculat-terulet" ref={terulet}>
-            {!tabla ? (
+            {!catalog ? (
               <div className="betolt">Betöltés…</div>
             ) : (
               <div className="arculat-keret kv-keret" style={{ width: szel, zoom: arany }}
                    data-meret={meret}>
-                <Koncepcio kod={kod} mod={mod} t={tabla} />
+                <Koncepcio kod={kod} mod={mod} k={catalog} />
               </div>
             )}
           </div>
           <p className="halk arculat-megjegyzes">
             Az előnézet {szel} px széles{arany < 1 ? `, ${Math.round(arany * 100)}%-ra kicsinyítve` : ''}.
-            A csomagok és az árak a Szolgáltatások menüből jönnek, a sedan teljes ára.
+            A csomagok és az árak a Szolgáltatások menüből jönnek, a járműkategória a táblázat fejlécében
+            és a foglalásnál váltható. A térkép élesben a Google Térképből töltődik be.
           </p>
         </div>
       </div>
