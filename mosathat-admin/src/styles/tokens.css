@@ -1,0 +1,80 @@
+:root {
+  --hatter:        #f4f5f3;
+  --lap:           #ffffff;
+  --lap-2:         #fafbf9;
+  --keret:         #e2e5df;
+  --keret-eros:    #cdd2c8;
+
+  --szoveg:        #171a17;
+  --szoveg-halk:   #6b736a;
+  --szoveg-halvany:#98a094;
+  --sotet:         #14181a;
+  --sotet-2:       #1d2326;
+  --sotet-keret:   #2b3337;
+  --sotet-szoveg:  #e8eae6;
+  --sotet-halk:    #8d968f;
+  --zold:          #1f7a4d;
+  --zold-vilagos:  #2f9c63;
+  --zold-halvany:  #e7f3ec;
+  --zold-sotet:    #17593a;
+  --narancs:         #e07b1f;
+  --narancs-halvany: #fdeedd;
+  --narancs-sotet:   #9a4d0b;
+  --tobbnap:         #6b4fbb;
+  --tobbnap-halvany: #f1ecfb;
+  --tobbnap-keret:   #d6c8f2;
+  --tobbnap-sotet:   #4a3388;
+  --szabadsag:         #c2417a;
+  --szabadsag-halvany: #fbe8f0;
+  --szabadsag-keret:   #efc3d5;
+  --szabadsag-sotet:   #8a2353;
+  --v-varjuk:      #9aa39c;
+  --v-erkezett:    #c9821f;
+  --v-dolgozunk:   var(--zold);
+  --v-kesz:        #2f6fb0;
+  --v-lezart:      #9aa39c;
+  --v-baj:         #b3402f;
+  --tr-jo:         var(--zold);
+  --tr-jo-halk:    #dfeee6;
+  --tr-szoros:     #c9821f;
+  --tr-szoros-halk:#faeedb;
+  --tr-tele:       #b3402f;
+  --tr-tele-halk:  #f7e2de;
+  --betu: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+  --betu-szam: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --m-xs:   11px;
+  --m-sm:   13px;
+  --m-alap: 14px;
+  --m-md:   16px;
+  --m-lg:   20px;
+  --m-xl:   26px;
+  --m-xxl:  34px;
+  --m-hos:  52px;
+
+  --vastag-normal: 400;
+  --vastag-kozep:  500;
+  --vastag-eros:   600;
+  --vastag-fej:    700;
+  --t1: 4px;
+  --t2: 8px;
+  --t3: 12px;
+  --t4: 16px;
+  --t5: 24px;
+  --t6: 32px;
+  --t7: 48px;
+  --r-sm: 4px;
+  --r:    8px;
+  --r-lg: 14px;
+  --r-kor: 999px;
+
+  --arnyek-sm: 0 1px 2px rgba(20, 24, 26, .06);
+  --arnyek:    0 2px 8px rgba(20, 24, 26, .08);
+  --arnyek-lg: 0 12px 40px rgba(20, 24, 26, .22);
+  --oldalsav:   232px;
+  --fejlec:     60px;
+  --mobil-fejlec: 56px;
+
+  --atmenet: 140ms ease;
+}

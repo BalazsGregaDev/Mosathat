@@ -1,0 +1,89 @@
+.lap.keres-lap { width: min(1040px, 100%); }
+
+.keres-lapozo {
+  margin-left: auto;
+  display: flex; align-items: center; gap: var(--t2);
+  font-family: var(--betu-szam); font-size: var(--m-sm);
+}
+.keres-lapozo + .bezar { margin-left: 0; }
+
+.keres-racs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: var(--t5);
+  align-items: start;
+}
+.keres-bal { display: flex; flex-direction: column; gap: var(--t4); min-width: 0; }
+.keres-jobb { display: flex; flex-direction: column; gap: var(--t3); min-width: 0; }
+
+.keres-auto { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--t3); }
+.keres-auto .rendszam {
+  font-family: var(--betu-szam); font-size: var(--m-xl);
+  font-weight: var(--vastag-fej); letter-spacing: .06em;
+}
+
+.keres-adatok {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px var(--t4);
+  margin: var(--t3) 0 0;
+  font-size: var(--m-sm);
+}
+.keres-adatok dt { color: var(--szoveg-halk); }
+.keres-adatok dd { margin: 0; }
+.keres-megjegyzes { font-style: italic; }
+.keres-egyeztet { color: #7a5600; font-weight: var(--vastag-eros); }
+
+.keres-ugyfel { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--t3); font-size: var(--m-sm); }
+.keres-cimkek { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--t2); }
+.cimke-pill[data-r='uj']         { background: var(--zold-halvany); color: var(--zold-sotet); }
+.cimke-pill[data-r='visszatero'] { background: #e6ecfa; color: #24418a; }
+.cimke-pill[data-r='baj']        { background: #fbeaea; color: var(--v-baj); font-weight: var(--vastag-eros); }
+.cimke-pill[data-r='figyel']     { background: #fff4d6; color: #7a5600; }
+.keres-tipp { font-size: var(--m-xs); margin: var(--t2) 0 0; }
+
+.keres-itelet {
+  display: flex; flex-direction: column; gap: 4px;
+  border-radius: var(--r);
+  padding: var(--t3) var(--t4);
+  font-size: var(--m-sm);
+}
+.keres-itelet strong { font-size: var(--m-md); }
+.keres-itelet ul { margin: 0; padding-left: 18px; }
+.keres-itelet[data-befer='true']  { background: var(--zold-halvany); color: var(--zold-sotet); }
+.keres-itelet[data-befer='false'] { background: #fbeaea; color: var(--v-baj); }
+
+.keres-foglaltsag {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--t3);
+  border-radius: var(--r);
+  background: var(--lap-2);
+  font-size: var(--m-xs);
+}
+.keres-foglaltsag strong { font-family: var(--betu-szam); font-size: var(--m-xl); }
+
+.keres-lab { flex-wrap: wrap; }
+.keres-lab .gombok { margin-left: auto; }
+
+.keres-jelzo {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--t4) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 45;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: #24418a;
+  color: #fff;
+  box-shadow: var(--arnyek-lg);
+  font-weight: var(--vastag-eros);
+}
+.keres-jelzo:hover { filter: brightness(1.08); }
+
+.iv-darab[data-kiemelt] { box-shadow: 0 0 0 2px #24418a; z-index: 1; }
+.iv-darab[data-kiemelt][data-gond] { box-shadow: 0 0 0 2px var(--v-baj); }
+
+@media (max-width: 760px) {
+  .keres-racs { grid-template-columns: minmax(0, 1fr); }
+}
