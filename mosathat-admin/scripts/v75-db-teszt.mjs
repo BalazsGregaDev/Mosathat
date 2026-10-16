@@ -55,7 +55,7 @@ const rossz = structuredClone(uj); rossz.sorok[0].name = '  '
 t.ok('üres sornév: hiba, és semmi nem változik', [true, 'Premium'],
   [(await hiba(() => q(db, `select csomag_szerkeszto_mentes($1)`, [JSON.stringify(rossz)]))) !== null,
    (await q(db, `select name from packages where code = 'PREMIUM'`))[0].name])
-const db_ = (await q(db, `select csomag_szerkeszto_mentes($1) n`, [JSON.stringify(uj)]))[0].n
+const db_ = (await q(db, `select csomag_szerkeszto_mentes($1) x`, [JSON.stringify(uj)]))[0].x.frissitett
 t.ok('a tulajdonos ment, a nyitott foglalások frissülnek', true, db_ > 0)
 
 console.log('\n=== 3) Mindenhol átvezetve ===\n')

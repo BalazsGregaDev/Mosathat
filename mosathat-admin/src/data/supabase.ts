@@ -9,7 +9,7 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat,
+  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { idoRovidit, num, numOrNull, toExtra, toOnlineKeres, toQuote } from './source'
@@ -269,10 +269,10 @@ export class SupabaseSource implements DataSource {
     return data as CsomagSzerkesztoAdat
   }
 
-  async saveCsomagSzerkeszto(adat: CsomagSzerkesztoAdat): Promise<number> {
+  async saveCsomagSzerkeszto(adat: CsomagSzerkesztoAdat): Promise<CsomagMentesEredmeny> {
     const { data, error } = await this.sb.rpc('csomag_szerkeszto_mentes', { p: adat })
     if (error) fail('Csomagok mentése', error)
-    return Number(data ?? 0)
+    return data as CsomagMentesEredmeny
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {

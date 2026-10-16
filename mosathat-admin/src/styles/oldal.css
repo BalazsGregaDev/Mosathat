@@ -436,3 +436,14 @@
   .szerk-cella { flex-direction: column-reverse; align-items: stretch; gap: 4px; }
   .szerk-cella .csuszka { align-self: flex-start; padding: 0; }
 }
+.szerk-fej { display: flex; align-items: center; justify-content: space-between; gap: var(--t3); }
+.szerk-fej .btn { text-transform: none; letter-spacing: normal; }
+.szerk-tabla thead th[data-uj] { color: var(--zold); }
+.szerk-nevtelen { color: var(--v-baj); font-style: italic; text-transform: none; }
+.szerk-csomag { padding: var(--t3); border: 1px solid var(--keret); border-radius: var(--r); }
+.szerk-csomag[data-uj] { border-color: var(--zold); background: color-mix(in srgb, var(--zold) 4%, transparent); }
+.szerk-csomag-fej { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.szerk-csomag-szam { margin-right: auto; font-size: var(--m-xs); font-weight: var(--vastag-eros); color: var(--szoveg-halk); text-transform: uppercase; letter-spacing: .06em; }
+.szerk-tabla[data-sok] .szerk-cella { flex-direction: column-reverse; align-items: stretch; gap: 4px; }
+.szerk-tabla[data-sok] .szerk-cella .csuszka { align-self: flex-start; padding: 0; }
+.szerk-csomagok + .szerk-tipp { padding: 0 var(--t4) var(--t4); margin-top: 0; }

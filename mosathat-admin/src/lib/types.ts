@@ -903,9 +903,11 @@ export interface NewStaffInput {
 
 export interface SzerkesztoCsomag {
   id: string
-  code: string
+  code: string | null
   name: string
   description: string | null
+  includes_package_id: string | null
+  hasznalt: boolean
 }
 
 export interface SzerkesztoCella {
@@ -918,6 +920,12 @@ export interface SzerkesztoSor {
   name: string
   area: ServiceArea
   cellak: Record<string, SzerkesztoCella>
+}
+
+export interface CsomagMentesEredmeny {
+  frissitett: number
+  torolt: number
+  kivezetve: string[]
 }
 
 export interface CsomagSzerkesztoAdat {

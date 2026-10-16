@@ -4,7 +4,6 @@ import { useApp } from '../../state/AppContext'
 import { hibaSzoveg } from '../../lib/format'
 import type { CsomagSzerkesztoAdat, ServiceArea, SzerkesztoCsomag, SzerkesztoSor } from '../../lib/types'
 import Csuszka from '../common/Csuszka'
-import { automatikusLeiras } from '../../lib/csomagLeiras'
 
 interface Sor extends SzerkesztoSor {
   kulcs: string
@@ -30,20 +29,29 @@ function vazlatbol(a: CsomagSzerkesztoAdat): Vazlat {
   }
 }
 
+function ujAzonosito(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+  const h = () => Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0')
+  return `${h()}${h()}-${h()}-4${h().slice(1)}-a${h().slice(1)}-${h()}${h()}${h()}`
+}
+
 function mentendo(v: Vazlat): CsomagSzerkesztoAdat {
   const sorrend = TERULETEK.flatMap((t) => v.sorok.filter((s) => s.area === t.kulcs))
+  const ids = new Set(v.csomagok.map((c) => c.id))
   return {
     csomagok: v.csomagok.map((c) => ({ ...c, name: c.name.trim(), description: (c.description ?? '').trim() || null })),
     sorok: sorrend.map(({ kulcs: _k, ...s }) => ({
       ...s,
       name: s.name.trim(),
-      cellak: Object.fromEntries(Object.entries(s.cellak).map(([id, c]) => [id, { ...c, name: c.name.trim() || s.name.trim() }])),
+      cellak: Object.fromEntries(Object.entries(s.cellak)
+        .filter(([id]) => ids.has(id))
+        .map(([id, c]) => [id, { ...c, name: c.name.trim() || s.name.trim() }])),
     })),
   }
 }
 
 export default function CsomagSzerkeszto() {
-  const { data, catalog, refreshCatalog, refresh } = useApp()
+  const { data, refreshCatalog, refresh } = useApp()
   const [eredeti, setEredeti] = useState<Vazlat | null>(null)
   const [v, setV] = useState<Vazlat | null>(null)
   const [hiba, setHiba] = useState<string | null>(null)
@@ -137,9 +145,61 @@ export default function CsomagSzerkeszto() {
     setV((x) => x && { ...x, csomagok: x.csomagok.map((c) => (c.id === id ? { ...c, [mezo]: ertek } : c)) })
   }
 
-  function automatikus(id: string): string {
-    const a = automatikusLeiras(catalog, id)
-    return a ? `Üresen hagyva: ${a}` : ''
+  function automatikus(c: SzerkesztoCsomag): string {
+    const alap = csomagok.find((x) => x.id === c.includes_package_id)
+    if (!alap) return ''
+    const plusz = TERULETEK.flatMap((t) => v!.sorok.filter((s) => s.area === t.kulcs))
+      .filter((s) => {
+        const sajat = s.cellak[c.id]
+        const alapCella = s.cellak[alap.id]
+        if (!sajat?.active) return false
+        return !(alapCella?.active && (alapCella.name || s.name) === (sajat.name || s.name))
+      })
+      .map((s) => s.cellak[c.id].name || s.name)
+    if (!plusz.length) return ''
+    return `Üresen hagyva: ${alap.name || 'névtelen'} mindene, plusz: ${plusz.join(', ')}`
+  }
+
+  function ujCsomag() {
+    setUzenet(null)
+    const id = ujAzonosito()
+    setV((x) => x && {
+      csomagok: [...x.csomagok, { id, code: null, name: '', description: '', includes_package_id: null, hasznalt: false }],
+      sorok: x.sorok.map((s) => ({ ...s, cellak: { ...s.cellak, [id]: { name: '', active: false } } })),
+    })
+    window.setTimeout(() => {
+      const el = document.getElementById(`csn-${id}`)
+      el?.scrollIntoView({ block: 'center' })
+      el?.focus()
+    }, 0)
+  }
+
+  function csomagTorol(id: string) {
+    setUzenet(null)
+    setV((x) => x && {
+      ...x,
+      csomagok: x.csomagok
+        .filter((c) => c.id !== id)
+        .map((c) => (c.includes_package_id === id ? { ...c, includes_package_id: null } : c)),
+    })
+  }
+
+  function csomagMozgat(id: string, irany: -1 | 1) {
+    setUzenet(null)
+    setV((x) => {
+      if (!x) return x
+      const i = x.csomagok.findIndex((c) => c.id === id)
+      const j = i + irany
+      if (j < 0 || j >= x.csomagok.length) return x
+      const cs = x.csomagok.slice()
+      ;[cs[i], cs[j]] = [cs[j], cs[i]]
+      return { ...x, csomagok: cs }
+    })
+  }
+
+  function csomagAlap(id: string, alap: string) {
+    setUzenet(null)
+    setV((x) => x && { ...x, csomagok: x.csomagok.map((c) => (c.id === id ? { ...c, includes_package_id: alap || null } : c)) })
   }
 
   async function mentes() {
@@ -147,13 +207,18 @@ export default function CsomagSzerkeszto() {
     setMent(true)
     setHiba(null)
     try {
-      const n = await data.saveCsomagSzerkeszto(mentendo(v))
+      const e = await data.saveCsomagSzerkeszto(mentendo(v))
       const friss = vazlatbol(await data.getCsomagSzerkeszto())
       setEredeti(friss)
       setV(friss)
       await refreshCatalog()
       refresh()
-      setUzenet(n > 0 ? `Mentve. ${n} nyitott foglalás munkalapja frissült.` : 'Mentve.')
+      setUzenet([
+        'Mentve.',
+        e.frissitett > 0 ? `${e.frissitett} nyitott foglalás munkalapja frissült.` : '',
+        e.torolt > 0 ? `${e.torolt} csomag törölve.` : '',
+        e.kivezetve.length ? `Kivezetve (van hozzá foglalás, ezért nem törölhető): ${e.kivezetve.join(', ')}.` : '',
+      ].filter(Boolean).join(' '))
     } catch (e) {
       setHiba(hibaSzoveg(e))
     } finally {
@@ -164,14 +229,19 @@ export default function CsomagSzerkeszto() {
   return (
     <div className="csomag-szerk">
       <div className="panel panelek-szeles">
-        <h3>Csomagtartalom</h3>
+        <h3 className="szerk-fej">
+          Csomagtartalom
+          <button type="button" className="btn btn-kicsi" onClick={ujCsomag}>+ Új csomag (oszlop)</button>
+        </h3>
         <div className="panel-torzs">
           <div className="tablagorgo">
-            <table className="lista szerk-tabla">
+            <table className="lista szerk-tabla" data-sok={csomagok.length >= 4 || undefined}>
               <thead>
                 <tr>
                   <th>Munkalépés</th>
-                  {csomagok.map((c) => <th key={c.id}>{c.name || <span className="halk">névtelen</span>}</th>)}
+                  {csomagok.map((c) => (
+                    <th key={c.id} data-uj={!c.code || undefined}>{c.name || <span className="szerk-nevtelen">névtelen</span>}</th>
+                  ))}
                 </tr>
               </thead>
               {TERULETEK.map((t) => {
@@ -257,8 +327,20 @@ export default function CsomagSzerkeszto() {
       <div className="panel panelek-szeles">
         <h3>Csomagok neve és leírása</h3>
         <div className="panel-torzs szerk-csomagok">
-          {csomagok.map((c) => (
-            <div className="szerk-csomag" key={c.id}>
+          {csomagok.map((c, i) => (
+            <div className="szerk-csomag" key={c.id} data-uj={!c.code || undefined}>
+              <div className="szerk-csomag-fej">
+                <span className="szerk-csomag-szam">{i + 1}. oszlop{!c.code && ' · új'}</span>
+                <button type="button" className="btn btn-kicsi" aria-label={`${c.name || 'Új csomag'} balra`}
+                        disabled={i === 0} onClick={() => csomagMozgat(c.id, -1)}>Balra</button>
+                <button type="button" className="btn btn-kicsi" aria-label={`${c.name || 'Új csomag'} jobbra`}
+                        disabled={i === csomagok.length - 1} onClick={() => csomagMozgat(c.id, 1)}>Jobbra</button>
+                <button type="button" className="btn btn-kicsi btn-veszelyes" disabled={csomagok.length === 1}
+                        title={c.hasznalt ? 'Van hozzá foglalás, ezért mentéskor csak kivezetjük: eltűnik mindenhonnan, a régi foglalások megtartják.' : undefined}
+                        onClick={() => csomagTorol(c.id)}>
+                  {c.hasznalt ? 'Kivezetés' : 'Törlés'}
+                </button>
+              </div>
               <div className="mezo">
                 <label htmlFor={`csn-${c.id}`}>Név</label>
                 <input id={`csn-${c.id}`} className="beviteli" value={c.name}
@@ -266,14 +348,30 @@ export default function CsomagSzerkeszto() {
                        onChange={(e) => csomagValt(c.id, 'name', e.target.value)} />
               </div>
               <div className="mezo">
+                <label htmlFor={`csa-${c.id}`}>Erre épül</label>
+                <select id={`csa-${c.id}`} className="beviteli" value={c.includes_package_id ?? ''}
+                        onChange={(e) => csomagAlap(c.id, e.target.value)}>
+                  <option value="">Semmire (önálló)</option>
+                  {csomagok.filter((x) => x.id !== c.id).map((x) => (
+                    <option key={x.id} value={x.id}>{x.name || 'névtelen'}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="mezo">
                 <label htmlFor={`csl-${c.id}`}>Leírás</label>
                 <textarea id={`csl-${c.id}`} className="beviteli" rows={3} value={c.description ?? ''}
-                          placeholder={automatikus(c.id)}
+                          placeholder={automatikus(c)}
                           onChange={(e) => csomagValt(c.id, 'description', e.target.value)} />
               </div>
             </div>
           ))}
         </div>
+        {csomagok.some((c) => !c.code) && (
+          <p className="halk szerk-tipp">
+            Az új csomag árait mentés után a Csomagok és árak fülön tudod megadni. Amíg nincs ára,
+            foglalásnál „árajánlat alapján” jelenik meg.
+          </p>
+        )}
       </div>
 
       <div className="szerk-lab" data-valtozott={valtozott || undefined}>

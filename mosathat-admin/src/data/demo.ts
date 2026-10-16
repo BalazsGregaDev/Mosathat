@@ -17,7 +17,7 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat,
+  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
 import { idoRovidit, num, numOrNull, toExtra, toOnlineKeres, toQuote } from './source'
@@ -262,9 +262,9 @@ export class DemoSource implements DataSource {
     return r.x
   }
 
-  async saveCsomagSzerkeszto(adat: CsomagSzerkesztoAdat): Promise<number> {
-    const [r] = await this.rows<{ n: number }>(`select csomag_szerkeszto_mentes($1::jsonb) n`, [JSON.stringify(adat)])
-    return Number(r?.n ?? 0)
+  async saveCsomagSzerkeszto(adat: CsomagSzerkesztoAdat): Promise<CsomagMentesEredmeny> {
+    const [r] = await this.rows<{ x: CsomagMentesEredmeny }>(`select csomag_szerkeszto_mentes($1::jsonb) x`, [JSON.stringify(adat)])
+    return r.x
   }
 
   async getBooking(id: string): Promise<DayBooking | null> {
