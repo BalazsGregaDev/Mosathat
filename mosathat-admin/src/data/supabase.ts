@@ -9,10 +9,10 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
+  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
-import { idoRovidit, num, numOrNull, publikusbol, toExtra, toOnlineKeres, toQuote } from './source'
+import { idoRovidit, num, numOrNull, publikusbol, publikusNapbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { EloFrissites } from './elo'
 import { tokenFetch } from './tokenFetch'
 
@@ -261,6 +261,24 @@ export class SupabaseSource implements DataSource {
   async saveArculat(kod: string, mod: 'VILAGOS' | 'SOTET'): Promise<void> {
     const { error } = await this.sb.rpc('arculat_valasztas', { p_kod: kod, p_mod: mod })
     if (error) fail('Arculat mentése', error)
+  }
+
+  async publikusNap(nap: string): Promise<PublikusNapAdat> {
+    const { data, error } = await this.sb.rpc('publikus_nap', { p_nap: nap })
+    if (error) fail('Szabad időpontok', error)
+    return publikusNapbol(data as { foglalasok: DayBooking[]; savok: DayLane[] } | null)
+  }
+
+  async publikusAjanlat(input: Partial<NewBookingInput> & CalcInput): Promise<Quote> {
+    const { data, error } = await this.sb.rpc('publikus_ajanlat', { p: input })
+    if (error) fail('Árszámítás', error)
+    return toQuote(data as Record<string, unknown>)
+  }
+
+  async publikusFoglalas(input: OnlineBookingInput): Promise<string> {
+    const { data, error } = await this.sb.rpc('publikus_foglalas', { p: input })
+    if (error) fail('Foglalási kérés', error)
+    return data as string
   }
 
   async getPublikus(): Promise<PublikusAdat> {

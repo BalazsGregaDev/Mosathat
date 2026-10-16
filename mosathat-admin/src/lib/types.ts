@@ -775,6 +775,12 @@ export interface OnlineBookingInput {
   brand: string | null
   model: string | null
   notes: string | null
+  weboldal?: string
+}
+
+export interface PublikusNapAdat {
+  foglalasok: DayBooking[]
+  savok: DayLane[]
 }
 
 export interface DayLane {

@@ -24,7 +24,7 @@
       ]
     },
     {
-      "source": "/publikus",
+      "source": "/(publikus|impresszum|adatvedelem)",
       "headers": [
         {
           "key": "X-Robots-Tag",

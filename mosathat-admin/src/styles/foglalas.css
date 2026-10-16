@@ -172,3 +172,6 @@
   .fogl-osszeg .ar { font-size: 20px; }
   .fogl-osszeg .kuld .btn { padding: 10px 12px; font-size: var(--m-sm); }
 }
+.fogl-csapda { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.fogl-adatvedelem { margin: var(--t2) 0 0; font-size: var(--m-xs); color: var(--szoveg-halk); }
+.fogl-adatvedelem a { color: inherit; text-decoration: underline; }

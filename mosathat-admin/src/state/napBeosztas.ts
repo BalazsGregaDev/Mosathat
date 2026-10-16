@@ -23,7 +23,7 @@ export function munkaCimke(b: Pick<DayBooking, 'plate_raw' | 'fleet_index' | 'co
   return b.company_name || b.customer_name || 'névtelen'
 }
 
-export async function napBeosztasBetolt(data: DataSource, datum: string,
+export async function napBeosztasBetolt(data: Pick<DataSource, 'getDay' | 'getDayLanes'>, datum: string,
                                         kihagy: string | null = null): Promise<NapBeosztas> {
   const [foglalasok, savok] = await Promise.all([data.getDay(datum), data.getDayLanes(datum)])
   const negyedek = negyedekbol(savok)

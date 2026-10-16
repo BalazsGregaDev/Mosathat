@@ -24,7 +24,12 @@ import LemondasOldal from './features/publikus/LemondasOldal'
 const PublikusOldal = lazy(() => import('./features/publikus/PublikusOldal'))
 
 const lemondas = /^\/lemondas(\/|$)/.test(window.location.pathname)
-const publikus = /^\/publikus\/?$/.test(window.location.pathname)
+const PUBLIKUS_LAPOK: Record<string, 'fooldal' | 'impresszum' | 'adatvedelem'> = {
+  '/publikus': 'fooldal',
+  '/impresszum': 'impresszum',
+  '/adatvedelem': 'adatvedelem',
+}
+const publikus = PUBLIKUS_LAPOK[window.location.pathname.replace(/\/+$/, '') || '/'] ?? null
 
 if (!lemondas && !publikus) {
   nagyitasTiltas()
@@ -37,7 +42,7 @@ createRoot(document.getElementById('root')!).render(
       <LemondasOldal />
     ) : publikus ? (
       <Suspense fallback={null}>
-        <PublikusOldal />
+        <PublikusOldal lap={publikus} />
       </Suspense>
     ) : (
       <AppProvider>

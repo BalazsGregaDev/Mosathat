@@ -12,6 +12,8 @@ interface KvAllapot {
   kat: VehicleCategory
   setKat: (k: VehicleCategory) => void
   tol: Record<VehicleCategory, number | null>
+  nyilvanos: boolean
+  foglalas?: ReactNode
 }
 
 const Kv = createContext<KvAllapot | null>(null)
@@ -28,10 +30,12 @@ const CEL_ELEM: Record<Cel, string> = {
 
 const MENU: [string, Cel][] = [['Csomagok', 'csomagok'], ['Foglalás', 'foglalas'], ['Hol vagyunk', 'hely'], ['Kapcsolat', 'kapcsolat']]
 
-function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null) {
+function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null, nyilvanos = false) {
   e.preventDefault()
   if (!cel) return
-  e.currentTarget.closest('.kv')?.querySelector(CEL_ELEM[cel])?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const elem = e.currentTarget.closest('.kv')?.querySelector(CEL_ELEM[cel])
+  if (elem) elem.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  else if (nyilvanos) window.location.href = `/publikus#${cel}`
 }
 
 const ADDRESS = `${UZLET.cim.replace(/\.$/, '')}, ${UZLET.irsz}`
@@ -39,12 +43,15 @@ const TERKEP = `https://www.google.com/maps?q=${encodeURIComponent(`${UZLET.nev}
 const UTVONAL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ADDRESS)}`
 
 function Nav({ jobbra }: { jobbra?: ReactNode }) {
+  const { nyilvanos } = useKv()
   return (
     <header className="kv-nav">
-      <span className="kv-logo">{UZLET.nev}</span>
+      {nyilvanos
+        ? <a className="kv-logo" href="/publikus">{UZLET.nev}</a>
+        : <span className="kv-logo">{UZLET.nev}</span>}
       {jobbra ?? (
         <nav>
-          {MENU.map(([m, cel]) => <a key={m} href={`#${cel}`} onClick={(e) => ugras(e, cel)}>{m}</a>)}
+          {MENU.map(([m, cel]) => <a key={m} href={`#${cel}`} onClick={(e) => ugras(e, cel, nyilvanos)}>{m}</a>)}
         </nav>
       )}
     </header>
@@ -52,7 +59,8 @@ function Nav({ jobbra }: { jobbra?: ReactNode }) {
 }
 
 function Gomb({ children = 'Időpontot kérek', cel = 'foglalas' }: { children?: ReactNode; cel?: Cel | null }) {
-  return <a className="kv-gomb" href="#foglalas" onClick={(e) => ugras(e, cel)}>{children}</a>
+  const { nyilvanos } = useKv()
+  return <a className="kv-gomb" href="#foglalas" onClick={(e) => ugras(e, cel, nyilvanos)}>{children}</a>
 }
 
 function Info({ cimke, children }: { cimke: string; children: ReactNode }) {
@@ -178,6 +186,7 @@ function Foglalas() {
 }
 
 function Terkep() {
+  const [betolt, setBetolt] = useState(false)
   return (
     <section className="kv-hely">
       <div className="kv-hely-szoveg">
@@ -191,16 +200,27 @@ function Terkep() {
         <Info cimke="Telefon">{UZLET.telefon}</Info>
         <a className="kv-link" href={UTVONAL} target="_blank" rel="noreferrer">Útvonaltervezés a Google Térképpel</a>
       </div>
-      <div className="kv-terkep">
-        <iframe title={`${UZLET.nev} a térképen`} src={TERKEP} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+      <div className="kv-terkep" data-betoltve={betolt || undefined}>
+        {betolt ? (
+          <iframe title={`${UZLET.nev} a térképen`} src={TERKEP} referrerPolicy="no-referrer-when-downgrade" />
+        ) : (
+          <div className="kv-terkep-kerdes">
+            <p>
+              A térképet a Google szolgáltatja. Betöltéskor a Google megkapja az IP-címedet,
+              és sütiket helyezhet el a böngésződben.
+            </p>
+            <button type="button" className="kv-terkep-gomb" onClick={() => setBetolt(true)}>Térkép betöltése</button>
+          </div>
+        )}
       </div>
     </section>
   )
 }
 
-const LAB_MENU = [['Lemondási feltételek', 'feltetelek'], ['Adatkezelés', 'adatkezeles'], ['Impresszum', 'impresszum']]
+const LAB_MENU = [['Impresszum', '/impresszum'], ['Adatvédelmi tájékoztató', '/adatvedelem']]
 
 function Lab() {
+  const { nyilvanos } = useKv()
   return (
     <footer className="kv-lab">
       <div className="kv-lab-fo">
@@ -213,13 +233,15 @@ function Lab() {
         <div className="kv-info">
           <span className="kv-cimke">Kapcsolat</span>
           <span className="kv-ertek">{UZLET.telefon}</span>
-          <a className="kv-link" href="#foglalas" onClick={(e) => ugras(e, 'foglalas')}>Időpontot kérek</a>
+          <a className="kv-link" href="#foglalas" onClick={(e) => ugras(e, 'foglalas', nyilvanos)}>Időpontot kérek</a>
         </div>
       </div>
       <div className="kv-lab-also">
         <span>© {new Date().getFullYear()} {UZLET.nev}</span>
         <nav>
-          {LAB_MENU.map(([m, h]) => <a key={h} href={`#${h}`} onClick={(e) => ugras(e, null)}>{m}</a>)}
+          {LAB_MENU.map(([m, h]) => (
+            <a key={h} href={h} onClick={nyilvanos ? undefined : (e) => ugras(e, null)}>{m}</a>
+          ))}
         </nav>
       </div>
     </footer>
@@ -227,9 +249,10 @@ function Lab() {
 }
 
 function Vege() {
+  const { foglalas } = useKv()
   return (
     <>
-      <Foglalas />
+      {foglalas ?? <Foglalas />}
       <Terkep />
       <Lab />
     </>
@@ -489,16 +512,42 @@ const OLDALAK: Record<KoncepcioKod, () => ReactNode> = {
   '08': Lakk,
 }
 
-export default function Koncepcio({ kod, mod, k }: { kod: KoncepcioKod; mod: Mod; k: Catalog }) {
+interface KoncepcioProps {
+  kod: KoncepcioKod
+  mod: Mod
+  k: Catalog
+  nyilvanos?: boolean
+  foglalas?: ReactNode
+}
+
+function KvKornyezet({ kod, mod, k, nyilvanos = false, foglalas, children }: KoncepcioProps & { children: ReactNode }) {
   const [kat, setKat] = useState<VehicleCategory>('SZEMELYAUTO')
   const t = useMemo(() => csomagTabla(k, kat), [k, kat])
   const tol = useMemo(() => kategoriaTol(k), [k])
-  const Oldal = OLDALAK[kod]
   return (
-    <Kv.Provider value={{ t, kat, setKat, tol }}>
+    <Kv.Provider value={{ t, kat, setKat, tol, nyilvanos, foglalas }}>
       <div className="kv" lang="hu" data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
-        <Oldal />
+        {children}
       </div>
     </Kv.Provider>
+  )
+}
+
+export function KoncepcioKeret({ children, ...p }: KoncepcioProps & { children: ReactNode }) {
+  return (
+    <KvKornyezet {...p}>
+      <Nav />
+      {children}
+      <Lab />
+    </KvKornyezet>
+  )
+}
+
+export default function Koncepcio(p: KoncepcioProps) {
+  const Oldal = OLDALAK[p.kod]
+  return (
+    <KvKornyezet {...p}>
+      <Oldal />
+    </KvKornyezet>
   )
 }

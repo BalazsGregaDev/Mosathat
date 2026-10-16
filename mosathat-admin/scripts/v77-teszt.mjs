@@ -34,7 +34,7 @@ ok('a valódi árak', ['12 800 Ft', '15 600 Ft', '19 800 Ft'], (await o.p.locato
 await o.p.locator('.kv-kat button').filter({ hasText: 'SUV' }).click()
 ok('a kategóriaváltó itt is működik', ['14 600 Ft', '17 800 Ft', '22 600 Ft'], (await o.p.locator('.kv-tabla thead .kv-ar').allInnerTexts()).map(sima))
 ok('foglalás, térkép, footer', [1, 1, 1],
-  [await o.p.locator('.kv-foglalas').count(), await o.p.locator('.kv-hely iframe').count(), await o.p.locator('.kv-lab').count()])
+  [await o.p.locator('.kv-foglalas').count(), await o.p.locator('.kv-hely .kv-terkep').count(), await o.p.locator('.kv-lab').count()])
 ok('saját címsor a böngészőfülön', true, /^Mosathat — kézi autókozmetika/.test(await o.p.title()))
 ok('a teljes szélességet kitölti, nincs admin keret', true,
   await o.p.locator('.kv').evaluate((e) => Math.abs(e.getBoundingClientRect().width - innerWidth) < 2))

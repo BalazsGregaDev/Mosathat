@@ -58,6 +58,8 @@ const lathato = await p.locator('.kv-foglalas').evaluate((e) => { const r = e.ge
 ok('az Időpontot kérek a foglaláshoz görget', true, lathato)
 
 console.log('\n=== 3) Térkép és footer ===\n')
+ok('a térkép előbb csak kérdez, nem tölt', [0, 0], [await p.locator('.kv-terkep iframe').count(), terkepKeres.length])
+await p.getByRole('button', { name: 'Térkép betöltése' }).click(); await p.waitForTimeout(500)
 const src = await p.locator('.kv-terkep iframe').getAttribute('src')
 ok('Google térkép a Mosathat címére', true, /google\.com\/maps\?q=Mosathat%2C%20V%C3%A1ci%20%C3%BAt%20140%2C%201138%20Budapest.*output=embed/.test(src))
 ok('a térkép betöltése el is indul', true, terkepKeres.length > 0)
@@ -70,7 +72,7 @@ ok('nincs rag az idő után', false, /\d:\d\d-(tól|től|ig|ra|re)/.test(lab + s
 console.log('\n=== 4) Mind a 8 koncepció, mindkét módban ===\n')
 for (const kod of ['01', '02', '03', '04', '05', '06', '07', '08']) {
   await p.locator('.arculat-lista button').filter({ hasText: kod }).click(); await p.waitForTimeout(200)
-  const van = await p.evaluate(() => ['.kv-tabla', '.kv-kat', '.kv-foglalas', '.kv-hely iframe', '.kv-lab'].map((s) => !!document.querySelector(`.kv ${s}`)))
+  const van = await p.evaluate(() => ['.kv-tabla', '.kv-kat', '.kv-foglalas', '.kv-hely .kv-terkep', '.kv-lab'].map((s) => !!document.querySelector(`.kv ${s}`)))
   ok(`${kod}: táblázat, váltó, foglalás, térkép, footer`, [true, true, true, true, true], van)
 }
 

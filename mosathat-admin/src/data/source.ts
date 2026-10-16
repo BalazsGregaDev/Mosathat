@@ -7,6 +7,7 @@ import type {
   CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
   OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
+  PublikusNapAdat,
 } from '../lib/types'
 
 export interface Catalog {
@@ -22,12 +23,16 @@ export interface Catalog {
 export interface PublikusAdat {
   arculat: string | null
   mod: 'VILAGOS' | 'SOTET' | null
+  lemondasOra: number
   katalogus: Catalog
 }
 
 export interface PublikusNyers {
   arculat: string | null
   arculat_mod: 'VILAGOS' | 'SOTET' | null
+  lemondas_ora?: number
+  extras?: Extra[]
+  fullServicePricing?: Catalog['fullServicePricing']
   packages: Catalog['packages']
   packagePricing: Catalog['packagePricing']
   packageItems: Catalog['packageItems']
@@ -38,13 +43,14 @@ export function publikusbol(n: PublikusNyers): PublikusAdat {
   return {
     arculat: n.arculat,
     mod: n.arculat_mod,
+    lemondasOra: num(n.lemondas_ora ?? 24),
     katalogus: {
       packages: n.packages ?? [],
       packagePricing: n.packagePricing ?? [],
       packageItems: n.packageItems ?? [],
       packageExtras: n.packageExtras ?? [],
-      fullServicePricing: [],
-      extras: [],
+      fullServicePricing: n.fullServicePricing ?? [],
+      extras: (n.extras ?? []).map(toExtra),
       surcharges: [],
     },
   }
@@ -85,6 +91,9 @@ export interface DataSource {
   saveArculat(kod: string, mod: 'VILAGOS' | 'SOTET'): Promise<void>
   getCsomagSzerkeszto(): Promise<CsomagSzerkesztoAdat>
   getPublikus(): Promise<PublikusAdat>
+  publikusNap(nap: string): Promise<PublikusNapAdat>
+  publikusAjanlat(input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
+  publikusFoglalas(input: OnlineBookingInput): Promise<string>
   saveCsomagSzerkeszto(adat: CsomagSzerkesztoAdat): Promise<CsomagMentesEredmeny>
   getBooking(id: string): Promise<DayBooking | null>
   getCapacity(date: string): Promise<DayCapacity>
@@ -268,5 +277,12 @@ export function idoRovidit<T extends { starts: string | null; ends: string | nul
     ...r,
     starts: r.starts ? r.starts.slice(0, 5) : null,
     ends: r.ends ? r.ends.slice(0, 5) : null,
+  }
+}
+
+export function publikusNapbol(n: { foglalasok?: DayBooking[]; savok?: DayLane[] } | null): PublikusNapAdat {
+  return {
+    foglalasok: n?.foglalasok ?? [],
+    savok: (n?.savok ?? []).map((x) => ({ ...x, lanes: Number(x.lanes) })),
   }
 }

@@ -137,7 +137,7 @@
 }
 .kv[data-k='01'] .kv-nav { border-bottom: 1px solid var(--vonal-eros); padding: 14px 24px; }
 .kv[data-k='01'] .kv-logo { font-family: var(--mono); font-size: 12px; letter-spacing: .28em; text-transform: uppercase; }
-.kv[data-k='01'] .kv-nav a { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: var(--halk); }
+.kv[data-k='01'] .kv-nav nav a { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: var(--halk); }
 .kv[data-k='01'] .kv-hero { display: grid; grid-template-columns: 57fr 43fr; border-bottom: 1px solid var(--vonal-eros); }
 .kv[data-k='01'] .kv-hero-bal { padding: 34px 24px 36px; }
 .kv[data-k='01'] h1 { font-size: 38px; font-weight: 500; letter-spacing: -.02em; line-height: 1.15; }
@@ -184,7 +184,7 @@
 }
 .kv[data-k='02'] .kv-nav { background: var(--nav-bg); color: var(--nav-fg); border-bottom: 3px solid var(--zold); padding: 14px 24px; }
 .kv[data-k='02'] .kv-logo { font-family: var(--szuk); font-weight: 600; font-size: 20px; letter-spacing: .08em; text-transform: uppercase; }
-.kv[data-k='02'] .kv-nav a { font-family: var(--szuk); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #c3c5bd; }
+.kv[data-k='02'] .kv-nav nav a { font-family: var(--szuk); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #c3c5bd; }
 .kv[data-k='02'] .kv-hero { padding: 42px 24px 34px; }
 .kv[data-k='02'] .kv-kicker { display: block; max-width: 300px; font-family: var(--szuk); font-size: 14px; letter-spacing: .3em; text-transform: uppercase; color: var(--halk); }
 .kv[data-k='02'] h1 { margin-top: 14px; font-family: var(--szuk); font-weight: 600; font-size: 66px; line-height: .98; text-transform: uppercase; letter-spacing: -.005em; }
@@ -231,7 +231,7 @@
 }
 .kv[data-k='03'] .kv-nav { border-bottom: 1px solid var(--vonal-eros); padding: 16px 24px; }
 .kv[data-k='03'] .kv-logo { font-family: var(--talpas); font-weight: 600; font-size: 18px; }
-.kv[data-k='03'] .kv-nav a { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--halk); }
+.kv[data-k='03'] .kv-nav nav a { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--halk); }
 .kv[data-k='03'] .kv-hero { padding: 38px 24px 30px; }
 .kv[data-k='03'] .kv-kicker { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--zold); }
 .kv[data-k='03'] h1 { margin-top: 14px; font-family: var(--talpas); font-weight: 400; font-size: 56px; line-height: 1.04; letter-spacing: -.01em; }
@@ -273,7 +273,7 @@
 }
 .kv[data-k='04'] .kv-nav { border-bottom: 1px solid var(--vonal); padding: 16px 28px; }
 .kv[data-k='04'] .kv-logo { font-family: var(--vekony); font-size: 14px; letter-spacing: .42em; text-transform: uppercase; }
-.kv[data-k='04'] .kv-nav a { font-family: var(--vekony); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--halk); }
+.kv[data-k='04'] .kv-nav nav a { font-family: var(--vekony); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--halk); }
 .kv[data-k='04'] .kv-hero { padding: 56px 28px 44px; border-bottom: 1px solid var(--vonal); }
 .kv[data-k='04'] h1 { font-family: var(--vekony); font-weight: 350; font-size: 60px; line-height: 1.12; letter-spacing: -.01em; }
 .kv[data-k='04'] h1 em { color: var(--zold); }
@@ -311,7 +311,7 @@
 }
 .kv[data-k='05'] .kv-nav { background: var(--nav-bg); color: var(--nav-fg); padding: 12px 20px; }
 .kv[data-k='05'] .kv-logo { font-weight: 800; font-stretch: 125%; font-size: 15px; text-transform: uppercase; }
-.kv[data-k='05'] .kv-nav a { font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.kv[data-k='05'] .kv-nav nav a { font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
 .kv[data-k='05'] .kv-hero { display: grid; grid-template-columns: 59fr 41fr; border-bottom: 3px solid var(--vonal-eros); }
 .kv[data-k='05'] .kv-hero-bal { padding: 30px 20px; }
 .kv[data-k='05'] .kv-kicker { font-weight: 700; font-stretch: 125%; font-size: 13px; letter-spacing: .2em; text-transform: uppercase; color: var(--halk); }
@@ -398,7 +398,7 @@
 }
 .kv[data-k='07'] .kv-nav { border-bottom: 1px solid var(--vonal); padding: 14px 24px; }
 .kv[data-k='07'] .kv-logo { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: -.01em; }
-.kv[data-k='07'] .kv-nav a { font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--halk); }
+.kv[data-k='07'] .kv-nav nav a { font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--halk); }
 .kv[data-k='07'] .kv-hero { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 20px; align-items: end; padding: 40px 24px 28px; }
 .kv[data-k='07'] .kv-hero-bal { grid-column: span 6; }
 .kv[data-k='07'] h1 { font-weight: 400; font-size: 54px; line-height: 1.06; letter-spacing: -.03em; }
@@ -441,7 +441,7 @@
 }
 .kv[data-k='08'] .kv-nav { padding: 18px 28px 14px; }
 .kv[data-k='08'] .kv-logo { font-family: var(--talpas); font-size: 22px; }
-.kv[data-k='08'] .kv-nav a { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--halk); }
+.kv[data-k='08'] .kv-nav nav a { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--halk); }
 .kv[data-k='08'] .kv-lakk {
   margin: 0 28px; min-height: 200px; display: flex; align-items: flex-end; padding: 30px;
   background:
@@ -627,3 +627,66 @@
   .kv[data-k='03'] .kv-kat-kartyak { gap: 10px; }
   .kv[data-k='06'] .kv-kat-ar { flex-basis: auto; padding-left: 0; margin-left: auto; }
 }
+
+.kv-terkep-kerdes {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px; text-align: center; background: color-mix(in srgb, var(--bg) 84%, transparent);
+}
+.kv-terkep-kerdes p { max-width: 360px; font-size: 13px; line-height: 1.5; color: var(--halk); }
+.kv .kv-terkep-gomb {
+  font-family: var(--apro); font-size: 13px; font-weight: 600; padding: 10px 18px;
+  border: 1px solid var(--zold); background: var(--bg); color: var(--zold); cursor: pointer;
+}
+.kv .kv-terkep-gomb:hover { background: var(--zold); color: var(--tele-fg); }
+.kv-terkep[data-betoltve] { background: none; }
+
+.kv-foglalas-elo {
+  --lap: var(--bg);
+  --lap-2: color-mix(in srgb, var(--fg) 4%, var(--bg));
+  --hatter: var(--bg);
+  --keret: var(--vonal);
+  --keret-eros: color-mix(in srgb, var(--fg) 28%, var(--bg));
+  --szoveg: var(--fg);
+  --szoveg-halk: var(--halk);
+  --szoveg-halvany: var(--halk);
+  --zold-halvany: color-mix(in srgb, var(--zold) 10%, var(--bg));
+  --zold-vilagos: color-mix(in srgb, var(--zold) 25%, var(--bg));
+  --zold-sotet: var(--zold);
+}
+.kv-foglalas-elo .fogl { max-width: 900px; margin: 0; padding: 0; }
+.kv-foglalas-elo .fogl h2 { font-family: var(--fej); }
+.kv-foglalas-elo .fogl .btn-fo { color: var(--tele-fg); }
+.kv-foglalas-elo .fogl .beviteli { background: var(--bg); color: var(--fg); }
+.kv-foglalas-elo .fogl a { color: var(--zold); }
+
+.kv-jogi { max-width: 780px; padding: 40px var(--px) 56px; }
+.kv-jogi h1 { font-family: var(--fej); font-size: 40px; font-weight: 400; line-height: 1.1; margin-bottom: 8px; }
+.kv-jogi h2 { font-family: var(--fej); font-size: 22px; font-weight: 500; margin: 36px 0 12px; }
+.kv-jogi h3 { font-size: 16px; margin: 26px 0 10px; }
+.kv-jogi p, .kv-jogi li { font-size: 15px; line-height: 1.65; }
+.kv-jogi p + p { margin-top: 10px; }
+.kv-jogi ul { list-style: disc; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.kv-jogi a { color: var(--zold); text-decoration: underline; text-underline-offset: 2px; }
+.kv-jogi-hataly { color: var(--halk); font-size: 13px !important; }
+.kv-jogi-tervezet {
+  margin-bottom: 20px !important; padding: 10px 14px; font-size: 13px !important;
+  border: 1px solid var(--zold); color: var(--zold); background: color-mix(in srgb, var(--zold) 6%, var(--bg));
+}
+.kv-jogi-halk { color: var(--halk); font-size: 13px !important; }
+.kv-jogi-adatok { margin: 0 0 12px; border-top: 1px solid var(--vonal); }
+.kv-jogi-sor { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--vonal); }
+.kv-jogi-sor dt { font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--halk); padding-top: 2px; }
+.kv-jogi-sor dd { margin: 0; font-size: 15px; line-height: 1.55; overflow-wrap: anywhere; }
+.kv-jogi-kezeles + .kv-jogi-kezeles { margin-top: 8px; }
+.kv-jogi-kezeles p { margin-top: 10px; }
+.kv-jogi-tabla { overflow-x: auto; margin: 12px 0; }
+.kv-jogi-tabla table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.kv-jogi-tabla th, .kv-jogi-tabla td { text-align: left; vertical-align: top; padding: 9px 10px 9px 0; border-bottom: 1px solid var(--vonal); }
+.kv-jogi-tabla th { font-size: 12px; font-weight: 600; color: var(--halk); }
+@container kv (max-width: 700px) {
+  .kv-jogi { padding-top: 28px; }
+  .kv-jogi h1 { font-size: 30px; }
+  .kv-jogi-sor { grid-template-columns: 1fr; gap: 2px; }
+  .kv-jogi-tabla table { min-width: 520px; }
+}
+.kv .kv-logo { color: inherit; text-decoration: none; }

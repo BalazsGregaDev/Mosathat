@@ -17,10 +17,10 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
+  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
-import { idoRovidit, num, numOrNull, publikusbol, toExtra, toOnlineKeres, toQuote } from './source'
+import { idoRovidit, num, numOrNull, publikusbol, publikusNapbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { DEMO_BELEPOK, DEMO_STAFF_ID } from './demoBelepok'
 
 
@@ -255,6 +255,21 @@ export class DemoSource implements DataSource {
 
   async saveArculat(kod: string, mod: 'VILAGOS' | 'SOTET'): Promise<void> {
     await this.rows(`select arculat_valasztas($1, $2)`, [kod, mod])
+  }
+
+  async publikusNap(nap: string): Promise<PublikusNapAdat> {
+    const [r] = await this.rows<{ x: { foglalasok: DayBooking[]; savok: DayLane[] } }>(`select publikus_nap($1::date) x`, [nap])
+    return publikusNapbol(r?.x ?? null)
+  }
+
+  async publikusAjanlat(input: Partial<NewBookingInput> & CalcInput): Promise<Quote> {
+    const [r] = await this.rows<{ x: Record<string, unknown> }>(`select publikus_ajanlat($1::jsonb) x`, [JSON.stringify(input)])
+    return toQuote(r?.x)
+  }
+
+  async publikusFoglalas(input: OnlineBookingInput): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select publikus_foglalas($1::jsonb) id`, [JSON.stringify(input)])
+    return r.id
   }
 
   async getPublikus(): Promise<PublikusAdat> {

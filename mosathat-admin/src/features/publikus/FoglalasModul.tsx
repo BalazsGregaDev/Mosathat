@@ -13,7 +13,19 @@ import {
   type BookingScope, type Extra, type MeasureUnit, type Quote, type SeatMaterial, type VehicleCategory,
 } from '../../lib/types'
 import { csomagbanBenne } from '../../lib/csomag'
-import type { DataSource } from '../../data/source'
+import type { Catalog, DataSource } from '../../data/source'
+
+export type FoglalasForras = Pick<DataSource, 'quoteBooking' | 'onlineBooking' | 'getDay' | 'getDayLanes'>
+
+export interface FoglalasKornyezet {
+  data: FoglalasForras
+  katalogus: Catalog
+  revision: number
+  refresh: () => void
+  nyilvanos: boolean
+  lemondasOra?: number
+  onNapiNezet?: (nap: string) => void
+}
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
 const TERJEDELMEK: BookingScope[] = ['TELJES', 'KULSO', 'BELSO']
@@ -61,6 +73,13 @@ export default function FoglalasModul({ onNapiNezet }: {
   const { data, refresh } = useApp()
   const revision = useRevizio()
   const katalogus = useCatalog()
+  return (
+    <FoglalasUrlap data={data} katalogus={katalogus} revision={revision} refresh={refresh}
+                   nyilvanos={false} onNapiNezet={onNapiNezet} />
+  )
+}
+
+export function FoglalasUrlap({ data, katalogus, revision, refresh, nyilvanos, lemondasOra, onNapiNezet }: FoglalasKornyezet) {
   const holnap = napPlusz(maStr(), 1)
   const utolsoNap = napPlusz(holnap, LEGTOBB_HET * 7)
 
@@ -77,6 +96,7 @@ export default function FoglalasModul({ onNapiNezet }: {
   const [hatarido, setHatarido] = useState<number | null>(null)
   const [adatok, setAdatok] = useState<Adatok>(URES_ADATOK)
   const [elfogad, setElfogad] = useState(false)
+  const [weboldal, setWeboldal] = useState('')
   const [oldal, setOldal] = useState(0)
   const [kuld, setKuld] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
@@ -231,6 +251,7 @@ export default function FoglalasModul({ onNapiNezet }: {
         customer_email: adatok.email.trim() || null, plate_raw: adatok.rendszam.trim(),
         brand: adatok.marka.trim() || null, model: adatok.modell.trim() || null,
         notes: adatok.megjegyzes.trim() || null,
+        ...(nyilvanos ? { weboldal } : {}),
       })
       setKesz({
         id, nap,
@@ -258,7 +279,7 @@ export default function FoglalasModul({ onNapiNezet }: {
   if (kesz) {
     return (
       <div className="fogl">
-        <ProbaSav />
+        {!nyilvanos && <ProbaSav />}
         <section className="fogl-kartya fogl-siker">
           <h2>Köszönjük, megkaptuk a foglalási kérésed!</h2>
           <p>
@@ -283,12 +304,14 @@ export default function FoglalasModul({ onNapiNezet }: {
 
   return (
     <div className="fogl">
-      <ProbaSav />
+      {!nyilvanos && <ProbaSav />}
 
-      <header className="fogl-fej">
-        <h1>Időpontfoglalás</h1>
-        <p>Válaszd ki, mit szeretnél, és mutatjuk a szabad időpontokat.</p>
-      </header>
+      {!nyilvanos && (
+        <header className="fogl-fej">
+          <h1>Időpontfoglalás</h1>
+          <p>Válaszd ki, mit szeretnél, és mutatjuk a szabad időpontokat.</p>
+        </header>
+      )}
 
       <section className="fogl-kartya">
         <h2><span className="lepes">1</span> Milyen autóval jössz?</h2>
@@ -574,11 +597,26 @@ export default function FoglalasModul({ onNapiNezet }: {
               <textarea id="fo-megj" className="beviteli" value={adatok.megjegyzes}
                         placeholder="pl. kutyaszőr a hátsó ülésen" onChange={(e) => set('megjegyzes', e.target.value)} /></div>
           </div>
+          {nyilvanos && (
+            <div className="fogl-csapda" aria-hidden="true">
+              <label htmlFor="fo-weboldal">Weboldal</label>
+              <input id="fo-weboldal" tabIndex={-1} autoComplete="off" value={weboldal}
+                     onChange={(e) => setWeboldal(e.target.value)} />
+            </div>
+          )}
           <label className="fogl-feltetel">
             <input type="checkbox" checked={elfogad} onChange={(e) => setElfogad(e.target.checked)} />
-            <span>Elfogadom a foglalási és lemondási feltételeket, és hozzájárulok, hogy az
-              adataimat a foglalás kezeléséhez felhasználják.</span>
+            <span>
+              Tudomásul veszem, hogy ez foglalási kérés: az időpont akkor végleges, amikor
+              visszaigazoljuk. Ha megadom az e-mail címem, a visszaigazolásban kapok egy lemondó
+              linket, amellyel {lemondasOra != null ? `az időpont előtt legalább ${lemondasOra} órával` : 'a megadott határidőig'} lemondhatom
+              a foglalást. Ha ez a határidő már lejárt, telefonon tudom jelezni.
+            </span>
           </label>
+          <p className="fogl-adatvedelem">
+            A megadott adatokat a foglalás teljesítéséhez kezeljük. Részletek:{' '}
+            <a href="/adatvedelem" target="_blank" rel="noopener">Adatvédelmi tájékoztató</a>.
+          </p>
         </section>
       )}
 
@@ -623,7 +661,7 @@ export default function FoglalasModul({ onNapiNezet }: {
         </section>
       )}
 
-      <section className="fogl-fejleszto">
+      {!nyilvanos && <section className="fogl-fejleszto">
         <label>
           <input type="checkbox" checked={reszletek} onChange={(e) => setReszletek(e.target.checked)} />
           {' '}Fejlesztői részletek
@@ -638,7 +676,7 @@ export default function FoglalasModul({ onNapiNezet }: {
             {nap && <li>{nap}: {napAdat.get(nap)?.munkak.length ?? 0} munka a beosztásban</li>}
           </ul>
         )}
-      </section>
+      </section>}
     </div>
   )
 }
@@ -661,7 +699,7 @@ function elvitelSzoveg(a: ElvitelAblak): string {
   return `${napCim(a.nap)}, ${percOra(a.tol)} és ${percOra(a.ig)} között`
 }
 
-async function elvitelAblak(data: DataSource, nap: string): Promise<ElvitelAblak | null> {
+async function elvitelAblak(data: Pick<DataSource, 'getDayLanes'>, nap: string): Promise<ElvitelAblak | null> {
   for (let i = 1; i <= 14; i++) {
     const d = napPlusz(nap, i)
     const negyedek = negyedekbol(await data.getDayLanes(d))

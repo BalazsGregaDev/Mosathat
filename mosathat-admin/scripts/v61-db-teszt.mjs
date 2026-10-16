@@ -36,10 +36,12 @@ async function hibaUzenet(fn) {
   }
 }
 
-console.log('=== 1) Névtelen (anon) felhasználó egyetlen függvényt sem hívhat ===\n')
-const anonHivhat = await q(`select count(*)::int n from pg_proc p
-  where p.pronamespace = 'public'::regnamespace and has_function_privilege('anon', p.oid, 'EXECUTE')`)
-t.ok('anon által hívható függvény', 0, anonHivhat[0].n)
+console.log('=== 1) Névtelen (anon) felhasználó csak a nyilvános oldal függvényeit hívhatja ===\n')
+const anonHivhat = await q(`select p.proname from pg_proc p
+  where p.pronamespace = 'public'::regnamespace and has_function_privilege('anon', p.oid, 'EXECUTE')
+  order by 1`)
+t.ok('anon által hívható függvények: pontosan a négy nyilvános', ['publikus_ajanlat', 'publikus_foglalas', 'publikus_nap', 'publikus_oldal'],
+  anonHivhat.map((r) => r.proname))
 const authHivhat = await q(`select
   has_function_privilege('authenticated', 'public.day_absences(date)', 'EXECUTE') as tavollet,
   has_function_privilege('authenticated', 'public.create_booking(jsonb)', 'EXECUTE') as foglalas,
