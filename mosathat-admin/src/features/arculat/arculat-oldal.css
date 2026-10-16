@@ -39,3 +39,4 @@
 @media (max-width: 700px) {
   .arculat-cim { width: 100%; }
 }
+.arculat-megnyit, .arculat-megnyit:visited { color: var(--szoveg); text-decoration: none; }

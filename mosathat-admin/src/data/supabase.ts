@@ -11,8 +11,8 @@ import type {
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
   OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
 } from '../lib/types'
-import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
-import { idoRovidit, num, numOrNull, toExtra, toOnlineKeres, toQuote } from './source'
+import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
+import { idoRovidit, num, numOrNull, publikusbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { EloFrissites } from './elo'
 import { tokenFetch } from './tokenFetch'
 
@@ -261,6 +261,12 @@ export class SupabaseSource implements DataSource {
   async saveArculat(kod: string, mod: 'VILAGOS' | 'SOTET'): Promise<void> {
     const { error } = await this.sb.rpc('arculat_valasztas', { p_kod: kod, p_mod: mod })
     if (error) fail('Arculat mentése', error)
+  }
+
+  async getPublikus(): Promise<PublikusAdat> {
+    const { data, error } = await this.sb.rpc('publikus_oldal')
+    if (error) fail('Oldal', error)
+    return publikusbol(data as PublikusNyers)
   }
 
   async getCsomagSzerkeszto(): Promise<CsomagSzerkesztoAdat> {

@@ -115,6 +115,11 @@ export default function ArculatPage() {
                 </button>
               ))}
             </fieldset>
+            {kod === '03' && (
+              <a className="btn arculat-megnyit" target="_blank" rel="noopener" href="/publikus">
+                Megnyitás külön oldalon
+              </a>
+            )}
             <button type="button" className="btn btn-fo arculat-valaszt" onClick={() => void valaszt()}
                     disabled={ment || ezAValasztott}>
               {ezAValasztott ? 'Ez a kiválasztott' : ment ? 'Mentés…' : 'Ezt választom'}

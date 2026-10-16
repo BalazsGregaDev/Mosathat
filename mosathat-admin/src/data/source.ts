@@ -19,6 +19,37 @@ export interface Catalog {
   packageExtras: PackageExtraRow[]
 }
 
+export interface PublikusAdat {
+  arculat: string | null
+  mod: 'VILAGOS' | 'SOTET' | null
+  katalogus: Catalog
+}
+
+export interface PublikusNyers {
+  arculat: string | null
+  arculat_mod: 'VILAGOS' | 'SOTET' | null
+  packages: Catalog['packages']
+  packagePricing: Catalog['packagePricing']
+  packageItems: Catalog['packageItems']
+  packageExtras: Catalog['packageExtras']
+}
+
+export function publikusbol(n: PublikusNyers): PublikusAdat {
+  return {
+    arculat: n.arculat,
+    mod: n.arculat_mod,
+    katalogus: {
+      packages: n.packages ?? [],
+      packagePricing: n.packagePricing ?? [],
+      packageItems: n.packageItems ?? [],
+      packageExtras: n.packageExtras ?? [],
+      fullServicePricing: [],
+      extras: [],
+      surcharges: [],
+    },
+  }
+}
+
 export type KeresesMezo = 'MIND' | 'RENDSZAM' | 'NEV'
 
 export interface SessionUser {
@@ -53,6 +84,7 @@ export interface DataSource {
   getArculat(): Promise<ArculatValasztas>
   saveArculat(kod: string, mod: 'VILAGOS' | 'SOTET'): Promise<void>
   getCsomagSzerkeszto(): Promise<CsomagSzerkesztoAdat>
+  getPublikus(): Promise<PublikusAdat>
   saveCsomagSzerkeszto(adat: CsomagSzerkesztoAdat): Promise<CsomagMentesEredmeny>
   getBooking(id: string): Promise<DayBooking | null>
   getCapacity(date: string): Promise<DayCapacity>

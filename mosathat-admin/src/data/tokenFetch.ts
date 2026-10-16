@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const OLVASO_RPC = new Set([
-  'absence_list', 'booking_finish_preview', 'csomag_szerkeszto', 'booking_form_data', 'can_edit_customers', 'ceg_jeloltek',
+  'absence_list', 'booking_finish_preview', 'csomag_szerkeszto', 'publikus_oldal', 'booking_form_data', 'can_edit_customers', 'ceg_jeloltek',
   'dashboard_summary', 'day_absences', 'day_bookings', 'day_capacity', 'day_lanes', 'latest_start',
   'list_companies', 'list_customers', 'list_role_permissions', 'list_staff', 'list_vehicles',
   'quote_booking', 'range_order', 'search_companies', 'search_customers', 'sheet_cegek', 'sheet_detail',

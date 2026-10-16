@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import './styles/tokens.css'
@@ -21,9 +21,12 @@ import { billentyuzetHelyreallitas } from './lib/kepernyo'
 import App from './App'
 import LemondasOldal from './features/publikus/LemondasOldal'
 
-const lemondas = /^\/lemondas(\/|$)/.test(window.location.pathname)
+const PublikusOldal = lazy(() => import('./features/publikus/PublikusOldal'))
 
-if (!lemondas) {
+const lemondas = /^\/lemondas(\/|$)/.test(window.location.pathname)
+const publikus = /^\/publikus\/?$/.test(window.location.pathname)
+
+if (!lemondas && !publikus) {
   nagyitasTiltas()
   billentyuzetHelyreallitas()
 }
@@ -32,6 +35,10 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {lemondas ? (
       <LemondasOldal />
+    ) : publikus ? (
+      <Suspense fallback={null}>
+        <PublikusOldal />
+      </Suspense>
     ) : (
       <AppProvider>
         <App />

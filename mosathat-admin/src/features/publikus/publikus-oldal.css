@@ -1,0 +1,9 @@
+.pub-keret { min-height: 100%; }
+.pub-keret .kv { min-height: 100vh; }
+.pub-allapot {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 24px; text-align: center; color: #555a54; background: #f4f4f1; font: 15px/1.5 system-ui, sans-serif;
+}
+.pub-allapot strong { font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: #161816; }
+html.publikus, html.publikus body, html.publikus #root { height: auto; min-height: 100%; }
+html.publikus body { touch-action: auto; overscroll-behavior: auto; background: #f4f4f1; }

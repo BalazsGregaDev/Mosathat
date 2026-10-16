@@ -19,8 +19,8 @@ import type {
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
   OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
 } from '../lib/types'
-import type { Catalog, DataSource, KeresesMezo, SessionUser } from './source'
-import { idoRovidit, num, numOrNull, toExtra, toOnlineKeres, toQuote } from './source'
+import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
+import { idoRovidit, num, numOrNull, publikusbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { DEMO_BELEPOK, DEMO_STAFF_ID } from './demoBelepok'
 
 
@@ -255,6 +255,11 @@ export class DemoSource implements DataSource {
 
   async saveArculat(kod: string, mod: 'VILAGOS' | 'SOTET'): Promise<void> {
     await this.rows(`select arculat_valasztas($1, $2)`, [kod, mod])
+  }
+
+  async getPublikus(): Promise<PublikusAdat> {
+    const [r] = await this.rows<{ x: PublikusNyers }>(`select publikus_oldal() x`)
+    return publikusbol(r.x)
   }
 
   async getCsomagSzerkeszto(): Promise<CsomagSzerkesztoAdat> {
