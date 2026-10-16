@@ -803,7 +803,8 @@ export default function BookingDetail({
                       max={50}
                       step={5}
                       disabled={lezart}
-                      value={pct}
+                      placeholder="0"
+                      value={pct === 0 ? '' : pct}
                       onChange={(e) => setPct(Number(e.target.value) || 0)}
                     />
                   </div>
@@ -816,7 +817,8 @@ export default function BookingDetail({
                       min={0}
                       step={500}
                       disabled={lezart}
-                      value={fix}
+                      placeholder="0"
+                      value={fix === 0 ? '' : fix}
                       onChange={(e) => setFix(Number(e.target.value) || 0)}
                     />
                   </div>
