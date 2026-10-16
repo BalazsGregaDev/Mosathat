@@ -18,7 +18,7 @@ function Tobblet({ k, packageId }: { k: Catalog; packageId: string }) {
 }
 
 export function CimMellett({ k, p }: { k: Catalog; p: Package }) {
-  if (k.packageExtras.some((x) => x.package_id === p.id)) {
+  if (!p.description?.trim() && k.packageExtras.some((x) => x.package_id === p.id)) {
     return <Tobblet k={k} packageId={p.id} />
   }
   if (!p.description?.trim()) return null

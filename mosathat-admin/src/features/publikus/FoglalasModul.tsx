@@ -7,6 +7,7 @@ import { negyedekbol } from '../../lib/beosztas'
 import {
   ft, hetHetfoje, hibaSzoveg, idotartam, maStr, napCim, napokRovid, napPlusz, napRovidCim, percIdo, percOra,
 } from '../../lib/format'
+import { csomagLeiras } from '../../lib/csomagLeiras'
 import {
   CATEGORY_LABEL, EGYSEG, SCOPE_LABEL, ULES_LABEL, ULESEK,
   type BookingScope, type Extra, type MeasureUnit, type Quote, type SeatMaterial, type VehicleCategory,
@@ -306,17 +307,13 @@ export default function FoglalasModul({ onNapiNezet }: {
           {csomagok.map((p) => {
             const a = ar(p.id, 'TELJES')
             const lehet = foglalhato(p.id, 'TELJES')
-            const plusz = katalogus.packageExtras.filter((x) => x.package_id === p.id)
             return (
               <button key={p.id} type="button" className="fogl-csomag" aria-pressed={csomagId === p.id}
                       disabled={!lehet} onClick={() => setCsomagId(p.id)}>
                 <span className="nev">{p.name}</span>
                 <span className="ar">{lehet ? `${ft(a!.price_huf)}-tól` : 'árajánlat alapján'}</span>
                 {a?.duration_minutes ? <span className="ido">kb. {idotartam(a.duration_minutes)}</span> : null}
-                {plusz.length > 0 && (
-                  <span className="leiras">{plusz[0].parent_name} mindene, plusz: {plusz.map((x) => x.name).join(', ')}</span>
-                )}
-                {!plusz.length && p.description && <span className="leiras">{p.description}</span>}
+                {csomagLeiras(katalogus, p) && <span className="leiras">{csomagLeiras(katalogus, p)}</span>}
               </button>
             )
           })}

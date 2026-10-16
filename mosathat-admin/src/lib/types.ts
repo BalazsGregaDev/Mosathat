@@ -900,3 +900,27 @@ export interface NewStaffInput {
   password: string
   role: StaffRole
 }
+
+export interface SzerkesztoCsomag {
+  id: string
+  code: string
+  name: string
+  description: string | null
+}
+
+export interface SzerkesztoCella {
+  name: string
+  active: boolean
+}
+
+export interface SzerkesztoSor {
+  id: string | null
+  name: string
+  area: ServiceArea
+  cellak: Record<string, SzerkesztoCella>
+}
+
+export interface CsomagSzerkesztoAdat {
+  csomagok: SzerkesztoCsomag[]
+  sorok: SzerkesztoSor[]
+}

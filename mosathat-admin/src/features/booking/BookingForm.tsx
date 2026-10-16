@@ -5,6 +5,7 @@ import BeferSor from './BeferSor'
 import { useBookingForm } from '../../state/useBookingForm'
 import { useMentetlen } from '../../state/useMentetlen'
 import { ft, hibaSzoveg, idotartam, napRovidCim } from '../../lib/format'
+import { csomagLeiras } from '../../lib/csomagLeiras'
 import {
   CATEGORY_LABEL, EGYSEG, KATEGORIAK, SCOPE_LABEL, TERJEDELMEK, type BookingType,
   type Extra, type LatestStart,
@@ -286,7 +287,7 @@ export default function BookingForm({
                         <span className="jel" />
                         <span style={{ minWidth: 0 }}>
                           <span className="nev">{p.name}</span>
-                          <span className="leiras">{p.description}</span>
+                          <span className="leiras">{csomagLeiras(katalogus, p)}</span>
                         </span>
                         <span className="arblokk">
                           <div className="ar">

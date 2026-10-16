@@ -6,7 +6,7 @@ import type {
   Quote, CompanyHit, CompanyCandidate, AbsenceInput, AbsenceRow, DayAbsence,
   CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas,
+  OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat,
 } from '../lib/types'
 
 export interface Catalog {
@@ -52,6 +52,8 @@ export interface DataSource {
   ertesitesekKuldese(): Promise<KuldesEredmeny | null>
   getArculat(): Promise<ArculatValasztas>
   saveArculat(kod: string, mod: 'VILAGOS' | 'SOTET'): Promise<void>
+  getCsomagSzerkeszto(): Promise<CsomagSzerkesztoAdat>
+  saveCsomagSzerkeszto(adat: CsomagSzerkesztoAdat): Promise<number>
   getBooking(id: string): Promise<DayBooking | null>
   getCapacity(date: string): Promise<DayCapacity>
   getWorkWindows(date: string): Promise<WorkWindow[]>

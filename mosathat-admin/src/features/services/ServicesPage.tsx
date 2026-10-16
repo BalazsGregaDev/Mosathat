@@ -8,6 +8,7 @@ import {
   type PackagePrice, type VehicleCategory,
 } from '../../lib/types'
 import { CimMellett, CsomagTartalom } from './Arlista'
+import CsomagSzerkeszto from './CsomagSzerkeszto'
 import { KETTO_PX } from './ServicesView'
 import { useSzeles } from '../../state/useSzeles'
 import { urlapMegnyilt } from '../../lib/kepernyo'
@@ -72,7 +73,7 @@ function SzamMezo({
 
 export default function ServicesPage() {
   const { data, catalog: k, refreshCatalog: ujra } = useApp()
-  const [ful, setFul] = useState<'csomagok' | 'tartalom' | 'extrak'>('csomagok')
+  const [ful, setFul] = useState<'csomagok' | 'tartalom' | 'extrak' | 'szerkeszto'>('csomagok')
   const szeles = useSzeles(KETTO_PX)
 
   useEffect(() => {
@@ -101,6 +102,9 @@ export default function ServicesPage() {
           </button>
           <button className={ful === 'tartalom' ? 'aktiv' : ''} onClick={() => setFul('tartalom')}>
             Mi van bennük?
+          </button>
+          <button className={ful === 'szerkeszto' ? 'aktiv' : ''} onClick={() => setFul('szerkeszto')}>
+            Csomagok szerkesztése
           </button>
           {!szeles && (
             <button className={ful === 'extrak' ? 'aktiv' : ''} onClick={() => setFul('extrak')}>
@@ -249,6 +253,8 @@ export default function ServicesPage() {
       )}
 
       {ful === 'tartalom' && <CsomagTartalom k={k} />}
+
+      {ful === 'szerkeszto' && <CsomagSzerkeszto />}
 
       {ful === 'extrak' && (
         <div className="panel">

@@ -396,3 +396,43 @@
 .valtozas-gombok { display: flex; gap: var(--t2); }
 .kozos-fiok { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: var(--m-xs); cursor: pointer; }
 .kozos-fiok input { width: 16px; height: 16px; accent-color: var(--zold); }
+
+.csomag-szerk { display: flex; flex-direction: column; gap: var(--t4); padding-bottom: 72px; }
+.szerk-tabla { min-width: 760px; }
+.szerk-tabla thead th + th { text-align: center; }
+.szerk-tabla tbody th[scope='row'] { width: 40%; font-weight: inherit; }
+.szerk-tabla .terulet-sor th {
+  font-size: var(--m-xs); text-transform: uppercase; letter-spacing: .08em;
+  color: var(--szoveg-halk); background: var(--lap-2); padding: var(--t2) var(--t4); text-align: left;
+}
+.szerk-tabla td, .szerk-tabla th { vertical-align: middle; }
+.szerk-tabla .beviteli { padding: 6px 8px; font-size: var(--m-sm); }
+.szerk-tabla .beviteli[data-ures] { border-color: var(--v-baj); }
+.szerk-sor { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.szerk-sor > .beviteli { flex: 1 1 180px; min-width: 0; }
+.szerk-sor-gombok { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
+.szerk-tabla .szerk-sor-gombok select.beviteli { width: 80px; min-width: 0; flex: none; padding: 4px 6px; font-size: var(--m-xs); }
+.szerk-cella { display: flex; align-items: center; gap: 6px; }
+.szerk-cella .beviteli { min-width: 0; }
+.szerk-tabla td:not([data-be]) .szerk-cella .beviteli { opacity: .5; }
+.szerk-tabla td[data-be] { background: color-mix(in srgb, var(--zold) 6%, transparent); }
+.szerk-uj td { border-bottom: 0; padding-top: var(--t2); }
+.szerk-tipp { font-size: var(--m-xs); margin-top: var(--t3); }
+.szerk-csomagok { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--t4); }
+.szerk-csomag { display: flex; flex-direction: column; gap: var(--t2); }
+.szerk-csomag textarea.beviteli { resize: vertical; }
+.szerk-csomag .beviteli[data-ures] { border-color: var(--v-baj); }
+.szerk-lab {
+  position: sticky; bottom: 0; z-index: 2;
+  display: flex; align-items: center; gap: var(--t2); justify-content: flex-end;
+  padding: var(--t3) var(--t4); background: var(--lap);
+  border: 1px solid var(--keret); border-radius: var(--r); box-shadow: 0 -4px 16px rgba(0, 0, 0, .06);
+}
+.szerk-allapot { margin-right: auto; font-size: var(--m-sm); color: var(--szoveg-halk); }
+.szerk-lab[data-valtozott] .szerk-allapot { color: var(--szoveg); font-weight: var(--vastag-eros); }
+@media (max-width: 1400px) {
+  .szerk-tabla { min-width: 640px; }
+  .szerk-tabla tbody th[scope='row'] { width: 36%; }
+  .szerk-cella { flex-direction: column-reverse; align-items: stretch; gap: 4px; }
+  .szerk-cella .csuszka { align-self: flex-start; padding: 0; }
+}

@@ -10,7 +10,7 @@ export const FEJL = '00000000-0000-4000-8000-000000000001'
 export const TULAJ = '00000000-0000-4000-8000-000000000002'
 export const ALK = '00000000-0000-4000-8000-000000000003'
 
-export async function adatbazis({ demo = false, belepok = true, elotte = '' } = {}) {
+export async function adatbazis({ demo = false, belepok = true, elotte = '', meddig = '' } = {}) {
   const db = await PGlite.create()
   await db.exec(`
     create schema if not exists auth;
@@ -31,7 +31,7 @@ export async function adatbazis({ demo = false, belepok = true, elotte = '' } = 
       language sql immutable as $$ select salt || md5(pw) $$;
   `)
   if (elotte) await db.exec(elotte)
-  for (const f of (await readdir(MIG)).filter((f) => f.endsWith('.sql')).sort()) {
+  for (const f of (await readdir(MIG)).filter((f) => f.endsWith('.sql') && (!meddig || f < meddig)).sort()) {
     try {
       await db.exec(await readFile(join(MIG, f), 'utf8'))
     } catch (e) {
