@@ -1,4 +1,6 @@
-import { createContext, useContext, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
+import {
+  createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode,
+} from 'react'
 
 import type { Catalog } from '../../data/source'
 import type { VehicleCategory } from '../../lib/types'
@@ -14,6 +16,8 @@ interface KvAllapot {
   tol: Record<VehicleCategory, number | null>
   nyilvanos: boolean
   foglalas?: ReactNode
+  kiemelt: string | null
+  onCsomag?: (id: string) => void
 }
 
 const Kv = createContext<KvAllapot | null>(null)
@@ -89,11 +93,47 @@ function KatValaszto() {
   )
 }
 
+interface KeretHely {
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
+function useKiemelesKeret(index: number, frissit: unknown) {
+  const gorgo = useRef<HTMLDivElement>(null)
+  const [keret, setKeret] = useState<KeretHely | null>(null)
+
+  useLayoutEffect(() => {
+    const doboz = gorgo.current
+    const tabla = doboz?.querySelector('table')
+    if (!doboz || !tabla || index < 0) return
+    const meres = () => {
+      const th = tabla.querySelectorAll<HTMLElement>('thead th')[index + 1]
+      const nev = th?.querySelector<HTMLElement>('.kv-csomag-nev')
+      if (!th || !nev) return
+      const t = tabla.getBoundingClientRect()
+      const c = th.getBoundingClientRect()
+      const top = Math.max(0, nev.getBoundingClientRect().top - t.top - 12)
+      setKeret({ top, left: c.left - t.left, width: c.width, height: t.height - top })
+    }
+    const figyelo = new ResizeObserver(meres)
+    figyelo.observe(tabla)
+    tabla.querySelectorAll('thead th').forEach((e) => figyelo.observe(e))
+    return () => figyelo.disconnect()
+  }, [index, frissit])
+
+  return { gorgo, keret: index >= 0 ? keret : null }
+}
+
 function Tabla({ sorszam = false, ft = true }: { sorszam?: boolean; ft?: boolean }) {
-  const { t } = useKv()
+  const { t, kiemelt, onCsomag } = useKv()
+  const index = kiemelt ? t.csomagok.findIndex((c) => c.id === kiemelt) : -1
+  const { gorgo, keret } = useKiemelesKeret(index, t)
+  const halvany = (i: number) => (index >= 0 && i !== index) || undefined
   let n = 0
   return (
-    <div className="kv-tabla-gorgo">
+    <div className="kv-tabla-gorgo" ref={gorgo}>
       <table className="kv-tabla">
         <thead>
           <tr>
@@ -101,12 +141,24 @@ function Tabla({ sorszam = false, ft = true }: { sorszam?: boolean; ft?: boolean
               <span className="kv-csoport-cim">Járműkategória</span>
               <KatValaszto />
             </th>
-            {t.csomagok.map((c) => (
-              <th key={c.id} scope="col">
-                <span className="kv-csomag-nev">{c.nev}</span>
-                <span className="kv-ar">{szam(c.ar)}{ft && c.ar != null ? ' Ft' : ''}</span>
-              </th>
-            ))}
+            {t.csomagok.map((c, i) => {
+              const tartalom = (
+                <>
+                  <span className="kv-csomag-nev">{c.nev}</span>
+                  <span className="kv-ar">{szam(c.ar)}{ft && c.ar != null ? ' Ft' : ''}</span>
+                </>
+              )
+              return (
+                <th key={c.id} scope="col" data-halvany={halvany(i)}>
+                  {onCsomag && c.ar != null ? (
+                    <button type="button" className="kv-csomag-gomb" aria-pressed={i === index}
+                            onClick={() => onCsomag(c.id)}>
+                      {tartalom}
+                    </button>
+                  ) : tartalom}
+                </th>
+              )
+            })}
           </tr>
         </thead>
         {t.csoportok.map((g) => (
@@ -122,13 +174,14 @@ function Tabla({ sorszam = false, ft = true }: { sorszam?: boolean; ft?: boolean
                     {sorszam && <span className="kv-sorszam">{String(n).padStart(2, '0')}</span>}
                     {s.nev}
                   </th>
-                  {s.cellak.map((c, i) => <td key={i}><Jel c={c} /></td>)}
+                  {s.cellak.map((c, i) => <td key={i} data-halvany={halvany(i)}><Jel c={c} /></td>)}
                 </tr>
               )
             })}
           </tbody>
         ))}
       </table>
+      {keret && <span className="kv-kiemeles" aria-hidden="true" style={keret} />}
     </div>
   )
 }
@@ -248,11 +301,11 @@ function Lab() {
   )
 }
 
-function Vege() {
+function Vege({ foglalasNelkul = false }: { foglalasNelkul?: boolean }) {
   const { foglalas } = useKv()
   return (
     <>
-      {foglalas ?? <Foglalas />}
+      {!foglalasNelkul && (foglalas ?? <Foglalas />)}
       <Terkep />
       <Lab />
     </>
@@ -324,6 +377,16 @@ function Melygarazs() {
 }
 
 function Magazin() {
+  const { foglalas } = useKv()
+  const csomagok = (
+    <section className="kv-csomagok">
+      <div className="kv-szakasz-fej">
+        <h2>Csomagok</h2>
+        <Alcim />
+      </div>
+      <Tabla />
+    </section>
+  )
   return (
     <>
       <Nav />
@@ -342,14 +405,13 @@ function Magazin() {
         </div>
       </section>
       <div className="kv-foto"><span>Fotó helye — garázs, munka közben</span></div>
-      <section className="kv-csomagok">
-        <div className="kv-szakasz-fej">
-          <h2>Csomagok</h2>
-          <Alcim />
+      {foglalas ? (
+        <div className="kv-ketoszlop">
+          {csomagok}
+          {foglalas}
         </div>
-        <Tabla />
-      </section>
-      <Vege />
+      ) : csomagok}
+      <Vege foglalasNelkul={Boolean(foglalas)} />
     </>
   )
 }
@@ -518,14 +580,22 @@ interface KoncepcioProps {
   k: Catalog
   nyilvanos?: boolean
   foglalas?: ReactNode
+  kat?: VehicleCategory
+  onKat?: (k: VehicleCategory) => void
+  kiemelt?: string | null
+  onCsomag?: (id: string) => void
 }
 
-function KvKornyezet({ kod, mod, k, nyilvanos = false, foglalas, children }: KoncepcioProps & { children: ReactNode }) {
-  const [kat, setKat] = useState<VehicleCategory>('SZEMELYAUTO')
+function KvKornyezet({
+  kod, mod, k, nyilvanos = false, foglalas, kat: katKulso, onKat, kiemelt = null, onCsomag, children,
+}: KoncepcioProps & { children: ReactNode }) {
+  const [katBelso, setKatBelso] = useState<VehicleCategory>('SZEMELYAUTO')
+  const kat = katKulso ?? katBelso
+  const setKat = onKat ?? setKatBelso
   const t = useMemo(() => csomagTabla(k, kat), [k, kat])
   const tol = useMemo(() => kategoriaTol(k), [k])
   return (
-    <Kv.Provider value={{ t, kat, setKat, tol, nyilvanos, foglalas }}>
+    <Kv.Provider value={{ t, kat, setKat, tol, nyilvanos, foglalas, kiemelt, onCsomag }}>
       <div className="kv" lang="hu" data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
         {children}
       </div>

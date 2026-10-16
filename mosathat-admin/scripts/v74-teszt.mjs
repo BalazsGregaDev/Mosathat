@@ -27,6 +27,8 @@ const m = p.locator('dialog[aria-label="Munkalap"]')
 await m.locator('#pct').waitFor({ timeout: 10000 })
 
 await m.locator('#pct').scrollIntoViewIfNeeded()
+const javasolt = async () => (await m.locator('#veg').getAttribute('placeholder')).replace(/\D/g, '')
+const alap = Number(await javasolt())
 if (KEPEK) await m.screenshot({ path: join(KEPEK, 'v74-ures.png') })
 console.log('=== Erősen szennyezett és Fix felár ===\n')
 for (const [id, nev, beir] of [['#pct', 'Erősen szennyezett', '15'], ['#fix', 'Fix felár', '2500']]) {
@@ -40,11 +42,10 @@ for (const [id, nev, beir] of [['#pct', 'Erősen szennyezett', '15'], ['#fix', '
   ok(`${nev}: kitörölhető, utána újra üres`, '', await mezo.inputValue())
   await p.keyboard.type(beir)
 }
-const javasolt = async () => (await m.locator('#veg').getAttribute('placeholder')).replace(/\D/g, '')
-ok('a felárak beszámítanak a javasolt árba (15 600 × 1,15 + 2 500)', '20440', await javasolt())
+ok(`a felárak beszámítanak a javasolt árba (${alap} × 1,15 + 2 500)`, String(Math.round(alap * 1.15) + 2500), await javasolt())
 if (KEPEK) await m.screenshot({ path: join(KEPEK, 'v74-felarak.png') })
 await m.locator('#pct').fill(''); await m.locator('#fix').fill('')
-ok('üresen hagyva 0-nak számít: vissza az eredeti árra', '15600', await javasolt())
+ok('üresen hagyva 0-nak számít: vissza az eredeti árra', String(alap), await javasolt())
 ok('sehol nincs NaN', false, /NaN/.test(await m.innerText()))
 ok('nincs JS hiba', [], hibak)
 await b.close()

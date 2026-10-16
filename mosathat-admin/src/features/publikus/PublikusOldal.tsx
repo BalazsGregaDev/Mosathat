@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 
 import '../arculat/betuk'
 import '../arculat/koncepciok.css'
 import './publikus-oldal.css'
 import { createDataSource } from '../../data'
 import type { DataSource, PublikusAdat } from '../../data/source'
-import type { PublikusNapAdat } from '../../lib/types'
+import type { PublikusNapAdat, VehicleCategory } from '../../lib/types'
 import { UZLET, type KoncepcioKod } from '../../lib/arculat'
 import Koncepcio, { KoncepcioKeret } from '../arculat/Koncepcio'
 import { FoglalasUrlap, type FoglalasForras } from './FoglalasModul'
@@ -59,7 +59,14 @@ function nyilvanosForras(forras: DataSource, revision: number): FoglalasForras {
   }
 }
 
-function EloFoglalas({ forras, adat }: Betoltve) {
+interface Valasztas {
+  kat: VehicleCategory
+  onKat: (k: VehicleCategory) => void
+  csomagId: string | null
+  onCsomag: (id: string | null) => void
+}
+
+function EloFoglalas({ forras, adat, valasztas }: Betoltve & { valasztas: Valasztas }) {
   const [revision, setRevision] = useState(0)
   const refresh = useCallback(() => setRevision((r) => r + 1), [])
   const data = useMemo(() => nyilvanosForras(forras, revision), [forras, revision])
@@ -71,14 +78,29 @@ function EloFoglalas({ forras, adat }: Betoltve) {
         igazolja vissza.
       </p>
       <FoglalasUrlap data={data} katalogus={adat.katalogus} revision={revision} refresh={refresh}
-                     nyilvanos lemondasOra={adat.lemondasOra} />
+                     nyilvanos lemondasOra={adat.lemondasOra} {...valasztas} />
     </section>
   )
+}
+
+function useMenuMagassag(keret: RefObject<HTMLDivElement | null>, frissit: unknown) {
+  useEffect(() => {
+    const k = keret.current
+    const nav = k?.querySelector<HTMLElement>('.kv-nav')
+    if (!k || !nav) return
+    const figyelo = new ResizeObserver(() => k.style.setProperty('--nav-h', `${nav.offsetHeight}px`))
+    figyelo.observe(nav)
+    return () => figyelo.disconnect()
+  }, [keret, frissit])
 }
 
 export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
   const [betoltott, setBetoltott] = useState<Betoltve | null>(null)
   const [hiba, setHiba] = useState(false)
+  const [kat, setKat] = useState<VehicleCategory>('SZEMELYAUTO')
+  const [csomagId, setCsomagId] = useState<string | null>(null)
+  const keret = useRef<HTMLDivElement>(null)
+  useMenuMagassag(keret, betoltott ? lap : null)
 
   useEffect(() => {
     document.title = CIMEK[lap]
@@ -109,12 +131,14 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
 
   const { adat } = betoltott
   const mod = adat.arculat === PUBLIKUS_KONCEPCIO && adat.mod ? adat.mod : 'VILAGOS'
+  const valasztas: Valasztas = { kat, onKat: setKat, csomagId, onCsomag: setCsomagId }
 
   return (
-    <div className="kv-keret pub-keret">
+    <div className="kv-keret pub-keret" ref={keret}>
       {lap === 'fooldal' ? (
         <Koncepcio kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos
-                   foglalas={<EloFoglalas {...betoltott} />} />
+                   kat={kat} onKat={setKat} kiemelt={csomagId} onCsomag={setCsomagId}
+                   foglalas={<EloFoglalas {...betoltott} valasztas={valasztas} />} />
       ) : (
         <KoncepcioKeret kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos>
           <JogiOldal lap={lap} />

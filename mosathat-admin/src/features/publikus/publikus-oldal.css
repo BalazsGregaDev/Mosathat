@@ -6,4 +6,14 @@
 }
 .pub-allapot strong { font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: #161816; }
 html.publikus, html.publikus body, html.publikus #root { height: auto; min-height: 100%; }
-html.publikus body { touch-action: auto; overscroll-behavior: auto; background: #f4f4f1; }
+html.publikus body { touch-action: auto; overscroll-behavior: auto; background: #f4f4f1; overflow-x: visible; overflow-x: clip; }
+.pub-keret .kv-nav { position: sticky; top: 0; z-index: 30; background: var(--bg); }
+.pub-keret .kv-csomagok, .pub-keret .kv-foglalas, .pub-keret .kv-hely, .pub-keret .kv-lab {
+  scroll-margin-top: calc(var(--nav-h, 0px) + 12px);
+}
+@container kv (max-width: 700px) {
+  .pub-keret .kv[data-k] .kv-nav { gap: 6px; padding: 10px 16px; }
+  .pub-keret .kv[data-k] .kv-nav nav { max-width: 100%; flex-wrap: nowrap; gap: 14px; overflow-x: auto; scrollbar-width: none; }
+  .pub-keret .kv[data-k] .kv-nav nav a { letter-spacing: .08em; white-space: nowrap; }
+  .pub-keret .kv[data-k] .kv-nav nav::-webkit-scrollbar { display: none; }
+}

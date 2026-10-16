@@ -25,6 +25,10 @@ export interface FoglalasKornyezet {
   nyilvanos: boolean
   lemondasOra?: number
   onNapiNezet?: (nap: string) => void
+  kat?: VehicleCategory
+  onKat?: (k: VehicleCategory) => void
+  csomagId?: string | null
+  onCsomag?: (id: string | null) => void
 }
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
@@ -79,12 +83,19 @@ export default function FoglalasModul({ onNapiNezet }: {
   )
 }
 
-export function FoglalasUrlap({ data, katalogus, revision, refresh, nyilvanos, lemondasOra, onNapiNezet }: FoglalasKornyezet) {
+export function FoglalasUrlap({
+  data, katalogus, revision, refresh, nyilvanos, lemondasOra, onNapiNezet,
+  kat: katKulso, onKat, csomagId: csomagKulso, onCsomag,
+}: FoglalasKornyezet) {
   const holnap = napPlusz(maStr(), 1)
   const utolsoNap = napPlusz(holnap, LEGTOBB_HET * 7)
 
-  const [kat, setKat] = useState<VehicleCategory>('SZEMELYAUTO')
-  const [csomagId, setCsomagId] = useState<string | null>(null)
+  const [katBelso, setKatBelso] = useState<VehicleCategory>('SZEMELYAUTO')
+  const [csomagBelso, setCsomagBelso] = useState<string | null>(null)
+  const kat = katKulso ?? katBelso
+  const setKat = onKat ?? setKatBelso
+  const csomagId = csomagKulso !== undefined ? csomagKulso : csomagBelso
+  const setCsomagId = onCsomag ?? setCsomagBelso
   const [fs, setFs] = useState(false)
   const [ules, setUles] = useState<SeatMaterial | null>(null)
   const [elvitel, setElvitel] = useState<Elvitel | null>(null)
