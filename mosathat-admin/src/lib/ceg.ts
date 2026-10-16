@@ -23,7 +23,7 @@ export const TARHELY = [
   },
   {
     nev: 'Supabase Pte. Ltd.',
-    szerep: 'az adatbázis és a háttérszolgáltatások tárhelye',
+    szerep: 'az adatbázis és a háttérszolgáltatások tárhelye (adatközpont: Frankfurt, Németország)',
     cim: '65 Chulia Street #38-02/03, OCBC Centre, Szingapúr 049513',
     email: 'privacy@supabase.com',
   },
@@ -51,7 +51,7 @@ export const ADATFELDOLGOZOK = [
   {
     nev: 'Supabase Pte. Ltd.',
     cim: '65 Chulia Street #38-02/03, OCBC Centre, Szingapúr 049513',
-    feladat: 'adatbázis, bejelentkezés, a visszaigazoló e-mailt indító háttérfüggvény',
+    feladat: 'adatbázis, bejelentkezés, a visszaigazoló e-mailt indító háttérfüggvény (adatközpont: Frankfurt, Németország)',
   },
   {
     nev: 'Vercel Inc.',
@@ -64,8 +64,28 @@ export const ADATFELDOLGOZOK = [
     feladat: 'a visszaigazoló e-mailek kézbesítése',
   },
   {
+    nev: 'Billingo Technologies Zrt.',
+    cim: '1133 Budapest, Árbóc utca 6.',
+    feladat: 'számlázóprogram: a számlák kiállítása, tárolása és a számlaadatok továbbítása a NAV-nak',
+  },
+  {
+    nev: 'WLA Interservice Szolgáltató Kft.',
+    cim: '1163 Budapest, Kócs utca 7.',
+    feladat: `az ${CEG.email} e-mail fiók tárhelye`,
+  },
+  {
     nev: 'Könyvelő (a véglegesítéskor kerül feltüntetésre)',
     cim: '',
     feladat: 'könyvelés, számviteli és adózási feladatok',
   },
 ]
+
+export interface Kamera {
+  hely: string
+  terulet: string
+}
+
+export const KAMERA: { megorzes: string | null; kamerak: Kamera[] } = {
+  megorzes: null,
+  kamerak: [],
+}

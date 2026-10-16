@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { ADATFELDOLGOZOK, BEKELTETO, CEG, JOGI_HATALY, NAIH, TARHELY, TERVEZET } from '../../lib/ceg'
+import { ADATFELDOLGOZOK, BEKELTETO, CEG, JOGI_HATALY, KAMERA, NAIH, TARHELY, TERVEZET } from '../../lib/ceg'
 
 export type JogiLap = 'impresszum' | 'adatvedelem'
 
@@ -180,7 +180,20 @@ function Adatvedelem() {
       />
 
       <Adatkezeles
-        cim="2.4 Céges ügyfelek kapcsolattartói"
+        cim="2.4 Kapcsolattartás e-mailben és telefonon"
+        adatok="név, e-mail cím, telefonszám, a levél tartalma, valamint a telefonos egyeztetésből az, amit a foglaláshoz feljegyzünk"
+        cel="kérdéseid megválaszolása, időpontok egyeztetése, a foglalással és az elvégzett munkával kapcsolatos ügyintézés"
+        jogalap={<>ha a megkeresés foglaláshoz vagy szolgáltatáshoz kapcsolódik: {SZERZODES}; egyéb megkeresésnél a jogos érdekünk abban, hogy a hozzánk fordulóknak válaszolni tudjunk (GDPR 6. cikk (1) f) pont)</>}
+        megorzes="a foglaláshoz kapcsolódó levelezést a foglalás adataival együtt (lásd 2.3 pont), az egyéb megkereséseket az ügy lezárásától számított 1 évig"
+      >
+        <p>
+          E-mailben a hivatalos címünkön (<Level cim={CEG.email} />) tartjuk a kapcsolatot. A telefonhívásokat nem
+          rögzítjük.
+        </p>
+      </Adatkezeles>
+
+      <Adatkezeles
+        cim="2.5 Céges ügyfelek kapcsolattartói"
         adatok="a kapcsolattartó neve, telefonszáma, e-mail címe"
         cel="kapcsolattartás a velünk szerződő céggel (flotta, bérlet, szerződéses árak)"
         jogalap="az adatkezelő és a szerződő cég jogos érdeke a szerződés teljesítéséhez szükséges kapcsolattartásban (GDPR 6. cikk (1) f) pont)"
@@ -188,15 +201,22 @@ function Adatvedelem() {
       />
 
       <Adatkezeles
-        cim="2.5 Számlázás"
+        cim="2.6 Számlázás"
         adatok="a számlán szereplő adatok: név vagy cégnév, cím, adószám (cégnél), a szolgáltatás és az ár"
-        cel="számla kiállítása és a számviteli kötelezettségek teljesítése"
-        jogalap="jogi kötelezettség teljesítése (GDPR 6. cikk (1) c) pont; a számvitelről szóló 2000. évi C. törvény 169. §)"
+        cel="számla kiállítása, a számlaadatok bejelentése az adóhatóságnak és a számviteli kötelezettségek teljesítése"
+        jogalap="jogi kötelezettség teljesítése (GDPR 6. cikk (1) c) pont; a számvitelről szóló 2000. évi C. törvény 169. §; az általános forgalmi adóról szóló 2007. évi CXXVII. törvény 10. melléklete)"
         megorzes="8 évig (Számv. tv. 169. §)"
-      />
+      >
+        <p>
+          A számlákat a Billingo számlázóprogrammal állítjuk ki, amely a számla adatait a jogszabály szerint
+          automatikusan továbbítja a Nemzeti Adó- és Vámhivatal (NAV) online számla rendszerébe. Ha magánszemélyként
+          kapod a számlát, a neved és a címed nem kerül a NAV-nak továbbított adatok közé. A NAV a kapott adatokat
+          önálló adatkezelőként, a saját feladatai ellátásához kezeli.
+        </p>
+      </Adatkezeles>
 
       <Adatkezeles
-        cim="2.6 Panaszkezelés"
+        cim="2.7 Panaszkezelés"
         adatok="név, elérhetőség, a panasz leírása, a panaszról felvett jegyzőkönyv és a válaszunk"
         cel="a panasz kivizsgálása és megválaszolása"
         jogalap="jogi kötelezettség teljesítése (GDPR 6. cikk (1) c) pont; a fogyasztóvédelemről szóló 1997. évi CLV. törvény 17/A. §)"
@@ -204,7 +224,42 @@ function Adatvedelem() {
       />
 
       <Adatkezeles
-        cim="2.7 A weboldal technikai naplói"
+        cim="2.8 Kamerás megfigyelés a telephelyen"
+        adatok="a megfigyelt területen tartózkodók képmása és mozgása, a járművek képe a rendszámmal együtt; hangot nem rögzítünk"
+        cel="a telephely, a ránk bízott ügyfélautók, valamint a vállalkozás eszközeinek és anyagainak védelme; ha egy autón sérülést észlelnek, vagy a telephelyen baleset, lopás vagy rongálás történik, a körülmények tisztázása"
+        jogalap="a vállalkozás és az ügyfeleink jogos érdeke a ránk bízott járművek és a vagyontárgyak védelmében (GDPR 6. cikk (1) f) pont); az érdekmérlegelés eredményét kérésre megismerheted"
+        megorzes={KAMERA.megorzes
+          ? `a rögzítéstől számított ${KAMERA.megorzes}, utána a rendszer automatikusan felülírja a felvételeket; ha egy felvételt hatósági vagy bírósági eljárásban, illetve kárigény rendezéséhez felhasználunk, az eljárás vagy az ügy lezárásáig megőrizzük`
+          : 'a megőrzési időt a véglegesítéskor tüntetjük fel; ha egy felvételt hatósági vagy bírósági eljárásban, illetve kárigény rendezéséhez felhasználunk, az eljárás vagy az ügy lezárásáig megőrizzük'}
+      >
+        {KAMERA.kamerak.length > 0 ? (
+          <>
+            <p>A kamerák helye és az általuk látott terület:</p>
+            <ul>
+              {KAMERA.kamerak.map((k) => <li key={k.hely}><strong>{k.hely}:</strong> {k.terulet}</li>)}
+            </ul>
+          </>
+        ) : (
+          <p>A kamerák pontos helyét és az általuk látott területet a véglegesítéskor tüntetjük fel.</p>
+        )}
+        <p>
+          A kamerák csak az általunk használt területet figyelik. Mosdóban, öltözőben és a munkatársak
+          pihenőhelyiségében nincs kamera. A megfigyelt területre a bejáratnál figyelmeztető jelzés hívja fel a
+          figyelmet. A felvételeket csak az erre felhatalmazott munkatársunk nézheti vissza, és csak akkor, ha erre
+          konkrét ok van, például kárbejelentés vagy rongálás. Felvételt csak hatóság vagy bíróság megkeresésére,
+          illetve bűncselekmény vagy kár esetén a feljelentéshez vagy a kárigény rendezéséhez adunk át.
+        </p>
+        <p>
+          Ha egy felvételen szerepelsz, a megőrzési időn belül kérheted, hogy megnézhesd, vagy másolatot kapj róla
+          (a többi szereplőt szükség esetén kitakarjuk), illetve hogy ne töröljük, mert a jogaid érvényesítéséhez
+          szükséged van rá (GDPR 15. és 18. cikk). A kérésben add meg a felvétel napját, időpontját és helyét.
+          Munkatársainkat a kamerás megfigyelésről külön, írásban tájékoztatjuk (a munka törvénykönyvéről szóló
+          2012. évi I. törvény 11/A. § (1)).
+        </p>
+      </Adatkezeles>
+
+      <Adatkezeles
+        cim="2.9 A weboldal technikai naplói"
         adatok="IP-cím, a kérés időpontja, a megnyitott oldal, a böngésző típusa"
         cel="a weboldal és az adatbázis biztonságos működése, hibák és visszaélések felderítése"
         jogalap="jogos érdek a szolgáltatás biztonságos működtetésében (GDPR 6. cikk (1) f) pont)"
@@ -218,7 +273,7 @@ function Adatvedelem() {
       </Adatkezeles>
 
       <Adatkezeles
-        cim="2.8 Térkép (Google Térkép)"
+        cim="2.10 Térkép (Google Térkép)"
         adatok="IP-cím, a böngésző adatai, a Google által elhelyezett sütik"
         cel="a telephely megjelenítése a térképen"
         jogalap="a hozzájárulásod (GDPR 6. cikk (1) a) pont; az elektronikus hírközlésről szóló 2003. évi C. törvény 155. § (4))"
@@ -238,7 +293,7 @@ function Adatvedelem() {
       <p>
         A nyilvános weboldalon mi magunk nem helyezünk el sütit, és nem használunk látogatottságmérő vagy
         reklámcélú követőkódot. A betűtípusokat a saját tárhelyünkről töltjük be, nem külső szolgáltatótól.
-        Sütit csak a Google Térkép helyezhet el, és csak akkor, ha a térképet betöltöd (lásd 2.8 pont).
+        Sütit csak a Google Térkép helyezhet el, és csak akkor, ha a térképet betöltöd (lásd 2.10 pont).
         A munkatársaink által használt belső felület a bejelentkezés megőrzéséhez a böngésző helyi tárolóját
         használja; ez a látogatókat nem érinti.
       </p>
@@ -262,20 +317,25 @@ function Adatvedelem() {
         </table>
       </div>
       <p>
-        Ezen kívül személyes adatot csak akkor adunk át, ha jogszabály kötelez rá, például hatóság vagy
-        bíróság megkeresésére.
+        A számlák adatai jogszabály alapján a NAV-hoz kerülnek (lásd 2.6 pont), kamerafelvételt pedig csak a
+        2.8 pontban leírt esetekben adunk át. Ezen kívül személyes adatot csak akkor adunk át, ha jogszabály
+        kötelez rá, például hatóság vagy bíróság megkeresésére.
       </p>
 
       <h2>5. Adattovábbítás az Európai Gazdasági Térségen kívülre</h2>
       <p>
-        Az adatfeldolgozóink közül a Vercel Inc. és a Plus Five Five, Inc. (Resend) az Amerikai Egyesült
-        Államokban, a Supabase Pte. Ltd. Szingapúrban és az Egyesült Államokban működik, ezért az adatok
-        egy része az Európai Gazdasági Térségen kívülre kerülhet. Az adattovábbítás megfelelő garanciák
-        mellett történik: ahol a szolgáltató tanúsított az EU–USA adatvédelmi keret szerint, ott az
-        Európai Bizottság erre vonatkozó megfelelőségi határozata alapján, minden más esetben (és
-        tartalékként) az Európai Bizottság által elfogadott általános szerződési feltételek (GDPR 46. cikk)
-        alapján, amelyeket a szolgáltatók adatfeldolgozási szerződése tartalmaz. Ezekről a fenti
-        elérhetőségeken kérhetsz tájékoztatást.
+        Az adatbázisunk és annak biztonsági mentései az Európai Unióban, a Supabase frankfurti (Németország)
+        adatközpontjában vannak. A Supabase Pte. Ltd. ugyanakkor szingapúri cég, és az üzemeltetési és
+        hibaelhárítási feladatokat részben az amerikai Supabase, Inc. látja el, így munkatársaik az adatokhoz
+        az Európai Gazdasági Térségen kívülről is hozzáférhetnek. A Vercel Inc. és a Plus Five Five, Inc.
+        (Resend) az Amerikai Egyesült Államokban működik.
+      </p>
+      <p>
+        Az adattovábbítás megfelelő garanciák mellett történik: ahol a szolgáltató tanúsított az EU–USA
+        adatvédelmi keret szerint, ott az Európai Bizottság erre vonatkozó megfelelőségi határozata alapján,
+        minden más esetben (és tartalékként) az Európai Bizottság által elfogadott általános szerződési
+        feltételek (GDPR 46. cikk) alapján, amelyeket a szolgáltatók adatfeldolgozási szerződése tartalmaz.
+        Ezekről a fenti elérhetőségeken kérhetsz tájékoztatást.
       </p>
 
       <h2>6. Adatbiztonság</h2>
