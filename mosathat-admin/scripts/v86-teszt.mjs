@@ -82,9 +82,11 @@ await a.ctx.close()
 
 {
   const t = await publikus({ width: 390, height: 844 })
-  await t.p.locator('.kv-nav nav a').filter({ hasText: 'Foglalás' }).click()
+  await t.p.locator('.kv-menu-gomb').click()
+  await t.p.waitForTimeout(300)
+  await t.p.locator('.kv-menu-panel nav a').filter({ hasText: 'Foglalás' }).click()
   await t.p.waitForTimeout(1000)
-  ok('telefonon is: Foglalás cím kiemelve', true, (await villan(t.p, '.kv-foglalas h2')).van)
+  ok('telefonon is (a hamburger menüből): Foglalás cím kiemelve', true, (await villan(t.p, '.kv-foglalas h2')).van)
   await kep(t.p, '04-felvillan-telefon.png')
   await t.ctx.close()
 }

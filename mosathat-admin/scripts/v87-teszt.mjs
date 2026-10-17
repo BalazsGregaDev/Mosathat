@@ -172,13 +172,12 @@ console.log('\n=== 4) Megjegyzi a nyelvet, jogi oldalak angolul ===\n')
 console.log('\n=== 5) Telefonon ===\n')
 {
   const { ctx, p } = await publikus('/publikus?lang=en', { width: 390, height: 844 })
-  const m = await p.evaluate(() => {
-    const k = document.querySelector('.kv-nyelv-sor .nyelv-kapcsolo').getBoundingClientRect()
-    const nav = document.querySelector('.kv-nav').getBoundingClientRect()
-    const kicker = document.querySelector('.kv-kicker').getBoundingClientRect()
-    return { jobb: Math.round(innerWidth - k.right), alatta: k.bottom <= kicker.top, gap: Math.round(k.top - nav.bottom), gorget: document.documentElement.scrollWidth > innerWidth }
-  })
-  ok('saját sorban, jobbra igazítva, a felcím fölött, 10 px-re a navbartól', { jobb: 16, alatta: true, gap: 10, gorget: false }, m)
+  ok('a nyelvválasztó a hamburger menüben van, nem a navbar alatt', [false, true],
+    [await p.locator('.kv-nyelv-sor .nyelv-kapcsolo').isVisible(), await p.locator('.kv-menu-gomb').isVisible()])
+  await p.locator('.kv-menu-gomb').click()
+  await p.waitForTimeout(400)
+  ok('a menüben angolul aktív, nincs vízszintes görgetés', ['true', false],
+    [await p.locator('.kv-menu-panel .nyelv-kapcsolo').getAttribute('aria-checked'), await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)])
   await kep(p, '06-telefon-en.png')
   await ctx.close()
 }

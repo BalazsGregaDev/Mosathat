@@ -1,5 +1,5 @@
 import {
-  createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode,
+  createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode,
 } from 'react'
 
 import type { Catalog } from '../../data/source'
@@ -82,19 +82,66 @@ function Nav({ jobbra }: { jobbra?: ReactNode }) {
   const u = useUzlet()
   const sz = useSz()
   const nyelv = useNyelv()
+  const f = FELIRAT[nyelv]
+  const [nyitva, setNyitva] = useState(false)
+  const [gorgetve, setGorgetve] = useState(false)
+  const panelId = useId()
+  const hamburger = nyilvanos && !jobbra
+
+  useEffect(() => {
+    if (!hamburger) return
+    let kockas = 0
+    const figyel = () => {
+      cancelAnimationFrame(kockas)
+      kockas = requestAnimationFrame(() => setGorgetve(window.scrollY > 24))
+    }
+    figyel()
+    window.addEventListener('scroll', figyel, { passive: true })
+    return () => { cancelAnimationFrame(kockas); window.removeEventListener('scroll', figyel) }
+  }, [hamburger])
+
+  useEffect(() => {
+    if (!nyitva) return
+    const billentyu = (e: KeyboardEvent) => { if (e.key === 'Escape') setNyitva(false) }
+    window.addEventListener('keydown', billentyu)
+    return () => window.removeEventListener('keydown', billentyu)
+  }, [nyitva])
+
+  const logo = (e: MouseEvent<HTMLAnchorElement>) => {
+    setNyitva(false)
+    if (e.currentTarget.closest('.kv')?.querySelector('.kv-hero')) {
+      e.preventDefault()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+  const linkek = MENU.map(([m, cel]) => (
+    <a key={m} href={`#${cel}`} onClick={(e) => { setNyitva(false); ugras(e, cel, nyilvanos, nyelv) }}>{sz(m)}</a>
+  ))
+
   return (
     <>
-      <header className="kv-nav">
+      <header className="kv-nav" data-nyitva={nyitva || undefined} data-gorgetve={gorgetve || undefined}>
         {nyilvanos
-          ? <a className="kv-logo" href={nyelviUt('/publikus', nyelv)}>{u.nev}</a>
+          ? <a className="kv-logo" href={nyelviUt('/publikus', nyelv)} onClick={logo}>{u.nev}</a>
           : <span className="kv-logo">{u.nev}</span>}
-        {jobbra ?? (
-          <nav>
-            {MENU.map(([m, cel]) => <a key={m} href={`#${cel}`} onClick={(e) => ugras(e, cel, nyilvanos, nyelv)}>{sz(m)}</a>)}
-          </nav>
+        {jobbra ?? <nav aria-label={f.fomenu}>{linkek}</nav>}
+        {hamburger && (
+          <button type="button" className="kv-menu-gomb" aria-expanded={nyitva} aria-controls={panelId}
+                  aria-label={nyitva ? f.menuBezar : f.menu} onClick={() => setNyitva(!nyitva)}>
+            <span /><span /><span />
+          </button>
         )}
       </header>
       {nyelvValaszto && <div className="kv-nyelv-sor">{nyelvValaszto}</div>}
+      {hamburger && (
+        <div className="kv-menu-hely" data-nyitva={nyitva || undefined}>
+          <button type="button" className="kv-menu-hatter" tabIndex={-1} aria-hidden="true" onClick={() => setNyitva(false)} />
+          <div className="kv-menu-panel" id={panelId}>
+            <nav aria-label={f.fomenu}>{linkek}</nav>
+            {nyelvValaszto && <div className="kv-menu-nyelv" onClickCapture={() => setNyitva(false)}>{nyelvValaszto}</div>}
+          </div>
+        </div>
+      )}
     </>
   )
 }

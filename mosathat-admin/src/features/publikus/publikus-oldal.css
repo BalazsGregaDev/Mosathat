@@ -11,12 +11,6 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
 .pub-keret .kv-csomagok, .pub-keret .kv-foglalas, .pub-keret .kv-hely, .pub-keret .kv-lab {
   scroll-margin-top: calc(var(--nav-h, 0px) + 12px);
 }
-@container kv (max-width: 700px) {
-  .pub-keret .kv[data-k] .kv-nav { gap: 6px; padding: 10px 16px; }
-  .pub-keret .kv[data-k] .kv-nav nav { max-width: 100%; flex-wrap: nowrap; gap: 14px; overflow-x: auto; scrollbar-width: none; }
-  .pub-keret .kv[data-k] .kv-nav nav a { letter-spacing: .08em; white-space: nowrap; }
-  .pub-keret .kv[data-k] .kv-nav nav::-webkit-scrollbar { display: none; }
-}
 .pub-keret .kv {
   --pl: max(var(--px), calc(env(safe-area-inset-left, 0px) + 12px));
   --pr: max(var(--px), calc(env(safe-area-inset-right, 0px) + 12px));
@@ -37,8 +31,8 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
 }
 
 .pub-keret .kv { --nyelv-gap: 21px; }
-.pub-keret .kv-nyelv-sor { position: relative; z-index: 5; height: 0; }
-.pub-keret .kv-nyelv-sor .nyelv-kapcsolo { position: absolute; top: var(--nyelv-gap); right: var(--pr); }
+.pub-keret .kv-nyelv-sor { position: sticky; top: var(--nav-h, 0px); z-index: 29; height: 0; pointer-events: none; }
+.pub-keret .kv-nyelv-sor .nyelv-kapcsolo { position: absolute; top: var(--nyelv-gap); right: var(--pr); pointer-events: auto; }
 .pub-keret .kv .nyelv-kapcsolo {
   --nyk-hatter: color-mix(in srgb, var(--fg) 5%, var(--bg));
   --nyk-keret: var(--vonal);
@@ -52,6 +46,62 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
   .pub-keret .kv-nyelv-sor { height: auto; display: flex; justify-content: flex-end; padding: var(--nyelv-gap) var(--pr) 0; }
   .pub-keret .kv-nyelv-sor .nyelv-kapcsolo { position: relative; top: auto; right: auto; }
 }
+
+.pub-keret .kv-nav :is(.kv-logo, nav a) { position: relative; }
+.pub-keret .kv-nav :is(.kv-logo, nav a)::before { content: ''; position: absolute; inset: -10px -8px; }
+.pub-keret .kv-menu-gomb, .pub-keret .kv-menu-hely { display: none; }
+
 @container kv (max-width: 700px) {
   .pub-keret .kv { --nyelv-gap: 10px; }
+  .pub-keret .kv-nyelv-sor { display: none; }
+  .pub-keret .kv[data-k] .kv-nav {
+    flex-direction: row; align-items: center; justify-content: space-between; gap: 12px;
+    padding-top: 6px; padding-bottom: 6px;
+    background: transparent; border-bottom-color: transparent; color: #fff; mix-blend-mode: difference;
+  }
+  .pub-keret .kv[data-k] .kv-nav > nav { display: none; }
+  .pub-keret .kv[data-k] .kv-nav .kv-logo::before { inset: -12px -12px -12px -10px; }
+  .pub-keret .kv[data-k] .kv-nav .kv-logo { transition: opacity .2s ease, visibility .2s; }
+  .pub-keret .kv[data-k] .kv-nav[data-gorgetve]:not([data-nyitva]) .kv-logo { opacity: 0; visibility: hidden; }
+  .pub-keret .kv[data-k] .kv-nav[data-nyitva] { background: var(--bg); color: var(--fg); mix-blend-mode: normal; border-bottom-color: var(--vonal); }
+
+  .pub-keret .kv-menu-gomb {
+    display: block; position: relative; flex: none; width: 44px; height: 44px; margin: -4px -11px -4px 0; padding: 0;
+    border: 0; background: transparent; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .pub-keret .kv-menu-gomb span {
+    position: absolute; left: 11px; right: 11px; height: 1.5px; border-radius: 1px; background: currentColor;
+    transition: transform .22s ease, opacity .16s ease;
+  }
+  .pub-keret .kv-menu-gomb span:nth-child(1) { top: 15px; }
+  .pub-keret .kv-menu-gomb span:nth-child(2) { top: 21.25px; }
+  .pub-keret .kv-menu-gomb span:nth-child(3) { top: 27.5px; }
+  .pub-keret .kv-menu-gomb[aria-expanded='true'] span:nth-child(1) { transform: translateY(6.25px) rotate(45deg); }
+  .pub-keret .kv-menu-gomb[aria-expanded='true'] span:nth-child(2) { opacity: 0; }
+  .pub-keret .kv-menu-gomb[aria-expanded='true'] span:nth-child(3) { transform: translateY(-6.25px) rotate(-45deg); }
+  .pub-keret .kv-menu-gomb:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; border-radius: 8px; }
+
+  .pub-keret .kv-menu-hely[data-nyitva] { display: block; position: sticky; top: var(--nav-h, 0px); z-index: 31; height: 0; }
+  .pub-keret .kv-menu-hatter {
+    position: absolute; top: 0; left: 0; right: 0; height: 100vh; height: 100dvh; padding: 0; border: 0;
+    background: color-mix(in srgb, var(--fg) 26%, transparent); cursor: default; animation: kv-menu-hatter .2s ease;
+  }
+  .pub-keret .kv-menu-panel {
+    position: absolute; top: 0; left: 0; right: 0; padding: 0 var(--pr) 20px var(--pl);
+    background: var(--bg); border-bottom: 1px solid var(--vonal); box-shadow: 0 14px 28px rgba(0, 0, 0, .08);
+    animation: kv-menu-be .2s ease;
+  }
+  .pub-keret .kv-menu-panel nav { display: flex; flex-direction: column; }
+  .pub-keret .kv[data-k] .kv-menu-panel nav a {
+    display: flex; align-items: center; min-height: 52px; border-bottom: 1px solid var(--vonal);
+    font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--fg); text-decoration: none;
+  }
+  .pub-keret .kv-menu-nyelv { display: flex; padding-top: 18px; }
+  .pub-keret .kv-menu-nyelv .nyelv-kapcsolo { font-size: 12.5px; }
+  .pub-keret .kv-menu-nyelv .nyelv-fel { padding: 10px 14px; }
+}
+@keyframes kv-menu-be { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes kv-menu-hatter { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .pub-keret .kv-menu-gomb span, .pub-keret .kv-menu-panel, .pub-keret .kv-menu-hatter, .pub-keret .kv-nav .kv-logo { transition: none; animation: none; }
 }

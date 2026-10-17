@@ -73,6 +73,7 @@ await v.ctx.close()
 
 console.log('\n=== 3) Telefonon: álló kép, mint eddig ===\n')
 const t = await oldal({ width: 390, height: 844 }, minta)
+await t.p.waitForFunction(() => getComputedStyle(document.querySelector('.kv-foto img')).opacity === '1', null, { timeout: 5000 }).catch(() => {})
 ok('telefonon 200 px magas, sima kép (nem fix háttér), nem lóg ki', [200, '1', 'scroll', true], [
   Math.round((await t.p.locator('.kv-foto').boundingBox()).height),
   await t.p.locator('.kv-foto img').evaluate((e) => getComputedStyle(e).opacity),

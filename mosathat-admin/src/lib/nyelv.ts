@@ -95,6 +95,9 @@ export const FELIRAT = {
     forditas: '',
     hatalyos: 'Hatályos',
     tervezet: 'Tervezet: a szöveg jogi átnézés alatt áll, az adatok véglegesítése folyamatban van.',
+    menu: 'Menü',
+    menuBezar: 'Menü bezárása',
+    fomenu: 'Főmenü',
   },
   en: {
     bennevan: 'included',
@@ -110,6 +113,9 @@ export const FELIRAT = {
     forditas: 'This is an English translation provided for information. In case of any discrepancy, the Hungarian version prevails.',
     hatalyos: 'Effective from',
     tervezet: 'Draft: this text is under legal review and the details are being finalised.',
+    menu: 'Menu',
+    menuBezar: 'Close menu',
+    fomenu: 'Main menu',
   },
 } as const
 
