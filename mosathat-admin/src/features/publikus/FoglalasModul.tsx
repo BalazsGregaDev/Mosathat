@@ -33,6 +33,7 @@ export interface FoglalasKornyezet {
   onKat?: (k: VehicleCategory) => void
   csomagId?: string | null
   onCsomag?: (id: string | null) => void
+  bemutato?: Bemutato
 }
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
@@ -51,6 +52,18 @@ const LEGKESOBB_HATARIDO = 17 * 60
 
 type Tipus = 'VAROS' | 'LEADOS'
 type Elvitel = 'AZNAP' | 'MASNAP'
+
+export interface Bemutato {
+  csomagId?: string | null
+  fs?: boolean
+  ules?: SeatMaterial | null
+  elvitel?: Elvitel | null
+  tipus?: Tipus | null
+  extrak?: Record<string, number>
+  napot?: boolean
+  idot?: boolean
+  kesz?: boolean
+}
 
 interface ElvitelAblak {
   nap: string
@@ -91,7 +104,7 @@ export default function FoglalasModul({ onNapiNezet }: {
 
 export function FoglalasUrlap({
   data, katalogus, revision, refresh, nyilvanos, lemondasOra, onNapiNezet,
-  kat: katKulso, onKat, csomagId: csomagKulso, onCsomag,
+  kat: katKulso, onKat, csomagId: csomagKulso, onCsomag, bemutato,
 }: FoglalasKornyezet) {
   const sz = useSz()
   const u = useUzlet()
@@ -99,17 +112,17 @@ export function FoglalasUrlap({
   const utolsoNap = napPlusz(holnap, LEGTOBB_HET * 7)
 
   const [katBelso, setKatBelso] = useState<VehicleCategory>('SZEMELYAUTO')
-  const [csomagBelso, setCsomagBelso] = useState<string | null>(null)
+  const [csomagBelso, setCsomagBelso] = useState<string | null>(bemutato?.csomagId ?? null)
   const kat = katKulso ?? katBelso
   const setKat = onKat ?? setKatBelso
   const csomagId = csomagKulso !== undefined ? csomagKulso : csomagBelso
   const setCsomagId = onCsomag ?? setCsomagBelso
-  const [fs, setFs] = useState(false)
-  const [ules, setUles] = useState<SeatMaterial | null>(null)
-  const [elvitel, setElvitel] = useState<Elvitel | null>(null)
+  const [fs, setFs] = useState(bemutato?.fs ?? false)
+  const [ules, setUles] = useState<SeatMaterial | null>(bemutato?.ules ?? null)
+  const [elvitel, setElvitel] = useState<Elvitel | null>(bemutato?.elvitel ?? null)
   const [scope, setScope] = useState<BookingScope>('TELJES')
-  const [extrak, setExtrak] = useState<Record<string, number>>({})
-  const [tipus, setTipus] = useState<Tipus | null>(null)
+  const [extrak, setExtrak] = useState<Record<string, number>>(bemutato?.extrak ?? {})
+  const [tipus, setTipus] = useState<Tipus | null>(bemutato?.tipus ?? null)
   const [nap, setNap] = useState<string | null>(null)
   const [ido, setIdo] = useState<Lehetoseg | null>(null)
   const [hatarido, setHatarido] = useState<number | null>(null)
@@ -224,6 +237,11 @@ export function FoglalasUrlap({
 
   useEffect(() => { setIdo(null) }, [perc, tip, nap])
 
+  const elsoSzabad = napok.find((d) => d >= holnap && napErtek.get(d)?.allapot === 'szabad') ?? null
+  useEffect(() => {
+    if (bemutato?.napot && !nap && elsoSzabad) setNap(elsoSzabad)
+  }, [bemutato?.napot, nap, elsoSzabad])
+
   const elvitelKulcs = masnap && nap ? `${revision}|${nap}` : null
   const [elvitelek, setElvitelek] = useState<Map<string, ElvitelAblak | null>>(new Map())
   useEffect(() => {
@@ -237,6 +255,10 @@ export function FoglalasUrlap({
   const elvitelInfo = elvitelKulcs ? elvitelek.get(elvitelKulcs) ?? null : null
 
   const lehetosegek = nap ? napErtek.get(nap)?.lehetosegek ?? [] : []
+  const elsoIdo = lehetosegek[0] ?? null
+  useEffect(() => {
+    if (bemutato?.idot && !ido && elsoIdo) setIdo(elsoIdo)
+  }, [bemutato?.idot, ido, elsoIdo])
 
   const hataridoKell = tip === 'LEADOS' && !masnap
   const hataridok = useMemo(() => {
@@ -295,11 +317,18 @@ export function FoglalasUrlap({
   const csomag = csomagok.find((p) => p.id === csomagId) ?? null
   const csomagNev = csomag ? `${csomag.name}${fsBe ? ` + ${sz('foglalas.fs')}` : ''}` : ''
 
-  if (kesz) {
+  const bemutatoKesz = bemutato?.kesz ? {
+    id: 'bemutato', nap: holnap, mikor: `${sz('foglalas.hozas_cimke')}: 9:00, ${sz('foglalas.hatarido_cimke')}: 16:00`,
+    elvitel: { nap: napPlusz(holnap, 1), tol: ELVITEL_KEZDETE, ig: LEGKESOBB_HATARIDO }, email: true,
+  } : null
+  const keszAll = kesz ?? bemutatoKesz
+
+  if (keszAll) {
+    const kesz = keszAll
     return (
       <div className="fogl">
         {!nyilvanos && <ProbaSav />}
-        <section className="fogl-kartya fogl-siker">
+        <section className="fogl-kartya fogl-siker" data-lepes="siker">
           <h2>{sz('foglalas.siker')}</h2>
           <p>
             {napCim(kesz.nap)}, {kesz.mikor}.
@@ -330,7 +359,7 @@ export function FoglalasUrlap({
         </header>
       )}
 
-      <section className="fogl-kartya">
+      <section className="fogl-kartya" data-lepes="auto">
         <h2><span className="lepes">1</span> {sz('foglalas.auto')}</h2>
         <div className="fogl-valaszto harom">
           {KATEGORIAK.map((k) => (
@@ -341,7 +370,7 @@ export function FoglalasUrlap({
         </div>
       </section>
 
-      <section className="fogl-kartya">
+      <section className="fogl-kartya" data-lepes="csomag">
         <h2><span className="lepes">2</span> {sz('foglalas.csomag')}</h2>
         <div className="fogl-csomagok">
           {csomagok.map((p) => {
@@ -389,7 +418,7 @@ export function FoglalasUrlap({
       </section>
 
       {csomagId && (
-        <section className="fogl-kartya">
+        <section className="fogl-kartya" data-lepes="mit">
           <h2><span className="lepes">3</span> {sz('foglalas.mit')}</h2>
           <div className="fogl-valaszto harom">
             {TERJEDELMEK.map((s) => {
@@ -409,7 +438,7 @@ export function FoglalasUrlap({
       )}
 
       {csomagId && kinaltExtrak.length > 0 && (
-        <section className="fogl-kartya">
+        <section className="fogl-kartya" data-lepes="extrak">
           <h2><span className="lepes">4</span> {sz('foglalas.extrak')} <small>{sz('foglalas.nem_kotelezo')}</small></h2>
           {csomag && rejtett > 0 && (
             <p className="fogl-al-szoveg">{sz('foglalas.extrak_benne', { csomag: csomagNev })}</p>
@@ -450,7 +479,7 @@ export function FoglalasUrlap({
       )}
 
       {csomagId && !fsBe && (
-        <section className="fogl-kartya">
+        <section className="fogl-kartya" data-lepes="tipus">
           <h2><span className="lepes">5</span> {sz('foglalas.var_vagy_hagy')}</h2>
           <div className="fogl-valaszto ketto">
             <button type="button" aria-pressed={tipus === 'VAROS'} onClick={() => setTipus('VAROS')}>
@@ -466,7 +495,7 @@ export function FoglalasUrlap({
       )}
 
       {csomagId && fsBe && (
-        <section className="fogl-kartya">
+        <section className="fogl-kartya" data-lepes="elvitel">
           <h2><span className="lepes">5</span> {sz('foglalas.elvitel')}</h2>
           <p className="fogl-al-szoveg">{sz('foglalas.elvitel_fs')}</p>
           <div className="fogl-valaszto ketto">
@@ -486,7 +515,7 @@ export function FoglalasUrlap({
       )}
 
       {csomagId && tip && (
-        <section className="fogl-kartya">
+        <section className="fogl-kartya" data-lepes="nap">
           <h2><span className="lepes">6</span> {sz('foglalas.nap')}</h2>
           {ajanlatHiba ? (
             <p className="fogl-figyel">Nem sikerült kiszámolni az árat és az időt: {ajanlatHiba}</p>
@@ -583,7 +612,7 @@ export function FoglalasUrlap({
       )}
 
       {ido && (
-        <section className="fogl-kartya">
+        <section className="fogl-kartya" data-lepes="adatok">
           <h2><span className="lepes">8</span> {sz('foglalas.adatok')}</h2>
           <div className="fogl-urlap">
             <div className="mezo"><label htmlFor="fo-nev">{sz('foglalas.mezo.nev')} *</label>
@@ -625,7 +654,7 @@ export function FoglalasUrlap({
       )}
 
       {csomag && (
-        <section className="fogl-osszeg">
+        <section className="fogl-osszeg" data-lepes="osszeg">
           <div className="sorok">
             <div>
               <strong>{csomag.name}</strong>

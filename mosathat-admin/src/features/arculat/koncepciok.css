@@ -243,7 +243,13 @@
 .kv[data-k='03'] .kv-foto { overflow: hidden; }
 .kv[data-k='03'] .kv-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s ease; }
 .kv[data-k='03'] .kv-foto[data-kep='nincs'] img { display: none; }
-.kv[data-k='03'] .kv-foto[data-kep='van'] { height: clamp(200px, 28cqw, 380px); }
+.kv[data-k='03'] .kv-foto[data-kep='van'] { height: clamp(200px, 40cqw, 600px); }
+@media (hover: hover) and (pointer: fine) and (min-aspect-ratio: 1/1) and (prefers-reduced-motion: no-preference) {
+  .kv[data-k='03'] .kv-foto[data-kep='van'][data-ablak] {
+    background: var(--borito-kep) center / cover no-repeat fixed;
+  }
+  .kv[data-k='03'] .kv-foto[data-kep='van'][data-ablak] img { opacity: 0; }
+}
 .kv[data-k='03'] .kv-foto[data-kep='van'] img { opacity: 1; }
 .kv[data-k='03'] .kv-foto[data-kep='van'] span { display: none; }
 .kv[data-k='03'] .kv-foto span { position: absolute; left: 10px; bottom: 9px; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .42); }

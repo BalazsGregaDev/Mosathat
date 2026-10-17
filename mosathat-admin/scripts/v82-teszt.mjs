@@ -112,26 +112,47 @@ if (KEPEK) await p.screenshot({ path: join(KEPEK, 'v82-csomagok.png') })
 console.log('\n=== 3) Tartalom ===\n')
 await menuPont(p, 'Tartalom').click()
 await p.locator('.pub-szoveg').first().waitFor({ timeout: 15000 })
-const db_ = await p.locator('.pub-szoveg').count()
-ok('minden szöveg szerkeszthető (több mint 100 mező, csoportokban)', [true, true], [db_ > 100, (await p.locator('.pub-csoport').count()) >= 8])
+const kulcsok = await p.locator('.pub-szoveg').evaluateAll((l) => l.map((e) => e.dataset.kulcs))
+ok('minden szöveg pontosan egyszer, sávokba rendezve (115 mező, 16 sáv)', [115, 115, 16],
+  [kulcsok.length, new Set(kulcsok).size, await p.locator('.pub-sav').count()])
+ok('nincs már „Így jelenik meg” sor', 0, await p.getByText('Így jelenik meg').count())
+const sav = (id) => p.locator(`.pub-sav[data-sav="${id}"]`)
+ok('a sávok sorrendje követi az oldalt, a foglalás lépésenként',
+  ['menu', 'hero', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs', 'fogl-6', 'fogl-8', 'fogl-osszeg', 'fogl-siker', 'hely', 'lab'],
+  await p.locator('.pub-sav').evaluateAll((l) => l.map((e) => e.dataset.sav)))
+await p.waitForTimeout(2500)
+const lathato = async (id) => sav(id).locator('.fogl > *').evaluateAll((l) => l.filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.dataset.lepes))
+ok('a lépés-előnézetek csak a saját lépésüket mutatják', [['auto'], ['csomag'], ['nap'], ['adatok'], ['osszeg'], ['siker']],
+  [await lathato('fogl-1'), await lathato('fogl-2'), await lathato('fogl-6'), await lathato('fogl-8'), await lathato('fogl-osszeg'), await lathato('fogl-siker')])
+const allapotok = []
+for (const a of ['szabad', 'keves', 'tele', 'zarva']) allapotok.push((await sav('fogl-6').locator(`.fogl-nap[data-allapot="${a}"]`).count()) > 0)
+ok('a naptár-előnézetben minden állapot látszik, és ki van választva egy nap és egy időpont', [true, true, true, true, 1, 1],
+  [...allapotok, await sav('fogl-6').locator('.fogl-nap[aria-pressed="true"]').count(),
+   await sav('fogl-6').locator('.fogl-idok button[aria-pressed="true"]').count()])
 ok('alapból az eredeti szövegek állnak benne', 'Az autó nem tárgy.\n*Évekig* veled van.', await szoveg(p, 'hero.cim').locator('textarea').inputValue())
 await szoveg(p, 'hero.cim').locator('textarea').fill('Teszt nyitó cím.\n*Kiemelt* második sor')
 await szoveg(p, 'hero.felcim').locator('input').fill('Hívj: {telefon}')
 await szoveg(p, 'foglalas.auto').locator('input').fill('Mivel érkezel?')
-ok('előnézet: kiemelés és behelyettesített telefonszám', ['Kiemelt', true],
-  [sima(await szoveg(p, 'hero.cim').locator('.pub-elonezet em').textContent()),
-   /Hívj: \+36 1 506 0420/.test(sima(await szoveg(p, 'hero.felcim').locator('.pub-elonezet').textContent()))])
-ok('jelzi a nem mentett változást és a módosított mezőket', [true, 3],
+await szoveg(p, 'foglalas.kuldes').locator('input').fill('Kérés elküldése')
+await p.waitForTimeout(600)
+ok('az előnézet élőben követi a gépelést: kiemelés, behelyettesített telefonszám, foglalás lépései', ['Kiemelt', true, true, 'Kérés elküldése'],
+  [sima(await sav('hero').locator('.kv-hero h1 em').textContent()),
+   /Hívj: \+36 1 506 0420/i.test(sima(await sav('hero').locator('.kv-kicker').textContent())),
+   /Mivel érkezel\?/.test(await sav('fogl-1').locator('[data-lepes="auto"] h2').textContent()),
+   sima(await sav('fogl-osszeg').locator('.fogl-osszeg .btn-fo').textContent())])
+ok('jelzi a nem mentett változást és a módosított mezőket', [true, 4],
   [await p.locator('.pub-valtozott').isVisible(), await p.locator('.pub-szoveg[data-valtozott]').count()])
 if (KEPEK) {
   await p.locator('.tartalom').evaluate((e) => e.scrollTo(0, 0))
   await p.screenshot({ path: join(KEPEK, 'v82-tartalom-teteje.png') })
-  await szoveg(p, 'hero.cim').scrollIntoViewIfNeeded()
-  await p.locator('.tartalom').evaluate((e) => e.scrollBy(0, -170))
-  await p.screenshot({ path: join(KEPEK, 'v82-tartalom.png') })
+  for (const id of ['hero', 'fogl-2', 'fogl-6', 'fogl-osszeg']) {
+    await sav(id).locator('h3').evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
+    await p.waitForTimeout(300)
+    await p.screenshot({ path: join(KEPEK, `v82-tartalom-${id}.png`) })
+  }
 }
 ok('mentés', 'Mentve, a publikus oldalon már látszik', await ment(p))
-ok('mentés után a módosított mezők jelölve maradnak, változás nincs', [3, 0],
+ok('mentés után a módosított mezők jelölve maradnak, változás nincs', [4, 0],
   [await p.locator('.pub-szoveg .cimke-pill').count(), await p.locator('.pub-szoveg[data-valtozott]').count()])
 await p.locator('.pub-keres input').fill('ülés')
 const talalat = await p.locator('.pub-szoveg').evaluateAll((l) => l.map((e) => ({

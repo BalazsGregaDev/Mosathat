@@ -41,27 +41,42 @@ ok('nincs kép: helykitöltő felirat látszik, törött kép nincs', ['nincs', 
 ok('a sáv magassága változatlan', 170, Math.round((await u.p.locator('.kv-foto').boundingBox()).height))
 await u.ctx.close()
 
-console.log('\n=== 2) A /kepek/borito.jpg fájllal ===\n')
+console.log('\n=== 2) A /kepek/borito.jpg fájllal, asztali gépen: ablak a fix háttérre ===\n')
 const v = await oldal({ width: 1440, height: 900 }, minta)
 const doboz = await v.p.locator('.kv-foto').boundingBox()
-ok('a kép megjelenik, a felirat eltűnik', ['van', false, '1'], [
+const stilus = await v.p.locator('.kv-foto').evaluate((e) => {
+  const s = getComputedStyle(e)
+  return { csatolas: s.backgroundAttachment, kep: /\/kepek\/borito\.jpg/.test(s.backgroundImage), meret: s.backgroundSize }
+})
+ok('a kép megjelenik, a felirat eltűnik', ['van', false], [
   await v.p.locator('.kv-foto').getAttribute('data-kep'),
   await v.p.locator('.kv-foto span').isVisible(),
-  await v.p.locator('.kv-foto img').evaluate((e) => getComputedStyle(e).opacity),
 ])
-ok('asztali gépen magasabb borítósáv (380 px)', 380, Math.round(doboz.height))
-ok('a kép kitölti a sávot (object-fit: cover)', ['cover', true], [
-  await v.p.locator('.kv-foto img').evaluate((e) => getComputedStyle(e).objectFit),
-  Math.abs((await v.p.locator('.kv-foto img').boundingBox()).width - doboz.width) < 1,
-])
-ok('van alternatív szöveg', true, /Mosathat/.test(await v.p.locator('.kv-foto img').getAttribute('alt')))
+ok('a kép fix háttérként áll mögötte, a sáv csak ablak', { csatolas: 'fixed', kep: true, meret: 'cover' }, stilus)
+ok('asztali gépen magasabb ablak (a szélesség 40%-a, legfeljebb 600 px)', 576, Math.round(doboz.height))
+await v.p.evaluate(() => scrollTo(0, 0)); await v.p.waitForTimeout(200)
+const y = Math.round(doboz.y + 100)
+const pont = () => v.p.screenshot({ clip: { x: 720, y, width: 1, height: 1 } })
+const elotte = await pont()
+await v.p.evaluate(() => scrollTo(0, 120)); await v.p.waitForTimeout(250)
+const utana = await pont()
+ok('görgetéskor a kép nem mozdul, csak az ablak csúszik rajta', true, Buffer.compare(elotte, utana) === 0)
+ok('a képleírás megmarad a képernyőolvasónak', true, /Mosathat/.test(await v.p.locator('.kv-foto img').getAttribute('alt')))
 ok('nincs JS hiba', [], v.hibak)
-if (KEPEK) await v.p.screenshot({ path: join(KEPEK, 'v81-borito.png') })
+if (KEPEK) {
+  await v.p.evaluate(() => scrollTo(0, 0)); await v.p.waitForTimeout(200)
+  await v.p.screenshot({ path: join(KEPEK, 'v81-borito.png') })
+  await v.p.evaluate(() => scrollTo(0, 330)); await v.p.waitForTimeout(250)
+  await v.p.screenshot({ path: join(KEPEK, 'v81-borito-gorgetve.png') })
+}
 await v.ctx.close()
 
+console.log('\n=== 3) Telefonon: álló kép, mint eddig ===\n')
 const t = await oldal({ width: 390, height: 844 }, minta)
-ok('telefonon 200 px magas, nem lóg ki', [200, true], [
+ok('telefonon 200 px magas, sima kép (nem fix háttér), nem lóg ki', [200, '1', 'scroll', true], [
   Math.round((await t.p.locator('.kv-foto').boundingBox()).height),
+  await t.p.locator('.kv-foto img').evaluate((e) => getComputedStyle(e).opacity),
+  await t.p.locator('.kv-foto').evaluate((e) => getComputedStyle(e).backgroundAttachment),
   await t.p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
 ])
 if (KEPEK) await t.p.screenshot({ path: join(KEPEK, 'v81-borito-telefon.png') })

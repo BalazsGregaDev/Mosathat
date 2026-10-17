@@ -400,9 +400,11 @@ const BORITO_KEP = '/kepek/borito.jpg'
 
 function Borito() {
   const [allapot, setAllapot] = useState<'tolt' | 'van' | 'nincs'>('tolt')
+  const { nyilvanos } = useKv()
   const sz = useSz()
   return (
-    <div className="kv-foto" data-kep={allapot}>
+    <div className="kv-foto" data-kep={allapot} data-ablak={nyilvanos || undefined}
+         style={{ ['--borito-kep' as string]: `url("${BORITO_KEP}")` }}>
       <img src={BORITO_KEP} alt={sz('hero.borito_alt')} decoding="async"
            onLoad={() => setAllapot('van')} onError={() => setAllapot('nincs')} />
       <span>{sz('hero.borito_helye')}</span>
@@ -410,21 +412,10 @@ function Borito() {
   )
 }
 
-function Magazin() {
-  const { foglalas } = useKv()
+function MagazinHero() {
   const sz = useSz()
-  const csomagok = (
-    <section className="kv-csomagok">
-      <div className="kv-szakasz-fej">
-        <h2>{sz('csomagok.cim')}</h2>
-        <Alcim />
-      </div>
-      <Tabla />
-    </section>
-  )
   return (
     <>
-      <Nav />
       <section className="kv-hero">
         <span className="kv-kicker">{sz('hero.felcim')}</span>
         <h1><Gazdag s={sz('hero.cim')} /></h1>
@@ -434,12 +425,35 @@ function Magazin() {
         </div>
       </section>
       <Borito />
+    </>
+  )
+}
+
+function MagazinCsomagok() {
+  const sz = useSz()
+  return (
+    <section className="kv-csomagok">
+      <div className="kv-szakasz-fej">
+        <h2>{sz('csomagok.cim')}</h2>
+        <Alcim />
+      </div>
+      <Tabla />
+    </section>
+  )
+}
+
+function Magazin() {
+  const { foglalas } = useKv()
+  return (
+    <>
+      <Nav />
+      <MagazinHero />
       {foglalas ? (
         <div className="kv-ketoszlop">
-          {csomagok}
+          <MagazinCsomagok />
           {foglalas}
         </div>
-      ) : csomagok}
+      ) : <MagazinCsomagok />}
       <Vege foglalasNelkul={Boolean(foglalas)} />
     </>
   )
@@ -653,6 +667,20 @@ export default function Koncepcio(p: KoncepcioProps) {
   return (
     <KvKornyezet {...p}>
       <Oldal />
+    </KvKornyezet>
+  )
+}
+
+export type KoncepcioReszNev = 'nav' | 'hero' | 'csomagok' | 'hely' | 'lab'
+
+export function KoncepcioResz({ resz, mod, k }: { resz: KoncepcioReszNev; mod: Mod; k: Catalog }) {
+  return (
+    <KvKornyezet kod="03" mod={mod} k={k}>
+      {resz === 'nav' && <Nav />}
+      {resz === 'hero' && <MagazinHero />}
+      {resz === 'csomagok' && <MagazinCsomagok />}
+      {resz === 'hely' && <Terkep />}
+      {resz === 'lab' && <Lab />}
     </KvKornyezet>
   )
 }

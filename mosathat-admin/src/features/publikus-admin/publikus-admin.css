@@ -33,6 +33,8 @@
 .pub-kamera-gombok { display: flex; gap: 2px; }
 
 .pub-sugo { margin-bottom: var(--t4); }
+.pub-sugo > summary { padding: var(--t3) var(--t4); cursor: pointer; font-size: var(--m-sm); font-weight: var(--vastag-eros, 600); }
+.pub-sugo[open] > summary { border-bottom: 1px solid var(--keret); }
 .pub-sugo ul { margin: 0 0 var(--t3); padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: var(--m-sm); }
 .pub-sugo code, .pub-valtozok code { font-size: .92em; padding: 1px 5px; border-radius: 4px; background: var(--lap-2); }
 .pub-valtozok { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--m-xs); color: var(--szoveg-halk); }
@@ -41,16 +43,46 @@
 .pub-keres .beviteli { width: min(100%, 360px); }
 .pub-keres .halk { font-size: var(--m-sm); }
 
-.pub-csoport { margin-bottom: var(--t4); }
-.pub-szovegek { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: var(--t4) var(--t5, 32px); }
+.pub-sav { margin-bottom: var(--t4); }
+.pub-sav-torzs {
+  display: grid; grid-template-columns: minmax(0, 660px) minmax(0, 1fr); gap: var(--t4) var(--t5, 32px);
+  padding: var(--t3) var(--t4) var(--t4); align-items: start;
+}
+.pub-sav-torzs[data-szeles] { grid-template-columns: 1fr; }
+.pub-sav-torzs[data-szeles] .pub-sav-mezok { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: var(--t3) var(--t4); }
+.pub-sav-torzs[data-szeles] .pub-sav-leiras { grid-column: 1 / -1; }
+.pub-sav-elonezet { position: sticky; top: 120px; min-width: 0; }
+.pub-sav-torzs[data-szeles] .pub-sav-elonezet { position: static; }
+.pub-sav-cimke { display: block; margin-bottom: 6px; font-size: var(--m-xs); font-weight: var(--vastag-eros, 600); letter-spacing: .06em; text-transform: uppercase; color: var(--szoveg-halk); }
+.pub-sav-mezok { display: flex; flex-direction: column; gap: var(--t3); min-width: 0; }
+.pub-sav-leiras { margin: 0; font-size: var(--m-sm); }
 .pub-szoveg { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pub-szoveg-fej { display: flex; align-items: center; gap: var(--t2); flex-wrap: wrap; min-height: 26px; }
 .pub-szoveg-fej label { font-size: var(--m-sm); font-weight: var(--vastag-eros, 600); }
 .pub-szoveg-fej .btn { margin-left: auto; }
 .pub-szoveg[data-valtozott] .beviteli { border-color: var(--zold); box-shadow: 0 0 0 1px var(--zold); }
-.pub-szoveg textarea.beviteli { resize: vertical; min-height: 60px; line-height: 1.45; }
-.pub-elonezet { font-size: var(--m-xs); line-height: 1.5; padding: 6px 10px; border-radius: var(--r-sm); background: var(--lap-2); }
-.pub-elonezet em { font-style: italic; color: var(--zold); }
+.pub-szoveg textarea.beviteli { resize: vertical; min-height: 60px; line-height: 1.45; field-sizing: content; }
+.pub-mikor { font-size: var(--m-xs); color: var(--szoveg-halk); line-height: 1.45; }
+
+.pub-elonezet-hely { width: 100%; overflow: hidden; border: 1px solid var(--keret); border-radius: var(--r); background: #fff; }
+.pub-elonezet-lap { pointer-events: auto; }
+.pub-elonezet-lap > .kv { min-height: 0; }
+.pub-fogl-elonezet.kv-foglalas { padding: 18px; border-top: 0; }
+.pub-fogl-elonezet .fogl { gap: 12px; padding-bottom: 0; }
+.pub-fogl-elonezet .fogl-osszeg { position: static; box-shadow: none; }
+.pub-fogl-elonezet h2 { margin-bottom: 8px; }
+.pub-bongeszo { display: flex; align-items: flex-end; gap: 14px; padding: 10px 14px 0; background: #e6e7e3; }
+.pub-bongeszo-pottyok { display: flex; gap: 6px; padding-bottom: 12px; }
+.pub-bongeszo-pottyok i { width: 11px; height: 11px; border-radius: 50%; background: #c9cbc5; }
+.pub-bongeszo-ful {
+  max-width: 420px; padding: 9px 16px; border-radius: 9px 9px 0 0; background: #faf8f3;
+  font: 13px/1.3 system-ui, sans-serif; color: #2b2c29; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@media (max-width: 1200px) {
+  .pub-sav-torzs { grid-template-columns: 1fr; }
+  .pub-sav-elonezet { position: static; }
+}
+
 @media (max-width: 900px) {
   .pub-fej { padding-top: var(--t3); }
   .pub-fej-cim { display: none; }
