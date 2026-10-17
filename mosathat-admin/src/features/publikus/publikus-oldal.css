@@ -17,3 +17,21 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
   .pub-keret .kv[data-k] .kv-nav nav a { letter-spacing: .08em; white-space: nowrap; }
   .pub-keret .kv[data-k] .kv-nav nav::-webkit-scrollbar { display: none; }
 }
+.pub-keret .kv {
+  --pl: max(var(--px), calc(env(safe-area-inset-left, 0px) + 12px));
+  --pr: max(var(--px), calc(env(safe-area-inset-right, 0px) + 12px));
+}
+.pub-keret .kv[data-k] > :is(.kv-nav, .kv-hero, .kv-csomagok, .kv-foglalas, .kv-hely, .kv-lab, .kv-jogi) {
+  padding-left: var(--pl); padding-right: var(--pr);
+}
+.pub-keret .kv[data-k] > .kv-foto { margin-left: var(--pl); margin-right: var(--pr); }
+@container kv (width < 1100px) {
+  .pub-keret .kv[data-k] > .kv-ketoszlop > :is(.kv-csomagok, .kv-foglalas) { padding-left: var(--pl); padding-right: var(--pr); }
+}
+@container kv (width >= 1100px) {
+  .pub-keret .kv[data-k] > .kv-ketoszlop { padding-left: var(--pl); padding-right: var(--pr); }
+}
+.pub-keret .kv[data-k] > .kv-lab { padding-bottom: max(18px, calc(env(safe-area-inset-bottom, 0px) + 14px)); }
+@media (pointer: coarse) {
+  .pub-keret .kv[data-k] > .kv-lab { padding-bottom: max(36px, calc(env(safe-area-inset-bottom, 0px) + 18px)); }
+}
