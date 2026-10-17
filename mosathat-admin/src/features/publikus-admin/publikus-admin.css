@@ -131,3 +131,54 @@
 }
 .pub-sav[data-nyelv='en'] .pub-szoveg .beviteli { background: color-mix(in srgb, #012169 2.5%, var(--lap)); }
 .pub-kamera[data-angol] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+
+.pub-jogi-figyel { margin-bottom: var(--t4); line-height: 1.5; }
+.pub-jogi-figyel .pub-valtozo-link { font-family: inherit; }
+
+.jogi-panelek { display: flex; flex-direction: column; gap: var(--t4); max-width: 1100px; }
+.jogi-panel { position: relative; }
+.jogi-panel > h3 { display: flex; align-items: center; justify-content: space-between; gap: var(--t3); }
+.jogi-torzs { display: flex; flex-direction: column; gap: var(--t4); }
+.jogi-cimke {
+  display: block; margin-bottom: 8px; font-size: var(--m-xs); font-weight: var(--vastag-eros, 600);
+  letter-spacing: .06em; text-transform: uppercase; color: var(--szoveg-halk);
+}
+.jogi-sor, .jogi-elozo { display: flex; align-items: center; justify-content: space-between; gap: var(--t2) var(--t4); flex-wrap: wrap; }
+.jogi-adat { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 280px; }
+.jogi-nev { font-weight: var(--vastag-eros, 600); overflow-wrap: anywhere; }
+.jogi-reszlet { font-size: var(--m-sm); }
+.jogi-gombok { display: flex; align-items: center; gap: var(--t2); flex-wrap: wrap; }
+.jogi-megjegyzes { margin: var(--t3) 0 0; font-size: var(--m-sm); color: #7a5a14; }
+.jogi-uzenet { margin: var(--t3) 0 0; }
+.jogi-elozok ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--keret); }
+.jogi-elozo { padding: 10px 0; border-bottom: 1px solid var(--keret); }
+.jogi-elozo .jogi-nev { font-weight: 500; }
+.jogi-ures { margin: 0; font-size: var(--m-sm); }
+.jogi-tipp { margin: var(--t2) 0 0; font-size: var(--m-xs); }
+
+.jogi-ellenorzes {
+  display: flex; flex-direction: column; gap: var(--t3); padding: var(--t3) var(--t4) var(--t4);
+  border: 1px solid color-mix(in srgb, var(--zold) 40%, var(--keret)); border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--zold) 3%, var(--lap));
+}
+.jogi-ellenorzes-fej { display: flex; align-items: baseline; justify-content: space-between; gap: var(--t2) var(--t4); flex-wrap: wrap; }
+.jogi-ellenorzes-fej .halk { font-size: var(--m-sm); overflow-wrap: anywhere; }
+.jogi-ellenorzes .jogi-cimke { margin-bottom: -4px; }
+.jogi-figyelmeztetesek { flex-direction: column; gap: 6px; margin: 0; padding-left: calc(var(--t3) + 18px); list-style: disc; }
+.jogi-elonezet {
+  max-height: min(70vh, 640px); overflow: auto; overscroll-behavior: contain;
+  border: 1px solid var(--keret); border-radius: var(--r); background: #fff;
+}
+.jogi-elonezet > .kv { min-height: 0; }
+
+.jogi-huzas {
+  position: absolute; inset: 0; z-index: 2; display: none; align-items: center; justify-content: center;
+  border: 2px dashed var(--zold); border-radius: inherit; background: color-mix(in srgb, var(--zold-halvany) 88%, transparent);
+  color: var(--zold); font-weight: var(--vastag-eros, 600); pointer-events: none;
+}
+.jogi-panel[data-huzas] .jogi-huzas { display: flex; }
+
+@media (max-width: 640px) {
+  .jogi-gombok { width: 100%; }
+  .jogi-sor .jogi-gombok .btn { flex: 1 1 auto; }
+}

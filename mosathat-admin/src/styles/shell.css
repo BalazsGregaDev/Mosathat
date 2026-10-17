@@ -111,6 +111,11 @@
   .menu-cim { min-height: 18px; padding-bottom: 4px; }
   .oldalsav-fej .alnev { display: none; }
 }
+@media (max-height: 660px) and (pointer: fine) {
+  .menu button { min-height: 21px; }
+  .menu-cim { min-height: 16px; padding-bottom: 3px; }
+  .oldalsav-lab { gap: 1px; }
+}
 @media (pointer: coarse) {
   .menu button { flex: none; min-height: 42px; }
   .menu-cim { flex: none; min-height: 39px; }

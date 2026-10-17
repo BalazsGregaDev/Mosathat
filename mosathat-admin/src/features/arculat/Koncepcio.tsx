@@ -710,6 +710,10 @@ export default function Koncepcio(p: KoncepcioProps) {
   )
 }
 
+export function KoncepcioLap({ mod, k, children }: { mod: Mod; k: Catalog; children: ReactNode }) {
+  return <KvKornyezet kod="03" mod={mod} k={k}>{children}</KvKornyezet>
+}
+
 export type KoncepcioReszNev = 'nav' | 'hero' | 'csomagok' | 'hely' | 'lab'
 
 export function KoncepcioResz({ resz, mod, k }: { resz: KoncepcioReszNev; mod: Mod; k: Catalog }) {

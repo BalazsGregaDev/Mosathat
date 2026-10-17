@@ -678,6 +678,12 @@
 .kv-jogi p, .kv-jogi li { font-size: 15px; line-height: 1.65; }
 .kv-jogi p + p { margin-top: 10px; }
 .kv-jogi ul { list-style: disc; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.kv-jogi ol { list-style: decimal; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.kv-jogi li > :is(ul, ol) { margin-top: 6px; }
+.kv-jogi li > ul { list-style: circle; }
+.kv-jogi h4 { font-size: 15px; font-style: italic; margin: 20px 0 8px; }
+.kv-jogi :is(ul, ol) + p, .kv-jogi p + :is(ul, ol) { margin-top: 10px; }
+.kv-jogi[aria-busy] { min-height: 70vh; }
 .kv-jogi a { color: var(--zold); text-decoration: underline; text-underline-offset: 2px; }
 .kv-jogi-hataly { color: var(--halk); font-size: 13px !important; }
 .kv-jogi-tervezet {

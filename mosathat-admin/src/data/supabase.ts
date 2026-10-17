@@ -13,6 +13,8 @@ import type {
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
 import type { PublikusMentes } from '../lib/publikusTartalom'
+import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
+import type { Nyelv } from '../lib/nyelv'
 import { idoRovidit, num, numOrNull, publikusbol, publikusNapbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { EloFrissites } from './elo'
 import { tokenFetch } from './tokenFetch'
@@ -280,6 +282,35 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('publikus_foglalas', { p: input })
     if (error) fail('Foglalási kérés', error)
     return data as string
+  }
+
+  async publikusJogi(lap: JogiLap, nyelv: Nyelv): Promise<JogiBlokk[] | null> {
+    const { data, error } = await this.sb.rpc('publikus_jogi', { p_dokumentum: lap, p_nyelv: nyelv })
+    if (error) fail('Jogi szöveg', error)
+    return (data as JogiBlokk[] | null) ?? null
+  }
+
+  async jogiValtozatok(): Promise<JogiValtozat[]> {
+    const { data, error } = await this.sb.rpc('jogi_valtozatok')
+    if (error) fail('Jogi szövegek', error)
+    return (data as JogiValtozat[] | null) ?? []
+  }
+
+  async jogiFeltoltes(p: JogiFeltoltes): Promise<string> {
+    const { data, error } = await this.sb.rpc('jogi_valtozat_feltoltes', { p })
+    if (error) fail('Feltöltés', error)
+    return data as string
+  }
+
+  async jogiFajl(id: string): Promise<JogiFajl> {
+    const { data, error } = await this.sb.rpc('jogi_valtozat_fajl', { p_id: id })
+    if (error) fail('Letöltés', error)
+    return data as JogiFajl
+  }
+
+  async jogiVisszaallitas(id: string): Promise<void> {
+    const { error } = await this.sb.rpc('jogi_valtozat_visszaallitas', { p_id: id })
+    if (error) fail('Visszaállítás', error)
   }
 
   async savePublikusTartalom(p: PublikusMentes): Promise<void> {

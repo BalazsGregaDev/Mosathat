@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { useMentetlen } from '../../state/useMentetlen'
 import { CEG_ALAP, type PublikusAdatokNyers } from '../../lib/publikusTartalom'
 import { TERVEZET, type Kamera } from '../../lib/ceg'
 import type { Nyelv } from '../../lib/nyelv'
+import type { JogiValtozat } from '../../lib/jogiDokumentum'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import { usePublikusAdat } from '../publikus/usePublikusAdat'
 import { Mezo, PubFej, useMentes } from './kozos'
@@ -42,7 +43,31 @@ function kezdo(a: PublikusAdatokNyers | undefined, kamerak: Kamera[] | undefined
   }
 }
 
-export default function CegadatokOldal() {
+function FeltoltottJogi({ onJogi }: { onJogi?: () => void }) {
+  const { data } = useApp()
+  const [aktivak, setAktivak] = useState<JogiValtozat[]>([])
+  useEffect(() => {
+    let el = true
+    data.jogiValtozatok()
+      .then((l) => { if (el) setAktivak(l.filter((v) => v.aktiv && !v.beepitett)) })
+      .catch(() => {})
+    return () => { el = false }
+  }, [data])
+  if (!aktivak.length) return null
+  const nevek = aktivak.map((v) => `${v.dokumentum === 'impresszum' ? 'Impresszum' : 'Adatvédelmi tájékoztató'} (${v.nyelv === 'en' ? 'angol' : 'magyar'})`)
+  return (
+    <div className="figyelmeztet pub-jogi-figyel" role="note">
+      <span>
+        Feltöltött Word-változat van érvényben: <strong>{nevek.join(', ')}</strong>. Ezekben az itt átírt adatok és a „Hatályos”
+        dátum nem frissülnek, a „Tervezet” jelzés viszont innen is kapcsolható. Változáskor a Jogi szövegek menüben tölts fel
+        javított változatot.
+        {onJogi && <> <button type="button" className="pub-valtozo-link" onClick={onJogi}>Jogi szövegek</button></>}
+      </span>
+    </div>
+  )
+}
+
+export default function CegadatokOldal({ onJogi }: { onJogi?: () => void }) {
   const { data } = useApp()
   const { adat: pub, frissit } = usePublikusAdat()
   const [alap, setAlap] = useState(pub)
@@ -97,6 +122,8 @@ export default function CegadatokOldal() {
           await frissit()
         })}
       />
+
+      <FeltoltottJogi onJogi={onJogi} />
 
       <div className="pub-racs">
         <section className="panel">

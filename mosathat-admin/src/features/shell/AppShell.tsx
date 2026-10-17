@@ -35,11 +35,12 @@ const ElerhetosegOldal = lazy(() => import('../publikus-admin/ElerhetosegOldal')
 const TartalomOldal = lazy(() => import('../publikus-admin/TartalomOldal'))
 const CsomagokOldal = lazy(() => import('../publikus-admin/CsomagokOldal'))
 const CegadatokOldal = lazy(() => import('../publikus-admin/CegadatokOldal'))
+const JogiSzovegekOldal = lazy(() => import('../publikus-admin/JogiSzovegekOldal'))
 
 type Oldal =
   | 'attekintes' | 'nap' | 'szolgaltatasok' | 'partnerek' | 'ugyfelek'
   | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo' | 'foglalas' | 'arculat'
-  | 'pub-elerhetoseg' | 'pub-tartalom' | 'pub-csomagok' | 'pub-cegadatok'
+  | 'pub-elerhetoseg' | 'pub-tartalom' | 'pub-csomagok' | 'pub-cegadatok' | 'pub-jogi'
 
 type MenuPont = { id: Oldal; cimke: string; tulaj?: boolean; foglalas?: boolean }
 
@@ -61,6 +62,7 @@ const MENU_PUB: MenuPont[] = [
   { id: 'pub-tartalom', cimke: 'Tartalom' },
   { id: 'pub-csomagok', cimke: 'Csomagok' },
   { id: 'pub-cegadatok', cimke: 'Cégadatok' },
+  { id: 'pub-jogi', cimke: 'Jogi szövegek' },
   { id: 'arculat', cimke: 'Arculat' },
 ]
 
@@ -358,7 +360,8 @@ export default function AppShell() {
                 <TartalomOldal onUgras={ugrik} visszaterve={visszaterve} />
               )}
               {oldal === 'pub-csomagok' && <CsomagokOldal />}
-              {oldal === 'pub-cegadatok' && <CegadatokOldal />}
+              {oldal === 'pub-cegadatok' && <CegadatokOldal onJogi={() => setOldal('pub-jogi')} />}
+              {oldal === 'pub-jogi' && <JogiSzovegekOldal />}
             </Suspense>
           )}
         </main>

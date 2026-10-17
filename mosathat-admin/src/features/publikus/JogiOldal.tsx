@@ -1,9 +1,11 @@
-import { BEKELTETO, JOGI_CIM, NAIH, TARHELY } from '../../lib/ceg'
+import { BEKELTETO, JOGI_CIM, JOGI_CIM_EN, NAIH, TARHELY } from '../../lib/ceg'
+import type { JogiBlokk, JogiLap } from '../../lib/jogiDokumentum'
+import JogiDokumentum from './JogiDokumentum'
 import { Adatkezeles, Keret, Level, Sor } from './jogiKozos'
 import { ImpresszumEn, AdatvedelemEn } from './JogiOldalEn'
 import { useCeg, useJogi, useNyelv } from './tartalom'
 
-export type JogiLap = 'impresszum' | 'adatvedelem'
+export type { JogiLap }
 
 function Impresszum() {
   const ceg = useCeg()
@@ -357,8 +359,14 @@ function Adatvedelem() {
   )
 }
 
-export default function JogiOldal({ lap }: { lap: JogiLap }) {
+export function BeepitettJogi({ lap }: { lap: JogiLap }) {
   const en = useNyelv() === 'en'
   if (lap === 'impresszum') return en ? <ImpresszumEn /> : <Impresszum />
   return en ? <AdatvedelemEn /> : <Adatvedelem />
+}
+
+export default function JogiOldal({ lap, feltoltott }: { lap: JogiLap; feltoltott?: JogiBlokk[] | null }) {
+  const nyelv = useNyelv()
+  if (feltoltott?.length) return <JogiDokumentum blokkok={feltoltott} cim={(nyelv === 'en' ? JOGI_CIM_EN : JOGI_CIM)[lap]} />
+  return <BeepitettJogi lap={lap} />
 }

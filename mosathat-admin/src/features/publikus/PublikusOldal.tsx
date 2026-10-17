@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type RefObject } from 'react'
 
 import '../arculat/betuk'
 import '../arculat/koncepciok.css'
@@ -9,6 +9,7 @@ import type { PublikusNapAdat, VehicleCategory } from '../../lib/types'
 import { UZLET, type KoncepcioKod } from '../../lib/arculat'
 import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
 import type { Nyelv } from '../../lib/nyelv'
+import { ervenyesBlokkok, type JogiBlokk } from '../../lib/jogiDokumentum'
 import Koncepcio, { KoncepcioKeret } from '../arculat/Koncepcio'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import { FoglalasUrlap, type FoglalasForras } from './FoglalasModul'
@@ -77,6 +78,24 @@ function betolt(): Promise<Betoltve> {
   return betoltes
 }
 
+const jogiTar = new Map<string, JogiBlokk[] | null>()
+
+function useFeltoltottJogi(forras: DataSource | null, lap: PublikusLap, nyelv: Nyelv): { kesz: boolean; blokkok: JogiBlokk[] | null } {
+  const kulcs = lap === 'fooldal' ? null : `${lap}:${nyelv}`
+  const [, ujraRajzol] = useReducer((x: number) => x + 1, 0)
+  useEffect(() => {
+    if (!forras || !kulcs || lap === 'fooldal' || jogiTar.has(kulcs)) return
+    let el = true
+    forras.publikusJogi(lap, nyelv)
+      .then((b) => { jogiTar.set(kulcs, ervenyesBlokkok(b)) })
+      .catch(() => { jogiTar.set(kulcs, null) })
+      .finally(() => { if (el) ujraRajzol() })
+    return () => { el = false }
+  }, [forras, kulcs, lap, nyelv])
+  if (!kulcs) return { kesz: true, blokkok: null }
+  return { kesz: jogiTar.has(kulcs), blokkok: jogiTar.get(kulcs) ?? null }
+}
+
 function nyilvanosForras(forras: DataSource, revision: number): FoglalasForras {
   void revision
   const napok = new Map<string, Promise<PublikusNapAdat>>()
@@ -137,6 +156,7 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
   const [nyelv, setNyelv] = useNyelvAllapot()
   const keret = useRef<HTMLDivElement>(null)
   useMenuMagassag(keret, betoltott ? lap : null)
+  const jogi = useFeltoltottJogi(betoltott?.forras ?? null, lap, nyelv)
 
   useEffect(() => {
     document.title = UZLET.nev
@@ -184,7 +204,9 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
                      foglalas={<EloFoglalas {...betoltott} valasztas={valasztas} />} />
         ) : (
           <KoncepcioKeret kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos nyelvValaszto={valaszto}>
-            <JogiOldal lap={lap} />
+            {jogi.kesz
+              ? <JogiOldal lap={lap} feltoltott={jogi.blokkok} />
+              : <article className="kv-jogi" aria-busy="true" />}
           </KoncepcioKeret>
         )}
       </div>

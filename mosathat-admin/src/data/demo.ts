@@ -21,6 +21,8 @@ import type {
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
 import type { PublikusMentes } from '../lib/publikusTartalom'
+import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
+import type { Nyelv } from '../lib/nyelv'
 import { idoRovidit, num, numOrNull, publikusbol, publikusNapbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { DEMO_BELEPOK, DEMO_STAFF_ID } from './demoBelepok'
 
@@ -271,6 +273,30 @@ export class DemoSource implements DataSource {
   async publikusFoglalas(input: OnlineBookingInput): Promise<string> {
     const [r] = await this.rows<{ id: string }>(`select publikus_foglalas($1::jsonb) id`, [JSON.stringify(input)])
     return r.id
+  }
+
+  async publikusJogi(lap: JogiLap, nyelv: Nyelv): Promise<JogiBlokk[] | null> {
+    const [r] = await this.rows<{ x: JogiBlokk[] | null }>(`select publikus_jogi($1, $2) x`, [lap, nyelv])
+    return r?.x ?? null
+  }
+
+  async jogiValtozatok(): Promise<JogiValtozat[]> {
+    const [r] = await this.rows<{ x: JogiValtozat[] }>(`select jogi_valtozatok() x`)
+    return r?.x ?? []
+  }
+
+  async jogiFeltoltes(p: JogiFeltoltes): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select jogi_valtozat_feltoltes($1::jsonb) id`, [JSON.stringify(p)])
+    return r.id
+  }
+
+  async jogiFajl(id: string): Promise<JogiFajl> {
+    const [r] = await this.rows<{ x: JogiFajl }>(`select jogi_valtozat_fajl($1::uuid) x`, [id])
+    return r.x
+  }
+
+  async jogiVisszaallitas(id: string): Promise<void> {
+    await this.rows(`select jogi_valtozat_visszaallitas($1::uuid)`, [id])
   }
 
   async savePublikusTartalom(p: PublikusMentes): Promise<void> {

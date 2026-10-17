@@ -94,8 +94,8 @@ await belep(p)
 const menu = await p.locator('aside.oldalsav .menu').evaluate((m) => [...m.children].map((e) =>
   e.classList.contains('menu-cim') ? `# ${e.textContent.trim()}` : e.textContent.trim()))
 const pubIdx = menu.indexOf('# Publikus')
-ok('a Publikus címke alatt: Elérhetőség, Tartalom, Csomagok, Cégadatok, Arculat',
-  ['Elérhetőség', 'Tartalom', 'Csomagok', 'Cégadatok', 'Arculat'], menu.slice(pubIdx + 1, pubIdx + 6))
+ok('a Publikus címke alatt: Elérhetőség, Tartalom, Csomagok, Cégadatok, Jogi szövegek, Arculat',
+  ['Elérhetőség', 'Tartalom', 'Csomagok', 'Cégadatok', 'Jogi szövegek', 'Arculat'], menu.slice(pubIdx + 1, pubIdx + 7))
 ok('az Arculat már nem a fő menüben van, a Később alatt nincs Tartalom', [false, ['Készlet', 'Galéria']],
   [menu.slice(0, pubIdx).includes('Arculat'), menu.slice(menu.indexOf('# Később') + 1)])
 if (KEPEK) await p.locator('aside.oldalsav').screenshot({ path: join(KEPEK, 'v82-menu.png') })

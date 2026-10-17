@@ -11,6 +11,8 @@ import type {
 } from '../lib/types'
 import type { NyitvaNap, PublikusAdatokNyers, PublikusMentes, PublikusTartalomNyers } from '../lib/publikusTartalom'
 import type { Kamera } from '../lib/ceg'
+import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
+import type { Nyelv } from '../lib/nyelv'
 
 export interface Catalog {
   packages: Package[]
@@ -112,6 +114,11 @@ export interface DataSource {
   publikusNap(nap: string): Promise<PublikusNapAdat>
   publikusAjanlat(input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
   publikusFoglalas(input: OnlineBookingInput): Promise<string>
+  publikusJogi(lap: JogiLap, nyelv: Nyelv): Promise<JogiBlokk[] | null>
+  jogiValtozatok(): Promise<JogiValtozat[]>
+  jogiFeltoltes(p: JogiFeltoltes): Promise<string>
+  jogiFajl(id: string): Promise<JogiFajl>
+  jogiVisszaallitas(id: string): Promise<void>
   saveCsomagSzerkeszto(adat: CsomagSzerkesztoAdat): Promise<CsomagMentesEredmeny>
   getBooking(id: string): Promise<DayBooking | null>
   getCapacity(date: string): Promise<DayCapacity>
