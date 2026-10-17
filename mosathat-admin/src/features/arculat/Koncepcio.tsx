@@ -376,6 +376,19 @@ function Melygarazs() {
   )
 }
 
+const BORITO_KEP = '/kepek/borito.jpg'
+
+function Borito() {
+  const [allapot, setAllapot] = useState<'tolt' | 'van' | 'nincs'>('tolt')
+  return (
+    <div className="kv-foto" data-kep={allapot}>
+      <img src={BORITO_KEP} alt={`${UZLET.nev} — kézi autókozmetika a ${UZLET.haz} mélygarázsában`} decoding="async"
+           onLoad={() => setAllapot('van')} onError={() => setAllapot('nincs')} />
+      <span>Fotó helye — garázs, munka közben</span>
+    </div>
+  )
+}
+
 function Magazin() {
   const { foglalas } = useKv()
   const csomagok = (
@@ -404,7 +417,7 @@ function Magazin() {
           </p>
         </div>
       </section>
-      <div className="kv-foto"><span>Fotó helye — garázs, munka közben</span></div>
+      <Borito />
       {foglalas ? (
         <div className="kv-ketoszlop">
           {csomagok}

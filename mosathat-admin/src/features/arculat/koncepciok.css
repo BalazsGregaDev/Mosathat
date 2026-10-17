@@ -240,6 +240,12 @@
 .kv[data-k='03'] .kv-lede { font-size: 14px; line-height: 1.6; }
 .kv[data-k='03'] .kv-halk { font-size: 13px; line-height: 1.6; color: var(--halk); }
 .kv[data-k='03'] .kv-foto { margin: 4px 24px 0; height: 170px; position: relative; background: linear-gradient(105deg, #141714 0%, #1c2620 45%, #2e4a39 100%); }
+.kv[data-k='03'] .kv-foto { overflow: hidden; }
+.kv[data-k='03'] .kv-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s ease; }
+.kv[data-k='03'] .kv-foto[data-kep='nincs'] img { display: none; }
+.kv[data-k='03'] .kv-foto[data-kep='van'] { height: clamp(200px, 28cqw, 380px); }
+.kv[data-k='03'] .kv-foto[data-kep='van'] img { opacity: 1; }
+.kv[data-k='03'] .kv-foto[data-kep='van'] span { display: none; }
 .kv[data-k='03'] .kv-foto span { position: absolute; left: 10px; bottom: 9px; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .42); }
 .kv[data-k='03'] .kv-csomagok { padding: 30px 24px 26px; }
 .kv[data-k='03'] .kv-szakasz-fej { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
