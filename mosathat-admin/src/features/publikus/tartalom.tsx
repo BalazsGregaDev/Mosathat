@@ -1,9 +1,10 @@
 import { createContext, Fragment, useContext, useMemo, type ReactNode } from 'react'
 
 import {
-  cegbol, jogibol, kitolt, SZOVEG_ALAP, URES_TARTALOM, uzletbol, uzletValtozok,
+  cegbol, jogibol, kitolt, szovegAlap, URES_TARTALOM, uzletbol, uzletValtozok,
   type CegAdatok, type JogiAdatok, type PublikusTartalomNyers, type SzovegKulcs, type Uzlet, type Valtozok,
 } from '../../lib/publikusTartalom'
+import { formatum, type Formatum, type Nyelv } from '../../lib/nyelv'
 
 export type Sz = (kulcs: SzovegKulcs, extra?: Valtozok) => string
 
@@ -12,27 +13,32 @@ interface TartalomErtek {
   u: Uzlet
   ceg: CegAdatok
   jogi: JogiAdatok
+  nyelv: Nyelv
+  f: Formatum
 }
 
-function ertekbol(t: PublikusTartalomNyers, lemondasOra?: number): TartalomErtek {
-  const u = uzletbol(t)
+function ertekbol(t: PublikusTartalomNyers, lemondasOra?: number, nyelv: Nyelv = 'hu'): TartalomErtek {
+  const u = uzletbol(t, nyelv)
   const valtozok = uzletValtozok(u, lemondasOra)
+  const sajatok = nyelv === 'en' ? t.szovegek_en ?? {} : t.szovegek
+  const alap = szovegAlap(nyelv)
   const sz: Sz = (kulcs, extra) => {
-    const sajat = t.szovegek[kulcs]
-    const sablon = sajat && sajat.trim() ? sajat : SZOVEG_ALAP[kulcs]
+    const sajat = sajatok[kulcs]
+    const sablon = sajat && sajat.trim() ? sajat : alap[kulcs]
     return kitolt(sablon, extra ? { ...valtozok, ...extra } : valtozok)
   }
-  return { sz, u, ceg: cegbol(t, u), jogi: jogibol(t, u) }
+  return { sz, u, ceg: cegbol(t, u), jogi: jogibol(t, u, nyelv), nyelv, f: formatum(nyelv) }
 }
 
 const Ctx = createContext<TartalomErtek>(ertekbol(URES_TARTALOM))
 
-export function TartalomProvider({ t, lemondasOra, children }: {
+export function TartalomProvider({ t, lemondasOra, nyelv = 'hu', children }: {
   t: PublikusTartalomNyers
   lemondasOra?: number
+  nyelv?: Nyelv
   children: ReactNode
 }) {
-  const ertek = useMemo(() => ertekbol(t, lemondasOra), [t, lemondasOra])
+  const ertek = useMemo(() => ertekbol(t, lemondasOra, nyelv), [t, lemondasOra, nyelv])
   return <Ctx.Provider value={ertek}>{children}</Ctx.Provider>
 }
 
@@ -40,6 +46,12 @@ export const useSz = () => useContext(Ctx).sz
 export const useUzlet = () => useContext(Ctx).u
 export const useCeg = () => useContext(Ctx).ceg
 export const useJogi = () => useContext(Ctx).jogi
+export const useNyelv = () => useContext(Ctx).nyelv
+export const useFormatum = () => useContext(Ctx).f
+
+export function forditott<T extends { name: string; name_en?: string | null }>(x: T, nyelv: Nyelv): string {
+  return nyelv === 'en' ? x.name_en?.trim() || x.name : x.name
+}
 
 export function telefonLink(telefon: string): string {
   return `tel:${telefon.replace(/[^\d+]/g, '')}`

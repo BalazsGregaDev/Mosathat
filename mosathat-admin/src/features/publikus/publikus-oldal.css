@@ -35,3 +35,23 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
 @media (pointer: coarse) {
   .pub-keret .kv[data-k] > .kv-lab { padding-bottom: max(36px, calc(env(safe-area-inset-bottom, 0px) + 18px)); }
 }
+
+.pub-keret .kv { --nyelv-gap: 21px; }
+.pub-keret .kv-nyelv-sor { position: relative; z-index: 5; height: 0; }
+.pub-keret .kv-nyelv-sor .nyelv-kapcsolo { position: absolute; top: var(--nyelv-gap); right: var(--pr); }
+.pub-keret .kv .nyelv-kapcsolo {
+  --nyk-hatter: color-mix(in srgb, var(--fg) 5%, var(--bg));
+  --nyk-keret: var(--vonal);
+  --nyk-gomb: var(--bg);
+  --nyk-szoveg: var(--fg);
+  --nyk-halk: var(--halk);
+  --nyk-fokusz: var(--zold);
+}
+.pub-keret .kv[data-mod='sotet'] .nyelv-kapcsolo { --nyk-gomb: color-mix(in srgb, var(--fg) 14%, var(--bg)); }
+@container kv (max-width: 1000px) {
+  .pub-keret .kv-nyelv-sor { height: auto; display: flex; justify-content: flex-end; padding: var(--nyelv-gap) var(--pr) 0; }
+  .pub-keret .kv-nyelv-sor .nyelv-kapcsolo { position: relative; top: auto; right: auto; }
+}
+@container kv (max-width: 700px) {
+  .pub-keret .kv { --nyelv-gap: 10px; }
+}

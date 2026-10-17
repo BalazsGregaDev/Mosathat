@@ -1,4 +1,5 @@
 import type { Catalog } from '../data/source'
+import { formatum, type Nyelv } from './nyelv'
 import type { ServiceArea, VehicleCategory } from './types'
 
 export type KoncepcioKod = '01' | '02' | '03' | '04' | '05' | '06' | '07' | '08'
@@ -65,17 +66,21 @@ export interface CsomagTabla {
   belsoTol: number | null
 }
 
-function kisbetu(s: string): string {
-  return s.charAt(0).toLocaleLowerCase('hu-HU') + s.slice(1)
+function kozosElotag(nevek: string[]): number {
+  const szavak = nevek.map((n) => n.split(' '))
+  const legrovidebb = Math.min(...szavak.map((s) => s.length))
+  let k = 0
+  while (k < legrovidebb - 1 && szavak.every((s) => s[k] === szavak[0][k])) k++
+  return k
 }
 
-function valtozatok(nevek: (string | undefined)[]): Cella[] {
+function valtozatok(nevek: (string | undefined)[], nyelv: Nyelv): Cella[] {
   const meglevo = nevek.filter((n): n is string => Boolean(n))
-  const elsoSzo = meglevo[0].split(' ')[0]
-  const kozos = meglevo.every((n) => n.startsWith(`${elsoSzo} `))
+  const k = kozosElotag(meglevo)
   const alap = meglevo[0]
+  const kisbetu = formatum(nyelv).kisbetu
   return nevek.map((n): Cella => (n
-    ? { tipus: 'mas', szoveg: kisbetu(kozos ? n.slice(elsoSzo.length + 1) : n), kiemelt: n !== alap }
+    ? { tipus: 'mas', szoveg: kisbetu(n.split(' ').slice(k).join(' ')), kiemelt: n !== alap }
     : { tipus: 'nincs' }))
 }
 
@@ -100,7 +105,8 @@ export function kategoriaTol(k: Catalog): Record<VehicleCategory, number | null>
   return { SZEMELYAUTO: tol('SZEMELYAUTO'), SUV: tol('SUV'), KISBUSZ: tol('KISBUSZ') }
 }
 
-export function csomagTabla(k: Catalog, kat: VehicleCategory = 'SZEMELYAUTO'): CsomagTabla {
+export function csomagTabla(k: Catalog, kat: VehicleCategory = 'SZEMELYAUTO', nyelv: Nyelv = 'hu'): CsomagTabla {
+  const en = nyelv === 'en'
   const aktiv = aktivCsomagok(k)
   const ar = arKereso(k, kat)
   const minimum = (scope: 'KULSO' | 'BELSO') => {
@@ -112,10 +118,10 @@ export function csomagTabla(k: Catalog, kat: VehicleCategory = 'SZEMELYAUTO'): C
   for (const r of k.packageItems) {
     let s = sorok.get(r.slot_id)
     if (!s) {
-      s = { nev: r.slot_name, terulet: r.area, rend: r.sort_order, cella: {} }
+      s = { nev: (en && r.slot_name_en?.trim()) || r.slot_name, terulet: r.area, rend: r.sort_order, cella: {} }
       sorok.set(r.slot_id, s)
     }
-    s.cella[r.package_id] = r.name
+    s.cella[r.package_id] = (en && r.name_en?.trim()) || r.name
   }
 
   const csoport = (terulet: ServiceArea, cim: string): TablaCsoport => ({
@@ -130,14 +136,14 @@ export function csomagTabla(k: Catalog, kat: VehicleCategory = 'SZEMELYAUTO'): C
         return {
           nev: s.nev,
           cellak: elter
-            ? valtozatok(nevek)
+            ? valtozatok(nevek, nyelv)
             : nevek.map((n): Cella => (n ? { tipus: 'van' } : { tipus: 'nincs' })),
         }
       }),
   })
 
   return {
-    csomagok: aktiv.map((p) => ({ id: p.id, nev: p.name, ar: ar(p.id, 'TELJES') })),
+    csomagok: aktiv.map((p) => ({ id: p.id, nev: (en && p.name_en?.trim()) || p.name, ar: ar(p.id, 'TELJES') })),
     csoportok: [csoport('KULSO', 'Mosás'), csoport('BELSO', 'Takarítás')].filter((c) => c.sorok.length > 0),
     kulsoTol: minimum('KULSO'),
     belsoTol: minimum('BELSO'),

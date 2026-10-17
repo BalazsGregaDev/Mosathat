@@ -51,7 +51,7 @@ ok('a fejléc követi a nevet', 'Gold', (await szovegek(t.locator('thead th').nt
 const hely = await kartya.locator('textarea').getAttribute('placeholder')
 ok('az automatikus leírás már a vázlatból számol', true, /^Üresen hagyva: Elit mindene, plusz: .*Kerámia gyorsbevonat/.test(hely))
 ok('a kártya jelzi, hogy új, és tájékoztat az árakról', [true, true],
-  [/4\. oszlop · új/.test(sima(await kartya.textContent())), /Csomagok és árak fülön/.test(await p.locator('.szerk-tipp').last().innerText())])
+  [/4\. oszlop · új/.test(sima(await kartya.textContent())), /Csomagok és árak fülön/.test((await p.locator('.szerk-tipp').allInnerTexts()).join(' '))])
 if (KEPEK) { await p.setViewportSize({ width: 1600, height: 2400 }); await p.screenshot({ path: join(KEPEK, 'v76-uj-oszlop.png') }); await p.setViewportSize({ width: 1600, height: 1000 }) }
 await mentes.click(); await p.waitForTimeout(2500)
 ok('mentve', true, /^Mentve\./.test(sima(await p.locator('.szerk-allapot').innerText())))

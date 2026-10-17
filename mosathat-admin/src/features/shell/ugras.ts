@@ -1,4 +1,5 @@
 import { erintokepernyo } from '../../lib/kepernyo'
+import type { Nyelv } from '../../lib/nyelv'
 
 export type Billentyu = 'text' | 'tel' | 'email' | 'numeric'
 
@@ -9,6 +10,7 @@ export interface Ugras {
   kiemel?: string
   billentyu?: Billentyu
   valaszto?: boolean
+  nyelv?: Nyelv
 }
 
 export interface Honnan {

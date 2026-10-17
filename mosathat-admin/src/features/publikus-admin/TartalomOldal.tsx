@@ -7,11 +7,13 @@ import '../arculat/koncepciok.css'
 import { useApp } from '../../state/AppContext'
 import { useMentetlen } from '../../state/useMentetlen'
 import {
-  foSzakaszNapok, KOZOS_VALTOZOK, SZOVEGEK, uzletbol, uzletValtozok,
+  FORDITHATO_ADATOK, foSzakaszNapok, KOZOS_VALTOZOK, SZOVEGEK, uzletbol, uzletValtozok,
   type NyitvaNap, type SzovegDef, type SzovegKulcs, type Valtozok,
 } from '../../lib/publikusTartalom'
 import { csomagbanBenne } from '../../lib/csomag'
-import { maStr, napCim, napPlusz } from '../../lib/format'
+import { maStr, napPlusz } from '../../lib/format'
+import { formatum, NYELVEK, type Nyelv } from '../../lib/nyelv'
+import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import type { Catalog, PublikusAdat } from '../../data/source'
 import type { DayLane, Quote } from '../../lib/types'
 import type { Mod } from '../../lib/arculat'
@@ -143,17 +145,23 @@ function kovetkezoHetkoznap(): string {
   return d
 }
 
-const SAJAT_LEIRAS: Record<string, string> = {
-  csomag: 'a kiválasztott csomag neve, például: Premium',
-  tol: 'a legkorábbi vállalható határidő, például: 15:30',
-  ig: 'a legkésőbbi vállalható határidő, például: 17:00',
-  mikor: `az elvitel napja és időablaka, például: ${napCim(kovetkezoHetkoznap())}, 8:00 és 17:00 között`,
+function sajatLeiras(nyelv: Nyelv): Record<string, string> {
+  const f = formatum(nyelv)
+  return {
+    csomag: 'a kiválasztott csomag neve, például: Premium',
+    tol: 'a legkorábbi vállalható határidő, például: 15:30',
+    ig: 'a legkésőbbi vállalható határidő, például: 17:00',
+    mikor: `az elvitel napja és időablaka, például: ${f.napCim(kovetkezoHetkoznap())}, ${f.kozott('8:00', '17:00')}`,
+  }
 }
 
-function ValtozoMagyarazat({ ertek, sajat, valtozok, onValtozo }: {
+const SAJAT_LEIRAS: Record<Nyelv, Record<string, string>> = { hu: sajatLeiras('hu'), en: sajatLeiras('en') }
+
+function ValtozoMagyarazat({ ertek, sajat, valtozok, nyelv, onValtozo }: {
   ertek: string
   sajat: readonly string[]
   valtozok: Valtozok
+  nyelv: Nyelv
   onValtozo: (nev: string) => void
 }) {
   const hasznalt = [...new Set([...ertek.matchAll(/\{([a-z_]+)\}/g)].map((m) => m[1]))]
@@ -165,7 +173,7 @@ function ValtozoMagyarazat({ ertek, sajat, valtozok, onValtozo }: {
         if (sajat.includes(nev)) {
           return (
             <li key={nev}>
-              {!hasznalt.includes(nev) && 'Használható: '}<code>{`{${nev}}`}</code> = {SAJAT_LEIRAS[nev] ?? 'a foglalás közben kitöltött adat'}
+              {!hasznalt.includes(nev) && 'Használható: '}<code>{`{${nev}}`}</code> = {SAJAT_LEIRAS[nyelv][nev] ?? 'a foglalás közben kitöltött adat'}
             </li>
           )
         }
@@ -190,7 +198,10 @@ function ValtozoMagyarazat({ ertek, sajat, valtozok, onValtozo }: {
   )
 }
 
-function valtozoCel(nev: string, napok: NyitvaNap[]): Ugras {
+function valtozoCel(nev: string, napok: NyitvaNap[], nyelv: Nyelv = 'hu'): Ugras {
+  if (nyelv === 'en' && (FORDITHATO_ADATOK as readonly string[]).includes(nev)) {
+    return { oldal: 'pub-elerhetoseg', fokusz: `[data-mezo="${nev}_en"]`, billentyu: 'text', nyelv: 'en' }
+  }
   if (ELERHETOSEG_VALTOZOK.includes(nev)) {
     return { oldal: 'pub-elerhetoseg', fokusz: `[data-mezo="${nev}"]`, billentyu: BILLENTYU[nev] ?? 'text' }
   }
@@ -214,13 +225,24 @@ function valtozoCel(nev: string, napok: NyitvaNap[]): Ugras {
 const LISTA: readonly SzovegDef[] = SZOVEGEK
 const DEF = Object.fromEntries(LISTA.map((s) => [s.kulcs, s])) as Record<SzovegKulcs, SzovegDef>
 
-const piszkozat: { szovegek: Partial<Szovegek> } = { szovegek: {} }
+type Ket = Record<Nyelv, Szovegek>
 
-function kezdo(sajat: Record<string, string> | undefined): Szovegek {
-  return Object.fromEntries(LISTA.map((s) => [s.kulcs, sajat?.[s.kulcs]?.trim() ? sajat[s.kulcs] : s.alap])) as Szovegek
+const piszkozat: Record<Nyelv, Partial<Szovegek>> = { hu: {}, en: {} }
+
+const alapSzoveg = (s: SzovegDef, nyelv: Nyelv) => (nyelv === 'en' ? s.en : s.alap)
+
+function kezdo(sajat: Record<string, string> | undefined, nyelv: Nyelv): Szovegek {
+  return Object.fromEntries(LISTA.map((s) => [s.kulcs, sajat?.[s.kulcs]?.trim() ? sajat[s.kulcs] : alapSzoveg(s, nyelv)])) as Szovegek
 }
 
-const piszkozattal = (sajat: Record<string, string> | undefined): Szovegek => ({ ...kezdo(sajat), ...piszkozat.szovegek })
+function kezdoKet(pub: PublikusAdat | null): Ket {
+  return { hu: kezdo(pub?.tartalom.szovegek, 'hu'), en: kezdo(pub?.tartalom.szovegek_en, 'en') }
+}
+
+function piszkozattal(pub: PublikusAdat | null): Ket {
+  const k = kezdoKet(pub)
+  return { hu: { ...k.hu, ...piszkozat.hu }, en: { ...k.en, ...piszkozat.en } }
+}
 
 function Sugo({ id, valtozok, onValtozo }: { id: string; valtozok: Valtozok; onValtozo: (nev: string, sugo: string) => void }) {
   const leiras = Object.fromEntries(KOZOS_VALTOZOK.map((x) => [x.nev, x.leiras]))
@@ -403,23 +425,30 @@ export default function TartalomOldal({ onUgras, visszaterve = null }: {
   const { data } = useApp()
   const { adat: pub, frissit } = usePublikusAdat()
   const [alap, setAlap] = useState(pub)
-  const [v, setV] = useState<Szovegek>(() => piszkozattal(pub?.tartalom.szovegek))
+  const [v, setV] = useState<Ket>(() => piszkozattal(pub))
   const [keres, setKeres] = useState('')
+  const [savNyelv, setSavNyelv] = useState<Record<string, Nyelv>>({})
   const { allapot, fut } = useMentes()
   const visszaRef = useRef(visszaterve)
 
   if (pub !== alap) {
     setAlap(pub)
-    setV(piszkozattal(pub?.tartalom.szovegek))
+    setV(piszkozattal(pub))
   }
 
-  const eredeti = useMemo(() => kezdo(pub?.tartalom.szovegek), [pub])
-  const valtozottak = LISTA.filter((s) => v[s.kulcs as SzovegKulcs] !== eredeti[s.kulcs as SzovegKulcs])
-  useMentetlen(valtozottak.length > 0)
+  const eredeti = useMemo(() => kezdoKet(pub), [pub])
+  const valtozottak: Record<Nyelv, readonly SzovegDef[]> = {
+    hu: LISTA.filter((s) => v.hu[s.kulcs as SzovegKulcs] !== eredeti.hu[s.kulcs as SzovegKulcs]),
+    en: LISTA.filter((s) => v.en[s.kulcs as SzovegKulcs] !== eredeti.en[s.kulcs as SzovegKulcs]),
+  }
+  const vanValtozas = valtozottak.hu.length + valtozottak.en.length > 0
+  useMentetlen(vanValtozas)
 
   useEffect(() => {
     if (!pub) return
-    piszkozat.szovegek = Object.fromEntries(valtozottak.map((s) => [s.kulcs, v[s.kulcs as SzovegKulcs]])) as Partial<Szovegek>
+    for (const ny of NYELVEK) {
+      piszkozat[ny] = Object.fromEntries(valtozottak[ny].map((s) => [s.kulcs, v[ny][s.kulcs as SzovegKulcs]])) as Partial<Szovegek>
+    }
   })
 
   useEffect(() => {
@@ -451,40 +480,49 @@ export default function TartalomOldal({ onUgras, visszaterve = null }: {
 
   const kesleltetett = useDeferredValue(v)
   const elonezetTartalom = useMemo(
-    () => (pub ? { ...pub.tartalom, szovegek: kesleltetett } : null),
+    () => (pub ? { ...pub.tartalom, szovegek: kesleltetett.hu, szovegek_en: kesleltetett.en } : null),
     [pub, kesleltetett],
   )
   const forras = useMemo(() => (pub ? bemutatoForras(pub.katalogus) : null), [pub])
   const bAlap = useMemo(() => (pub ? bemutatoAlap(pub.katalogus) : KISZAMOLT), [pub])
-  const valtozok = useMemo(() => (pub ? uzletValtozok(uzletbol(pub.tartalom), pub.lemondasOra) : {}), [pub])
+  const valtozok = useMemo<Record<Nyelv, Valtozok>>(() => (pub
+    ? {
+        hu: uzletValtozok(uzletbol(pub.tartalom, 'hu'), pub.lemondasOra),
+        en: uzletValtozok(uzletbol(pub.tartalom, 'en'), pub.lemondasOra),
+      }
+    : { hu: {}, en: {} }), [pub])
 
   if (!pub || !elonezetTartalom || !forras) return <div className="betolt">Betöltés…</div>
 
   const valtozora = (nev: string, sugo: string) => onUgras?.(valtozoCel(nev, pub.tartalom.nyitvatartas), { sugo, valtozo: nev })
-  const mezobol = (kulcs: string) => (nev: string) => onUgras?.(valtozoCel(nev, pub.tartalom.nyitvatartas), { kulcs, valtozo: nev })
-  const sugo = (id: string) => <Sugo id={id} valtozok={valtozok} onValtozo={valtozora} />
+  const mezobol = (kulcs: string, ny: Nyelv) => (nev: string) =>
+    onUgras?.(valtozoCel(nev, pub.tartalom.nyitvatartas, ny), { kulcs, valtozo: nev })
+  const sugo = (id: string) => <Sugo id={id} valtozok={valtozok.hu} onValtozo={valtozora} />
 
   const q = kisbetu(keres.trim())
-  const latszik = (k: SzovegKulcs, sav: Sav) => !q || kisbetu(DEF[k].cimke).includes(q) || kisbetu(DEF[k].alap).includes(q)
-    || kisbetu(v[k]).includes(q) || kisbetu(sav.cim).includes(q)
-  const modositott = LISTA.filter((s) => v[s.kulcs as SzovegKulcs] !== s.alap).length
+  const latszik = (k: SzovegKulcs, sav: Sav) => !q || [DEF[k].cimke, DEF[k].alap, DEF[k].en, v.hu[k], v.en[k], sav.cim]
+    .some((x) => kisbetu(x).includes(q))
+  const modositott = LISTA.filter((s) => v.hu[s.kulcs as SzovegKulcs] !== s.alap).length
+    + LISTA.filter((s) => v.en[s.kulcs as SzovegKulcs] !== s.en).length
+
+  const kuldendo = (ny: Nyelv) => Object.fromEntries(valtozottak[ny].map((s) => {
+    const uj = v[ny][s.kulcs as SzovegKulcs]
+    return [s.kulcs, uj.trim() === '' || uj === alapSzoveg(s, ny) ? null : uj]
+  }))
+
+  const ir = (ny: Nyelv, k: SzovegKulcs, ertek: string) => setV({ ...v, [ny]: { ...v[ny], [k]: ertek } })
 
   return (
     <div className="oldal pub-oldal">
       <PubFej
         cim="Tartalom"
-        alcim="A publikus oldal szövegei sávonként, a foglalás lépésenként. Minden sáv mellett az, ahogy a publikus oldalon kinéz."
+        alcim="A publikus oldal szövegei sávonként, a foglalás lépésenként, magyarul és angolul. Minden sáv mellett az, ahogy a publikus oldalon kinéz."
         linkek={[['Publikus oldal megnyitása', '/publikus']]}
-        valtozott={valtozottak.length > 0}
+        valtozott={vanValtozas}
         allapot={allapot}
         onElvet={() => setV(eredeti)}
         onMent={() => void fut(async () => {
-          const kuld: Record<string, string | null> = {}
-          for (const s of valtozottak) {
-            const uj = v[s.kulcs as SzovegKulcs]
-            kuld[s.kulcs] = uj.trim() === '' || uj === s.alap ? null : uj
-          }
-          await data.savePublikusTartalom({ szovegek: kuld })
+          await data.savePublikusTartalom({ szovegek: kuldendo('hu'), szovegek_en: kuldendo('en') })
           await frissit()
         })}
       />
@@ -494,61 +532,69 @@ export default function TartalomOldal({ onUgras, visszaterve = null }: {
       <div className="pub-keres">
         <input className="beviteli" type="search" placeholder="Keresés a szövegek között" value={keres}
                onChange={(e) => setKeres(e.target.value)} aria-label="Keresés a szövegek között" />
-        <span className="halk">{LISTA.length} szöveg, ebből {modositott} eltér az eredetitől</span>
+        <span className="halk">{LISTA.length} szöveg két nyelven, ebből {modositott} eltér az eredetitől</span>
       </div>
 
-      <TartalomProvider t={elonezetTartalom} lemondasOra={pub.lemondasOra}>
-        {SAVOK.map((sav) => {
-          const mezok = sav.kulcsok.filter((k) => latszik(k, sav))
-          if (mezok.length === 0) return null
-          const szeles = Boolean(sav.oldalResz)
-          return (
-            <Fragment key={sav.id}>
-              {SUGO_ELOTT.has(sav.id) && sugo(sav.id)}
-              <section className="panel pub-sav" data-sav={sav.id}>
-                <h3>{sav.cim}</h3>
-                <div className="pub-sav-torzs" data-szeles={szeles || undefined}>
-                  <div className="pub-sav-elonezet">
-                    <span className="pub-sav-cimke">Előnézet</span>
+      {SAVOK.map((sav) => {
+        const mezok = sav.kulcsok.filter((k) => latszik(k, sav))
+        if (mezok.length === 0) return null
+        const szeles = Boolean(sav.oldalResz)
+        const ny = savNyelv[sav.id] ?? 'hu'
+        return (
+          <Fragment key={sav.id}>
+            {SUGO_ELOTT.has(sav.id) && sugo(sav.id)}
+            <section className="panel pub-sav" data-sav={sav.id} data-nyelv={ny}>
+              <h3>
+                {sav.cim}
+                <NyelvKapcsolo nyelv={ny} cimke={sav.cim} onValt={(n) => setSavNyelv({ ...savNyelv, [sav.id]: n })} />
+              </h3>
+              <div className="pub-sav-torzs" data-szeles={szeles || undefined}>
+                <div className="pub-sav-elonezet">
+                  <span className="pub-sav-cimke">Előnézet{ny === 'en' ? ', angolul' : ''}</span>
+                  <TartalomProvider t={elonezetTartalom} lemondasOra={pub.lemondasOra} nyelv={ny}>
                     <SavElonezet sav={sav} pub={pub} forras={forras} alap={bAlap} />
-                  </div>
-                  <div className="pub-sav-mezok">
-                    <p className="halk pub-sav-leiras">{sav.leiras}</p>
-                    {mezok.map((k) => {
-                      const s = DEF[k]
-                      const ertek = v[k]
-                      const elter = ertek !== s.alap
-                      return (
-                        <div key={k} className="pub-szoveg" data-kulcs={k} data-valtozott={ertek !== eredeti[k] || undefined}>
-                          <div className="pub-szoveg-fej">
-                            <label htmlFor={`sz-${k}`}>{s.cimke}</label>
-                            {elter && <span className="cimke-pill">módosítva</span>}
-                            {elter && (
-                              <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => setV({ ...v, [k]: s.alap })}>
-                                Eredeti szöveg
-                              </button>
-                            )}
-                          </div>
-                          {s.sor ? (
-                            <textarea id={`sz-${k}`} className="beviteli"
-                                      rows={Math.min(8, Math.max(2, Math.ceil(ertek.length / 42) + ertek.split('\n').length - 1))}
-                                      value={ertek} placeholder={s.alap} onChange={(e) => setV({ ...v, [k]: e.target.value })} />
-                          ) : (
-                            <input id={`sz-${k}`} className="beviteli" value={ertek} placeholder={s.alap}
-                                   onChange={(e) => setV({ ...v, [k]: e.target.value })} />
-                          )}
-                          <ValtozoMagyarazat ertek={ertek} sajat={s.valtozok ?? []} valtozok={valtozok} onValtozo={mezobol(k)} />
-                          {MIKOR[k] && <small className="pub-mikor">{MIKOR[k]}</small>}
-                        </div>
-                      )
-                    })}
-                  </div>
+                  </TartalomProvider>
                 </div>
-              </section>
-            </Fragment>
-          )
-        })}
-      </TartalomProvider>
+                <div className="pub-sav-mezok">
+                  <p className="halk pub-sav-leiras">{sav.leiras}</p>
+                  {mezok.map((k) => {
+                    const s = DEF[k]
+                    const ertek = v[ny][k]
+                    const alapErtek = alapSzoveg(s, ny)
+                    const elter = ertek !== alapErtek
+                    const azon = ny === 'en' ? `sz-en-${k}` : `sz-${k}`
+                    return (
+                      <div key={`${ny}-${k}`} className="pub-szoveg" data-kulcs={k} data-nyelv={ny}
+                           data-valtozott={ertek !== eredeti[ny][k] || undefined}>
+                        <div className="pub-szoveg-fej">
+                          <label htmlFor={azon}>{s.cimke}{ny === 'en' && <span className="pub-nyelv-jel">EN</span>}</label>
+                          {elter && <span className="cimke-pill">módosítva</span>}
+                          {elter && (
+                            <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => ir(ny, k, alapErtek)}>
+                              Eredeti szöveg
+                            </button>
+                          )}
+                        </div>
+                        {s.sor ? (
+                          <textarea id={azon} className="beviteli" lang={ny}
+                                    rows={Math.min(8, Math.max(2, Math.ceil(ertek.length / 42) + ertek.split('\n').length - 1))}
+                                    value={ertek} placeholder={alapErtek} onChange={(e) => ir(ny, k, e.target.value)} />
+                        ) : (
+                          <input id={azon} className="beviteli" lang={ny} value={ertek} placeholder={alapErtek}
+                                 onChange={(e) => ir(ny, k, e.target.value)} />
+                        )}
+                        <ValtozoMagyarazat ertek={ertek} sajat={s.valtozok ?? []} valtozok={valtozok[ny]} nyelv={ny}
+                                           onValtozo={mezobol(k, ny)} />
+                        {MIKOR[k] && <small className="pub-mikor">{MIKOR[k]}</small>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </section>
+          </Fragment>
+        )
+      })}
     </div>
   )
 }

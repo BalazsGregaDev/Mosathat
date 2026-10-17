@@ -20,10 +20,10 @@ await q(`select set_config('app.uid', '', false)`)
 a = await adat()
 t.ok('belépés nélkül is ugyanazt adja', ['05', 3], [a.arculat, a.packages.length])
 t.ok('csak nyilvános mezők: nincs ügyfél, foglalás, beszerzési adat', [],
-  Object.keys(a).filter((k) => !['arculat', 'arculat_mod', 'lemondas_ora', 'packages', 'packagePricing', 'packageItems', 'packageExtras', 'extras', 'fullServicePricing', 'leadas', 'nyitvatartas', 'adatok', 'szovegek', 'kamerak'].includes(k)))
+  Object.keys(a).filter((k) => !['arculat', 'arculat_mod', 'lemondas_ora', 'packages', 'packagePricing', 'packageItems', 'packageExtras', 'extras', 'fullServicePricing', 'leadas', 'nyitvatartas', 'adatok', 'szovegek', 'szovegek_en', 'kamerak'].includes(k)))
 t.ok('az extráknál csak nyilvános szolgáltatásadat', [
-  'active', 'area', 'description', 'duration_unit', 'id', 'included_in_full_service', 'included_in_packages', 'name',
-  'price_huf', 'price_unit', 'recommends_overnight', 'requires_quote', 'rest_minutes', 'sort_order', 'work_minutes'],
+  'active', 'area', 'description', 'description_en', 'duration_unit', 'id', 'included_in_full_service', 'included_in_packages', 'name',
+  'name_en', 'price_huf', 'price_unit', 'recommends_overnight', 'requires_quote', 'rest_minutes', 'sort_order', 'work_minutes'],
   [...new Set(a.extras.flatMap((e) => Object.keys(e)))].sort())
 
 const jog = (await q(`select has_function_privilege('anon', 'public.publikus_oldal()', 'execute') a`))[0].a

@@ -125,3 +125,9 @@
 @media (pointer: coarse) {
   .pub-valtozo { min-height: 38px; }
 }
+.pub-nyelv-jel {
+  display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 4px; vertical-align: 1px;
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; color: #012169; background: color-mix(in srgb, #012169 9%, transparent);
+}
+.pub-sav[data-nyelv='en'] .pub-szoveg .beviteli { background: color-mix(in srgb, #012169 2.5%, var(--lap)); }
+.pub-kamera[data-angol] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }

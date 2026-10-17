@@ -1,38 +1,9 @@
-import type { ReactNode } from 'react'
-
 import { BEKELTETO, JOGI_CIM, NAIH, TARHELY } from '../../lib/ceg'
-import { useCeg, useJogi } from './tartalom'
+import { Adatkezeles, Keret, Level, Sor } from './jogiKozos'
+import { ImpresszumEn, AdatvedelemEn } from './JogiOldalEn'
+import { useCeg, useJogi, useNyelv } from './tartalom'
 
 export type JogiLap = 'impresszum' | 'adatvedelem'
-
-function Keret({ cim, children }: { cim: string; children: ReactNode }) {
-  const jogi = useJogi()
-  return (
-    <article className="kv-jogi">
-      {jogi.tervezet && (
-        <p className="kv-jogi-tervezet" role="note">
-          Tervezet: a szöveg jogi átnézés alatt áll, az adatok véglegesítése folyamatban van.
-        </p>
-      )}
-      <h1>{cim}</h1>
-      <p className="kv-jogi-hataly">Hatályos: {jogi.hataly}</p>
-      {children}
-    </article>
-  )
-}
-
-function Sor({ cimke, children }: { cimke: string; children: ReactNode }) {
-  return (
-    <div className="kv-jogi-sor">
-      <dt>{cimke}</dt>
-      <dd>{children}</dd>
-    </div>
-  )
-}
-
-function Level({ cim }: { cim: string }) {
-  return <a href={`mailto:${cim}`}>{cim}</a>
-}
 
 function Impresszum() {
   const ceg = useCeg()
@@ -89,28 +60,6 @@ function Impresszum() {
         Az adatkezelésről az <a href="/adatvedelem">Adatvédelmi tájékoztatóban</a> olvashatsz.
       </p>
     </Keret>
-  )
-}
-
-function Adatkezeles({ cim, adatok, cel, jogalap, megorzes, children }: {
-  cim: string
-  adatok: ReactNode
-  cel: ReactNode
-  jogalap: ReactNode
-  megorzes: ReactNode
-  children?: ReactNode
-}) {
-  return (
-    <section className="kv-jogi-kezeles">
-      <h3>{cim}</h3>
-      <dl className="kv-jogi-adatok">
-        <Sor cimke="Kezelt adatok">{adatok}</Sor>
-        <Sor cimke="Cél">{cel}</Sor>
-        <Sor cimke="Jogalap">{jogalap}</Sor>
-        <Sor cimke="Megőrzés">{megorzes}</Sor>
-      </dl>
-      {children}
-    </section>
   )
 }
 
@@ -409,5 +358,7 @@ function Adatvedelem() {
 }
 
 export default function JogiOldal({ lap }: { lap: JogiLap }) {
-  return lap === 'impresszum' ? <Impresszum /> : <Adatvedelem />
+  const en = useNyelv() === 'en'
+  if (lap === 'impresszum') return en ? <ImpresszumEn /> : <Impresszum />
+  return en ? <AdatvedelemEn /> : <Adatvedelem />
 }

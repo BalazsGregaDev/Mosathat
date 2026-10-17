@@ -7,11 +7,13 @@ import { createDataSource } from '../../data'
 import type { DataSource, PublikusAdat } from '../../data/source'
 import type { PublikusNapAdat, VehicleCategory } from '../../lib/types'
 import { UZLET, type KoncepcioKod } from '../../lib/arculat'
-import { JOGI_CIM } from '../../lib/ceg'
+import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
+import type { Nyelv } from '../../lib/nyelv'
 import Koncepcio, { KoncepcioKeret } from '../arculat/Koncepcio'
+import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import { FoglalasUrlap, type FoglalasForras } from './FoglalasModul'
 import JogiOldal, { type JogiLap } from './JogiOldal'
-import { TartalomProvider, useSz, useUzlet } from './tartalom'
+import { TartalomProvider, useNyelv, useSz, useUzlet } from './tartalom'
 
 const PUBLIKUS_KONCEPCIO: KoncepcioKod = '03'
 
@@ -20,10 +22,40 @@ export type PublikusLap = 'fooldal' | JogiLap
 function Cim({ lap }: { lap: PublikusLap }) {
   const sz = useSz()
   const u = useUzlet()
+  const nyelv = useNyelv()
   const cim = lap === 'fooldal' ? sz('oldal.cim')
-    : `${JOGI_CIM[lap]} — ${u.nev}`
+    : `${(nyelv === 'en' ? JOGI_CIM_EN : JOGI_CIM)[lap]} — ${u.nev}`
   useEffect(() => { document.title = cim }, [cim])
   return null
+}
+
+const NYELV_TAR = 'mosathat.nyelv'
+
+function kezdoNyelv(): Nyelv {
+  const param = new URLSearchParams(window.location.search).get('lang')
+  if (param === 'en' || param === 'hu') return param
+  try {
+    return window.localStorage.getItem(NYELV_TAR) === 'en' ? 'en' : 'hu'
+  } catch {
+    return 'hu'
+  }
+}
+
+function useNyelvAllapot(): [Nyelv, (n: Nyelv) => void] {
+  const [nyelv, setNyelv] = useState<Nyelv>(kezdoNyelv)
+  useEffect(() => {
+    document.documentElement.lang = nyelv
+    const url = new URL(window.location.href)
+    if (nyelv === 'en') url.searchParams.set('lang', 'en')
+    else url.searchParams.delete('lang')
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
+    try {
+      window.localStorage.setItem(NYELV_TAR, nyelv)
+    } catch {
+      return
+    }
+  }, [nyelv])
+  return [nyelv, setNyelv]
 }
 
 interface Betoltve {
@@ -102,6 +134,7 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
   const [hiba, setHiba] = useState(false)
   const [kat, setKat] = useState<VehicleCategory>('SZEMELYAUTO')
   const [csomagId, setCsomagId] = useState<string | null>(null)
+  const [nyelv, setNyelv] = useNyelvAllapot()
   const keret = useRef<HTMLDivElement>(null)
   useMenuMagassag(keret, betoltott ? lap : null)
 
@@ -126,7 +159,11 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
     return (
       <div className="pub-allapot">
         <strong>{UZLET.nev}</strong>
-        <span>Az oldal most nem tölthető be. Kérjük, próbáld újra pár perc múlva, vagy hívj minket: {UZLET.telefon}</span>
+        <span>
+          {nyelv === 'en'
+            ? `The page cannot be loaded right now. Please try again in a few minutes, or call us: ${UZLET.telefon}`
+            : `Az oldal most nem tölthető be. Kérjük, próbáld újra pár perc múlva, vagy hívj minket: ${UZLET.telefon}`}
+        </span>
       </div>
     )
   }
@@ -135,17 +172,18 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
   const { adat } = betoltott
   const mod = adat.arculat === PUBLIKUS_KONCEPCIO && adat.mod ? adat.mod : 'VILAGOS'
   const valasztas: Valasztas = { kat, onKat: setKat, csomagId, onCsomag: setCsomagId }
+  const valaszto = <NyelvKapcsolo nyelv={nyelv} onValt={setNyelv} />
 
   return (
-    <TartalomProvider t={adat.tartalom} lemondasOra={adat.lemondasOra}>
+    <TartalomProvider t={adat.tartalom} lemondasOra={adat.lemondasOra} nyelv={nyelv}>
       <Cim lap={lap} />
       <div className="kv-keret pub-keret" ref={keret}>
         {lap === 'fooldal' ? (
-          <Koncepcio kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos
+          <Koncepcio kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos nyelvValaszto={valaszto}
                      kat={kat} onKat={setKat} kiemelt={csomagId} onCsomag={setCsomagId}
                      foglalas={<EloFoglalas {...betoltott} valasztas={valasztas} />} />
         ) : (
-          <KoncepcioKeret kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos>
+          <KoncepcioKeret kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos nyelvValaszto={valaszto}>
             <JogiOldal lap={lap} />
           </KoncepcioKeret>
         )}

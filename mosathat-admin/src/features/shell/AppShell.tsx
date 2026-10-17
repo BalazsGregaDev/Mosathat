@@ -28,6 +28,7 @@ import FoglalasModul from '../publikus/FoglalasModul'
 import KeresFigyelo from '../keresek/KeresFigyelo'
 import { foglalasModulLatja } from '../../lib/jogok'
 import { billentyuElore, celraUgrik, type Honnan, type Ugras } from './ugras'
+import type { Nyelv } from '../../lib/nyelv'
 
 const ArculatPage = lazy(() => import('../arculat/ArculatPage'))
 const ElerhetosegOldal = lazy(() => import('../publikus-admin/ElerhetosegOldal'))
@@ -91,6 +92,7 @@ export default function AppShell() {
   const [fiok, setFiok] = useState(false)
   const [jelszoNyitva, setJelszoNyitva] = useState(false)
   const [beallFul, setBeallFul] = useState<BeallitasFul | undefined>(undefined)
+  const [ugrasNyelv, setUgrasNyelv] = useState<Nyelv>('hu')
   const [vissza, setVissza] = useState<Honnan | null>(null)
   const [visszaterve, setVisszaterve] = useState<Honnan | null>(null)
   const ugrasLeall = useRef<() => void>(() => {})
@@ -101,6 +103,7 @@ export default function AppShell() {
     ugrasLeall.current()
     const ideiglenes = billentyuElore(cel)
     setBeallFul(cel.ful)
+    setUgrasNyelv(cel.nyelv ?? 'hu')
     setVissza(honnan)
     setVisszaterve(null)
     setOldal(cel.oldal)
@@ -139,7 +142,7 @@ export default function AppShell() {
       onClick={() => {
         ugrasLeall.current()
         setOldal(m.id); setFiok(false); setSzerzodesCeg(null)
-        setBeallFul(undefined); setVissza(null); setVisszaterve(null)
+        setBeallFul(undefined); setVissza(null); setVisszaterve(null); setUgrasNyelv('hu')
       }}
     >
       <span className="pont" />
@@ -348,7 +351,8 @@ export default function AppShell() {
             <Suspense fallback={<div className="betolt">Betöltés…</div>}>
               {oldal === 'arculat' && <ArculatPage />}
               {oldal === 'pub-elerhetoseg' && (
-                <ElerhetosegOldal onBeallitasok={() => { setBeallFul(undefined); setOldal('beallitasok') }} />
+                <ElerhetosegOldal kezdoNyelv={ugrasNyelv}
+                                  onBeallitasok={() => { setBeallFul(undefined); setOldal('beallitasok') }} />
               )}
               {oldal === 'pub-tartalom' && (
                 <TartalomOldal onUgras={ugrik} visszaterve={visszaterve} />

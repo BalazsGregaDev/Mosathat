@@ -44,7 +44,7 @@ t.ok('az adatok mentve, levágott szóközzel; üres szöveg = alapérték (null
   ['+36 1 999 0000', 'hello@pelda.hu', null, false, '3 munkanapig'],
   [o1.adatok.telefon, o1.adatok.email, o1.adatok.ceg_adoszam, o1.adatok.jogi_tervezet, o1.adatok.kamera_megorzes])
 t.ok('a szövegek mentve, sortöréssel együtt', { 'hero.cim': 'Első sor\n*Kiemelt* második', 'hero.felcim': 'Új felcím' }, o1.szovegek)
-t.ok('a kamerák sorrendben', [{ hely: 'Bejárat', terulet: 'a beálló autók' }, { hely: 'Mosótér', terulet: 'a két mosóhely' }], o1.kamerak)
+t.ok('a kamerák sorrendben', [{ hely: 'Bejárat', hely_en: null, terulet: 'a beálló autók', terulet_en: null }, { hely: 'Mosótér', hely_en: null, terulet: 'a két mosóhely', terulet_en: null }], o1.kamerak)
 
 await ki(FEJL)
 await ment({ szovegek: { 'hero.felcim': '', 'menu.csomagok': 'Árak' }, adatok: { nev: 'Mosathat' } })

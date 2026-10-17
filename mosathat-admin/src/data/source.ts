@@ -38,6 +38,7 @@ export interface PublikusNyers {
   nyitvatartas?: NyitvaNap[]
   adatok?: PublikusAdatokNyers
   szovegek?: Record<string, string>
+  szovegek_en?: Record<string, string>
   kamerak?: Kamera[]
   extras?: Extra[]
   fullServicePricing?: Catalog['fullServicePricing']
@@ -64,6 +65,7 @@ export function publikusbol(n: PublikusNyers): PublikusAdat {
     tartalom: {
       adatok: n.adatok ?? {},
       szovegek: n.szovegek ?? {},
+      szovegek_en: n.szovegek_en ?? {},
       kamerak: n.kamerak ?? [],
       nyitvatartas: n.nyitvatartas ?? [],
       leadas: n.leadas ?? null,

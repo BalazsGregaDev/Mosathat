@@ -2,11 +2,17 @@ import { useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { useMentetlen } from '../../state/useMentetlen'
-import { ELERHETOSEG_ALAP, uzletbol, type PublikusAdatokNyers } from '../../lib/publikusTartalom'
+import {
+  ELERHETOSEG_ALAP, ELERHETOSEG_ALAP_EN, FORDITHATO_ADATOK, uzletbol, type PublikusAdatokNyers,
+} from '../../lib/publikusTartalom'
+import type { Nyelv } from '../../lib/nyelv'
+import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import { usePublikusAdat } from '../publikus/usePublikusAdat'
 import { Mezo, PubFej, useMentes } from './kozos'
 
 type Kulcs = keyof typeof ELERHETOSEG_ALAP
+type AngolKulcs = `${(typeof FORDITHATO_ADATOK)[number]}_en`
+type Mind = Kulcs | AngolKulcs
 
 const MEZOK: { kulcs: Kulcs; cimke: string; sugo?: string; tipus?: string }[] = [
   { kulcs: 'nev', cimke: 'Megjelenő név', sugo: 'A logó helyén, a láblécben és a böngészőfül címében.' },
@@ -24,16 +30,22 @@ const CIM_MEZOK: { kulcs: Kulcs; cimke: string; sugo?: string }[] = [
 ]
 
 const KULCSOK = [...MEZOK, ...CIM_MEZOK].map((m) => m.kulcs)
+const ANGOL_KULCSOK = FORDITHATO_ADATOK.map((k) => `${k}_en` as AngolKulcs)
+const MIND: Mind[] = [...KULCSOK, ...ANGOL_KULCSOK]
 
-function kezdo(a: PublikusAdatokNyers | undefined): Record<Kulcs, string> {
-  return Object.fromEntries(KULCSOK.map((k) => [k, a?.[k]?.trim() || ELERHETOSEG_ALAP[k]])) as Record<Kulcs, string>
+function kezdo(a: PublikusAdatokNyers | undefined): Record<Mind, string> {
+  return {
+    ...Object.fromEntries(KULCSOK.map((k) => [k, a?.[k]?.trim() || ELERHETOSEG_ALAP[k]])),
+    ...Object.fromEntries(FORDITHATO_ADATOK.map((k) => [`${k}_en`, a?.[`${k}_en`]?.trim() || ELERHETOSEG_ALAP_EN[k]])),
+  } as Record<Mind, string>
 }
 
-export default function ElerhetosegOldal({ onBeallitasok }: { onBeallitasok: () => void }) {
+export default function ElerhetosegOldal({ onBeallitasok, kezdoNyelv = 'hu' }: { onBeallitasok: () => void; kezdoNyelv?: Nyelv }) {
   const { data } = useApp()
   const { adat: pub, frissit } = usePublikusAdat()
   const [alap, setAlap] = useState(pub)
-  const [v, setV] = useState<Record<Kulcs, string>>(() => kezdo(pub?.tartalom.adatok))
+  const [v, setV] = useState<Record<Mind, string>>(() => kezdo(pub?.tartalom.adatok))
+  const [cimNyelv, setCimNyelv] = useState<Nyelv>(kezdoNyelv)
   const { allapot, fut } = useMentes()
 
   if (pub !== alap) {
@@ -42,7 +54,7 @@ export default function ElerhetosegOldal({ onBeallitasok }: { onBeallitasok: () 
   }
 
   const eredeti = kezdo(pub?.tartalom.adatok)
-  const valtozott = KULCSOK.some((k) => v[k] !== eredeti[k])
+  const valtozott = MIND.some((k) => v[k] !== eredeti[k])
   useMentetlen(valtozott)
 
   if (!pub) return <div className="betolt">Betöltés…</div>
@@ -65,7 +77,7 @@ export default function ElerhetosegOldal({ onBeallitasok }: { onBeallitasok: () 
         allapot={allapot}
         onElvet={() => setV(eredeti)}
         onMent={() => void fut(async () => {
-          await data.savePublikusTartalom({ adatok: Object.fromEntries(KULCSOK.map((k) => [k, v[k]])) as PublikusAdatokNyers })
+          await data.savePublikusTartalom({ adatok: Object.fromEntries(MIND.map((k) => [k, v[k]])) as PublikusAdatokNyers })
           await frissit()
         })}
       />
@@ -76,9 +88,30 @@ export default function ElerhetosegOldal({ onBeallitasok }: { onBeallitasok: () 
           <div className="panel-torzs pub-mezok">{MEZOK.map(mezo)}</div>
         </section>
 
-        <section className="panel">
-          <h3>Cím és megközelítés</h3>
-          <div className="panel-torzs pub-mezok">{CIM_MEZOK.map(mezo)}</div>
+        <section className="panel" data-nyelv={cimNyelv}>
+          <h3>
+            Cím és megközelítés
+            <NyelvKapcsolo nyelv={cimNyelv} onValt={setCimNyelv} cimke="Cím és megközelítés" />
+          </h3>
+          {cimNyelv === 'hu' ? (
+            <div className="panel-torzs pub-mezok">{CIM_MEZOK.map(mezo)}</div>
+          ) : (
+            <div className="panel-torzs pub-mezok">
+              <p className="halk pub-megjegyzes">
+                Az irányítószám, az utca, házszám és az épület neve mindkét nyelven ugyanaz, angolul csak ezt a hármat kell megadni.
+              </p>
+              {CIM_MEZOK.filter((m) => (FORDITHATO_ADATOK as readonly string[]).includes(m.kulcs)).map((m) => {
+                const k = `${m.kulcs}_en` as AngolKulcs
+                return (
+                  <Mezo key={k} cimke={`${m.cimke} angolul`} sugo={`Magyarul: ${v[m.kulcs]}`}>
+                    <input className="beviteli" lang="en" value={v[k]}
+                           placeholder={ELERHETOSEG_ALAP_EN[m.kulcs as (typeof FORDITHATO_ADATOK)[number]]}
+                           onChange={(e) => setV({ ...v, [k]: e.target.value })} data-mezo={k} />
+                  </Mezo>
+                )
+              })}
+            </div>
+          )}
         </section>
 
         <section className="panel">

@@ -9,8 +9,9 @@ import {
   type Cella, type CsomagTabla, type KoncepcioKod, type Mod,
 } from '../../lib/arculat'
 import { katKulcs, type SzovegKulcs, type Uzlet } from '../../lib/publikusTartalom'
-import { JOGI_CIM } from '../../lib/ceg'
-import { Gazdag, telefonLink, useSz, useUzlet } from '../publikus/tartalom'
+import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
+import { FELIRAT, nyelviUt, type Nyelv } from '../../lib/nyelv'
+import { Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from '../publikus/tartalom'
 
 interface KvAllapot {
   t: CsomagTabla
@@ -21,6 +22,7 @@ interface KvAllapot {
   foglalas?: ReactNode
   kiemelt: string | null
   onCsomag?: (id: string) => void
+  nyelvValaszto?: ReactNode
 }
 
 const Kv = createContext<KvAllapot | null>(null)
@@ -56,7 +58,7 @@ function felvillant(cim: HTMLElement | null | undefined) {
   felvillanIdo.set(cim, window.setTimeout(() => cim.removeAttribute('data-felvillan'), FELVILLANAS))
 }
 
-function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null, nyilvanos = false) {
+function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null, nyilvanos = false, nyelv: Nyelv = 'hu') {
   e.preventDefault()
   if (!cel) return
   const kv = e.currentTarget.closest('.kv')
@@ -64,39 +66,44 @@ function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null, nyilvanos = fa
   if (elem) {
     elem.scrollIntoView({ behavior: 'smooth', block: 'start' })
     felvillant(kv?.querySelector<HTMLElement>(CEL_CIM[cel]))
-  } else if (nyilvanos) window.location.href = `/publikus#${cel}`
+  } else if (nyilvanos) window.location.href = `${nyelviUt('/publikus', nyelv)}#${cel}`
 }
 
-function terkepCimek(u: Uzlet) {
+function terkepCimek(u: Uzlet, nyelv: Nyelv) {
   const cim = `${u.cim.replace(/\.$/, '')}, ${u.irsz}`
   return {
-    terkep: `https://www.google.com/maps?q=${encodeURIComponent(`${u.nev}, ${cim}`)}&z=16&output=embed`,
-    utvonal: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cim)}`,
+    terkep: `https://www.google.com/maps?q=${encodeURIComponent(`${u.nev}, ${cim}`)}&z=16&hl=${nyelv}&output=embed`,
+    utvonal: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cim)}&hl=${nyelv}`,
   }
 }
 
 function Nav({ jobbra }: { jobbra?: ReactNode }) {
-  const { nyilvanos } = useKv()
+  const { nyilvanos, nyelvValaszto } = useKv()
   const u = useUzlet()
   const sz = useSz()
+  const nyelv = useNyelv()
   return (
-    <header className="kv-nav">
-      {nyilvanos
-        ? <a className="kv-logo" href="/publikus">{u.nev}</a>
-        : <span className="kv-logo">{u.nev}</span>}
-      {jobbra ?? (
-        <nav>
-          {MENU.map(([m, cel]) => <a key={m} href={`#${cel}`} onClick={(e) => ugras(e, cel, nyilvanos)}>{sz(m)}</a>)}
-        </nav>
-      )}
-    </header>
+    <>
+      <header className="kv-nav">
+        {nyilvanos
+          ? <a className="kv-logo" href={nyelviUt('/publikus', nyelv)}>{u.nev}</a>
+          : <span className="kv-logo">{u.nev}</span>}
+        {jobbra ?? (
+          <nav>
+            {MENU.map(([m, cel]) => <a key={m} href={`#${cel}`} onClick={(e) => ugras(e, cel, nyilvanos, nyelv)}>{sz(m)}</a>)}
+          </nav>
+        )}
+      </header>
+      {nyelvValaszto && <div className="kv-nyelv-sor">{nyelvValaszto}</div>}
+    </>
   )
 }
 
 function Gomb({ children, cel = 'foglalas' }: { children?: ReactNode; cel?: Cel | null }) {
   const { nyilvanos } = useKv()
   const sz = useSz()
-  return <a className="kv-gomb" href="#foglalas" onClick={(e) => ugras(e, cel, nyilvanos)}>{children ?? sz('gomb.idopont')}</a>
+  const nyelv = useNyelv()
+  return <a className="kv-gomb" href="#foglalas" onClick={(e) => ugras(e, cel, nyilvanos, nyelv)}>{children ?? sz('gomb.idopont')}</a>
 }
 
 function Info({ cimke, children }: { cimke: string; children: ReactNode }) {
@@ -109,8 +116,9 @@ function Info({ cimke, children }: { cimke: string; children: ReactNode }) {
 }
 
 function Jel({ c }: { c: Cella }) {
-  if (c.tipus === 'van') return <><span className="kv-van" aria-hidden="true" /><span className="kv-rejtett">benne van</span></>
-  if (c.tipus === 'nincs') return <><span className="kv-nincs" aria-hidden="true" /><span className="kv-rejtett">nincs benne</span></>
+  const f = FELIRAT[useNyelv()]
+  if (c.tipus === 'van') return <><span className="kv-van" aria-hidden="true" /><span className="kv-rejtett">{f.bennevan}</span></>
+  if (c.tipus === 'nincs') return <><span className="kv-nincs" aria-hidden="true" /><span className="kv-rejtett">{f.nincsbenne}</span></>
   return <span className="kv-mas" data-kiemelt={c.kiemelt || undefined}>{c.szoveg}</span>
 }
 
@@ -118,7 +126,7 @@ function KatValaszto() {
   const { kat, setKat } = useKv()
   const sz = useSz()
   return (
-    <div className="kv-kat" role="group" aria-label="Járműkategória">
+    <div className="kv-kat" role="group" aria-label={sz('csomagok.kategoria')}>
       {KATEGORIAK.map((k) => (
         <button key={k} type="button" aria-pressed={kat === k} onClick={() => setKat(k)}>{sz(katKulcs.tabla(k))}</button>
       ))}
@@ -162,6 +170,11 @@ function useKiemelesKeret(index: number, frissit: unknown) {
 function Tabla({ sorszam = false, ft = true }: { sorszam?: boolean; ft?: boolean }) {
   const { t, kiemelt, onCsomag } = useKv()
   const sz = useSz()
+  const nyelv = useNyelv()
+  const f = useFormatum()
+  const arSzoveg = (ar: number | null) => (nyelv === 'en'
+    ? ar == null ? FELIRAT.en.egyedi : ft ? f.ft(ar) : ar.toLocaleString('en-GB')
+    : `${szam(ar)}${ft && ar != null ? ' Ft' : ''}`)
   const index = kiemelt ? t.csomagok.findIndex((c) => c.id === kiemelt) : -1
   const { gorgo, keret } = useKiemelesKeret(index, t)
   const halvany = (i: number) => (index >= 0 && i !== index) || undefined
@@ -179,7 +192,7 @@ function Tabla({ sorszam = false, ft = true }: { sorszam?: boolean; ft?: boolean
               const tartalom = (
                 <>
                   <span className="kv-csomag-nev">{c.nev}</span>
-                  <span className="kv-ar">{szam(c.ar)}{ft && c.ar != null ? ' Ft' : ''}</span>
+                  <span className="kv-ar">{arSzoveg(c.ar)}</span>
                 </>
               )
               return (
@@ -280,7 +293,8 @@ function Terkep() {
   const [betolt, setBetolt] = useState(false)
   const u = useUzlet()
   const sz = useSz()
-  const linkek = terkepCimek(u)
+  const nyelv = useNyelv()
+  const linkek = terkepCimek(u, nyelv)
   return (
     <section className="kv-hely">
       <div className="kv-hely-szoveg">
@@ -294,7 +308,7 @@ function Terkep() {
       </div>
       <div className="kv-terkep" data-betoltve={betolt || undefined}>
         {betolt ? (
-          <iframe title={`${u.nev} a térképen`} src={linkek.terkep} referrerPolicy="no-referrer-when-downgrade" />
+          <iframe title={FELIRAT[nyelv].terkepen(u.nev)} src={linkek.terkep} referrerPolicy="no-referrer-when-downgrade" />
         ) : (
           <div className="kv-terkep-kerdes">
             <p>{sz('hely.terkep_szoveg')}</p>
@@ -312,6 +326,8 @@ function Lab() {
   const { nyilvanos } = useKv()
   const u = useUzlet()
   const sz = useSz()
+  const nyelv = useNyelv()
+  const jogiCim = nyelv === 'en' ? JOGI_CIM_EN : JOGI_CIM
   return (
     <footer className="kv-lab">
       <div className="kv-lab-fo">
@@ -325,14 +341,14 @@ function Lab() {
           <span className="kv-cimke">{sz('cimke.kapcsolat')}</span>
           <span className="kv-ertek"><a href={telefonLink(u.telefon)}>{u.telefon}</a></span>
           <span className="kv-ertek"><a href={`mailto:${u.email}`}>{u.email}</a></span>
-          <a className="kv-link" href="#foglalas" onClick={(e) => ugras(e, 'foglalas', nyilvanos)}>{sz('gomb.idopont')}</a>
+          <a className="kv-link" href="#foglalas" onClick={(e) => ugras(e, 'foglalas', nyilvanos, nyelv)}>{sz('gomb.idopont')}</a>
         </div>
       </div>
       <div className="kv-lab-also">
         <span>© {new Date().getFullYear()} {u.nev}</span>
         <nav>
           {LAB_MENU.map((m) => (
-            <a key={m} href={`/${m}`} onClick={nyilvanos ? undefined : (e) => ugras(e, null)}>{JOGI_CIM[m]}</a>
+            <a key={m} href={nyelviUt(`/${m}`, nyelv)} onClick={nyilvanos ? undefined : (e) => ugras(e, null)}>{jogiCim[m]}</a>
           ))}
         </nav>
       </div>
@@ -654,19 +670,21 @@ interface KoncepcioProps {
   onKat?: (k: VehicleCategory) => void
   kiemelt?: string | null
   onCsomag?: (id: string) => void
+  nyelvValaszto?: ReactNode
 }
 
 function KvKornyezet({
-  kod, mod, k, nyilvanos = false, foglalas, kat: katKulso, onKat, kiemelt = null, onCsomag, children,
+  kod, mod, k, nyilvanos = false, foglalas, kat: katKulso, onKat, kiemelt = null, onCsomag, nyelvValaszto, children,
 }: KoncepcioProps & { children: ReactNode }) {
   const [katBelso, setKatBelso] = useState<VehicleCategory>('SZEMELYAUTO')
   const kat = katKulso ?? katBelso
   const setKat = onKat ?? setKatBelso
-  const t = useMemo(() => csomagTabla(k, kat), [k, kat])
+  const nyelv = useNyelv()
+  const t = useMemo(() => csomagTabla(k, kat, nyelv), [k, kat, nyelv])
   const tol = useMemo(() => kategoriaTol(k), [k])
   return (
-    <Kv.Provider value={{ t, kat, setKat, tol, nyilvanos, foglalas, kiemelt, onCsomag }}>
-      <div className="kv" lang="hu" data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
+    <Kv.Provider value={{ t, kat, setKat, tol, nyilvanos, foglalas, kiemelt, onCsomag, nyelvValaszto }}>
+      <div className="kv" lang={nyelv} data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
         {children}
       </div>
     </Kv.Provider>

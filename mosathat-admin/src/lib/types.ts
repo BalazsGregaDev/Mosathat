@@ -116,6 +116,8 @@ export interface Package {
   code: string
   name: string
   description: string | null
+  name_en?: string | null
+  description_en?: string | null
   includes_package_id: string | null
   sort_order: number
   active: boolean
@@ -142,6 +144,8 @@ export interface Extra {
   id: string
   name: string
   description: string | null
+  name_en?: string | null
+  description_en?: string | null
   area: ServiceArea | null
   price_huf: number | null
   price_unit: MeasureUnit
@@ -166,6 +170,8 @@ export interface PackageMatrixRow {
   name: string
   area: ServiceArea
   sort_order: number
+  slot_name_en?: string | null
+  name_en?: string | null
 }
 
 export interface PackageExtraRow {
@@ -175,6 +181,8 @@ export interface PackageExtraRow {
   name: string
   area: ServiceArea
   sort_order: number
+  parent_name_en?: string | null
+  name_en?: string | null
 }
 
 export interface Surcharge {
@@ -912,18 +920,22 @@ export interface SzerkesztoCsomag {
   code: string | null
   name: string
   description: string | null
+  name_en: string | null
+  description_en: string | null
   includes_package_id: string | null
   hasznalt: boolean
 }
 
 export interface SzerkesztoCella {
   name: string
+  name_en: string | null
   active: boolean
 }
 
 export interface SzerkesztoSor {
   id: string | null
   name: string
+  name_en: string | null
   area: ServiceArea
   cellak: Record<string, SzerkesztoCella>
 }
@@ -934,7 +946,16 @@ export interface CsomagMentesEredmeny {
   kivezetve: string[]
 }
 
+export interface SzerkesztoExtra {
+  id: string
+  name: string
+  description: string | null
+  name_en: string | null
+  description_en: string | null
+}
+
 export interface CsomagSzerkesztoAdat {
   csomagok: SzerkesztoCsomag[]
   sorok: SzerkesztoSor[]
+  extrak: SzerkesztoExtra[]
 }
