@@ -93,11 +93,12 @@ const t = await oldal('/publikus', TELEFON)
   const ikon = await p.locator('.kv-menu-gomb span').evaluateAll((l) => l.map((e) => e.getBoundingClientRect()).reduce((a, r) => ({ l: Math.min(a.l, r.left), r: Math.max(a.r, r.right), t: Math.min(a.t, r.top), b: Math.max(a.b, r.bottom) }), { l: 1e9, r: -1e9, t: 1e9, b: -1e9 }))
   ok('bal felső sarokban a név, jobb felsőben a hamburger (16 px-es margóval)', [16, 16, true],
     [Math.round(logo.left), Math.round(390 - ikon.r), Math.abs((logo.top + logo.bottom) / 2 - (gomb.top + gomb.bottom) / 2) <= 2])
-  ok('hamburger: 3 csík, 22 px-es ikon 44×44-es érintési területen', [3, 22, 44, 44],
-    [await p.locator('.kv-menu-gomb span').count(), Math.round(ikon.r - ikon.l), Math.round(gomb.width), Math.round(gomb.height)])
+  ok('hamburger: 3 csík, 33×21 px-es ikon (a korábbi 22×14 másfélszerese) 48×48-as érintési területen, 2,25 px-es vonalakkal', [3, 33, 21, 48, 48, '2.25px'],
+    [await p.locator('.kv-menu-gomb span').count(), Math.round(ikon.r - ikon.l), Math.round(ikon.b - ikon.t), Math.round(gomb.width), Math.round(gomb.height),
+     await p.locator('.kv-menu-gomb span').first().evaluate((e) => getComputedStyle(e).height)])
   ok('a név a szövegnél nagyobb területen is megnyomható', ['kv-logo', 'kv-logo'],
     [await pontAlatt(p, logo.left - 7, logo.top - 8), await pontAlatt(p, logo.right + 9, logo.bottom + 8)])
-  ok('a hamburger az ikonon kívül, a 44 px-en belül is', 'kv-menu-gomb', await pontAlatt(p, ikon.l - 9, ikon.t - 10))
+  ok('a hamburger az ikonon kívül, a 48 px-en belül is', ['kv-menu-gomb', 'kv-menu-gomb'], [await pontAlatt(p, ikon.l - 6, ikon.t - 12), await pontAlatt(p, ikon.r + 5, ikon.b + 12)])
   ok('nincs vízszintes görgetés', true, await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))
   await kep(p, '02-telefon-teteje.png')
 

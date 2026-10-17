@@ -66,19 +66,19 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
   .pub-keret .kv[data-k] .kv-nav[data-nyitva] { background: var(--bg); color: var(--fg); mix-blend-mode: normal; border-bottom-color: var(--vonal); }
 
   .pub-keret .kv-menu-gomb {
-    display: block; position: relative; flex: none; width: 44px; height: 44px; margin: -4px -11px -4px 0; padding: 0;
+    display: block; position: relative; flex: none; width: 48px; height: 48px; margin: -6px -7.5px -6px 0; padding: 0;
     border: 0; background: transparent; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
   }
   .pub-keret .kv-menu-gomb span {
-    position: absolute; left: 11px; right: 11px; height: 1.5px; border-radius: 1px; background: currentColor;
+    position: absolute; left: 7.5px; right: 7.5px; height: 2.25px; border-radius: 1.5px; background: currentColor;
     transition: transform .22s ease, opacity .16s ease;
   }
-  .pub-keret .kv-menu-gomb span:nth-child(1) { top: 15px; }
-  .pub-keret .kv-menu-gomb span:nth-child(2) { top: 21.25px; }
-  .pub-keret .kv-menu-gomb span:nth-child(3) { top: 27.5px; }
-  .pub-keret .kv-menu-gomb[aria-expanded='true'] span:nth-child(1) { transform: translateY(6.25px) rotate(45deg); }
+  .pub-keret .kv-menu-gomb span:nth-child(1) { top: 13.5px; }
+  .pub-keret .kv-menu-gomb span:nth-child(2) { top: 22.875px; }
+  .pub-keret .kv-menu-gomb span:nth-child(3) { top: 32.25px; }
+  .pub-keret .kv-menu-gomb[aria-expanded='true'] span:nth-child(1) { transform: translateY(9.375px) rotate(45deg); }
   .pub-keret .kv-menu-gomb[aria-expanded='true'] span:nth-child(2) { opacity: 0; }
-  .pub-keret .kv-menu-gomb[aria-expanded='true'] span:nth-child(3) { transform: translateY(-6.25px) rotate(-45deg); }
+  .pub-keret .kv-menu-gomb[aria-expanded='true'] span:nth-child(3) { transform: translateY(-9.375px) rotate(-45deg); }
   .pub-keret .kv-menu-gomb:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; border-radius: 8px; }
 
   .pub-keret .kv-menu-hely[data-nyitva] { display: block; position: sticky; top: var(--nav-h, 0px); z-index: 31; height: 0; }
