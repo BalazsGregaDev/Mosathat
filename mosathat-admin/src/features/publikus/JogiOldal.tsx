@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { BEKELTETO, NAIH, TARHELY } from '../../lib/ceg'
+import { BEKELTETO, JOGI_CIM, NAIH, TARHELY } from '../../lib/ceg'
 import { useCeg, useJogi } from './tartalom'
 
 export type JogiLap = 'impresszum' | 'adatvedelem'
@@ -37,7 +37,7 @@ function Level({ cim }: { cim: string }) {
 function Impresszum() {
   const ceg = useCeg()
   return (
-    <Keret cim="Impresszum">
+    <Keret cim={JOGI_CIM.impresszum}>
       <h2>A szolgáltató adatai</h2>
       <dl className="kv-jogi-adatok">
         <Sor cimke="Cégnév">{ceg.nev}</Sor>
@@ -122,7 +122,7 @@ function Adatvedelem() {
   const jogi = useJogi()
   const kamera = jogi.kamera
   return (
-    <Keret cim="Adatvédelmi tájékoztató">
+    <Keret cim={JOGI_CIM.adatvedelem}>
       <p>
         Ebben a tájékoztatóban leírjuk, milyen személyes adatokat kezelünk, mire használjuk őket,
         meddig őrizzük meg, kinek adjuk át, és milyen jogaid vannak. A tájékoztató az Európai Unió

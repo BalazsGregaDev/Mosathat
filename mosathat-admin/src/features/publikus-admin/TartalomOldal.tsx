@@ -1,5 +1,5 @@
 import {
-  useDeferredValue, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode,
+  Fragment, useDeferredValue, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react'
 
 import '../arculat/betuk'
@@ -7,9 +7,11 @@ import '../arculat/koncepciok.css'
 import { useApp } from '../../state/AppContext'
 import { useMentetlen } from '../../state/useMentetlen'
 import {
-  KOZOS_VALTOZOK, SZOVEGEK, uzletbol, uzletValtozok, type SzovegDef, type SzovegKulcs,
+  foSzakaszNapok, KOZOS_VALTOZOK, SZOVEGEK, uzletbol, uzletValtozok,
+  type NyitvaNap, type SzovegDef, type SzovegKulcs, type Valtozok,
 } from '../../lib/publikusTartalom'
 import { csomagbanBenne } from '../../lib/csomag'
+import { maStr, napCim, napPlusz } from '../../lib/format'
 import type { Catalog, PublikusAdat } from '../../data/source'
 import type { DayLane, Quote } from '../../lib/types'
 import type { Mod } from '../../lib/arculat'
@@ -18,6 +20,7 @@ import { FoglalasUrlap, type Bemutato, type FoglalasForras } from '../publikus/F
 import { TartalomProvider, useSz } from '../publikus/tartalom'
 import { usePublikusAdat } from '../publikus/usePublikusAdat'
 import { PubFej, useMentes } from './kozos'
+import type { Billentyu, Honnan, Ugras } from '../shell/ugras'
 
 type Szovegek = Record<SzovegKulcs, string>
 type Lepes = 'auto' | 'csomag' | 'mit' | 'extrak' | 'tipus' | 'elvitel' | 'nap' | 'adatok' | 'osszeg' | 'siker'
@@ -43,7 +46,7 @@ const KISZAMOLT: BemutatoAlap = { csomagId: null, extrak: {} }
 
 const SAVOK: Sav[] = [
   { id: 'menu', cim: 'Menüsor és böngészőfül', leiras: 'Az oldal teteje és a böngésző fülén megjelenő cím.', oldalResz: 'nav', ful: true,
-    kulcsok: ['oldal.cim', 'menu.csomagok', 'menu.foglalas', 'menu.hely', 'menu.kapcsolat'] },
+    kulcsok: ['oldal.cim', 'menu.csomagok', 'menu.foglalas', 'menu.kapcsolat'] },
   { id: 'hero', cim: 'Nyitó rész', leiras: 'Az első, amit a látogató lát: felcím, nagy cím, két hasáb és a borítókép.', oldalResz: 'hero',
     kulcsok: ['hero.felcim', 'hero.cim', 'hero.bevezeto', 'hero.mellek', 'hero.borito_helye', 'hero.borito_alt'] },
   { id: 'csomagok', cim: 'Csomagok táblázat', leiras: 'A táblázat sorai és cellái a Csomagok menüben szerkeszthetők, itt a feliratai.', oldalResz: 'csomagok',
@@ -91,8 +94,8 @@ const SAVOK: Sav[] = [
   { id: 'hely', cim: 'Hol vagyunk', leiras: 'A címek és az adatok az Elérhetőség menüből jönnek, itt a feliratok.', oldalResz: 'hely',
     kulcsok: ['hely.cim', 'hely.bevezeto', 'cimke.cim', 'cimke.nyitvatartas', 'cimke.leadas', 'cimke.telefon',
       'hely.utvonal', 'hely.terkep_szoveg', 'hely.terkep_gomb'] },
-  { id: 'lab', cim: 'Lábléc', leiras: 'Az oldal alja. A Cím és a Nyitvatartás felirat a Hol vagyunk sávban módosítható.', oldalResz: 'lab',
-    kulcsok: ['lab.leiras', 'lab.leadas', 'cimke.kapcsolat', 'gomb.idopont', 'lab.impresszum', 'lab.adatvedelem'] },
+  { id: 'lab', cim: 'Lábléc', leiras: 'Az oldal alja. A Cím és a Nyitvatartás felirat a Hol vagyunk sávban módosítható, az Impresszum és az Adatvédelmi tájékoztató linkje nem módosítható.', oldalResz: 'lab',
+    kulcsok: ['lab.leiras', 'lab.leadas', 'cimke.kapcsolat', 'gomb.idopont'] },
 ]
 
 const MIKOR: Partial<Record<SzovegKulcs, string>> = {
@@ -116,11 +119,147 @@ const MIKOR: Partial<Record<SzovegKulcs, string>> = {
   'foglalas.siker_telefon': 'Akkor látszik az e-mailes mondat helyett, ha a foglaló nem adott meg e-mail címet.',
 }
 
+const SUGO_ELOTT = new Set(['csomagok', 'fogl-1', 'fogl-3', 'fogl-5fs', 'fogl-8', 'fogl-siker', 'lab'])
+
+const ELERHETOSEG_VALTOZOK = ['nev', 'telefon', 'email', 'irsz', 'cim', 'haz', 'szint', 'bejarat', 'kerulet']
+const BEALLITAS_VALTOZOK = ['nyitvatartas', 'nyitas', 'zaras', 'leadas', 'lemondas_ora']
+
+const VALTOZO_HELY: Record<string, string> = {
+  nev: 'Elérhetőség, Megjelenő név', telefon: 'Elérhetőség, Telefonszám', email: 'Elérhetőség, E-mail cím',
+  irsz: 'Elérhetőség, Irányítószám és város', cim: 'Elérhetőség, Utca, házszám', haz: 'Elérhetőség, Épület',
+  szint: 'Elérhetőség, Szint', bejarat: 'Elérhetőség, Bejárat', kerulet: 'Elérhetőség, Kerület',
+  nyitvatartas: 'Beállítások, Nyitvatartás fül', nyitas: 'Beállítások, Nyitvatartás fül, nyitás oszlop',
+  zaras: 'Beállítások, Nyitvatartás fül, zárás oszlop', leadas: 'Beállítások, Általános fül, Leadás legkorábban',
+  lemondas_ora: 'Beállítások, Általános fül, Online lemondás határideje',
+}
+
+const BILLENTYU: Record<string, Billentyu> = { telefon: 'tel', email: 'email' }
+
+const KOZOS_LEIRAS: Record<string, string> = Object.fromEntries(KOZOS_VALTOZOK.map((x) => [x.nev, x.leiras]))
+
+function kovetkezoHetkoznap(): string {
+  let d = napPlusz(maStr(), 1)
+  while ([0, 6].includes(new Date(`${d}T12:00:00`).getDay())) d = napPlusz(d, 1)
+  return d
+}
+
+const SAJAT_LEIRAS: Record<string, string> = {
+  csomag: 'a kiválasztott csomag neve, például: Premium',
+  tol: 'a legkorábbi vállalható határidő, például: 15:30',
+  ig: 'a legkésőbbi vállalható határidő, például: 17:00',
+  mikor: `az elvitel napja és időablaka, például: ${napCim(kovetkezoHetkoznap())}, 8:00 és 17:00 között`,
+}
+
+function ValtozoMagyarazat({ ertek, sajat, valtozok, onValtozo }: {
+  ertek: string
+  sajat: readonly string[]
+  valtozok: Valtozok
+  onValtozo: (nev: string) => void
+}) {
+  const hasznalt = [...new Set([...ertek.matchAll(/\{([a-z_]+)\}/g)].map((m) => m[1]))]
+  const nevek = [...hasznalt, ...sajat.filter((n) => !hasznalt.includes(n))]
+  if (nevek.length === 0) return null
+  return (
+    <ul className="pub-valtozo-magyarazat">
+      {nevek.map((nev) => {
+        if (sajat.includes(nev)) {
+          return (
+            <li key={nev}>
+              {!hasznalt.includes(nev) && 'Használható: '}<code>{`{${nev}}`}</code> = {SAJAT_LEIRAS[nev] ?? 'a foglalás közben kitöltött adat'}
+            </li>
+          )
+        }
+        if (KOZOS_LEIRAS[nev]) {
+          return (
+            <li key={nev}>
+              <button type="button" className="pub-valtozo-link" data-valtozo-link={nev}
+                      title={`Módosítás helye: ${VALTOZO_HELY[nev]}.`} onClick={() => onValtozo(nev)}>
+                {`{${nev}}`}
+              </button>
+              {' '}= {KOZOS_LEIRAS[nev]}, most: {String(valtozok[nev] ?? '')}
+            </li>
+          )
+        }
+        return (
+          <li key={nev} data-ismeretlen>
+            <code>{`{${nev}}`}</code> = nincs ilyen adat, a publikus oldalon kapcsos zárójellel együtt, változatlanul jelenne meg.
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function valtozoCel(nev: string, napok: NyitvaNap[]): Ugras {
+  if (ELERHETOSEG_VALTOZOK.includes(nev)) {
+    return { oldal: 'pub-elerhetoseg', fokusz: `[data-mezo="${nev}"]`, billentyu: BILLENTYU[nev] ?? 'text' }
+  }
+  if (nev === 'leadas') return { oldal: 'beallitasok', ful: 'altalanos', fokusz: '[data-mezo="leadas"]', valaszto: true }
+  if (nev === 'lemondas_ora') return { oldal: 'beallitasok', ful: 'altalanos', fokusz: '[data-mezo="lemondas_ora"]', billentyu: 'numeric' }
+  const fo = foSzakaszNapok(napok)
+  if (nev === 'nyitas' || nev === 'zaras') {
+    return {
+      oldal: 'beallitasok', ful: 'ido', valaszto: true,
+      fokusz: `[data-mezo="${nev}"]${fo.length ? `[data-nap="${fo[0]}"]` : ''}`,
+      kiemel: fo.length ? fo.map((n) => `[data-mezo="${nev}"][data-nap="${n}"]`).join(', ') : undefined,
+    }
+  }
+  const elso = [...napok].sort((a, b) => a.weekday - b.weekday).find((d) => !d.closed && d.opens && d.closes)
+  return {
+    oldal: 'beallitasok', ful: 'ido', kiemel: '[data-mezo="nyitvatartas"]',
+    fokusz: elso ? `[data-mezo="nyitas"][data-nap="${elso.weekday}"]` : '[data-mezo="nyitvatartas"]',
+  }
+}
+
 const LISTA: readonly SzovegDef[] = SZOVEGEK
 const DEF = Object.fromEntries(LISTA.map((s) => [s.kulcs, s])) as Record<SzovegKulcs, SzovegDef>
 
+const piszkozat: { szovegek: Partial<Szovegek> } = { szovegek: {} }
+
 function kezdo(sajat: Record<string, string> | undefined): Szovegek {
   return Object.fromEntries(LISTA.map((s) => [s.kulcs, sajat?.[s.kulcs]?.trim() ? sajat[s.kulcs] : s.alap])) as Szovegek
+}
+
+const piszkozattal = (sajat: Record<string, string> | undefined): Szovegek => ({ ...kezdo(sajat), ...piszkozat.szovegek })
+
+function Sugo({ id, valtozok, onValtozo }: { id: string; valtozok: Valtozok; onValtozo: (nev: string, sugo: string) => void }) {
+  const leiras = Object.fromEntries(KOZOS_VALTOZOK.map((x) => [x.nev, x.leiras]))
+  const csoport = (cim: string, nevek: string[]) => (
+    <div className="pub-valtozo-csoport">
+      <span className="pub-valtozo-cim">{cim}</span>
+      <div className="pub-valtozok">
+        {nevek.map((nev) => (
+          <button key={nev} type="button" className="pub-valtozo" data-valtozo={nev}
+                  title={`${leiras[nev] ?? nev}. Módosítás helye: ${VALTOZO_HELY[nev]}.`}
+                  onClick={() => onValtozo(nev, id)}>
+            <code>{`{${nev}}`}</code>
+            <span>{String(valtozok[nev] ?? '')}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+  return (
+    <details className="panel pub-sugo" data-sugo={id}>
+      <summary>Beírható adatok és kiemelés</summary>
+      <div className="panel-torzs">
+        <ul>
+          <li>
+            <strong>Kapcsos zárójelben</strong> az adatok automatikusan beíródnak, például a
+            {' '}<code>{'{telefon}'}</code> helyére a telefonszám. Így ha egy adat változik, a szövegekben nem kell átírni.
+          </li>
+          <li>
+            <strong>Kattints egy adatra</strong>, és odaviszünk, ahol módosíthatod. A még nem mentett szövegeid
+            megmaradnak, a fejlécben lévő Vissza a Tartalomhoz gombbal ide térsz vissza.
+          </li>
+          <li><strong>Csillagok között</strong> a szöveg kiemelt lesz, például <code>*Évekig*</code>.</li>
+          <li>A több soros mezőkben az Enter új sort kezd. Ha egy mezőt üresen hagysz, az eredeti szöveg áll vissza.</li>
+        </ul>
+        {csoport('Az Elérhetőség menüben módosítható', ELERHETOSEG_VALTOZOK)}
+        {csoport('A Beállítások menüben módosítható', BEALLITAS_VALTOZOK)}
+      </div>
+    </details>
+  )
 }
 
 const kisbetu = (s: string) => s.toLocaleLowerCase('hu')
@@ -257,22 +396,58 @@ function SavElonezet({ sav, pub, forras, alap }: {
   return null
 }
 
-export default function TartalomOldal() {
+export default function TartalomOldal({ onUgras, visszaterve = null }: {
+  onUgras?: (cel: Ugras, honnan: Honnan) => void
+  visszaterve?: Honnan | null
+}) {
   const { data } = useApp()
   const { adat: pub, frissit } = usePublikusAdat()
   const [alap, setAlap] = useState(pub)
-  const [v, setV] = useState<Szovegek>(() => kezdo(pub?.tartalom.szovegek))
+  const [v, setV] = useState<Szovegek>(() => piszkozattal(pub?.tartalom.szovegek))
   const [keres, setKeres] = useState('')
   const { allapot, fut } = useMentes()
+  const visszaRef = useRef(visszaterve)
 
   if (pub !== alap) {
     setAlap(pub)
-    setV(kezdo(pub?.tartalom.szovegek))
+    setV(piszkozattal(pub?.tartalom.szovegek))
   }
 
   const eredeti = useMemo(() => kezdo(pub?.tartalom.szovegek), [pub])
   const valtozottak = LISTA.filter((s) => v[s.kulcs as SzovegKulcs] !== eredeti[s.kulcs as SzovegKulcs])
   useMentetlen(valtozottak.length > 0)
+
+  useEffect(() => {
+    if (!pub) return
+    piszkozat.szovegek = Object.fromEntries(valtozottak.map((s) => [s.kulcs, v[s.kulcs as SzovegKulcs]])) as Partial<Szovegek>
+  })
+
+  useEffect(() => {
+    const h = visszaRef.current
+    if (!h || !pub) return
+    visszaRef.current = null
+    const cel = h.kulcs
+      ? document.querySelector<HTMLElement>(`.pub-szoveg[data-kulcs="${h.kulcs}"]`)
+      : document.querySelector<HTMLDetailsElement>(`.pub-sugo[data-sugo="${h.sugo}"]`)
+    if (!cel) return
+    if (cel instanceof HTMLDetailsElement) cel.open = true
+    const fej = document.querySelector<HTMLElement>('.pub-fej')
+    cel.style.scrollMarginTop = `${(fej?.offsetHeight ?? 0) + 12}px`
+    const igazit = () => cel.scrollIntoView({ block: h.kulcs ? 'center' : 'start' })
+    igazit()
+    cel.querySelector<HTMLElement>(h.kulcs ? `[data-valtozo-link="${h.valtozo}"]` : `[data-valtozo="${h.valtozo}"]`)
+      ?.focus({ preventScroll: true })
+    const idozitok = [150, 450, 1000].map((t) => window.setTimeout(igazit, t))
+    const megszakit = () => idozitok.forEach((t) => window.clearTimeout(t))
+    const tarto = cel.closest('.tartalom') ?? window
+    tarto.addEventListener('wheel', megszakit, { once: true, passive: true })
+    tarto.addEventListener('touchstart', megszakit, { once: true, passive: true })
+    return () => {
+      megszakit()
+      tarto.removeEventListener('wheel', megszakit)
+      tarto.removeEventListener('touchstart', megszakit)
+    }
+  }, [pub])
 
   const kesleltetett = useDeferredValue(v)
   const elonezetTartalom = useMemo(
@@ -284,6 +459,10 @@ export default function TartalomOldal() {
   const valtozok = useMemo(() => (pub ? uzletValtozok(uzletbol(pub.tartalom), pub.lemondasOra) : {}), [pub])
 
   if (!pub || !elonezetTartalom || !forras) return <div className="betolt">Betöltés…</div>
+
+  const valtozora = (nev: string, sugo: string) => onUgras?.(valtozoCel(nev, pub.tartalom.nyitvatartas), { sugo, valtozo: nev })
+  const mezobol = (kulcs: string) => (nev: string) => onUgras?.(valtozoCel(nev, pub.tartalom.nyitvatartas), { kulcs, valtozo: nev })
+  const sugo = (id: string) => <Sugo id={id} valtozok={valtozok} onValtozo={valtozora} />
 
   const q = kisbetu(keres.trim())
   const latszik = (k: SzovegKulcs, sav: Sav) => !q || kisbetu(DEF[k].cimke).includes(q) || kisbetu(DEF[k].alap).includes(q)
@@ -310,27 +489,7 @@ export default function TartalomOldal() {
         })}
       />
 
-      <details className="panel pub-sugo">
-        <summary>Beírható adatok és kiemelés</summary>
-        <div className="panel-torzs">
-          <ul>
-            <li>
-              <strong>Kapcsos zárójelben</strong> az adatok automatikusan beíródnak, például a
-              {' '}<code>{'{telefon}'}</code> helyére a telefonszám. Így ha az Elérhetőség menüben változik valami,
-              a szövegekben nem kell átírni.
-            </li>
-            <li><strong>Csillagok között</strong> a szöveg kiemelt lesz, például <code>*Évekig*</code>.</li>
-            <li>A több soros mezőkben az Enter új sort kezd. Ha egy mezőt üresen hagysz, az eredeti szöveg áll vissza.</li>
-          </ul>
-          <div className="pub-valtozok">
-            {KOZOS_VALTOZOK.map((x) => (
-              <span key={x.nev} title={x.leiras}>
-                <code>{`{${x.nev}}`}</code> {String(valtozok[x.nev] ?? '')}
-              </span>
-            ))}
-          </div>
-        </div>
-      </details>
+      {sugo('fent')}
 
       <div className="pub-keres">
         <input className="beviteli" type="search" placeholder="Keresés a szövegek között" value={keres}
@@ -344,45 +503,49 @@ export default function TartalomOldal() {
           if (mezok.length === 0) return null
           const szeles = Boolean(sav.oldalResz)
           return (
-            <section key={sav.id} className="panel pub-sav" data-sav={sav.id}>
-              <h3>{sav.cim}</h3>
-              <div className="pub-sav-torzs" data-szeles={szeles || undefined}>
-                <div className="pub-sav-elonezet">
-                  <span className="pub-sav-cimke">Előnézet</span>
-                  <SavElonezet sav={sav} pub={pub} forras={forras} alap={bAlap} />
-                </div>
-                <div className="pub-sav-mezok">
-                  <p className="halk pub-sav-leiras">{sav.leiras}</p>
-                  {mezok.map((k) => {
-                    const s = DEF[k]
-                    const ertek = v[k]
-                    const elter = ertek !== s.alap
-                    return (
-                      <div key={k} className="pub-szoveg" data-kulcs={k} data-valtozott={ertek !== eredeti[k] || undefined}>
-                        <div className="pub-szoveg-fej">
-                          <label htmlFor={`sz-${k}`}>{s.cimke}</label>
-                          {elter && <span className="cimke-pill">módosítva</span>}
-                          {elter && (
-                            <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => setV({ ...v, [k]: s.alap })}>
-                              Eredeti szöveg
-                            </button>
+            <Fragment key={sav.id}>
+              {SUGO_ELOTT.has(sav.id) && sugo(sav.id)}
+              <section className="panel pub-sav" data-sav={sav.id}>
+                <h3>{sav.cim}</h3>
+                <div className="pub-sav-torzs" data-szeles={szeles || undefined}>
+                  <div className="pub-sav-elonezet">
+                    <span className="pub-sav-cimke">Előnézet</span>
+                    <SavElonezet sav={sav} pub={pub} forras={forras} alap={bAlap} />
+                  </div>
+                  <div className="pub-sav-mezok">
+                    <p className="halk pub-sav-leiras">{sav.leiras}</p>
+                    {mezok.map((k) => {
+                      const s = DEF[k]
+                      const ertek = v[k]
+                      const elter = ertek !== s.alap
+                      return (
+                        <div key={k} className="pub-szoveg" data-kulcs={k} data-valtozott={ertek !== eredeti[k] || undefined}>
+                          <div className="pub-szoveg-fej">
+                            <label htmlFor={`sz-${k}`}>{s.cimke}</label>
+                            {elter && <span className="cimke-pill">módosítva</span>}
+                            {elter && (
+                              <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => setV({ ...v, [k]: s.alap })}>
+                                Eredeti szöveg
+                              </button>
+                            )}
+                          </div>
+                          {s.sor ? (
+                            <textarea id={`sz-${k}`} className="beviteli"
+                                      rows={Math.min(8, Math.max(2, Math.ceil(ertek.length / 42) + ertek.split('\n').length - 1))}
+                                      value={ertek} placeholder={s.alap} onChange={(e) => setV({ ...v, [k]: e.target.value })} />
+                          ) : (
+                            <input id={`sz-${k}`} className="beviteli" value={ertek} placeholder={s.alap}
+                                   onChange={(e) => setV({ ...v, [k]: e.target.value })} />
                           )}
+                          <ValtozoMagyarazat ertek={ertek} sajat={s.valtozok ?? []} valtozok={valtozok} onValtozo={mezobol(k)} />
+                          {MIKOR[k] && <small className="pub-mikor">{MIKOR[k]}</small>}
                         </div>
-                        {s.sor ? (
-                          <textarea id={`sz-${k}`} className="beviteli"
-                                    rows={Math.min(8, Math.max(2, Math.ceil(ertek.length / 42) + ertek.split('\n').length - 1))}
-                                    value={ertek} placeholder={s.alap} onChange={(e) => setV({ ...v, [k]: e.target.value })} />
-                        ) : (
-                          <input id={`sz-${k}`} className="beviteli" value={ertek} placeholder={s.alap}
-                                 onChange={(e) => setV({ ...v, [k]: e.target.value })} />
-                        )}
-                        {MIKOR[k] && <small className="pub-mikor">{MIKOR[k]}</small>}
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            </Fragment>
           )
         })}
       </TartalomProvider>

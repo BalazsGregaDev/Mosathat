@@ -107,7 +107,7 @@ export interface NyitvaSzakasz {
   hossz: number
 }
 
-export function nyitvaSzakaszok(napok: NyitvaNap[]): NyitvaSzakasz[] {
+function szakaszok(napok: NyitvaNap[]): { tol: number; ig: number; nyitas: string; zaras: string }[] {
   const nyitott = [...napok].sort((a, b) => a.weekday - b.weekday).filter((d) => !d.closed && d.opens && d.closes)
   const ki: { tol: number; ig: number; nyitas: string; zaras: string }[] = []
   for (const d of nyitott) {
@@ -118,7 +118,16 @@ export function nyitvaSzakaszok(napok: NyitvaNap[]): NyitvaSzakasz[] {
       ki.push({ tol: d.weekday, ig: d.weekday, nyitas: ora(d.opens), zaras: ora(d.closes) })
     }
   }
-  return ki.map((s) => ({
+  return ki
+}
+
+export function foSzakaszNapok(napok: NyitvaNap[]): number[] {
+  const fo = [...szakaszok(napok)].sort((x, y) => (y.ig - y.tol) - (x.ig - x.tol))[0]
+  return fo ? Array.from({ length: fo.ig - fo.tol + 1 }, (_, i) => fo.tol + i) : []
+}
+
+export function nyitvaSzakaszok(napok: NyitvaNap[]): NyitvaSzakasz[] {
+  return szakaszok(napok).map((s) => ({
     napok: s.tol === s.ig ? NAP_NEV[s.tol] : `${NAP_NEV[s.tol]}–${NAP_NEV[s.ig]}`,
     napokRovid: s.tol === s.ig ? NAP_ROVID[s.tol] : `${NAP_ROVID[s.tol]}–${NAP_ROVID[s.ig]}`,
     nyitas: s.nyitas,
@@ -235,7 +244,6 @@ export const CSOPORT_NEV: Record<SzovegCsoport, string> = {
 export const SZOVEGEK = [
   { kulcs: 'menu.csomagok', csoport: 'menu', cimke: 'Menü: csomagok', alap: 'Csomagok' },
   { kulcs: 'menu.foglalas', csoport: 'menu', cimke: 'Menü: foglalás', alap: 'Foglalás' },
-  { kulcs: 'menu.hely', csoport: 'menu', cimke: 'Menü: hol vagyunk', alap: 'Hol vagyunk' },
   { kulcs: 'menu.kapcsolat', csoport: 'menu', cimke: 'Menü: kapcsolat', alap: 'Kapcsolat' },
   { kulcs: 'gomb.idopont', csoport: 'menu', cimke: 'Időpontkérő gomb és link', alap: 'Időpontot kérek' },
 
@@ -360,8 +368,6 @@ export const SZOVEGEK = [
 
   { kulcs: 'lab.leiras', csoport: 'lab', cimke: 'Rövid leírás a név alatt', sor: true, alap: 'Kézi autókozmetika a Váci úti {haz} mélygarázsában.' },
   { kulcs: 'lab.leadas', csoport: 'lab', cimke: 'Leadás sor a nyitvatartás alatt', alap: 'Leadás legkorábban {leadas}' },
-  { kulcs: 'lab.impresszum', csoport: 'lab', cimke: 'Impresszum link', alap: 'Impresszum' },
-  { kulcs: 'lab.adatvedelem', csoport: 'lab', cimke: 'Adatvédelmi tájékoztató link', alap: 'Adatvédelmi tájékoztató' },
 
   { kulcs: 'oldal.cim', csoport: 'oldal', cimke: 'Az oldal címe a böngészőfülön és a keresőben', alap: '{nev} — kézi autókozmetika, {irsz}, {cim}' },
 ] as const satisfies readonly SzovegDef[]

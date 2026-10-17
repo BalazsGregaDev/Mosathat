@@ -16,6 +16,8 @@ export default function IdoMezo({
   placeholder,
   torolheto,
   cim,
+  mezo,
+  nap,
 }: {
   id?: string
   value: string
@@ -26,6 +28,8 @@ export default function IdoMezo({
   placeholder?: string
   torolheto?: boolean
   cim?: string
+  mezo?: string
+  nap?: number
 }) {
   const [erinto] = useState(erintokepernyo)
   const [nyitva, setNyitva] = useState(false)
@@ -33,6 +37,7 @@ export default function IdoMezo({
   if (!erinto) {
     return (
       <input id={id} type="time" className={className} step={300} aria-label={ariaLabel}
+             data-mezo={mezo} data-nap={nap}
              value={value} placeholder={placeholder}
              onChange={(e) => onChange(e.target.value)}
              onBlur={(e) => onKesz?.(e.target.value)} />
@@ -43,6 +48,7 @@ export default function IdoMezo({
     <>
       <button type="button" id={id} className={`${className} ido-gomb`}
               aria-label={ariaLabel} aria-haspopup="dialog"
+              data-mezo={mezo} data-nap={nap}
               data-ures={!value || undefined}
               onClick={() => setNyitva(true)}>
         {value || placeholder || '—'}

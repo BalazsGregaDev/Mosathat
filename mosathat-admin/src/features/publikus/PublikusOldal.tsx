@@ -7,6 +7,7 @@ import { createDataSource } from '../../data'
 import type { DataSource, PublikusAdat } from '../../data/source'
 import type { PublikusNapAdat, VehicleCategory } from '../../lib/types'
 import { UZLET, type KoncepcioKod } from '../../lib/arculat'
+import { JOGI_CIM } from '../../lib/ceg'
 import Koncepcio, { KoncepcioKeret } from '../arculat/Koncepcio'
 import { FoglalasUrlap, type FoglalasForras } from './FoglalasModul'
 import JogiOldal, { type JogiLap } from './JogiOldal'
@@ -20,8 +21,7 @@ function Cim({ lap }: { lap: PublikusLap }) {
   const sz = useSz()
   const u = useUzlet()
   const cim = lap === 'fooldal' ? sz('oldal.cim')
-    : lap === 'impresszum' ? `${sz('lab.impresszum')} — ${u.nev}`
-    : `${sz('lab.adatvedelem')} — ${u.nev}`
+    : `${JOGI_CIM[lap]} — ${u.nev}`
   useEffect(() => { document.title = cim }, [cim])
   return null
 }

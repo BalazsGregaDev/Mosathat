@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import {
@@ -15,7 +15,7 @@ import ServicesPage from '../services/ServicesPage'
 import PartnersPage from '../partners/PartnersPage'
 import CustomersPage from '../customers/CustomersPage'
 import DashboardPage from '../dashboard/DashboardPage'
-import SettingsPage from '../settings/SettingsPage'
+import SettingsPage, { type BeallitasFul } from '../settings/SettingsPage'
 import ServicesView from '../services/ServicesView'
 import PartnersView from '../partners/PartnersView'
 import IgazoloOldal from '../igazolo/IgazoloOldal'
@@ -27,6 +27,7 @@ import JelszoModal from '../common/JelszoModal'
 import FoglalasModul from '../publikus/FoglalasModul'
 import KeresFigyelo from '../keresek/KeresFigyelo'
 import { foglalasModulLatja } from '../../lib/jogok'
+import { billentyuElore, celraUgrik, type Honnan, type Ugras } from './ugras'
 
 const ArculatPage = lazy(() => import('../arculat/ArculatPage'))
 const ElerhetosegOldal = lazy(() => import('../publikus-admin/ElerhetosegOldal'))
@@ -89,6 +90,30 @@ export default function AppShell() {
   const [szerkesztId, setSzerkesztId] = useState<string | null>(null)
   const [fiok, setFiok] = useState(false)
   const [jelszoNyitva, setJelszoNyitva] = useState(false)
+  const [beallFul, setBeallFul] = useState<BeallitasFul | undefined>(undefined)
+  const [vissza, setVissza] = useState<Honnan | null>(null)
+  const [visszaterve, setVisszaterve] = useState<Honnan | null>(null)
+  const ugrasLeall = useRef<() => void>(() => {})
+
+  useEffect(() => () => ugrasLeall.current(), [])
+
+  function ugrik(cel: Ugras, honnan: Honnan) {
+    ugrasLeall.current()
+    const ideiglenes = billentyuElore(cel)
+    setBeallFul(cel.ful)
+    setVissza(honnan)
+    setVisszaterve(null)
+    setOldal(cel.oldal)
+    ugrasLeall.current = celraUgrik(cel, ideiglenes)
+  }
+
+  function visszaTartalomba() {
+    ugrasLeall.current()
+    setVisszaterve(vissza)
+    setVissza(null)
+    setBeallFul(undefined)
+    setOldal('pub-tartalom')
+  }
 
   useEffect(() => {
     if (!fiok) return
@@ -111,7 +136,11 @@ export default function AppShell() {
     <button
       key={m.id}
       aria-current={m.id === oldal ? 'page' : undefined}
-      onClick={() => { setOldal(m.id); setFiok(false); setSzerzodesCeg(null) }}
+      onClick={() => {
+        ugrasLeall.current()
+        setOldal(m.id); setFiok(false); setSzerzodesCeg(null)
+        setBeallFul(undefined); setVissza(null); setVisszaterve(null)
+      }}
     >
       <span className="pont" />
       {m.cimke}
@@ -161,6 +190,9 @@ export default function AppShell() {
   )
 
   const napiFejlec = oldal === 'nap'
+  const visszaGomb = vissza && oldal !== 'pub-tartalom' && (
+    <button type="button" className="ugras-vissza" onClick={visszaTartalomba}>Vissza a Tartalomhoz</button>
+  )
 
   function lep(irany: -1 | 1) {
     if (nezet === 'nap') setNap(napPlusz(nap, irany))
@@ -244,6 +276,7 @@ export default function AppShell() {
             <>
               <div className="cim" style={{ fontWeight: 600 }}>{oldalCim}</div>
               <div className="fejlec-tolto" />
+              {visszaGomb}
             </>
           )}
         </header>
@@ -264,7 +297,10 @@ export default function AppShell() {
               <button className="lep" onClick={() => lep(1)} aria-label="Előre">›</button>
             </>
           ) : (
-            <div className="nap">{oldalCim}</div>
+            <>
+              <div className="nap">{oldalCim}</div>
+              {visszaGomb}
+            </>
           )}
         </header>
 
@@ -303,7 +339,7 @@ export default function AppShell() {
           )}
           {oldal === 'ugyfelek' && <CustomersPage />}
           {oldal === 'felhasznalok' && <UsersPage />}
-          {oldal === 'beallitasok' && <SettingsPage />}
+          {oldal === 'beallitasok' && <SettingsPage kezdoFul={beallFul} />}
           {oldal === 'profilom' && <ProfilPage onJelszo={() => setJelszoNyitva(true)} />}
           {oldal === 'foglalas' && foglalasJog && (
             <FoglalasModul onNapiNezet={(d) => { setNap(d); setNezet('nap'); setOldal('nap') }} />
@@ -311,8 +347,12 @@ export default function AppShell() {
           {teljesJogu && (oldal === 'arculat' || oldal.startsWith('pub-')) && (
             <Suspense fallback={<div className="betolt">Betöltés…</div>}>
               {oldal === 'arculat' && <ArculatPage />}
-              {oldal === 'pub-elerhetoseg' && <ElerhetosegOldal onBeallitasok={() => setOldal('beallitasok')} />}
-              {oldal === 'pub-tartalom' && <TartalomOldal />}
+              {oldal === 'pub-elerhetoseg' && (
+                <ElerhetosegOldal onBeallitasok={() => { setBeallFul(undefined); setOldal('beallitasok') }} />
+              )}
+              {oldal === 'pub-tartalom' && (
+                <TartalomOldal onUgras={ugrik} visszaterve={visszaterve} />
+              )}
               {oldal === 'pub-csomagok' && <CsomagokOldal />}
               {oldal === 'pub-cegadatok' && <CegadatokOldal />}
             </Suspense>

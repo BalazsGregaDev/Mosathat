@@ -9,6 +9,7 @@ import {
   type Cella, type CsomagTabla, type KoncepcioKod, type Mod,
 } from '../../lib/arculat'
 import { katKulcs, type SzovegKulcs, type Uzlet } from '../../lib/publikusTartalom'
+import { JOGI_CIM } from '../../lib/ceg'
 import { Gazdag, telefonLink, useSz, useUzlet } from '../publikus/tartalom'
 
 interface KvAllapot {
@@ -25,25 +26,45 @@ interface KvAllapot {
 const Kv = createContext<KvAllapot | null>(null)
 const useKv = () => useContext(Kv)!
 
-type Cel = 'csomagok' | 'foglalas' | 'hely' | 'kapcsolat'
+type Cel = 'csomagok' | 'foglalas' | 'kapcsolat'
 
 const CEL_ELEM: Record<Cel, string> = {
   csomagok: '.kv-csomagok',
   foglalas: '.kv-foglalas',
-  hely: '.kv-hely',
   kapcsolat: '.kv-lab',
 }
 
+const CEL_CIM: Record<Cel, string> = {
+  csomagok: '.kv-csomagok h2',
+  foglalas: '.kv-foglalas h2',
+  kapcsolat: '.kv-lab [data-kapcsolat] > .kv-cimke',
+}
+
 const MENU: [SzovegKulcs, Cel][] = [
-  ['menu.csomagok', 'csomagok'], ['menu.foglalas', 'foglalas'], ['menu.hely', 'hely'], ['menu.kapcsolat', 'kapcsolat'],
+  ['menu.csomagok', 'csomagok'], ['menu.foglalas', 'foglalas'], ['menu.kapcsolat', 'kapcsolat'],
 ]
+
+const FELVILLANAS = 3000
+const felvillanIdo = new WeakMap<HTMLElement, number>()
+
+function felvillant(cim: HTMLElement | null | undefined) {
+  if (!cim) return
+  window.clearTimeout(felvillanIdo.get(cim))
+  cim.removeAttribute('data-felvillan')
+  void cim.offsetWidth
+  cim.setAttribute('data-felvillan', '')
+  felvillanIdo.set(cim, window.setTimeout(() => cim.removeAttribute('data-felvillan'), FELVILLANAS))
+}
 
 function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null, nyilvanos = false) {
   e.preventDefault()
   if (!cel) return
-  const elem = e.currentTarget.closest('.kv')?.querySelector(CEL_ELEM[cel])
-  if (elem) elem.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  else if (nyilvanos) window.location.href = `/publikus#${cel}`
+  const kv = e.currentTarget.closest('.kv')
+  const elem = kv?.querySelector(CEL_ELEM[cel])
+  if (elem) {
+    elem.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    felvillant(kv?.querySelector<HTMLElement>(CEL_CIM[cel]))
+  } else if (nyilvanos) window.location.href = `/publikus#${cel}`
 }
 
 function terkepCimek(u: Uzlet) {
@@ -285,7 +306,7 @@ function Terkep() {
   )
 }
 
-const LAB_MENU: [SzovegKulcs, string][] = [['lab.impresszum', '/impresszum'], ['lab.adatvedelem', '/adatvedelem']]
+const LAB_MENU = ['impresszum', 'adatvedelem'] as const
 
 function Lab() {
   const { nyilvanos } = useKv()
@@ -300,7 +321,7 @@ function Lab() {
         </div>
         <Info cimke={sz('cimke.cim')}>{u.irsz}, {u.cim}<br />{u.haz}, {u.szint}</Info>
         <Info cimke={sz('cimke.nyitvatartas')}>{u.nyitvatartas}<br />{sz('lab.leadas')}</Info>
-        <div className="kv-info">
+        <div className="kv-info" data-kapcsolat>
           <span className="kv-cimke">{sz('cimke.kapcsolat')}</span>
           <span className="kv-ertek"><a href={telefonLink(u.telefon)}>{u.telefon}</a></span>
           <span className="kv-ertek"><a href={`mailto:${u.email}`}>{u.email}</a></span>
@@ -310,8 +331,8 @@ function Lab() {
       <div className="kv-lab-also">
         <span>© {new Date().getFullYear()} {u.nev}</span>
         <nav>
-          {LAB_MENU.map(([m, h]) => (
-            <a key={h} href={h} onClick={nyilvanos ? undefined : (e) => ugras(e, null)}>{sz(m)}</a>
+          {LAB_MENU.map((m) => (
+            <a key={m} href={`/${m}`} onClick={nyilvanos ? undefined : (e) => ugras(e, null)}>{JOGI_CIM[m]}</a>
           ))}
         </nav>
       </div>

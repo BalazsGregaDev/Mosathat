@@ -16,6 +16,7 @@ import { katKulcs, terjedelemKulcs, ulesKulcs, type SzovegKulcs } from '../../li
 import { Gazdag, TartalomProvider, telefonLink, useSz, useUzlet } from './tartalom'
 import { usePublikusAdat } from './usePublikusAdat'
 import { URES_TARTALOM } from '../../lib/publikusTartalom'
+import { JOGI_CIM } from '../../lib/ceg'
 import { csomagbanBenne } from '../../lib/csomag'
 import type { Catalog, DataSource } from '../../data/source'
 
@@ -648,7 +649,7 @@ export function FoglalasUrlap({
           </label>
           <p className="fogl-adatvedelem">
             {sz('foglalas.adatvedelem')}{' '}
-            <a href="/adatvedelem" target="_blank" rel="noopener">{sz('lab.adatvedelem')}</a>.
+            <a href="/adatvedelem" target="_blank" rel="noopener">{JOGI_CIM.adatvedelem}</a>.
           </p>
         </section>
       )}

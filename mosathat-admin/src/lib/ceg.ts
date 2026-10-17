@@ -10,6 +10,8 @@ export const CEG = {
   honlap: 'mosathat.hu',
 }
 
+export const JOGI_CIM = { impresszum: 'Impresszum', adatvedelem: 'Adatvédelmi tájékoztató' } as const
+
 export const JOGI_HATALY = '2026. október 17.'
 
 export const TERVEZET = true

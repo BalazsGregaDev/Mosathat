@@ -6,7 +6,8 @@ import { hibaSzoveg, idoMezo, maStr, napRovidCim } from '../../lib/format'
 import IdoMezo from '../common/IdoMezo'
 import type { DayOverride, OpeningDay, ShopSettings, ValidityKind } from '../../lib/types'
 
-type Ful = 'ido' | 'altalanos' | 'kivetel'
+export type BeallitasFul = 'ido' | 'altalanos' | 'kivetel'
+type Ful = BeallitasFul
 
 const FejHely = createContext<HTMLElement | null>(null)
 const AktivFul = createContext(true)
@@ -25,8 +26,8 @@ function FulTartalom({ aktiv, children }: { aktiv: boolean; children: React.Reac
   )
 }
 
-export default function SettingsPage() {
-  const [ful, setFul] = useState<Ful>('ido')
+export default function SettingsPage({ kezdoFul = 'ido' }: { kezdoFul?: Ful }) {
+  const [ful, setFul] = useState<Ful>(kezdoFul)
   const [fejHely, setFejHely] = useState<HTMLElement | null>(null)
 
   return (
@@ -130,7 +131,7 @@ function Nyitvatartas() {
   if (!napok) return <div className="betolt">Betöltés…</div>
 
   return (
-    <div className="panel panelek-szeles">
+    <div className="panel panelek-szeles" data-mezo="nyitvatartas">
       <h3>A hét beosztása</h3>
       <div className="panel-torzs">
         <p className="halk" style={{ fontSize: 'var(--m-xs)', marginBottom: 'var(--t3)' }}>
@@ -169,13 +170,13 @@ function Nyitvatartas() {
                           <IdoMezo className="beviteli ido"
                                  value={idoMezo(d.opens)}
                                  onChange={(v) => modosit(d.weekday, { opens: v })}
-                                 ariaLabel={`${d.nev} nyitás`} />
+                                 ariaLabel={`${d.nev} nyitás`} mezo="nyitas" nap={d.weekday} />
                         </td>
                         <td>
                           <IdoMezo className="beviteli ido"
                                  value={idoMezo(d.closes)}
                                  onChange={(v) => modosit(d.weekday, { closes: v })}
-                                 ariaLabel={`${d.nev} zárás`} />
+                                 ariaLabel={`${d.nev} zárás`} mezo="zaras" nap={d.weekday} />
                         </td>
                         <td>
                           <IdoMezo className="beviteli ido"
@@ -264,7 +265,7 @@ function Altalanos() {
           <div className="mezo">
             <span>Leadás legkorábban</span>
             <IdoMezo ariaLabel="Leadás legkorábban" className="beviteli" value={idoMezo(s.drop_off_from)}
-                   onChange={(v) => mod({ drop_off_from: v })} />
+                   onChange={(v) => mod({ drop_off_from: v })} mezo="leadas" />
             <small>
               Nem a nyitás — ennél korábbra a rendszer nem ígér leadást. 7:15 azért
               van, mert 7:00-ra nem mindig sikerült beérni.
@@ -327,7 +328,7 @@ function Altalanos() {
         <div className="panel-torzs">
           <label className="mezo">
             <span>Online lemondás határideje (óra)</span>
-            <input type="number" min={0} max={168} className="beviteli"
+            <input type="number" min={0} max={168} className="beviteli" data-mezo="lemondas_ora"
                    value={s.online_lemondas_ora}
                    onChange={(e) => mod({ online_lemondas_ora: Number(e.target.value) })} />
             <small>

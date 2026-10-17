@@ -39,8 +39,8 @@ ok('saját címsor a böngészőfülön', true, /^Mosathat — kézi autókozmet
 ok('a teljes szélességet kitölti, nincs admin keret', true,
   await o.p.locator('.kv').evaluate((e) => Math.abs(e.getBoundingClientRect().width - innerWidth) < 2))
 if (KEPEK) await o.p.screenshot({ path: join(KEPEK, 'v77-publikus-asztali.png'), fullPage: true })
-await o.p.locator('.kv-nav a').filter({ hasText: 'Hol vagyunk' }).click(); await o.p.waitForTimeout(1500)
-ok('a menü a szekcióhoz görget', true, await o.p.locator('.kv-hely').evaluate((e) => { const r = e.getBoundingClientRect(); return scrollY > 500 && r.top >= 0 && r.top < innerHeight / 2 }))
+await o.p.locator('.kv-nav a').filter({ hasText: 'Kapcsolat' }).click(); await o.p.waitForTimeout(1500)
+ok('a menü a szekcióhoz görget', true, await o.p.locator('.kv-lab').evaluate((e) => { const r = e.getBoundingClientRect(); return scrollY > 500 && r.top >= 0 && r.top < innerHeight }))
 ok('nincs JS hiba', [], o.hibak)
 await o.ctx.close()
 
