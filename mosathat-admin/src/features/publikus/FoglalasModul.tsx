@@ -9,9 +9,13 @@ import {
 } from '../../lib/format'
 import { csomagLeiras } from '../../lib/csomagLeiras'
 import {
-  CATEGORY_LABEL, EGYSEG, SCOPE_LABEL, ULES_LABEL, ULESEK,
+  EGYSEG, ULESEK,
   type BookingScope, type Extra, type MeasureUnit, type Quote, type SeatMaterial, type VehicleCategory,
 } from '../../lib/types'
+import { katKulcs, terjedelemKulcs, ulesKulcs, type SzovegKulcs } from '../../lib/publikusTartalom'
+import { Gazdag, TartalomProvider, telefonLink, useSz, useUzlet } from './tartalom'
+import { usePublikusAdat } from './usePublikusAdat'
+import { URES_TARTALOM } from '../../lib/publikusTartalom'
 import { csomagbanBenne } from '../../lib/csomag'
 import type { Catalog, DataSource } from '../../data/source'
 
@@ -40,7 +44,6 @@ const EBED: TiltottSav[] = [
   { tol: 0, ig: 9 * 60 - 1 },
   { tol: 11 * 60 + 15, ig: 12 * 60 + 45 },
 ]
-const UZLET_TELEFON = '+36 1 506 0420'
 const ALAP_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 1, ULES: 5, AJTO: 4, LITER: 1 }
 const LEGTOBB_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 10, ULES: 9, AJTO: 6, LITER: 10 }
 const ELVITEL_KEZDETE = 8 * 60
@@ -67,8 +70,8 @@ interface Adatok {
 
 const URES_ADATOK: Adatok = { nev: '', telefon: '', email: '', rendszam: '', marka: '', modell: '', megjegyzes: '' }
 
-const ALLAPOT_NEV: Record<NapAllapot, string> = {
-  szabad: 'Szabad', keves: 'Kevés hely', tele: 'Tele', zarva: 'Zárva',
+const ALLAPOT_KULCS: Record<NapAllapot, SzovegKulcs> = {
+  szabad: 'foglalas.allapot.szabad', keves: 'foglalas.allapot.keves', tele: 'foglalas.allapot.tele', zarva: 'foglalas.allapot.zarva',
 }
 
 export default function FoglalasModul({ onNapiNezet }: {
@@ -77,9 +80,12 @@ export default function FoglalasModul({ onNapiNezet }: {
   const { data, refresh } = useApp()
   const revision = useRevizio()
   const katalogus = useCatalog()
+  const { adat: pub } = usePublikusAdat()
   return (
-    <FoglalasUrlap data={data} katalogus={katalogus} revision={revision} refresh={refresh}
-                   nyilvanos={false} onNapiNezet={onNapiNezet} />
+    <TartalomProvider t={pub?.tartalom ?? URES_TARTALOM} lemondasOra={pub?.lemondasOra}>
+      <FoglalasUrlap data={data} katalogus={katalogus} revision={revision} refresh={refresh}
+                     nyilvanos={false} onNapiNezet={onNapiNezet} lemondasOra={pub?.lemondasOra} />
+    </TartalomProvider>
   )
 }
 
@@ -87,6 +93,8 @@ export function FoglalasUrlap({
   data, katalogus, revision, refresh, nyilvanos, lemondasOra, onNapiNezet,
   kat: katKulso, onKat, csomagId: csomagKulso, onCsomag,
 }: FoglalasKornyezet) {
+  const sz = useSz()
+  const u = useUzlet()
   const holnap = napPlusz(maStr(), 1)
   const utolsoNap = napPlusz(holnap, LEGTOBB_HET * 7)
 
@@ -266,8 +274,8 @@ export function FoglalasUrlap({
       })
       setKesz({
         id, nap,
-        mikor: tip === 'VAROS' ? `kezdés: ${percOra(ido.tol)}`
-          : `hozás: ${percOra(ido.tol)}${hataridoKell && hat !== null ? `, határidő: ${percOra(hat)}` : ''}`,
+        mikor: tip === 'VAROS' ? `${sz('foglalas.kezdes_cimke')}: ${percOra(ido.tol)}`
+          : `${sz('foglalas.hozas_cimke')}: ${percOra(ido.tol)}${hataridoKell && hat !== null ? `, ${sz('foglalas.hatarido_cimke')}: ${percOra(hat)}` : ''}`,
         elvitel: masnap ? elvitelInfo : null,
         email: adatok.email.trim() !== '',
       })
@@ -285,23 +293,21 @@ export function FoglalasUrlap({
 
   const set = <K extends keyof Adatok>(k: K, v: string) => setAdatok((x) => ({ ...x, [k]: v }))
   const csomag = csomagok.find((p) => p.id === csomagId) ?? null
-  const csomagNev = csomag ? `${csomag.name}${fsBe ? ' + Full Service' : ''}` : ''
+  const csomagNev = csomag ? `${csomag.name}${fsBe ? ` + ${sz('foglalas.fs')}` : ''}` : ''
 
   if (kesz) {
     return (
       <div className="fogl">
         {!nyilvanos && <ProbaSav />}
         <section className="fogl-kartya fogl-siker">
-          <h2>Köszönjük, megkaptuk a foglalási kérésed!</h2>
+          <h2>{sz('foglalas.siker')}</h2>
           <p>
             {napCim(kesz.nap)}, {kesz.mikor}.
-            {kesz.elvitel && <> Elviheted: {elvitelSzoveg(kesz.elvitel)}.</>}
-            {kesz.email
-              ? ' Amint visszaigazoltuk, e-mailt küldünk róla, benne a lemondó linkkel.'
-              : ' Hamarosan visszaigazoljuk telefonon.'}
+            {kesz.elvitel && <> {sz('foglalas.siker_elvitel', { mikor: elvitelSzoveg(kesz.elvitel) })}</>}
+            {' '}{kesz.email ? sz('foglalas.siker_email') : sz('foglalas.siker_telefon')}
           </p>
           <div className="fogl-gombok">
-            <button type="button" className="btn" onClick={ujra}>Új foglalás</button>
+            <button type="button" className="btn" onClick={ujra}>{sz('foglalas.uj')}</button>
             {onNapiNezet && (
               <button type="button" className="btn btn-fo" onClick={() => onNapiNezet(kesz.nap)}>
                 Megnézem a napi nézetben
@@ -325,18 +331,18 @@ export function FoglalasUrlap({
       )}
 
       <section className="fogl-kartya">
-        <h2><span className="lepes">1</span> Milyen autóval jössz?</h2>
+        <h2><span className="lepes">1</span> {sz('foglalas.auto')}</h2>
         <div className="fogl-valaszto harom">
           {KATEGORIAK.map((k) => (
             <button key={k} type="button" aria-pressed={kat === k} onClick={() => setKat(k)}>
-              {CATEGORY_LABEL[k]}
+              {sz(katKulcs.foglalas(k))}
             </button>
           ))}
         </div>
       </section>
 
       <section className="fogl-kartya">
-        <h2><span className="lepes">2</span> Csomag</h2>
+        <h2><span className="lepes">2</span> {sz('foglalas.csomag')}</h2>
         <div className="fogl-csomagok">
           {csomagok.map((p) => {
             const a = ar(p.id, 'TELJES')
@@ -345,7 +351,7 @@ export function FoglalasUrlap({
               <button key={p.id} type="button" className="fogl-csomag" aria-pressed={csomagId === p.id}
                       disabled={!lehet} onClick={() => setCsomagId(p.id)}>
                 <span className="nev">{p.name}</span>
-                <span className="ar">{lehet ? `${ft(a!.price_huf)}-tól` : 'árajánlat alapján'}</span>
+                <span className="ar">{lehet ? `${ft(a!.price_huf)}-tól` : sz('foglalas.arajanlat')}</span>
                 {a?.duration_minutes ? <span className="ido">kb. {idotartam(a.duration_minutes)}</span> : null}
                 {csomagLeiras(katalogus, p) && <span className="leiras">{csomagLeiras(katalogus, p)}</span>}
               </button>
@@ -357,26 +363,24 @@ export function FoglalasUrlap({
           <label className="fogl-fs" data-be={fsBe || undefined} data-tiltva={!fsLehet || undefined}>
             <input type="checkbox" checked={fsBe} disabled={!fsLehet} onChange={(e) => setFs(e.target.checked)} />
             <span className="nev">
-              Full Service
-              <small>
-                A csomag mellé az ülések mélytisztítása: kárpitnál vizes kárpittisztítás, bőrnél
-                bőrtisztítás és ápolás. A vizes kárpit aznap is elvihető, de ajánlott egy éjszakára
-                nálunk hagyni, hogy megszáradjon.
-              </small>
+              {sz('foglalas.fs')}
+              <small>{sz('foglalas.fs_leiras')}</small>
             </span>
             <span className="ar">
-              {fsLehet ? <>{ft(fsSor!.price_huf)}<small>{csomag.name} csomaggal együtt</small></> : 'árajánlat alapján'}
+              {fsLehet
+                ? <>{ft(fsSor!.price_huf)}<small>{sz('foglalas.fs_csomaggal', { csomag: csomag.name })}</small></>
+                : sz('foglalas.arajanlat')}
             </span>
           </label>
         )}
 
         {fsBe && (
           <div className="fogl-ules">
-            <span className="cimke">Milyen az ülés?</span>
+            <span className="cimke">{sz('foglalas.ules')}</span>
             <div className="fogl-valaszto harom">
               {ULESEK.map((u) => (
                 <button key={u} type="button" aria-pressed={ules === u} onClick={() => setUles(u)}>
-                  {ULES_LABEL[u]}
+                  {sz(ulesKulcs(u))}
                 </button>
               ))}
             </div>
@@ -386,7 +390,7 @@ export function FoglalasUrlap({
 
       {csomagId && (
         <section className="fogl-kartya">
-          <h2><span className="lepes">3</span> Mit csináljunk?</h2>
+          <h2><span className="lepes">3</span> {sz('foglalas.mit')}</h2>
           <div className="fogl-valaszto harom">
             {TERJEDELMEK.map((s) => {
               const a = ar(csomagId, s)
@@ -394,21 +398,21 @@ export function FoglalasUrlap({
               return (
                 <button key={s} type="button" aria-pressed={sc === s}
                         disabled={!lehet} onClick={() => setScope(s)}>
-                  {SCOPE_LABEL[s]}
-                  <small>{foglalhato(csomagId, s) ? ft(a!.price_huf) : 'telefonon'}</small>
+                  {sz(terjedelemKulcs(s))}
+                  <small>{foglalhato(csomagId, s) ? ft(a!.price_huf) : sz('foglalas.telefonon')}</small>
                 </button>
               )
             })}
           </div>
-          {fsBe && <p className="fogl-al-szoveg">Full Service-nél a teljes csomag jár, kívül és belül.</p>}
+          {fsBe && <p className="fogl-al-szoveg">{sz('foglalas.fs_teljes')}</p>}
         </section>
       )}
 
       {csomagId && kinaltExtrak.length > 0 && (
         <section className="fogl-kartya">
-          <h2><span className="lepes">4</span> Kérsz még valamit? <small>nem kötelező</small></h2>
+          <h2><span className="lepes">4</span> {sz('foglalas.extrak')} <small>{sz('foglalas.nem_kotelezo')}</small></h2>
           {csomag && rejtett > 0 && (
-            <p className="fogl-al-szoveg">Ami a {csomagNev} csomagban már benne van, azt itt nem kínáljuk külön.</p>
+            <p className="fogl-al-szoveg">{sz('foglalas.extrak_benne', { csomag: csomagNev })}</p>
           )}
           <div className="fogl-extrak">
             {kinaltExtrak.map((e) => {
@@ -424,7 +428,7 @@ export function FoglalasUrlap({
                       {e.description && <small>{e.description}</small>}
                     </span>
                     <span className="ar" data-egyeztet={egyeztet || undefined}>
-                      {egyeztet ? 'ár egyeztetés után'
+                      {egyeztet ? sz('foglalas.ar_egyeztetes')
                         : `+ ${ft(e.price_huf)}${egysegre ? ` / ${EGYSEG[e.price_unit]}` : ''}`}
                     </span>
                   </label>
@@ -447,15 +451,15 @@ export function FoglalasUrlap({
 
       {csomagId && !fsBe && (
         <section className="fogl-kartya">
-          <h2><span className="lepes">5</span> Megvárod, vagy itt hagyod?</h2>
+          <h2><span className="lepes">5</span> {sz('foglalas.var_vagy_hagy')}</h2>
           <div className="fogl-valaszto ketto">
             <button type="button" aria-pressed={tipus === 'VAROS'} onClick={() => setTipus('VAROS')}>
-              Megvárom
-              <small>Pontos kezdési időpontot választasz, és amíg kész, nálunk várhatsz.</small>
+              {sz('foglalas.varom')}
+              <small>{sz('foglalas.varom_leiras')}</small>
             </button>
             <button type="button" aria-pressed={tipus === 'LEADOS'} onClick={() => setTipus('LEADOS')}>
-              Itt hagyom
-              <small>Behozod amikor tudod, kész vagyunk mire viszed.</small>
+              {sz('foglalas.hagyom')}
+              <small>{sz('foglalas.hagyom_leiras')}</small>
             </button>
           </div>
         </section>
@@ -463,18 +467,18 @@ export function FoglalasUrlap({
 
       {csomagId && fsBe && (
         <section className="fogl-kartya">
-          <h2><span className="lepes">5</span> Mikor viszed el?</h2>
-          <p className="fogl-al-szoveg">Full Service-nél az autót nálunk hagyod.</p>
+          <h2><span className="lepes">5</span> {sz('foglalas.elvitel')}</h2>
+          <p className="fogl-al-szoveg">{sz('foglalas.elvitel_fs')}</p>
           <div className="fogl-valaszto ketto">
             <button type="button" aria-pressed={elvitel === 'AZNAP'} onClick={() => setElvitel('AZNAP')}>
-              Aznap
-              <small>{szaradni ? 'Amint elkészül, vizesen elviheted.' : 'Amint elkészül, elviheted.'}</small>
+              {sz('foglalas.aznap')}
+              <small>{szaradni ? sz('foglalas.aznap_vizes') : sz('foglalas.aznap_bor')}</small>
             </button>
             <button type="button" aria-pressed={elvitel === 'MASNAP'} onClick={() => setElvitel('MASNAP')}>
-              Másnap
+              {sz('foglalas.masnap')}
               <small>
-                {szaradni ? 'Ajánlott: egy éjszakát nálunk szárad. ' : ''}
-                Másnap reggel 8-tól zárásig bármikor elviheted.
+                {szaradni ? `${sz('foglalas.masnap_szarad')} ` : ''}
+                {sz('foglalas.masnap_leiras')}
               </small>
             </button>
           </div>
@@ -483,14 +487,11 @@ export function FoglalasUrlap({
 
       {csomagId && tip && (
         <section className="fogl-kartya">
-          <h2><span className="lepes">6</span> Melyik nap?</h2>
+          <h2><span className="lepes">6</span> {sz('foglalas.nap')}</h2>
           {ajanlatHiba ? (
             <p className="fogl-figyel">Nem sikerült kiszámolni az árat és az időt: {ajanlatHiba}</p>
           ) : !perc ? (
-            <p className="fogl-figyel">
-              Ehhez a választáshoz nincs megadva munkaidő, ezért nem tudunk szabad
-              időpontot számolni. Kérjük, hívj minket.
-            </p>
+            <p className="fogl-figyel">{sz('foglalas.nincs_munkaido')}</p>
           ) : (
             <>
               <div className="fogl-lapozo">
@@ -513,7 +514,7 @@ export function FoglalasUrlap({
                             onClick={() => setNap(d)}>
                       <span className="szam">{Number(d.slice(8, 10))}</span>
                       <span className="allapot">
-                        {allapot === 'korai' ? '' : allapot === 'tolt' ? '…' : ALLAPOT_NEV[allapot]}
+                        {allapot === 'korai' ? '' : allapot === 'tolt' ? '…' : sz(ALLAPOT_KULCS[allapot])}
                       </span>
                     </button>
                   )
@@ -521,37 +522,37 @@ export function FoglalasUrlap({
               </div>
               {napHiba && <p className="fogl-figyel">Nem sikerült betölteni a szabad időpontokat: {napHiba}</p>}
               <div className="fogl-jelmagyarazat">
-                <span data-allapot="szabad">Szabad</span>
-                <span data-allapot="keves">Kevés hely</span>
-                <span data-allapot="tele">Tele</span>
+                <span data-allapot="szabad">{sz('foglalas.allapot.szabad')}</span>
+                <span data-allapot="keves">{sz('foglalas.allapot.keves')}</span>
+                <span data-allapot="tele">{sz('foglalas.allapot.tele')}</span>
               </div>
 
               {nap && (
                 <>
                   <h2 className="fogl-al"><span className="lepes">7</span>
-                    {tip === 'VAROS' ? ' Mikor kezdjük?' : ' Mikor hozod?'} <small>{napCim(nap)}</small>
+                    {' '}{tip === 'VAROS' ? sz('foglalas.kezdes') : sz('foglalas.hozas')} <small>{napCim(nap)}</small>
                   </h2>
                   {lehetosegek.length === 0 ? (
-                    <p className="fogl-figyel">Erre a napra már nincs szabad időpont.</p>
+                    <p className="fogl-figyel">{sz('foglalas.nincs_ido')}</p>
                   ) : (
                     <div className="fogl-idok">
                       {lehetosegek.map((l) => (
                         <button key={l.tol} type="button" aria-pressed={ido?.tol === l.tol} onClick={() => setIdo(l)}>
                           {percOra(l.tol)}
-                          {tip === 'LEADOS' && !masnap && <small>kész kb. {l.kesz !== null ? percOra(l.kesz) : '—'}</small>}
+                          {tip === 'LEADOS' && !masnap && <small>{sz('foglalas.kesz_kb')} {l.kesz !== null ? percOra(l.kesz) : '—'}</small>}
                         </button>
                       ))}
                     </div>
                   )}
                   {ido && hataridoKell && (
                     <div className="fogl-hatarido">
-                      <span className="cimke">Mikorra legyen kész?</span>
+                      <span className="cimke">{sz('foglalas.hatarido')}</span>
                       {hataridok.length === 0 ? (
-                        <p className="fogl-figyel">Erre a hozási időre nem tudunk határidőt vállalni, válassz korábbit.</p>
+                        <p className="fogl-figyel">{sz('foglalas.hatarido_nincs')}</p>
                       ) : (
                         <>
                           <p className="fogl-al-szoveg">
-                            Legkorábban {percOra(hataridok[0])}, legkésőbb {percOra(hataridok[hataridok.length - 1])}.
+                            {sz('foglalas.hatarido_savos', { tol: percOra(hataridok[0]), ig: percOra(hataridok[hataridok.length - 1]) })}
                           </p>
                           <div className="fogl-hataridok">
                             {hataridok.map((t) => (
@@ -567,15 +568,12 @@ export function FoglalasUrlap({
                   {masnap && lehetosegek.length > 0 && (
                     <p className="fogl-elvitel">
                       {elvitelInfo
-                        ? <>Elviheted: <strong>{elvitelSzoveg(elvitelInfo)}</strong>, bármikor.</>
-                        : 'Az elvitel napját számoljuk…'}
+                        ? <Gazdag s={sz('foglalas.elvitel_mikor', { mikor: elvitelSzoveg(elvitelInfo) })} kiemeles="strong" />
+                        : sz('foglalas.elvitel_szamol')}
                     </p>
                   )}
                   <p className="fogl-erkezes">
-                    Kérjük, ha lehet, a választott időpont előtt <strong>5–10 perccel</strong> érkezz.
-                    Ha késel, kérjük, telefonálj: <a href={`tel:${UZLET_TELEFON.replace(/\s/g, '')}`}>{UZLET_TELEFON}</a>
-                  <br />
-                  A végleges ár az autó állapotától függően eltérhet, erősen szennyezett autón 50% felárat számíthatunk fel.
+                    <Gazdag s={sz('foglalas.erkezes')} kiemeles="strong" linkek={{ [u.telefon]: telefonLink(u.telefon) }} />
                   </p>
                 </>
               )}
@@ -586,27 +584,27 @@ export function FoglalasUrlap({
 
       {ido && (
         <section className="fogl-kartya">
-          <h2><span className="lepes">8</span> Az adataid</h2>
+          <h2><span className="lepes">8</span> {sz('foglalas.adatok')}</h2>
           <div className="fogl-urlap">
-            <div className="mezo"><label htmlFor="fo-nev">Név *</label>
+            <div className="mezo"><label htmlFor="fo-nev">{sz('foglalas.mezo.nev')} *</label>
               <input id="fo-nev" className="beviteli" value={adatok.nev} autoComplete="name"
                      onChange={(e) => set('nev', e.target.value)} /></div>
-            <div className="mezo"><label htmlFor="fo-tel">Telefonszám *</label>
+            <div className="mezo"><label htmlFor="fo-tel">{sz('foglalas.mezo.telefon')} *</label>
               <input id="fo-tel" className="beviteli" type="tel" value={adatok.telefon} autoComplete="tel"
                      placeholder="+36 30 123 4567" onChange={(e) => set('telefon', e.target.value)} /></div>
-            <div className="mezo"><label htmlFor="fo-email">E-mail</label>
+            <div className="mezo"><label htmlFor="fo-email">{sz('foglalas.mezo.email')}</label>
               <input id="fo-email" className="beviteli" type="email" value={adatok.email} autoComplete="email"
-                     placeholder="a visszaigazoláshoz" onChange={(e) => set('email', e.target.value)} /></div>
-            <div className="mezo"><label htmlFor="fo-rsz">Rendszám *</label>
+                     placeholder={sz('foglalas.minta.email')} onChange={(e) => set('email', e.target.value)} /></div>
+            <div className="mezo"><label htmlFor="fo-rsz">{sz('foglalas.mezo.rendszam')} *</label>
               <input id="fo-rsz" className="beviteli" value={adatok.rendszam}
                      onChange={(e) => set('rendszam', e.target.value.toUpperCase())} /></div>
-            <div className="mezo"><label htmlFor="fo-marka">Márka</label>
+            <div className="mezo"><label htmlFor="fo-marka">{sz('foglalas.mezo.marka')}</label>
               <input id="fo-marka" className="beviteli" value={adatok.marka} onChange={(e) => set('marka', e.target.value)} /></div>
-            <div className="mezo"><label htmlFor="fo-modell">Modell</label>
+            <div className="mezo"><label htmlFor="fo-modell">{sz('foglalas.mezo.modell')}</label>
               <input id="fo-modell" className="beviteli" value={adatok.modell} onChange={(e) => set('modell', e.target.value)} /></div>
-            <div className="mezo szeles"><label htmlFor="fo-megj">Megjegyzés</label>
+            <div className="mezo szeles"><label htmlFor="fo-megj">{sz('foglalas.mezo.megjegyzes')}</label>
               <textarea id="fo-megj" className="beviteli" value={adatok.megjegyzes}
-                        placeholder="pl. kutyaszőr a hátsó ülésen" onChange={(e) => set('megjegyzes', e.target.value)} /></div>
+                        placeholder={sz('foglalas.minta.megjegyzes')} onChange={(e) => set('megjegyzes', e.target.value)} /></div>
           </div>
           {nyilvanos && (
             <div className="fogl-csapda" aria-hidden="true">
@@ -617,16 +615,11 @@ export function FoglalasUrlap({
           )}
           <label className="fogl-feltetel">
             <input type="checkbox" checked={elfogad} onChange={(e) => setElfogad(e.target.checked)} />
-            <span>
-              Tudomásul veszem, hogy ez foglalási kérés: az időpont akkor végleges, amikor
-              visszaigazoljuk. Ha megadom az e-mail címem, a visszaigazolásban kapok egy lemondó
-              linket, amellyel {lemondasOra != null ? `az időpont előtt legalább ${lemondasOra} órával` : 'a megadott határidőig'} lemondhatom
-              a foglalást. Ha ez a határidő már lejárt, telefonon tudom jelezni.
-            </span>
+            <span>{sz('foglalas.feltetel', { lemondas_ora: lemondasOra ?? 24 })}</span>
           </label>
           <p className="fogl-adatvedelem">
-            A megadott adatokat a foglalás teljesítéséhez kezeljük. Részletek:{' '}
-            <a href="/adatvedelem" target="_blank" rel="noopener">Adatvédelmi tájékoztató</a>.
+            {sz('foglalas.adatvedelem')}{' '}
+            <a href="/adatvedelem" target="_blank" rel="noopener">{sz('lab.adatvedelem')}</a>.
           </p>
         </section>
       )}
@@ -636,8 +629,8 @@ export function FoglalasUrlap({
           <div className="sorok">
             <div>
               <strong>{csomag.name}</strong>
-              {fsBe && <> + Full Service{ules ? ` (${ULES_LABEL[ules].toLowerCase()})` : ''}</>}
-              {' · '}{CATEGORY_LABEL[kat]} · {SCOPE_LABEL[sc]}
+              {fsBe && <> + {sz('foglalas.fs')}{ules ? ` (${sz(ulesKulcs(ules)).toLowerCase()})` : ''}</>}
+              {' · '}{sz(katKulcs.foglalas(kat))} · {sz(terjedelemKulcs(sc))}
             </div>
             {valasztottExtrak.length > 0 && (
               <div className="halk">
@@ -647,26 +640,26 @@ export function FoglalasUrlap({
               </div>
             )}
             {egyeztetendo.length > 0 && (
-              <div className="halk">Ára egyeztetés után: {egyeztetendo.map((e) => e.name).join(', ')}</div>
+              <div className="halk">{sz('foglalas.egyeztetendo')} {egyeztetendo.map((e) => e.name).join(', ')}</div>
             )}
             {nap && ido && (
               <div>
-                {napCim(nap)} · {tip === 'VAROS' ? `kezdés: ${percOra(ido.tol)}` : `hozás: ${percOra(ido.tol)}`}
-                {hataridoKell && hat !== null && ` · határidő: ${percOra(hat)}`}
+                {napCim(nap)} · {tip === 'VAROS' ? `${sz('foglalas.kezdes_cimke')}: ${percOra(ido.tol)}` : `${sz('foglalas.hozas_cimke')}: ${percOra(ido.tol)}`}
+                {hataridoKell && hat !== null && ` · ${sz('foglalas.hatarido_cimke')}: ${percOra(hat)}`}
                 {masnap && elvitelInfo
-                  && ` · elvitel: ${napRovidCim(elvitelInfo.nap)} ${percOra(elvitelInfo.tol)}–${percOra(elvitelInfo.ig)}`}
+                  && ` · ${sz('foglalas.elvitel_cimke')}: ${napRovidCim(elvitelInfo.nap)} ${percOra(elvitelInfo.tol)}–${percOra(elvitelInfo.ig)}`}
               </div>
             )}
           </div>
           <div className="osszeg">
             <span className="ar">{ajanlat ? ft(ajanlat.price_huf) : '—'}</span>
             <span className="halk">{perc ? `kb. ${idotartam(perc)}` : ''}</span>
-            {egyeztetendo.length > 0 && <span className="halk">+ egyeztetendő tétel</span>}
+            {egyeztetendo.length > 0 && <span className="halk">{sz('foglalas.egyeztetendo_tetel')}</span>}
           </div>
           <div className="kuld">
             {hiba && <div className="hibauzenet">{hiba}</div>}
             <button type="button" className="btn btn-fo" disabled={!kuldheto} onClick={() => void kuldes()}>
-              {kuld ? 'Küldés…' : 'Foglalási kérés küldése'}
+              {kuld ? sz('foglalas.kuldes_folyamatban') : sz('foglalas.kuldes')}
             </button>
           </div>
         </section>
@@ -682,7 +675,7 @@ export function FoglalasUrlap({
             <li>Munkaidő: {perc ? `${perc} perc` : 'nincs'} · típus: {tip ?? '—'}{fsBe ? ` · Full Service, elvitel: ${elvitel ?? '—'}` : ''}</li>
             <li>Napok: {napok.filter((d) => napErtek.has(d)).map((d) => {
               const e = napErtek.get(d)!
-              return `${d.slice(5)}: ${ALLAPOT_NEV[e.allapot]} (${e.lehetosegek.length} időpont, még ${e.meg})`
+              return `${d.slice(5)}: ${sz(ALLAPOT_KULCS[e.allapot])} (${e.lehetosegek.length} időpont, még ${e.meg})`
             }).join(' · ') || '—'}</li>
             {nap && <li>{nap}: {napAdat.get(nap)?.munkak.length ?? 0} munka a beosztásban</li>}
           </ul>

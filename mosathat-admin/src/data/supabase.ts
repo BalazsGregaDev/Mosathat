@@ -12,6 +12,7 @@ import type {
   OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
+import type { PublikusMentes } from '../lib/publikusTartalom'
 import { idoRovidit, num, numOrNull, publikusbol, publikusNapbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { EloFrissites } from './elo'
 import { tokenFetch } from './tokenFetch'
@@ -279,6 +280,11 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('publikus_foglalas', { p: input })
     if (error) fail('Foglalási kérés', error)
     return data as string
+  }
+
+  async savePublikusTartalom(p: PublikusMentes): Promise<void> {
+    const { error } = await this.sb.rpc('publikus_tartalom_mentes', { p })
+    if (error) fail('A publikus oldal mentése', error)
   }
 
   async getPublikus(): Promise<PublikusAdat> {

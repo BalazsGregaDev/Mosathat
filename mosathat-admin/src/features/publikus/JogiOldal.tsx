@@ -1,19 +1,21 @@
 import type { ReactNode } from 'react'
 
-import { ADATFELDOLGOZOK, BEKELTETO, CEG, JOGI_HATALY, KAMERA, NAIH, TARHELY, TERVEZET } from '../../lib/ceg'
+import { BEKELTETO, NAIH, TARHELY } from '../../lib/ceg'
+import { useCeg, useJogi } from './tartalom'
 
 export type JogiLap = 'impresszum' | 'adatvedelem'
 
 function Keret({ cim, children }: { cim: string; children: ReactNode }) {
+  const jogi = useJogi()
   return (
     <article className="kv-jogi">
-      {TERVEZET && (
+      {jogi.tervezet && (
         <p className="kv-jogi-tervezet" role="note">
           Tervezet: a szöveg jogi átnézés alatt áll, az adatok véglegesítése folyamatban van.
         </p>
       )}
       <h1>{cim}</h1>
-      <p className="kv-jogi-hataly">Hatályos: {JOGI_HATALY}</p>
+      <p className="kv-jogi-hataly">Hatályos: {jogi.hataly}</p>
       {children}
     </article>
   )
@@ -33,18 +35,19 @@ function Level({ cim }: { cim: string }) {
 }
 
 function Impresszum() {
+  const ceg = useCeg()
   return (
     <Keret cim="Impresszum">
       <h2>A szolgáltató adatai</h2>
       <dl className="kv-jogi-adatok">
-        <Sor cimke="Cégnév">{CEG.nev}</Sor>
-        <Sor cimke="Rövidített cégnév">{CEG.rovidNev}</Sor>
-        <Sor cimke="Székhely">{CEG.szekhely}</Sor>
-        <Sor cimke="Cégjegyzékszám">{CEG.cegjegyzekszam}</Sor>
-        <Sor cimke="Nyilvántartó bíróság">{CEG.cegbirosag}</Sor>
-        <Sor cimke="Adószám">{CEG.adoszam}</Sor>
-        <Sor cimke="Telefon">{CEG.telefon}</Sor>
-        <Sor cimke="E-mail"><Level cim={CEG.email} /></Sor>
+        <Sor cimke="Cégnév">{ceg.nev}</Sor>
+        <Sor cimke="Rövidített cégnév">{ceg.rovidNev}</Sor>
+        <Sor cimke="Székhely">{ceg.szekhely}</Sor>
+        <Sor cimke="Cégjegyzékszám">{ceg.cegjegyzekszam}</Sor>
+        <Sor cimke="Nyilvántartó bíróság">{ceg.cegbirosag}</Sor>
+        <Sor cimke="Adószám">{ceg.adoszam}</Sor>
+        <Sor cimke="Telefon">{ceg.telefon}</Sor>
+        <Sor cimke="E-mail"><Level cim={ceg.email} /></Sor>
       </dl>
 
       <h2>Tárhelyszolgáltatók</h2>
@@ -61,8 +64,8 @@ function Impresszum() {
       <h2>Panaszkezelés</h2>
       <p>
         Ha valamivel nem vagy elégedett, panaszodat elmondhatod személyesen a helyszínen, telefonon
-        ({CEG.telefon}), vagy megírhatod e-mailben (<Level cim={CEG.email} />) vagy postán a székhelyünkre
-        ({CEG.szekhely}). A szóbeli panaszt azonnal megvizsgáljuk, és ha lehet, rögtön orvosoljuk; ha erre
+        ({ceg.telefon}), vagy megírhatod e-mailben (<Level cim={ceg.email} />) vagy postán a székhelyünkre
+        ({ceg.szekhely}). A szóbeli panaszt azonnal megvizsgáljuk, és ha lehet, rögtön orvosoljuk; ha erre
         nincs mód, vagy nem értesz egyet a megoldással, jegyzőkönyvet veszünk fel róla. Az írásbeli
         panaszra a beérkezésétől számított 30 napon belül írásban, érdemben válaszolunk. A panaszról
         felvett jegyzőkönyvet és a válaszunkat három évig megőrizzük.
@@ -115,6 +118,9 @@ const SZERZODES = 'a szerződés megkötését megelőző lépések és a szerz�
 const ELEVULES = 'a szolgáltatás teljesítésétől számított 5 évig, a polgári jogi igények elévüléséig (Ptk. 6:22. §)'
 
 function Adatvedelem() {
+  const ceg = useCeg()
+  const jogi = useJogi()
+  const kamera = jogi.kamera
   return (
     <Keret cim="Adatvédelmi tájékoztató">
       <p>
@@ -125,12 +131,12 @@ function Adatvedelem() {
 
       <h2>1. Az adatkezelő</h2>
       <dl className="kv-jogi-adatok">
-        <Sor cimke="Név">{CEG.nev} ({CEG.rovidNev})</Sor>
-        <Sor cimke="Székhely">{CEG.szekhely}</Sor>
-        <Sor cimke="Cégjegyzékszám">{CEG.cegjegyzekszam}</Sor>
-        <Sor cimke="Adószám">{CEG.adoszam}</Sor>
-        <Sor cimke="E-mail"><Level cim={CEG.email} /></Sor>
-        <Sor cimke="Telefon">{CEG.telefon}</Sor>
+        <Sor cimke="Név">{ceg.nev} ({ceg.rovidNev})</Sor>
+        <Sor cimke="Székhely">{ceg.szekhely}</Sor>
+        <Sor cimke="Cégjegyzékszám">{ceg.cegjegyzekszam}</Sor>
+        <Sor cimke="Adószám">{ceg.adoszam}</Sor>
+        <Sor cimke="E-mail"><Level cim={ceg.email} /></Sor>
+        <Sor cimke="Telefon">{ceg.telefon}</Sor>
       </dl>
       <p>
         Adatvédelmi tisztviselőt nem jelöltünk ki, mert tevékenységünk nem tartozik a GDPR 37. cikke
@@ -187,7 +193,7 @@ function Adatvedelem() {
         megorzes="a foglaláshoz kapcsolódó levelezést a foglalás adataival együtt (lásd 2.3 pont), az egyéb megkereséseket az ügy lezárásától számított 1 évig"
       >
         <p>
-          E-mailben a hivatalos címünkön (<Level cim={CEG.email} />) tartjuk a kapcsolatot. A telefonhívásokat nem
+          E-mailben a hivatalos címünkön (<Level cim={ceg.email} />) tartjuk a kapcsolatot. A telefonhívásokat nem
           rögzítjük.
         </p>
       </Adatkezeles>
@@ -228,15 +234,15 @@ function Adatvedelem() {
         adatok="a megfigyelt területen tartózkodók képmása és mozgása, a járművek képe a rendszámmal együtt; hangot nem rögzítünk"
         cel="a telephely, a ránk bízott ügyfélautók, valamint a vállalkozás eszközeinek és anyagainak védelme; ha egy autón sérülést észlelnek, vagy a telephelyen baleset, lopás vagy rongálás történik, a körülmények tisztázása"
         jogalap="a vállalkozás és az ügyfeleink jogos érdeke a ránk bízott járművek és a vagyontárgyak védelmében (GDPR 6. cikk (1) f) pont); az érdekmérlegelés eredményét kérésre megismerheted"
-        megorzes={KAMERA.megorzes
-          ? `a rögzítéstől számított ${KAMERA.megorzes}, utána a rendszer automatikusan felülírja a felvételeket; ha egy felvételt hatósági vagy bírósági eljárásban, illetve kárigény rendezéséhez felhasználunk, az eljárás vagy az ügy lezárásáig megőrizzük`
+        megorzes={kamera.megorzes
+          ? `a rögzítéstől számított ${kamera.megorzes}, utána a rendszer automatikusan felülírja a felvételeket; ha egy felvételt hatósági vagy bírósági eljárásban, illetve kárigény rendezéséhez felhasználunk, az eljárás vagy az ügy lezárásáig megőrizzük`
           : 'a megőrzési időt a véglegesítéskor tüntetjük fel; ha egy felvételt hatósági vagy bírósági eljárásban, illetve kárigény rendezéséhez felhasználunk, az eljárás vagy az ügy lezárásáig megőrizzük'}
       >
-        {KAMERA.kamerak.length > 0 ? (
+        {kamera.kamerak.length > 0 ? (
           <>
             <p>A kamerák helye és az általuk látott terület:</p>
             <ul>
-              {KAMERA.kamerak.map((k) => <li key={k.hely}><strong>{k.hely}:</strong> {k.terulet}</li>)}
+              {kamera.kamerak.map((k) => <li key={k.hely}><strong>{k.hely}:</strong> {k.terulet}</li>)}
             </ul>
           </>
         ) : (
@@ -310,7 +316,7 @@ function Adatvedelem() {
             <tr><th>Adatfeldolgozó</th><th>Feladat</th><th>Cím</th></tr>
           </thead>
           <tbody>
-            {ADATFELDOLGOZOK.map((a) => (
+            {jogi.adatfeldolgozok.map((a) => (
               <tr key={a.nev}><td>{a.nev}</td><td>{a.feladat}</td><td>{a.cim}</td></tr>
             ))}
           </tbody>
@@ -363,7 +369,7 @@ function Adatvedelem() {
         <li><strong>Hozzájárulás visszavonása</strong> (7. cikk (3)): a térkép betöltéséhez adott hozzájárulást bármikor visszavonhatod; ez a visszavonás előtti adatkezelést nem érinti.</li>
       </ul>
       <p>
-        Kérésedet e-mailben (<Level cim={CEG.email} />) vagy postán ({CEG.szekhely}) küldheted el. Indokolatlan
+        Kérésedet e-mailben (<Level cim={ceg.email} />) vagy postán ({ceg.szekhely}) küldheted el. Indokolatlan
         késedelem nélkül, legkésőbb egy hónapon belül válaszolunk; ezt a határidőt indokolt esetben két
         hónappal meghosszabbíthatjuk, erről az első hónapon belül tájékoztatunk. A válasz ingyenes.
         Ha kétségünk van a kérelmező személyazonosságát illetően, további adatot kérhetünk a

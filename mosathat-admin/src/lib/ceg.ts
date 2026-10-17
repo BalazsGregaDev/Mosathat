@@ -84,8 +84,3 @@ export interface Kamera {
   hely: string
   terulet: string
 }
-
-export const KAMERA: { megorzes: string | null; kamerak: Kamera[] } = {
-  megorzes: null,
-  kamerak: [],
-}

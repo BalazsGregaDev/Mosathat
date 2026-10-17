@@ -59,6 +59,7 @@ ok('mentés után a kártya már nem „új”, a gomb Törlés (nincs foglalás
   [/· új/.test(sima(await kartya.textContent())), sima(await kartya.locator('.btn-veszelyes').innerText())])
 
 console.log('\n=== 2) Mindenhol megjelenik ===\n')
+await menu('Szolgáltatások'); await p.waitForTimeout(1200)
 await ful('Mi van bennük?'); await p.waitForTimeout(800)
 ok('Mi van bennük?: Gold oszlop', ['Munkalépés', 'Start', 'Premium', 'Elit', 'Gold'], await szovegek(p.locator('.tartalom-tabla thead th')))
 await ful('Csomagok és árak'); await p.waitForTimeout(800)

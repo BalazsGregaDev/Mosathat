@@ -75,6 +75,7 @@ ok('a belső sorrend mentve (Belső ablaktisztítás egyet feljebb)', ['Porszív
   (await t.locator('tbody').nth(1).locator('tr[data-sor]').evaluateAll((e) => e.map((x) => x.dataset.sor))).slice(0, 3))
 
 console.log('\n=== 3) Mindenhol átvezetve ===\n')
+await menu(p, 'Szolgáltatások'); await p.waitForTimeout(1200)
 await ful(p, 'Mi van bennük?'); await p.waitForTimeout(800)
 const mt = p.locator('.tartalom-tabla')
 ok('Mi van bennük?: új név a fejlécben', ['Munkalépés', 'Start', 'Prémium', 'Elit'], await szovegek(mt.locator('thead th')))

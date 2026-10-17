@@ -29,12 +29,19 @@ import KeresFigyelo from '../keresek/KeresFigyelo'
 import { foglalasModulLatja } from '../../lib/jogok'
 
 const ArculatPage = lazy(() => import('../arculat/ArculatPage'))
+const ElerhetosegOldal = lazy(() => import('../publikus-admin/ElerhetosegOldal'))
+const TartalomOldal = lazy(() => import('../publikus-admin/TartalomOldal'))
+const CsomagokOldal = lazy(() => import('../publikus-admin/CsomagokOldal'))
+const CegadatokOldal = lazy(() => import('../publikus-admin/CegadatokOldal'))
 
 type Oldal =
   | 'attekintes' | 'nap' | 'szolgaltatasok' | 'partnerek' | 'ugyfelek'
   | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo' | 'foglalas' | 'arculat'
+  | 'pub-elerhetoseg' | 'pub-tartalom' | 'pub-csomagok' | 'pub-cegadatok'
 
-const MENU: { id: Oldal; cimke: string; tulaj?: boolean; foglalas?: boolean }[] = [
+type MenuPont = { id: Oldal; cimke: string; tulaj?: boolean; foglalas?: boolean }
+
+const MENU: MenuPont[] = [
   { id: 'attekintes', cimke: 'Áttekintés', tulaj: true },
   { id: 'nap', cimke: 'Időpontok' },
   { id: 'igazolo', cimke: 'Igazolólap' },
@@ -45,13 +52,19 @@ const MENU: { id: Oldal; cimke: string; tulaj?: boolean; foglalas?: boolean }[] 
   { id: 'beallitasok', cimke: 'Beállítások', tulaj: true },
   { id: 'profilom', cimke: 'Profilom' },
   { id: 'foglalas', cimke: 'Időpontfoglalás', foglalas: true },
-  { id: 'arculat', cimke: 'Arculat', tulaj: true },
+]
+
+const MENU_PUB: MenuPont[] = [
+  { id: 'pub-elerhetoseg', cimke: 'Elérhetőség' },
+  { id: 'pub-tartalom', cimke: 'Tartalom' },
+  { id: 'pub-csomagok', cimke: 'Csomagok' },
+  { id: 'pub-cegadatok', cimke: 'Cégadatok' },
+  { id: 'arculat', cimke: 'Arculat' },
 ]
 
 const MENU_2 = [
   { id: 'keszlet', cimke: 'Készlet' },
   { id: 'galeria', cimke: 'Galéria' },
-  { id: 'tartalom', cimke: 'Tartalom' },
 ]
 
 export default function AppShell() {
@@ -60,8 +73,10 @@ export default function AppShell() {
   const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
   const foglalasJog = foglalasModulLatja(user)
   const menu = MENU.filter((m) => (!m.tulaj || teljesJogu) && (!m.foglalas || foglalasJog))
+  const pubMenu = teljesJogu ? MENU_PUB : []
 
   const [oldal, setOldal] = useState<Oldal>(teljesJogu ? 'attekintes' : 'nap')
+  const oldalCim = [...menu, ...pubMenu].find((m) => m.id === oldal)?.cimke
   const [szerzodesCeg, setSzerzodesCeg] = useState<string | null>(null)
   const [nap, setNap] = useState(maStr())
   const [nezet, setNezet] = useState<'nap' | 'het' | 'honap'>('nap')
@@ -92,6 +107,17 @@ export default function AppShell() {
     setReszletId(id)
   }
 
+  const menuGomb = (m: MenuPont) => (
+    <button
+      key={m.id}
+      aria-current={m.id === oldal ? 'page' : undefined}
+      onClick={() => { setOldal(m.id); setFiok(false); setSzerzodesCeg(null) }}
+    >
+      <span className="pont" />
+      {m.cimke}
+    </button>
+  )
+
   const menuTartalom = (
     <>
       <div className="oldalsav-fej">
@@ -100,16 +126,14 @@ export default function AppShell() {
       </div>
 
       <nav className="menu">
-        {menu.map((m) => (
-          <button
-            key={m.id}
-            aria-current={m.id === oldal ? 'page' : undefined}
-            onClick={() => { setOldal(m.id); setFiok(false); setSzerzodesCeg(null) }}
-          >
-            <span className="pont" />
-            {m.cimke}
-          </button>
-        ))}
+        {menu.map(menuGomb)}
+
+        {pubMenu.length > 0 && (
+          <>
+            <div className="menu-cim">Publikus</div>
+            {pubMenu.map(menuGomb)}
+          </>
+        )}
 
         {teljesJogu && (
           <>
@@ -218,9 +242,7 @@ export default function AppShell() {
             </>
           ) : (
             <>
-              <div className="cim" style={{ fontWeight: 600 }}>
-                {menu.find((m) => m.id === oldal)?.cimke}
-              </div>
+              <div className="cim" style={{ fontWeight: 600 }}>{oldalCim}</div>
               <div className="fejlec-tolto" />
             </>
           )}
@@ -242,7 +264,7 @@ export default function AppShell() {
               <button className="lep" onClick={() => lep(1)} aria-label="Előre">›</button>
             </>
           ) : (
-            <div className="nap">{menu.find((m) => m.id === oldal)?.cimke}</div>
+            <div className="nap">{oldalCim}</div>
           )}
         </header>
 
@@ -269,7 +291,9 @@ export default function AppShell() {
                        onHetre={(d) => { setNap(d); setNezet('het') }} />
           )}
 
-          {oldal === 'szolgaltatasok' && (teljesJogu ? <ServicesPage /> : <ServicesView />)}
+          {oldal === 'szolgaltatasok' && (teljesJogu
+            ? <ServicesPage onCsomagSzerkeszto={() => setOldal('pub-csomagok')} />
+            : <ServicesView />)}
           {oldal === 'partnerek' && (teljesJogu || user?.canEditCustomers
             ? <PartnersPage fokuszCeg={szerzodesCeg} />
             : <PartnersView fokuszCeg={szerzodesCeg} />)}
@@ -284,9 +308,13 @@ export default function AppShell() {
           {oldal === 'foglalas' && foglalasJog && (
             <FoglalasModul onNapiNezet={(d) => { setNap(d); setNezet('nap'); setOldal('nap') }} />
           )}
-          {oldal === 'arculat' && teljesJogu && (
+          {teljesJogu && (oldal === 'arculat' || oldal.startsWith('pub-')) && (
             <Suspense fallback={<div className="betolt">Betöltés…</div>}>
-              <ArculatPage />
+              {oldal === 'arculat' && <ArculatPage />}
+              {oldal === 'pub-elerhetoseg' && <ElerhetosegOldal onBeallitasok={() => setOldal('beallitasok')} />}
+              {oldal === 'pub-tartalom' && <TartalomOldal />}
+              {oldal === 'pub-csomagok' && <CsomagokOldal />}
+              {oldal === 'pub-cegadatok' && <CegadatokOldal />}
             </Suspense>
           )}
         </main>

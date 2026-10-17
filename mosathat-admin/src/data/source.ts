@@ -9,6 +9,8 @@ import type {
   OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
   PublikusNapAdat,
 } from '../lib/types'
+import type { NyitvaNap, PublikusAdatokNyers, PublikusMentes, PublikusTartalomNyers } from '../lib/publikusTartalom'
+import type { Kamera } from '../lib/ceg'
 
 export interface Catalog {
   packages: Package[]
@@ -25,12 +27,18 @@ export interface PublikusAdat {
   mod: 'VILAGOS' | 'SOTET' | null
   lemondasOra: number
   katalogus: Catalog
+  tartalom: PublikusTartalomNyers
 }
 
 export interface PublikusNyers {
   arculat: string | null
   arculat_mod: 'VILAGOS' | 'SOTET' | null
   lemondas_ora?: number
+  leadas?: string | null
+  nyitvatartas?: NyitvaNap[]
+  adatok?: PublikusAdatokNyers
+  szovegek?: Record<string, string>
+  kamerak?: Kamera[]
   extras?: Extra[]
   fullServicePricing?: Catalog['fullServicePricing']
   packages: Catalog['packages']
@@ -52,6 +60,13 @@ export function publikusbol(n: PublikusNyers): PublikusAdat {
       fullServicePricing: n.fullServicePricing ?? [],
       extras: (n.extras ?? []).map(toExtra),
       surcharges: [],
+    },
+    tartalom: {
+      adatok: n.adatok ?? {},
+      szovegek: n.szovegek ?? {},
+      kamerak: n.kamerak ?? [],
+      nyitvatartas: n.nyitvatartas ?? [],
+      leadas: n.leadas ?? null,
     },
   }
 }
@@ -91,6 +106,7 @@ export interface DataSource {
   saveArculat(kod: string, mod: 'VILAGOS' | 'SOTET'): Promise<void>
   getCsomagSzerkeszto(): Promise<CsomagSzerkesztoAdat>
   getPublikus(): Promise<PublikusAdat>
+  savePublikusTartalom(p: PublikusMentes): Promise<void>
   publikusNap(nap: string): Promise<PublikusNapAdat>
   publikusAjanlat(input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
   publikusFoglalas(input: OnlineBookingInput): Promise<string>

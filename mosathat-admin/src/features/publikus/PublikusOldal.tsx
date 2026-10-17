@@ -10,15 +10,20 @@ import { UZLET, type KoncepcioKod } from '../../lib/arculat'
 import Koncepcio, { KoncepcioKeret } from '../arculat/Koncepcio'
 import { FoglalasUrlap, type FoglalasForras } from './FoglalasModul'
 import JogiOldal, { type JogiLap } from './JogiOldal'
+import { TartalomProvider, useSz, useUzlet } from './tartalom'
 
 const PUBLIKUS_KONCEPCIO: KoncepcioKod = '03'
 
 export type PublikusLap = 'fooldal' | JogiLap
 
-const CIMEK: Record<PublikusLap, string> = {
-  fooldal: `${UZLET.nev} — kézi autókozmetika, ${UZLET.irsz}, ${UZLET.cim}`,
-  impresszum: `Impresszum — ${UZLET.nev}`,
-  adatvedelem: `Adatvédelmi tájékoztató — ${UZLET.nev}`,
+function Cim({ lap }: { lap: PublikusLap }) {
+  const sz = useSz()
+  const u = useUzlet()
+  const cim = lap === 'fooldal' ? sz('oldal.cim')
+    : lap === 'impresszum' ? `${sz('lab.impresszum')} — ${u.nev}`
+    : `${sz('lab.adatvedelem')} — ${u.nev}`
+  useEffect(() => { document.title = cim }, [cim])
+  return null
 }
 
 interface Betoltve {
@@ -70,13 +75,11 @@ function EloFoglalas({ forras, adat, valasztas }: Betoltve & { valasztas: Valasz
   const [revision, setRevision] = useState(0)
   const refresh = useCallback(() => setRevision((r) => r + 1), [])
   const data = useMemo(() => nyilvanosForras(forras, revision), [forras, revision])
+  const sz = useSz()
   return (
     <section className="kv-foglalas kv-foglalas-elo">
-      <h2>Időpontfoglalás</h2>
-      <p className="kv-bevezeto">
-        Válaszd ki, mit szeretnél, és mutatjuk a szabad időpontokat. A kérésedet munkatársunk
-        igazolja vissza.
-      </p>
+      <h2>{sz('foglalas.cim')}</h2>
+      <p className="kv-bevezeto">{sz('foglalas.bevezeto')}</p>
       <FoglalasUrlap data={data} katalogus={adat.katalogus} revision={revision} refresh={refresh}
                      nyilvanos lemondasOra={adat.lemondasOra} {...valasztas} />
     </section>
@@ -103,7 +106,7 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
   useMenuMagassag(keret, betoltott ? lap : null)
 
   useEffect(() => {
-    document.title = CIMEK[lap]
+    document.title = UZLET.nev
     document.documentElement.classList.add('publikus')
     let el = true
     betolt()
@@ -134,16 +137,19 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
   const valasztas: Valasztas = { kat, onKat: setKat, csomagId, onCsomag: setCsomagId }
 
   return (
-    <div className="kv-keret pub-keret" ref={keret}>
-      {lap === 'fooldal' ? (
-        <Koncepcio kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos
-                   kat={kat} onKat={setKat} kiemelt={csomagId} onCsomag={setCsomagId}
-                   foglalas={<EloFoglalas {...betoltott} valasztas={valasztas} />} />
-      ) : (
-        <KoncepcioKeret kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos>
-          <JogiOldal lap={lap} />
-        </KoncepcioKeret>
-      )}
-    </div>
+    <TartalomProvider t={adat.tartalom} lemondasOra={adat.lemondasOra}>
+      <Cim lap={lap} />
+      <div className="kv-keret pub-keret" ref={keret}>
+        {lap === 'fooldal' ? (
+          <Koncepcio kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos
+                     kat={kat} onKat={setKat} kiemelt={csomagId} onCsomag={setCsomagId}
+                     foglalas={<EloFoglalas {...betoltott} valasztas={valasztas} />} />
+        ) : (
+          <KoncepcioKeret kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos>
+            <JogiOldal lap={lap} />
+          </KoncepcioKeret>
+        )}
+      </div>
+    </TartalomProvider>
   )
 }

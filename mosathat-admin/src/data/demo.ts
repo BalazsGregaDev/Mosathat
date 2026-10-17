@@ -20,6 +20,7 @@ import type {
   OnlineKeres, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
+import type { PublikusMentes } from '../lib/publikusTartalom'
 import { idoRovidit, num, numOrNull, publikusbol, publikusNapbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { DEMO_BELEPOK, DEMO_STAFF_ID } from './demoBelepok'
 
@@ -270,6 +271,10 @@ export class DemoSource implements DataSource {
   async publikusFoglalas(input: OnlineBookingInput): Promise<string> {
     const [r] = await this.rows<{ id: string }>(`select publikus_foglalas($1::jsonb) id`, [JSON.stringify(input)])
     return r.id
+  }
+
+  async savePublikusTartalom(p: PublikusMentes): Promise<void> {
+    await this.rows(`select publikus_tartalom_mentes($1::jsonb)`, [JSON.stringify(p)])
   }
 
   async getPublikus(): Promise<PublikusAdat> {

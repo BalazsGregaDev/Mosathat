@@ -8,6 +8,9 @@ import { hibaSzoveg } from '../../lib/format'
 import { KONCEPCIOK, type KoncepcioKod, type Mod } from '../../lib/arculat'
 import type { ArculatValasztas } from '../../lib/types'
 import Koncepcio from './Koncepcio'
+import { TartalomProvider } from '../publikus/tartalom'
+import { usePublikusAdat } from '../publikus/usePublikusAdat'
+import { URES_TARTALOM } from '../../lib/publikusTartalom'
 
 type Meret = 'ASZTALI' | 'TABLET' | 'TELEFON'
 
@@ -24,6 +27,7 @@ export default function ArculatPage() {
   const [hiba, setHiba] = useState<string | null>(null)
   const [arany, setArany] = useState(1)
   const terulet = useRef<HTMLDivElement>(null)
+  const { adat: pub } = usePublikusAdat()
 
   useEffect(() => { refreshCatalog().catch(() => {}) }, [refreshCatalog])
 
@@ -132,14 +136,17 @@ export default function ArculatPage() {
             ) : (
               <div className="arculat-keret kv-keret" style={{ width: szel, zoom: arany }}
                    data-meret={meret}>
-                <Koncepcio kod={kod} mod={mod} k={catalog} />
+                <TartalomProvider t={pub?.tartalom ?? URES_TARTALOM} lemondasOra={pub?.lemondasOra}>
+                  <Koncepcio kod={kod} mod={mod} k={catalog} />
+                </TartalomProvider>
               </div>
             )}
           </div>
           <p className="halk arculat-megjegyzes">
             Az előnézet {szel} px széles{arany < 1 ? `, ${Math.round(arany * 100)}%-ra kicsinyítve` : ''}.
-            A csomagok és az árak a Szolgáltatások menüből jönnek, a járműkategória a táblázat fejlécében
-            és a foglalásnál váltható. A térkép élesben a Google Térképből töltődik be.
+            Az árak a Szolgáltatások menüből, a csomagtáblázat a Publikus › Csomagok, a szövegek a
+            Publikus › Tartalom, az elérhetőségek a Publikus › Elérhetőség menüből jönnek. A térkép
+            élesben a Google Térképből töltődik be.
           </p>
         </div>
       </div>

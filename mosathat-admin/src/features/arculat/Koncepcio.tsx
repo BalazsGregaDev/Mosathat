@@ -5,9 +5,11 @@ import {
 import type { Catalog } from '../../data/source'
 import type { VehicleCategory } from '../../lib/types'
 import {
-  csomagTabla, kategoriaTol, KAT_ALCIM, KAT_NEV, KATEGORIAK, szam, UZLET,
+  csomagTabla, kategoriaTol, KATEGORIAK, szam,
   type Cella, type CsomagTabla, type KoncepcioKod, type Mod,
 } from '../../lib/arculat'
+import { katKulcs, type SzovegKulcs, type Uzlet } from '../../lib/publikusTartalom'
+import { Gazdag, telefonLink, useSz, useUzlet } from '../publikus/tartalom'
 
 interface KvAllapot {
   t: CsomagTabla
@@ -32,7 +34,9 @@ const CEL_ELEM: Record<Cel, string> = {
   kapcsolat: '.kv-lab',
 }
 
-const MENU: [string, Cel][] = [['Csomagok', 'csomagok'], ['Foglalás', 'foglalas'], ['Hol vagyunk', 'hely'], ['Kapcsolat', 'kapcsolat']]
+const MENU: [SzovegKulcs, Cel][] = [
+  ['menu.csomagok', 'csomagok'], ['menu.foglalas', 'foglalas'], ['menu.hely', 'hely'], ['menu.kapcsolat', 'kapcsolat'],
+]
 
 function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null, nyilvanos = false) {
   e.preventDefault()
@@ -42,29 +46,36 @@ function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null, nyilvanos = fa
   else if (nyilvanos) window.location.href = `/publikus#${cel}`
 }
 
-const ADDRESS = `${UZLET.cim.replace(/\.$/, '')}, ${UZLET.irsz}`
-const TERKEP = `https://www.google.com/maps?q=${encodeURIComponent(`${UZLET.nev}, ${ADDRESS}`)}&z=16&output=embed`
-const UTVONAL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ADDRESS)}`
+function terkepCimek(u: Uzlet) {
+  const cim = `${u.cim.replace(/\.$/, '')}, ${u.irsz}`
+  return {
+    terkep: `https://www.google.com/maps?q=${encodeURIComponent(`${u.nev}, ${cim}`)}&z=16&output=embed`,
+    utvonal: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cim)}`,
+  }
+}
 
 function Nav({ jobbra }: { jobbra?: ReactNode }) {
   const { nyilvanos } = useKv()
+  const u = useUzlet()
+  const sz = useSz()
   return (
     <header className="kv-nav">
       {nyilvanos
-        ? <a className="kv-logo" href="/publikus">{UZLET.nev}</a>
-        : <span className="kv-logo">{UZLET.nev}</span>}
+        ? <a className="kv-logo" href="/publikus">{u.nev}</a>
+        : <span className="kv-logo">{u.nev}</span>}
       {jobbra ?? (
         <nav>
-          {MENU.map(([m, cel]) => <a key={m} href={`#${cel}`} onClick={(e) => ugras(e, cel, nyilvanos)}>{m}</a>)}
+          {MENU.map(([m, cel]) => <a key={m} href={`#${cel}`} onClick={(e) => ugras(e, cel, nyilvanos)}>{sz(m)}</a>)}
         </nav>
       )}
     </header>
   )
 }
 
-function Gomb({ children = 'Időpontot kérek', cel = 'foglalas' }: { children?: ReactNode; cel?: Cel | null }) {
+function Gomb({ children, cel = 'foglalas' }: { children?: ReactNode; cel?: Cel | null }) {
   const { nyilvanos } = useKv()
-  return <a className="kv-gomb" href="#foglalas" onClick={(e) => ugras(e, cel, nyilvanos)}>{children}</a>
+  const sz = useSz()
+  return <a className="kv-gomb" href="#foglalas" onClick={(e) => ugras(e, cel, nyilvanos)}>{children ?? sz('gomb.idopont')}</a>
 }
 
 function Info({ cimke, children }: { cimke: string; children: ReactNode }) {
@@ -84,10 +95,11 @@ function Jel({ c }: { c: Cella }) {
 
 function KatValaszto() {
   const { kat, setKat } = useKv()
+  const sz = useSz()
   return (
     <div className="kv-kat" role="group" aria-label="Járműkategória">
       {KATEGORIAK.map((k) => (
-        <button key={k} type="button" aria-pressed={kat === k} onClick={() => setKat(k)}>{KAT_NEV[k]}</button>
+        <button key={k} type="button" aria-pressed={kat === k} onClick={() => setKat(k)}>{sz(katKulcs.tabla(k))}</button>
       ))}
     </div>
   )
@@ -128,6 +140,7 @@ function useKiemelesKeret(index: number, frissit: unknown) {
 
 function Tabla({ sorszam = false, ft = true }: { sorszam?: boolean; ft?: boolean }) {
   const { t, kiemelt, onCsomag } = useKv()
+  const sz = useSz()
   const index = kiemelt ? t.csomagok.findIndex((c) => c.id === kiemelt) : -1
   const { gorgo, keret } = useKiemelesKeret(index, t)
   const halvany = (i: number) => (index >= 0 && i !== index) || undefined
@@ -138,7 +151,7 @@ function Tabla({ sorszam = false, ft = true }: { sorszam?: boolean; ft?: boolean
         <thead>
           <tr>
             <th className="kv-fej-bal" scope="col">
-              <span className="kv-csoport-cim">Járműkategória</span>
+              <span className="kv-csoport-cim">{sz('csomagok.kategoria')}</span>
               <KatValaszto />
             </th>
             {t.csomagok.map((c, i) => {
@@ -164,7 +177,9 @@ function Tabla({ sorszam = false, ft = true }: { sorszam?: boolean; ft?: boolean
         {t.csoportok.map((g) => (
           <tbody key={g.terulet}>
             <tr className="kv-csoport">
-              <th scope="colgroup" colSpan={t.csomagok.length + 1}>{g.cim}</th>
+              <th scope="colgroup" colSpan={t.csomagok.length + 1}>
+                {sz(g.terulet === 'BELSO' ? 'csomagok.csoport.belso' : 'csomagok.csoport.kulso')}
+              </th>
             </tr>
             {g.sorok.map((s) => {
               n++
@@ -201,17 +216,19 @@ function Labjegyzet() {
 
 function Alcim({ utana = '' }: { utana?: string }) {
   const { kat } = useKv()
-  return <span className="kv-alcim">{KAT_ALCIM[kat]}{utana}</span>
+  const sz = useSz()
+  return <span className="kv-alcim">{sz(katKulcs.alcim(kat))}{utana}</span>
 }
 
 const LEPESEK = ['Autó', 'Csomag', 'Időpont', 'Adatok']
 
 function Foglalas() {
   const { kat, setKat, tol } = useKv()
+  const sz = useSz()
   return (
     <section className="kv-foglalas">
-      <h2>Időpontfoglalás</h2>
-      <p className="kv-bevezeto">Válaszd ki, mit szeretnél, és mutatjuk a szabad időpontokat.</p>
+      <h2>{sz('foglalas.cim')}</h2>
+      <p className="kv-bevezeto">{sz('foglalas.bevezeto')}</p>
       <ol className="kv-lepesek">
         {LEPESEK.map((l, i) => (
           <li key={l} aria-current={i === 0 ? 'step' : undefined}>
@@ -220,11 +237,11 @@ function Foglalas() {
         ))}
       </ol>
       <div className="kv-lepes">
-        <h3>Milyen autóval jössz?</h3>
+        <h3>{sz('foglalas.auto')}</h3>
         <div className="kv-kat-kartyak">
           {KATEGORIAK.map((k) => (
             <button key={k} type="button" aria-pressed={kat === k} onClick={() => setKat(k)}>
-              <span className="kv-kat-nev">{KAT_NEV[k]}</span>
+              <span className="kv-kat-nev">{sz(katKulcs.tabla(k))}</span>
               <span className="kv-kat-ar">{tol[k] != null ? `${szam(tol[k])} Ft-tól` : 'árajánlat alapján'}</span>
             </button>
           ))}
@@ -240,29 +257,27 @@ function Foglalas() {
 
 function Terkep() {
   const [betolt, setBetolt] = useState(false)
+  const u = useUzlet()
+  const sz = useSz()
+  const linkek = terkepCimek(u)
   return (
     <section className="kv-hely">
       <div className="kv-hely-szoveg">
-        <h2>Hol vagyunk</h2>
-        <p className="kv-bevezeto">
-          A {UZLET.haz} mélygarázsában, a −1. szinten. A bejárat a {UZLET.bejarat} nyílik.
-        </p>
-        <Info cimke="Cím">{UZLET.irsz}, {UZLET.cim}</Info>
-        <Info cimke="Nyitvatartás">{UZLET.napok} {UZLET.nyitas}–{UZLET.zaras}</Info>
-        <Info cimke="Leadás legkorábban">{UZLET.leadas}</Info>
-        <Info cimke="Telefon">{UZLET.telefon}</Info>
-        <a className="kv-link" href={UTVONAL} target="_blank" rel="noreferrer">Útvonaltervezés a Google Térképpel</a>
+        <h2>{sz('hely.cim')}</h2>
+        <p className="kv-bevezeto"><Gazdag s={sz('hely.bevezeto')} /></p>
+        <Info cimke={sz('cimke.cim')}>{u.irsz}, {u.cim}</Info>
+        <Info cimke={sz('cimke.nyitvatartas')}>{u.nyitvatartas}</Info>
+        <Info cimke={sz('cimke.leadas')}>{u.leadas}</Info>
+        <Info cimke={sz('cimke.telefon')}><a href={telefonLink(u.telefon)}>{u.telefon}</a></Info>
+        <a className="kv-link" href={linkek.utvonal} target="_blank" rel="noreferrer">{sz('hely.utvonal')}</a>
       </div>
       <div className="kv-terkep" data-betoltve={betolt || undefined}>
         {betolt ? (
-          <iframe title={`${UZLET.nev} a térképen`} src={TERKEP} referrerPolicy="no-referrer-when-downgrade" />
+          <iframe title={`${u.nev} a térképen`} src={linkek.terkep} referrerPolicy="no-referrer-when-downgrade" />
         ) : (
           <div className="kv-terkep-kerdes">
-            <p>
-              A térképet a Google szolgáltatja. Betöltéskor a Google megkapja az IP-címedet,
-              és sütiket helyezhet el a böngésződben.
-            </p>
-            <button type="button" className="kv-terkep-gomb" onClick={() => setBetolt(true)}>Térkép betöltése</button>
+            <p>{sz('hely.terkep_szoveg')}</p>
+            <button type="button" className="kv-terkep-gomb" onClick={() => setBetolt(true)}>{sz('hely.terkep_gomb')}</button>
           </div>
         )}
       </div>
@@ -270,30 +285,33 @@ function Terkep() {
   )
 }
 
-const LAB_MENU = [['Impresszum', '/impresszum'], ['Adatvédelmi tájékoztató', '/adatvedelem']]
+const LAB_MENU: [SzovegKulcs, string][] = [['lab.impresszum', '/impresszum'], ['lab.adatvedelem', '/adatvedelem']]
 
 function Lab() {
   const { nyilvanos } = useKv()
+  const u = useUzlet()
+  const sz = useSz()
   return (
     <footer className="kv-lab">
       <div className="kv-lab-fo">
         <div className="kv-lab-elso">
-          <span className="kv-logo">{UZLET.nev}</span>
-          <p>Kézi autókozmetika a Váci úti {UZLET.haz} mélygarázsában.</p>
+          <span className="kv-logo">{u.nev}</span>
+          <p><Gazdag s={sz('lab.leiras')} /></p>
         </div>
-        <Info cimke="Cím">{UZLET.irsz}, {UZLET.cim}<br />{UZLET.haz}, {UZLET.szint}</Info>
-        <Info cimke="Nyitvatartás">{UZLET.napok} {UZLET.nyitas}–{UZLET.zaras}<br />Leadás legkorábban {UZLET.leadas}</Info>
+        <Info cimke={sz('cimke.cim')}>{u.irsz}, {u.cim}<br />{u.haz}, {u.szint}</Info>
+        <Info cimke={sz('cimke.nyitvatartas')}>{u.nyitvatartas}<br />{sz('lab.leadas')}</Info>
         <div className="kv-info">
-          <span className="kv-cimke">Kapcsolat</span>
-          <span className="kv-ertek">{UZLET.telefon}</span>
-          <a className="kv-link" href="#foglalas" onClick={(e) => ugras(e, 'foglalas', nyilvanos)}>Időpontot kérek</a>
+          <span className="kv-cimke">{sz('cimke.kapcsolat')}</span>
+          <span className="kv-ertek"><a href={telefonLink(u.telefon)}>{u.telefon}</a></span>
+          <span className="kv-ertek"><a href={`mailto:${u.email}`}>{u.email}</a></span>
+          <a className="kv-link" href="#foglalas" onClick={(e) => ugras(e, 'foglalas', nyilvanos)}>{sz('gomb.idopont')}</a>
         </div>
       </div>
       <div className="kv-lab-also">
-        <span>© {new Date().getFullYear()} {UZLET.nev}</span>
+        <span>© {new Date().getFullYear()} {u.nev}</span>
         <nav>
           {LAB_MENU.map(([m, h]) => (
-            <a key={h} href={h} onClick={nyilvanos ? undefined : (e) => ugras(e, null)}>{m}</a>
+            <a key={h} href={h} onClick={nyilvanos ? undefined : (e) => ugras(e, null)}>{sz(m)}</a>
           ))}
         </nav>
       </div>
@@ -313,6 +331,7 @@ function Vege({ foglalasNelkul = false }: { foglalasNelkul?: boolean }) {
 }
 
 function Adatlap() {
+  const u = useUzlet()
   return (
     <>
       <Nav />
@@ -326,11 +345,11 @@ function Adatlap() {
           <Gomb />
         </div>
         <div className="kv-hero-jobb">
-          <Info cimke="Telephely">{UZLET.irsz}, {UZLET.cim}<br /><b>{UZLET.haz}</b>, {UZLET.szint}</Info>
-          <Info cimke="Bejárat">A {UZLET.bejarat}</Info>
-          <Info cimke="Nyitvatartás">{UZLET.napok} <b>{UZLET.nyitas}–{UZLET.zaras}</b></Info>
-          <Info cimke="Leadás legkorábban"><b>{UZLET.leadas}</b> — munkába menet is</Info>
-          <Info cimke="Telefon">{UZLET.telefon}</Info>
+          <Info cimke="Telephely">{u.irsz}, {u.cim}<br /><b>{u.haz}</b>, {u.szint}</Info>
+          <Info cimke="Bejárat">A {u.bejarat}</Info>
+          <Info cimke="Nyitvatartás">{u.napok} <b>{u.nyitas}–{u.zaras}</b></Info>
+          <Info cimke="Leadás legkorábban"><b>{u.leadas}</b> — munkába menet is</Info>
+          <Info cimke="Telefon">{u.telefon}</Info>
         </div>
       </section>
       <section className="kv-csomagok">
@@ -347,11 +366,12 @@ function Adatlap() {
 }
 
 function Melygarazs() {
+  const u = useUzlet()
   return (
     <>
       <Nav />
       <section className="kv-hero">
-        <span className="kv-kicker">{UZLET.haz} — mélygarázs, −1. szint</span>
+        <span className="kv-kicker">{u.haz} — mélygarázs, −1. szint</span>
         <h1>Amíg dolgozol,<br /><em>rendbe tesszük</em><br />az autód</h1>
         <p className="kv-lede">
           Add le reggel a garázsban, vedd át tisztán munka után. Kézi mosás, kézi takarítás,
@@ -360,10 +380,10 @@ function Melygarazs() {
         <Gomb />
       </section>
       <section className="kv-sav">
-        <Info cimke="Nyitvatartás">{UZLET.napokRovid} {UZLET.nyitas}–{UZLET.zaras}</Info>
-        <Info cimke="Leadás legkorábban">{UZLET.leadas}</Info>
-        <Info cimke="Bejárat">{UZLET.bejarat}</Info>
-        <Info cimke="Telefon">{UZLET.telefon}</Info>
+        <Info cimke="Nyitvatartás">{u.napokRovid} {u.nyitas}–{u.zaras}</Info>
+        <Info cimke="Leadás legkorábban">{u.leadas}</Info>
+        <Info cimke="Bejárat">{u.bejarat}</Info>
+        <Info cimke="Telefon">{u.telefon}</Info>
       </section>
       <div className="kv-csik" aria-hidden="true" />
       <section className="kv-csomagok">
@@ -380,21 +400,23 @@ const BORITO_KEP = '/kepek/borito.jpg'
 
 function Borito() {
   const [allapot, setAllapot] = useState<'tolt' | 'van' | 'nincs'>('tolt')
+  const sz = useSz()
   return (
     <div className="kv-foto" data-kep={allapot}>
-      <img src={BORITO_KEP} alt={`${UZLET.nev} — kézi autókozmetika a ${UZLET.haz} mélygarázsában`} decoding="async"
+      <img src={BORITO_KEP} alt={sz('hero.borito_alt')} decoding="async"
            onLoad={() => setAllapot('van')} onError={() => setAllapot('nincs')} />
-      <span>Fotó helye — garázs, munka közben</span>
+      <span>{sz('hero.borito_helye')}</span>
     </div>
   )
 }
 
 function Magazin() {
   const { foglalas } = useKv()
+  const sz = useSz()
   const csomagok = (
     <section className="kv-csomagok">
       <div className="kv-szakasz-fej">
-        <h2>Csomagok</h2>
+        <h2>{sz('csomagok.cim')}</h2>
         <Alcim />
       </div>
       <Tabla />
@@ -404,17 +426,11 @@ function Magazin() {
     <>
       <Nav />
       <section className="kv-hero">
-        <span className="kv-kicker">Kézi autókozmetika — {UZLET.kerulet}</span>
-        <h1>Az autó nem tárgy.<br /><em>Évekig</em> veled van.</h1>
+        <span className="kv-kicker">{sz('hero.felcim')}</span>
+        <h1><Gazdag s={sz('hero.cim')} /></h1>
         <div className="kv-hasabok">
-          <p className="kv-lede">
-            Kézi mosás és kézi takarítás a Váci úti {UZLET.haz} mélygarázsában. Bogároldótól a
-            hosszantartó vaxig, három csomagban — és pontosan leírva, melyik mit tud.
-          </p>
-          <p className="kv-halk">
-            Hétfőtől péntekig {UZLET.nyitas}–{UZLET.zaras}, de autót már reggel {UZLET.leadas} után
-            le lehet adni. A bejárat a Dagály utca felől nyílik, a mélygarázs −1. szintjén.
-          </p>
+          <p className="kv-lede"><Gazdag s={sz('hero.bevezeto')} /></p>
+          <p className="kv-halk"><Gazdag s={sz('hero.mellek')} /></p>
         </div>
       </section>
       <Borito />
@@ -430,6 +446,7 @@ function Magazin() {
 }
 
 function Showroom() {
+  const u = useUzlet()
   return (
     <>
       <Nav />
@@ -437,15 +454,15 @@ function Showroom() {
         <h1>Kézi autókozmetika,<br />amíg fent <em>dolgozol</em>.</h1>
         <span className="kv-vonal" aria-hidden="true" />
         <p className="kv-lede">
-          A {UZLET.haz} mélygarázsában. Leadás reggel negyed nyolctól, átvétel munka után — az autó
+          A {u.haz} mélygarázsában. Leadás reggel negyed nyolctól, átvétel munka után — az autó
           közben végigmegy a teljes kézi folyamaton.
         </p>
         <Gomb />
         <div className="kv-sav">
-          <Info cimke="Nyitvatartás">{UZLET.napok} {UZLET.nyitas}–{UZLET.zaras}</Info>
-          <Info cimke="Leadás legkorábban">{UZLET.leadas}</Info>
-          <Info cimke="Cím">{UZLET.cim.replace('.', '.,')} −1. szint</Info>
-          <Info cimke="Telefon">{UZLET.telefon}</Info>
+          <Info cimke="Nyitvatartás">{u.napok} {u.nyitas}–{u.zaras}</Info>
+          <Info cimke="Leadás legkorábban">{u.leadas}</Info>
+          <Info cimke="Cím">{u.cim.replace('.', '.,')} −1. szint</Info>
+          <Info cimke="Telefon">{u.telefon}</Info>
         </div>
       </section>
       <section className="kv-csomagok">
@@ -458,6 +475,7 @@ function Showroom() {
 }
 
 function Jelzotabla() {
+  const u = useUzlet()
   return (
     <>
       <Nav />
@@ -472,8 +490,8 @@ function Jelzotabla() {
           <Gomb />
         </div>
         <div className="kv-hero-jobb">
-          <Info cimke="Nyitvatartás">{UZLET.napokRovid} {UZLET.nyitas}–{UZLET.zaras}</Info>
-          <Info cimke="Leadás legkorábban">{UZLET.leadas}</Info>
+          <Info cimke="Nyitvatartás">{u.napokRovid} {u.nyitas}–{u.zaras}</Info>
+          <Info cimke="Leadás legkorábban">{u.leadas}</Info>
           <Info cimke="Bejárat">Dagály utca</Info>
         </div>
       </section>
@@ -488,9 +506,11 @@ function Jelzotabla() {
 
 function Munkalap() {
   const { kat } = useKv()
+  const u = useUzlet()
+  const sz = useSz()
   return (
     <>
-      <Nav jobbra={<span className="kv-fejszoveg">Munkalap — 1138 Bp., {UZLET.cim}</span>} />
+      <Nav jobbra={<span className="kv-fejszoveg">Munkalap — 1138 Bp., {u.cim}</span>} />
       <section className="kv-hero">
         <span className="kv-pecset">Kézi mosás</span>
         <h1>Minden autóról<br />tudjuk, mi történt vele.</h1>
@@ -504,7 +524,7 @@ function Munkalap() {
         <div className="kv-lap">
           <div className="kv-lap-fej">
             <span>Csomagtartalom</span>
-            <span>{KAT_NEV[kat]} — bruttó</span>
+            <span>{sz(katKulcs.tabla(kat))} — bruttó</span>
           </div>
           <Tabla ft={false} />
         </div>
@@ -515,6 +535,7 @@ function Munkalap() {
 }
 
 function Racs() {
+  const u = useUzlet()
   return (
     <>
       <Nav />
@@ -527,15 +548,15 @@ function Racs() {
           </p>
         </div>
         <div className="kv-doboz">
-          <strong>Leadás reggel {UZLET.leadas}, átvétel munka után</strong>
+          <strong>Leadás reggel {u.leadas}, átvétel munka után</strong>
           <Gomb>Időpontot kérek →</Gomb>
         </div>
       </section>
       <section className="kv-sav">
-        <Info cimke="Nyitvatartás">{UZLET.napokRovid} {UZLET.nyitas}–{UZLET.zaras}</Info>
-        <Info cimke="Leadás legkorábban">{UZLET.leadas}</Info>
+        <Info cimke="Nyitvatartás">{u.napokRovid} {u.nyitas}–{u.zaras}</Info>
+        <Info cimke="Leadás legkorábban">{u.leadas}</Info>
         <Info cimke="Bejárat">Dagály utca</Info>
-        <Info cimke="Telefon">{UZLET.telefon}</Info>
+        <Info cimke="Telefon">{u.telefon}</Info>
       </section>
       <section className="kv-csomagok">
         <h2>Csomagok</h2>
@@ -547,6 +568,7 @@ function Racs() {
 }
 
 function Lakk() {
+  const u = useUzlet()
   return (
     <>
       <Nav />
@@ -555,15 +577,15 @@ function Lakk() {
       </section>
       <section className="kv-hero">
         <p className="kv-lede">
-          Kézi mosás és kézi takarítás a {UZLET.haz} mélygarázsában. Nincs kefe, nincs sietség — csak
+          Kézi mosás és kézi takarítás a {u.haz} mélygarázsában. Nincs kefe, nincs sietség — csak
           az az érzés, amikor másnap reggel is jó beülni.
         </p>
         <div className="kv-hero-jobb">
           <Gomb />
           <ul className="kv-sorok">
-            <li>{UZLET.napok} {UZLET.nyitas}–{UZLET.zaras}</li>
-            <li>Leadás legkorábban {UZLET.leadas}</li>
-            <li>Bejárat a {UZLET.bejarat}</li>
+            <li>{u.napok} {u.nyitas}–{u.zaras}</li>
+            <li>Leadás legkorábban {u.leadas}</li>
+            <li>Bejárat a {u.bejarat}</li>
           </ul>
         </div>
       </section>
