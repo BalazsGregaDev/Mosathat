@@ -273,9 +273,9 @@
 .kv[data-k='03'] .kv-van { width: 7px; height: 7px; border-radius: 50%; background: var(--zold); }
 .kv[data-k='03'] .kv-mas { font-family: var(--talpas); font-style: italic; font-size: 14px; }
 @container kv (max-width: 700px) {
-  .kv[data-k='03'] .kv-hero { padding: 26px 16px 28.6px; }
+  .kv[data-k='03'] .kv-hero { padding: 26px 16px 31.2px; }
   .kv[data-k='03'] h1 { font-size: 34px; }
-  .kv[data-k='03'] .kv-hasabok { grid-template-columns: 1fr; gap: 13.2px; }
+  .kv[data-k='03'] .kv-hasabok { grid-template-columns: 1fr; gap: 14.4px; }
   .kv[data-k='03'] .kv-hero-foglalas { display: flex; justify-content: center; padding: 6px 0 8px; }
   .kv[data-k='03'] .kv-hero-foglalas a.kv-gomb-lakk { margin-top: 0; }
   .kv[data-k='03'] .kv-foto { margin: 0 16px; height: 130px; }
@@ -895,6 +895,8 @@
   .kv[data-k='03'] .kv-galeria { padding: 44px 16px 52px; }
 }
 @container kv (max-width: 700px) {
+  .kv[data-k='03'] .kv-rolunk { row-gap: 24px; }
+  .kv[data-k='03'] .kv-rolunk-szoveg p + p { margin-top: 24px; }
   .kv-galeria-racs { gap: 8px; }
   .kv-galeria-eszkozok { gap: 12px; margin: 20px 0 14px; }
   .kv .kv-ikon { width: 48px; height: 48px; border-radius: 12px; }

@@ -37,13 +37,20 @@ export function useVaszonSzin(gyoker: RefObject<HTMLElement | null>, be: boolean
     const g = gyoker.current
     if (!be || !g) return
     const html = document.documentElement
+    const body = document.body
     let kocka = 0
+    let elozo = ''
     const frissit = () => {
       kocka = 0
       const s = getComputedStyle(g)
       const lent = window.scrollY > (html.scrollHeight - window.innerHeight) / 2
       const szin = (lent ? s.getPropertyValue('--lakk-mely') : s.getPropertyValue('--bg')).trim()
-      if (szin) html.style.backgroundColor = szin
+      if (!szin || `${szin}|${lent}` === elozo) return
+      elozo = `${szin}|${lent}`
+      html.style.backgroundColor = szin
+      body.style.backgroundColor = szin
+      html.style.overscrollBehaviorY = lent ? 'none' : ''
+      body.style.overscrollBehaviorY = lent ? 'none' : ''
     }
     const kerel = () => { if (!kocka) kocka = requestAnimationFrame(frissit) }
     frissit()
@@ -53,7 +60,10 @@ export function useVaszonSzin(gyoker: RefObject<HTMLElement | null>, be: boolean
       cancelAnimationFrame(kocka)
       window.removeEventListener('scroll', kerel)
       window.removeEventListener('resize', kerel)
-      html.style.backgroundColor = ''
+      for (const e of [html, body]) {
+        e.style.backgroundColor = ''
+        e.style.overscrollBehaviorY = ''
+      }
     }
   }, [gyoker, be])
 }

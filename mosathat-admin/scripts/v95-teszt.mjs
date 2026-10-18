@@ -35,6 +35,11 @@ async function oldal(opts, ut = '/publikus') {
   return { ctx, p, hibak }
 }
 const vaszon = (p) => p.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)
+const gyoker = (p) => p.evaluate(() => ({
+  html: getComputedStyle(document.documentElement).backgroundColor,
+  body: getComputedStyle(document.body).backgroundColor,
+  rugo: getComputedStyle(document.documentElement).overscrollBehaviorY + '/' + getComputedStyle(document.body).overscrollBehaviorY,
+}))
 const gorget = async (p, y) => { await p.evaluate((yy) => scrollTo(0, yy), y); await p.waitForTimeout(250) }
 const doboz = (p, sel) => p.locator(sel).first().evaluate((e) => {
   const r = e.getBoundingClientRect()
@@ -44,12 +49,16 @@ const doboz = (p, sel) => p.locator(sel).first().evaluate((e) => {
 console.log('=== 1) A lábléc háttere „végtelen”: túlgörgetve alul is sötétzöld látszik ===\n')
 for (const [nev, opts, ut] of [['asztali', ASZTALI, '/publikus'], ['telefon', TELEFON, '/publikus'], ['impresszum', ASZTALI, '/impresszum']]) {
   const t = await oldal(opts, ut)
-  const fent = await vaszon(t.p)
+  const fent = await gyoker(t.p)
   await gorget(t.p, 1e6)
-  const lent = await vaszon(t.p)
+  const lent = await gyoker(t.p)
   const labSzin = await t.p.locator('.kv-lab').evaluate((e) => getComputedStyle(e).backgroundImage)
   await gorget(t.p, 0)
-  ok(`${nev}: a lap tetején a vászon a lap színe, alul a lábléc alsó színe`, [VILAGOS, LAKK, true, VILAGOS], [fent, lent, labSzin.includes('rgb(11, 33, 22)'), await vaszon(t.p)])
+  ok(`${nev}: fent a html és a body is a lap színe, alul a lábléc alsó színe (az iPhone a body színét mutatja a lap alatt)`,
+    [{ html: VILAGOS, body: VILAGOS }, { html: LAKK, body: LAKK }, true, VILAGOS],
+    [{ html: fent.html, body: fent.body }, { html: lent.html, body: lent.body }, labSzin.includes('rgb(11, 33, 22)'), await vaszon(t.p)])
+  ok(`${nev}: alul nem rugózik túl az oldal, fent igen (a lehúzásos frissítés megmarad)`, ['auto/auto', 'none/none', 'auto/auto'],
+    [fent.rugo, lent.rugo, (await gyoker(t.p)).rugo])
   if (nev === 'telefon') {
     await gorget(t.p, 1e6)
     await t.p.evaluate(() => { document.body.style.transform = 'translateY(-160px)' })
@@ -86,7 +95,7 @@ console.log('\n=== 2) Telefon, nyitó rész: Időpontfoglalás gomb a vonal alat
     const [a, c] = [...document.querySelectorAll('.kv-gomb-lakk')].map((e) => getComputedStyle(e))
     return a.backgroundImage === c.backgroundImage && a.color === c.color && a.fontSize === c.fontSize
   }))
-  ok('a két bekezdés közötti és a borítókép előtti térköz 10%-kal nagyobb (12 → 13,2 px, 26 → 28,6 px)', [13.2, 28.6],
+  ok('telefonon a két bekezdés közötti és a borítókép előtti térköz 20%-kal nagyobb az eredetinél (12 → 14,4 px, 26 → 31,2 px)', [14.4, 31.2],
     [Math.round((halk.y - lede.alja) * 10) / 10, Math.round((foto.y - halk.alja) * 10) / 10])
   await kep(p, '02-telefon-nyito.png')
   await p.locator('.kv-hero-foglalas .kv-gomb-lakk').tap()
@@ -102,7 +111,13 @@ console.log('\n=== 2) Telefon, nyitó rész: Időpontfoglalás gomb a vonal alat
   const h2 = await doboz(p, '.kv-rolunk h2')
   const p1 = await doboz(p, '.kv-rolunk-elso')
   const p2 = await doboz(p, '.kv-rolunk-szoveg p + p')
-  ok('cím → első bekezdés 22 px, első → második bekezdés 22 px (eddig 20)', [22, 22], [Math.round(p1.y - h2.alja), Math.round(p2.y - p1.alja)])
+  ok('telefonon cím → első bekezdés 24 px, első → második bekezdés 24 px (eredetileg 20)', [24, 24], [Math.round(p1.y - h2.alja), Math.round(p2.y - p1.alja)])
+  const ra = await oldal(ASZTALI)
+  ok('asztali gépen maradt a 22 px', [22, 22], await ra.p.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect()
+    return [Math.round(parseFloat(getComputedStyle(document.querySelector('.kv-rolunk')).rowGap)), Math.round(r('.kv-rolunk-szoveg p + p').top - r('.kv-rolunk-elso').bottom)]
+  }))
+  await ra.ctx.close()
   await p.locator('.kv-rolunk').evaluate((e) => scrollTo(0, e.getBoundingClientRect().top + scrollY + 40))
   await kep(p, '03-telefon-rolunk.png')
 
