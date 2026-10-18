@@ -7,6 +7,7 @@ import { hetHetfoje, hibaSzoveg, maE, napPlusz, napRovidCim, ora } from '../../l
 import { STATUS_LABEL, type DayBooking } from '../../lib/types'
 import MiniKartya, { azonosito } from './MiniKartya'
 import { hetiSavok, tobbnaposE } from '../../lib/savok'
+import KivetelJel, { kivetelFelirat, kivetelTipus, useKivetelnapok } from './Kivetelnap'
 
 const NAPOK = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
 const MAX = 10
@@ -22,6 +23,7 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
   const [sorok, setSorok] = useState<DayBooking[] | null>(null)
   const [rend, setRend] = useState<Map<string, number>>(new Map())
   const [hiba, setHiba] = useState<string | null>(null)
+  const kivetelek = useKivetelnapok(hetfo, napPlusz(hetfo, 6))
 
   useEffect(() => {
     let el = true
@@ -72,7 +74,8 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
         && b.service_date.slice(0, 10) <= d && b.last_day.slice(0, 10) >= d).length
   const hetvege = [5, 6]
     .map((i) => napPlusz(hetfo, i))
-    .filter((d) => hetvegeDb(d) > 0)
+    .filter((d) => hetvegeDb(d) > 0 || kivetelek.has(d))
+  const hetvegenMunka = hetvege.some((d) => hetvegeDb(d) > 0)
 
   const napiDb = (i: number) =>
     (napok.get(napPlusz(hetfo, i)) ?? []).length
@@ -116,7 +119,7 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
           const d = napPlusz(hetfo, i)
           return (
             <button className="oszlopfej" key={d} onClick={() => onNapra(d)}
-                    data-ma={maE(d) || undefined}>
+                    data-ma={maE(d) || undefined} data-kivetel={kivetelTipus(kivetelek.get(d))}>
               <span className="nev">{NAPOK[i]}</span>
               <span className="datum">{napRovidCim(d)}</span>
               <span className="db">{napiDb(i) || ''}</span>
@@ -131,16 +134,19 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
           const lista = napok.get(d) ?? []
           const latszik = lista.slice(0, MAX)
           const tobb = lista.length - latszik.length
+          const kivetel = kivetelek.get(d)
 
           return (
-            <section className="naposzlop" key={d} data-ma={maE(d) || undefined}>
-              <button className="oszlopfej oszlopfej-sajat" onClick={() => onNapra(d)}>
+            <section className="naposzlop" key={d} data-ma={maE(d) || undefined} data-kivetel={kivetelTipus(kivetel)}>
+              <button className="oszlopfej oszlopfej-sajat" onClick={() => onNapra(d)} data-kivetel={kivetelTipus(kivetel)}>
                 <span className="nev">{NAPOK[i]}</span>
                 <span className="datum">{napRovidCim(d)}</span>
                 <span className="db">{napiDb(i) || ''}</span>
               </button>
 
               <div className="oszloptorzs">
+                {kivetel && <KivetelJel o={kivetel} />}
+
                 {latszik.map((b) => (
                   <MiniKartya key={b.id} b={b} onMegnyit={onMegnyit} />
                 ))}
@@ -151,7 +157,7 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
                   </button>
                 )}
 
-                {lista.length === 0 && <div className="uresnap">—</div>}
+                {lista.length === 0 && !kivetel && <div className="uresnap">—</div>}
               </div>
             </section>
           )
@@ -160,12 +166,21 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
 
       {hetvege.length > 0 && (
         <div className="hetvegesor">
-          <span className="cimke">Hétvégén is van munka</span>
-          {hetvege.map((d) => (
-            <button key={d} className="btn btn-kicsi" onClick={() => onNapra(d)}>
-              {NAPOK[d === napPlusz(hetfo, 5) ? 5 : 6]} · {hetvegeDb(d)} autó
-            </button>
-          ))}
+          <span className="cimke">{hetvegenMunka ? 'Hétvégén is van munka' : 'Hétvége'}</span>
+          {hetvege.map((d) => {
+            const kivetel = kivetelek.get(d)
+            return (
+              <button key={d} className="btn btn-kicsi hetvegenap" onClick={() => onNapra(d)}
+                      data-kivetel={kivetelTipus(kivetel)} title={kivetel?.note ?? undefined}>
+                {NAPOK[d === napPlusz(hetfo, 5) ? 5 : 6]} · {hetvegeDb(d)} autó
+                {kivetel && (
+                  <span className="hetvege-kivetel">
+                    {kivetelFelirat(kivetel)}{kivetel.note ? ` · ${kivetel.note}` : ''}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

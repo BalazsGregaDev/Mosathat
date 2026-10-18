@@ -336,6 +336,46 @@
   .honap-autok .szo { font-size: var(--m-xs); }
 }
 .honapnap[data-kivul] .honap-autok { opacity: .55; }
+
+.kivetel-jel {
+  display: flex; flex-direction: column; gap: 1px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  border-left: 3px solid;
+  font-size: var(--m-xs); line-height: 1.3;
+  text-align: left;
+}
+.kivetel-jel strong { font-weight: var(--vastag-eros); font-family: var(--betu-szam); }
+.kivetel-megj {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere;
+}
+.kivetel-jel[data-kivetel='zarva'] { background: var(--piros-halvany); border-left-color: var(--piros); color: var(--piros-sotet); }
+.kivetel-jel[data-kivetel='nyitva'] { background: var(--zold-halvany); border-left-color: var(--zold); color: var(--zold-sotet); }
+
+.oszlopfej[data-kivetel='zarva'] { background: var(--piros-halvany); }
+.oszlopfej[data-kivetel='zarva'] .nev, .oszlopfej[data-kivetel='zarva'] .datum { color: var(--piros-sotet); }
+.oszlopfej[data-kivetel='nyitva'] { background: var(--zold-halvany); }
+.oszlopfej[data-kivetel='nyitva'] .nev, .oszlopfej[data-kivetel='nyitva'] .datum { color: var(--zold-sotet); }
+.hetfejsor .oszlopfej[data-kivetel='zarva']:not([data-ma]) { border-color: #e7b5ab; }
+.hetfejsor .oszlopfej[data-kivetel='nyitva']:not([data-ma]) { border-color: #a9d3ba; }
+.naposzlop[data-kivetel='zarva']:not([data-ma]) { border-color: #e7b5ab; }
+.naposzlop[data-kivetel='nyitva']:not([data-ma]) { border-color: #a9d3ba; }
+
+.honapnap[data-kivetel='zarva'] { background: #fdf3f1; }
+.honapnap[data-kivetel='zarva']:not([data-ma]) { border-color: #e7b5ab; }
+.honapnap[data-kivetel='zarva'] .napszam { color: var(--piros-sotet); }
+.honapnap[data-kivetel='nyitva'] { background: #f3faf6; }
+.honapnap[data-kivetel='nyitva']:not([data-ma]) { border-color: #a9d3ba; }
+.honapnap[data-kivetel='nyitva'] .napszam { color: var(--zold-sotet); }
+.honapnap[data-kivul][data-kivetel] { opacity: .6; }
+.honapnap .kivetel-jel { padding: 3px 6px; }
+
+.hetvegenap { display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap; text-align: left; }
+.hetvegenap[data-kivetel='zarva'] { background: var(--piros-halvany); border-color: #e7b5ab; color: var(--piros-sotet); }
+.hetvegenap[data-kivetel='nyitva'] { background: var(--zold-halvany); border-color: #a9d3ba; color: var(--zold-sotet); }
+.hetvege-kivetel { font-weight: var(--vastag-eros); }
 @media (max-width: 900px) {
   .hetracs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hetfejsor { display: none; }

@@ -9,6 +9,7 @@ import {
 import { STATUS_LABEL, type DayBooking, type VacationRow } from '../../lib/types'
 import { hetiSavok, hetiSzabadsagok, tobbnaposE } from '../../lib/savok'
 import { azonosito } from './MiniKartya'
+import KivetelJel, { kivetelLeiras, kivetelTipus, useKivetelnapok } from './Kivetelnap'
 
 const FEJ = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V']
 
@@ -34,6 +35,7 @@ export default function MonthView({ nap, onNapra, onHetre }: {
   const [sorok, setSorok] = useState<DayBooking[] | null>(null)
   const [szabadsagok, setSzabadsagok] = useState<VacationRow[]>([])
   const [hiba, setHiba] = useState<string | null>(null)
+  const kivetelek = useKivetelnapok(elso, utolso)
 
   useEffect(() => {
     let el = true
@@ -107,6 +109,7 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                 const lista = napok.get(d) ?? []
                 const atfuto = savok.filter((s) => s.tol <= i && i <= s.ig).length
                 const osszes = lista.length + atfuto
+                const kivetel = kivetelek.get(d)
 
                 return (
                   <button
@@ -115,12 +118,15 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                     onClick={() => onNapra(d)}
                     data-kivul={!azonosHonap(d, elseje) || undefined}
                     data-ma={maE(d) || undefined}
-                    aria-label={`${d} — ${osszes} foglalás`}
+                    data-kivetel={kivetelTipus(kivetel)}
+                    aria-label={`${d} — ${osszes} foglalás${kivetel ? `, ${kivetelLeiras(kivetel)}` : ''}`}
                   >
                     <span className="napszam">
                       <span>{Number(d.slice(8, 10))}</span>
                       {osszes > 0 && <span className="db">{osszes}</span>}
                     </span>
+
+                    {kivetel && <KivetelJel o={kivetel} />}
 
                     {lista.length > 0 && (
                       <span className="honap-autok">

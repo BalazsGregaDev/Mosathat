@@ -40,6 +40,9 @@
   --tr-szoros-halk:#faeedb;
   --tr-tele:       #b3402f;
   --tr-tele-halk:  #f7e2de;
+  --piros:         #b3402f;
+  --piros-halvany: #f7e2de;
+  --piros-sotet:   #8a2e20;
   --betu: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
           "Helvetica Neue", Arial, sans-serif;
   --betu-szam: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
