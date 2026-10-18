@@ -73,7 +73,7 @@ const a = await publikus('/publikus', { width: 1440, height: 900 })
   await kapcsolo(p).click()
   await p.waitForTimeout(700)
   ok('EN aktív, ?lang=en az URL-ben, megjegyezve, html lang=en', { lang: 'en', url: '?lang=en', tar: 'en', be: 'true' }, await allapot(p))
-  ok('menü', ['Packages', 'Booking', 'Contact'], (await p.locator('.kv-nav nav a').allTextContents()).map(sima))
+  ok('menü', ['About us', 'Gallery', 'Packages', 'Booking', 'Contact'], (await p.locator('.kv-nav nav a').allTextContents()).map(sima))
   ok('nyitó rész', ['HAND CAR DETAILING — BUDAPEST, DISTRICT XIII', 'Your car isn’t just a thing. It’s with you for years.'],
     [sima(await p.locator('.kv-kicker').innerText()), sima(await p.locator('.kv-hero h1').innerText())])
   ok('böngészőfül', 'Mosathat — hand car detailing, 1138 Budapest, Váci út 140.', await p.title())

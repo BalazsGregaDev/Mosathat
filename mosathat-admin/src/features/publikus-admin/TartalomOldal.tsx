@@ -48,7 +48,7 @@ const KISZAMOLT: BemutatoAlap = { csomagId: null, extrak: {} }
 
 const SAVOK: Sav[] = [
   { id: 'menu', cim: 'Menüsor és böngészőfül', leiras: 'Az oldal teteje és a böngésző fülén megjelenő cím.', oldalResz: 'nav', ful: true,
-    kulcsok: ['oldal.cim', 'menu.csomagok', 'menu.foglalas', 'menu.kapcsolat'] },
+    kulcsok: ['oldal.cim', 'menu.rolunk', 'menu.galeria', 'menu.csomagok', 'menu.foglalas', 'menu.kapcsolat'] },
   { id: 'hero', cim: 'Nyitó rész', leiras: 'Az első, amit a látogató lát: felcím, nagy cím, két hasáb és a borítókép.', oldalResz: 'hero',
     kulcsok: ['hero.felcim', 'hero.cim', 'hero.bevezeto', 'hero.mellek', 'hero.borito_helye', 'hero.borito_alt'] },
   { id: 'rolunk', cim: 'Rólunk', leiras: 'A borítókép alatti sötétzöld sáv: cím és két bekezdés. Az első bekezdés nagyobb betűvel jelenik meg.', oldalResz: 'rolunk',

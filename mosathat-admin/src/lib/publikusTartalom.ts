@@ -283,6 +283,8 @@ export const CSOPORT_NEV: Record<SzovegCsoport, string> = {
 }
 
 export const SZOVEGEK = [
+  { kulcs: 'menu.rolunk', csoport: 'menu', cimke: 'Menü: rólunk', alap: 'Rólunk', en: 'About us' },
+  { kulcs: 'menu.galeria', csoport: 'menu', cimke: 'Menü: galéria', alap: 'Galéria', en: 'Gallery' },
   { kulcs: 'menu.csomagok', csoport: 'menu', cimke: 'Menü: csomagok', alap: 'Csomagok', en: 'Packages' },
   { kulcs: 'menu.foglalas', csoport: 'menu', cimke: 'Menü: foglalás', alap: 'Foglalás', en: 'Booking' },
   { kulcs: 'menu.kapcsolat', csoport: 'menu', cimke: 'Menü: kapcsolat', alap: 'Kapcsolat', en: 'Contact' },

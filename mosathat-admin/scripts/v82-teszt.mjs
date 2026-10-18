@@ -113,7 +113,7 @@ console.log('\n=== 3) Tartalom ===\n')
 await menuPont(p, 'Tartalom').click()
 await p.locator('.pub-szoveg').first().waitFor({ timeout: 15000 })
 const kulcsok = await p.locator('.pub-szoveg').evaluateAll((l) => l.map((e) => e.dataset.kulcs))
-ok('minden szöveg pontosan egyszer, sávokba rendezve (121 mező, 18 sáv)', [121, 121, 18],
+ok('minden szöveg pontosan egyszer, sávokba rendezve (123 mező, 18 sáv)', [123, 123, 18],
   [kulcsok.length, new Set(kulcsok).size, await p.locator('.pub-sav').count()])
 ok('nincs már „Így jelenik meg” sor', 0, await p.getByText('Így jelenik meg').count())
 const sav = (id) => p.locator(`.pub-sav[data-sav="${id}"]`)

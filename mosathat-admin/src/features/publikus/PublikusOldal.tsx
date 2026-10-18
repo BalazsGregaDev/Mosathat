@@ -171,7 +171,7 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
   useEffect(() => {
     if (!betoltott || lap !== 'fooldal') return
     const cel = window.location.hash.slice(1)
-    const osztaly: Record<string, string> = { csomagok: '.kv-csomagok', foglalas: '.kv-foglalas', hely: '.kv-hely', kapcsolat: '.kv-lab' }
+    const osztaly: Record<string, string> = { rolunk: '.kv-rolunk h2', galeria: '.kv-galeria', csomagok: '.kv-csomagok', foglalas: '.kv-foglalas', hely: '.kv-hely', kapcsolat: '.kv-lab' }
     if (osztaly[cel]) window.setTimeout(() => document.querySelector(osztaly[cel])?.scrollIntoView(), 50)
   }, [betoltott, lap])
 

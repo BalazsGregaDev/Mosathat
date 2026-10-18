@@ -52,12 +52,12 @@ console.log('=== 1) Asztali gépen: a nyelvválasztó a navbarral együtt jön =
   await gorget(p, 1400)
   await p.locator('.kv-nyelv-sor .nyelv-kapcsolo').click()
   await p.waitForTimeout(500)
-  ok('görgetett állapotban is kattintható, a helyén marad', ['en', 'Packages'], [await p.evaluate(() => document.documentElement.lang), sima(await p.locator('.kv-nav nav a').first().textContent())])
+  ok('görgetett állapotban is kattintható, a helyén marad', ['en', 'About us'], [await p.evaluate(() => document.documentElement.lang), sima(await p.locator('.kv-nav nav a').first().textContent())])
   await kep(p, '01-asztali-gorgetve.png', { clip: { x: 0, y: 0, width: 1440, height: 260 } })
   const n = await doboz(p, '.kv-nav nav a')
   ok('a menüpontok kattintható területe nagyobb a szövegnél (8 px-re a szövegtől is)', ['', true],
     [await p.evaluate(() => getComputedStyle(document.querySelector('.kv-nav nav a'), '::before').content.replace(/"/g, '')),
-     (await pontAlatt(p, n.left - 6, n.top - 7)) === 'Packages'])
+     (await pontAlatt(p, n.left - 6, n.top - 7)) === 'About us'])
   ok('a sáv többi része nem takarja el a tartalmat (átkattintható)', 'none',
     await p.locator('.kv-nyelv-sor').evaluate((e) => getComputedStyle(e).pointerEvents))
   ok('nincs futásidejű hiba', [], hibak)
@@ -126,8 +126,8 @@ console.log('\n=== 4) A hamburger menü ===\n')
     sorMagassag: Math.round(document.querySelector('.kv-menu-panel nav a').getBoundingClientRect().height),
     nyelvMagassag: document.querySelector('.kv-menu-panel .nyelv-kapcsolo').getBoundingClientRect().height >= 44,
   }))
-  ok('megnyílik: Csomagok, Foglalás, Kapcsolat és a nyelvválasztó; a név is látszik, a gomb X lett',
-    { gomb: 'true', cimke: 'Menü bezárása', linkek: ['Csomagok', 'Foglalás', 'Kapcsolat'], nyelv: true, hatter: true, logo: '1', sorMagassag: 52, nyelvMagassag: true }, nyitott)
+  ok('megnyílik: Rólunk, Galéria, Csomagok, Foglalás, Kapcsolat és a nyelvválasztó; a név is látszik, a gomb X lett',
+    { gomb: 'true', cimke: 'Menü bezárása', linkek: ['Rólunk', 'Galéria', 'Csomagok', 'Foglalás', 'Kapcsolat'], nyelv: true, hatter: true, logo: '1', sorMagassag: 52, nyelvMagassag: true }, nyitott)
   await kep(p, '04-telefon-menu-nyitva.png')
 
   await p.locator('.kv-menu-panel nav a').filter({ hasText: 'Foglalás' }).tap()
@@ -144,7 +144,7 @@ console.log('\n=== 4) A hamburger menü ===\n')
     [await p.locator('.kv-menu-hely').isVisible(), await p.evaluate(() => document.documentElement.lang), await p.evaluate(() => location.search),
      await p.locator('.kv-menu-gomb').getAttribute('aria-label')])
   await p.locator('.kv-menu-gomb').tap(); await p.waitForTimeout(300)
-  ok('angolul a menü is angol', ['Packages', 'Booking', 'Contact'], (await p.locator('.kv-menu-panel nav a').allTextContents()).map(sima))
+  ok('angolul a menü is angol', ['About us', 'Gallery', 'Packages', 'Booking', 'Contact'], (await p.locator('.kv-menu-panel nav a').allTextContents()).map(sima))
   await kep(p, '06-telefon-menu-angol.png')
   await p.mouse.click(200, 780); await p.waitForTimeout(300)
   ok('a menün kívülre érintve bezárul', false, await p.locator('.kv-menu-hely').isVisible())

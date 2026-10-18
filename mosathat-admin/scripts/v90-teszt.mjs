@@ -32,7 +32,7 @@ async function oldal(ut, opts = { viewport: { width: 1440, height: 900 } }, alap
 }
 const gorget = async (p, y) => { await p.evaluate((yy) => scrollTo(0, yy), y); await p.waitForTimeout(350) }
 const galeriahoz = async (p) => {
-  await p.locator('.kv-galeria-eszkozok').evaluate((e) => scrollTo(0, e.getBoundingClientRect().top + scrollY - 90))
+  await p.evaluate(() => scrollTo(0, Math.min(...['.kv-galeria-eszkozok', '.kv-galeria-racs'].map((s) => document.querySelector(s).getBoundingClientRect().top)) + scrollY - 90))
   await p.waitForFunction(() => document.querySelectorAll('.kv-moso[data-kesz]').length === 4, null, { timeout: 30000 })
   await p.waitForTimeout(300)
 }

@@ -1,5 +1,5 @@
 import {
-  createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode,
+  createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode,
 } from 'react'
 
 import type { Catalog } from '../../data/source'
@@ -30,22 +30,35 @@ interface KvAllapot {
 const Kv = createContext<KvAllapot | null>(null)
 const useKv = () => useContext(Kv)!
 
-type Cel = 'csomagok' | 'foglalas' | 'kapcsolat'
+type Cel = 'rolunk' | 'galeria' | 'csomagok' | 'foglalas' | 'kapcsolat'
 
 const CEL_ELEM: Record<Cel, string> = {
+  rolunk: '.kv-rolunk h2',
+  galeria: '.kv-galeria',
   csomagok: '.kv-csomagok',
   foglalas: '.kv-foglalas',
   kapcsolat: '.kv-lab',
 }
 
 const CEL_CIM: Record<Cel, string> = {
+  rolunk: '.kv-rolunk h2',
+  galeria: '.kv-galeria h2',
   csomagok: '.kv-csomagok h2',
   foglalas: '.kv-foglalas h2',
   kapcsolat: '.kv-lab [data-kapcsolat] > .kv-cimke',
 }
 
+const KEMLEL: Record<Cel, [string, string, number]> = {
+  rolunk: ['.kv-rolunk h2', '.kv-rolunk', 64],
+  galeria: ['.kv-galeria', '.kv-galeria', 0],
+  csomagok: ['.kv-csomagok', '.kv-csomagok', 0],
+  foglalas: ['.kv-foglalas', '.kv-foglalas', 0],
+  kapcsolat: ['.kv-hely', '.kv-lab', 0],
+}
+
 const MENU: [SzovegKulcs, Cel][] = [
-  ['menu.csomagok', 'csomagok'], ['menu.foglalas', 'foglalas'], ['menu.kapcsolat', 'kapcsolat'],
+  ['menu.rolunk', 'rolunk'], ['menu.galeria', 'galeria'], ['menu.csomagok', 'csomagok'],
+  ['menu.foglalas', 'foglalas'], ['menu.kapcsolat', 'kapcsolat'],
 ]
 
 const FELVILLANAS = 3000
@@ -87,8 +100,36 @@ function Nav({ jobbra }: { jobbra?: ReactNode }) {
   const f = FELIRAT[nyelv]
   const [nyitva, setNyitva] = useState(false)
   const [gorgetve, setGorgetve] = useState(false)
+  const [aktiv, setAktiv] = useState('')
+  const fej = useRef<HTMLElement>(null)
   const panelId = useId()
   const hamburger = nyilvanos && !jobbra
+
+  useEffect(() => {
+    if (!hamburger) return
+    const kv = fej.current?.closest('.kv')
+    if (!kv) return
+    let kocka = 0
+    const szamol = () => {
+      kocka = 0
+      const vonal = (fej.current?.offsetHeight ?? 0) + window.innerHeight * 0.3
+      const legalul = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4
+      const ki: Cel[] = []
+      for (const [, cel] of MENU) {
+        const [felso, also, elotte] = KEMLEL[cel]
+        const fent = kv.querySelector(felso)?.getBoundingClientRect()
+        const lent = kv.querySelector(also)?.getBoundingClientRect()
+        if (fent && lent && fent.top - elotte <= vonal && lent.bottom > vonal) ki.push(cel)
+      }
+      const uj = legalul && kv.querySelector(KEMLEL.kapcsolat[1]) ? 'kapcsolat' : ki.join(' ')
+      setAktiv((r) => (r === uj ? r : uj))
+    }
+    const kerel = () => { if (!kocka) kocka = requestAnimationFrame(szamol) }
+    kerel()
+    window.addEventListener('scroll', kerel, { passive: true })
+    window.addEventListener('resize', kerel)
+    return () => { cancelAnimationFrame(kocka); window.removeEventListener('scroll', kerel); window.removeEventListener('resize', kerel) }
+  }, [hamburger])
 
   useEffect(() => {
     if (!hamburger) return
@@ -116,13 +157,15 @@ function Nav({ jobbra }: { jobbra?: ReactNode }) {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
+  const aktivok = aktiv.split(' ')
   const linkek = MENU.map(([m, cel]) => (
-    <a key={m} href={`#${cel}`} onClick={(e) => { setNyitva(false); ugras(e, cel, nyilvanos, nyelv) }}>{sz(m)}</a>
+    <a key={m} href={`#${cel}`} aria-current={aktivok.includes(cel) ? 'location' : undefined}
+       onClick={(e) => { setNyitva(false); ugras(e, cel, nyilvanos, nyelv) }}>{sz(m)}</a>
   ))
 
   return (
     <>
-      <header className="kv-nav" data-nyitva={nyitva || undefined} data-gorgetve={gorgetve || undefined}>
+      <header className="kv-nav" ref={fej} data-nyitva={nyitva || undefined} data-gorgetve={gorgetve || undefined}>
         {nyilvanos
           ? <a className="kv-logo" href={nyelviUt('/publikus', nyelv)} onClick={logo}>{u.nev}</a>
           : <span className="kv-logo">{u.nev}</span>}
@@ -377,8 +420,16 @@ function Lab() {
   const sz = useSz()
   const nyelv = useNyelv()
   const jogiCim = nyelv === 'en' ? JOGI_CIM_EN : JOGI_CIM
+  const eger = (e: PointerEvent<HTMLElement>) => {
+    if (e.pointerType !== 'mouse') return
+    const el = e.currentTarget
+    const r = el.getBoundingClientRect()
+    el.style.setProperty('--eger-x', `${Math.round(e.clientX - r.left)}px`)
+    el.style.setProperty('--eger-y', `${Math.round(e.clientY - r.top)}px`)
+    if (!el.hasAttribute('data-eger')) el.setAttribute('data-eger', '')
+  }
   return (
-    <footer className="kv-lab" data-csillan>
+    <footer className="kv-lab" data-csillan onPointerMove={eger} onPointerLeave={(e) => e.currentTarget.removeAttribute('data-eger')}>
       <div className="kv-lab-fo">
         <div className="kv-lab-elso">
           <span className="kv-logo">{u.nev}</span>

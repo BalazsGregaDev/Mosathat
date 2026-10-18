@@ -8,9 +8,10 @@
 html.publikus, html.publikus body, html.publikus #root { height: auto; min-height: 100%; }
 html.publikus body { touch-action: auto; overscroll-behavior: auto; background: #f4f4f1; overflow-x: visible; overflow-x: clip; }
 .pub-keret .kv-nav { position: sticky; top: 0; z-index: 30; background: var(--bg); }
-.pub-keret .kv-csomagok, .pub-keret .kv-foglalas, .pub-keret .kv-hely, .pub-keret .kv-lab {
+.pub-keret .kv-galeria, .pub-keret .kv-csomagok, .pub-keret .kv-foglalas, .pub-keret .kv-hely, .pub-keret .kv-lab {
   scroll-margin-top: calc(var(--nav-h, 0px) + 12px);
 }
+.pub-keret .kv-rolunk h2 { scroll-margin-top: calc(var(--nav-h, 0px) + 56px); }
 .pub-keret .kv {
   --pl: max(var(--px), calc(env(safe-area-inset-left, 0px) + 12px));
   --pr: max(var(--px), calc(env(safe-area-inset-right, 0px) + 12px));
@@ -49,6 +50,16 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
 
 .pub-keret .kv-nav :is(.kv-logo, nav a) { position: relative; }
 .pub-keret .kv-nav :is(.kv-logo, nav a)::before { content: ''; position: absolute; inset: -10px -8px; }
+.pub-keret .kv-nav nav a { transition: color .2s ease; }
+.pub-keret .kv-nav nav a::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 1.5px; background: var(--zold);
+  transform: scaleX(0); transform-origin: left center; transition: transform .25s ease;
+}
+.pub-keret .kv[data-k] .kv-nav nav a[aria-current] { color: var(--fg); }
+.pub-keret .kv-nav nav a[aria-current]::after { transform: scaleX(1); }
+@container kv (max-width: 1000px) {
+  .pub-keret .kv[data-k] .kv-nav nav { gap: 20px; }
+}
 .pub-keret .kv-menu-gomb, .pub-keret .kv-menu-hely { display: none; }
 
 @container kv (max-width: 700px) {
@@ -96,6 +107,11 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
     display: flex; align-items: center; min-height: 52px; border-bottom: 1px solid var(--vonal);
     font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--fg); text-decoration: none;
   }
+  .pub-keret .kv-menu-panel nav a { position: relative; }
+  .pub-keret .kv[data-k] .kv-menu-panel nav a[aria-current] { color: var(--zold); font-weight: 600; }
+  .pub-keret .kv-menu-panel nav a[aria-current]::after {
+    content: ''; position: absolute; left: -12px; top: 50%; width: 3px; height: 18px; margin-top: -9px; border-radius: 2px; background: var(--zold);
+  }
   .pub-keret .kv-menu-nyelv { display: flex; padding-top: 18px; }
   .pub-keret .kv-menu-nyelv .nyelv-kapcsolo { font-size: 12.5px; }
   .pub-keret .kv-menu-nyelv .nyelv-fel { padding: 10px 14px; }
@@ -103,5 +119,6 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
 @keyframes kv-menu-be { from { opacity: 0; transform: translateY(-6px); } }
 @keyframes kv-menu-hatter { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .pub-keret .kv-menu-gomb span, .pub-keret .kv-menu-panel, .pub-keret .kv-menu-hatter, .pub-keret .kv-nav .kv-logo { transition: none; animation: none; }
+  .pub-keret .kv-menu-gomb span, .pub-keret .kv-menu-panel, .pub-keret .kv-menu-hatter, .pub-keret .kv-nav .kv-logo,
+  .pub-keret .kv-nav nav a, .pub-keret .kv-nav nav a::after { transition: none; animation: none; }
 }
