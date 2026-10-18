@@ -33,7 +33,7 @@ async function oldal(ut, opts = { viewport: { width: 1440, height: 900 } }, alap
 const gorget = async (p, y) => { await p.evaluate((yy) => scrollTo(0, yy), y); await p.waitForTimeout(350) }
 const galeriahoz = async (p) => {
   await p.evaluate(() => scrollTo(0, Math.min(...['.kv-galeria-eszkozok', '.kv-galeria-racs'].map((s) => document.querySelector(s).getBoundingClientRect().top)) + scrollY - 90))
-  await p.waitForFunction(() => document.querySelectorAll('.kv-moso[data-kesz]').length === 4, null, { timeout: 30000 })
+  await p.waitForFunction(() => document.querySelectorAll('.kv-galeria-racs .kv-moso[data-kesz]').length === 4, null, { timeout: 30000 })
   await p.waitForTimeout(300)
 }
 const alfa = (p, i, pontok) => p.locator('.kv-moso canvas').nth(i).evaluate((c, pp) => {
@@ -136,7 +136,7 @@ console.log('\n=== 4) Galéria: lemosás egérrel, szivacsméret ===\n')
   const p = a.p
   await galeriahoz(p)
   ok('2×2-es rács, a koszos kép van felül', [4, 2, [255, 255, 255]],
-    [await p.locator('.kv-moso').count(), await p.locator('.kv-galeria-racs').evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(' ').length),
+    [await p.locator('.kv-galeria-racs .kv-moso').count(), await p.locator('.kv-galeria-racs').evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(' ').length),
      await alfa(p, 0, [[0.2, 0.2], [0.5, 0.5], [0.8, 0.8]])])
   ok('alul a tiszta (b), felül a koszos (a) kép', ['/kepek/galeria/sub2b.jpg', '/kepek/galeria/sub2a.jpg'],
     [await p.locator('.kv-moso-tiszta').first().evaluate((e) => new URL(e.src).pathname), await p.locator('.kv-moso-koszos').first().evaluate((e) => new URL(e.src).pathname)])
@@ -210,14 +210,16 @@ console.log('\n=== 6) Angolul ===\n')
   await a.ctx.close()
 }
 
-console.log('\n=== 7) Telefonon: ujjal vízszintesen mos, függőlegesen görget ===\n')
+console.log('\n=== 7) Telefonon: a szivacs gomb benyomása után ujjal mos ===\n')
 {
   const t = await oldal('/publikus', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
   const p = t.p
   await galeriahoz(p)
   ok('telefonon is 2×2, nincs vízszintes görgetés', [2, true],
     [await p.locator('.kv-galeria-racs').evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(' ').length), await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)])
-  ok('a képen függőlegesen görgetni lehet (touch-action: pan-y)', 'pan-y', await p.locator('.kv-moso canvas').first().evaluate((e) => getComputedStyle(e).touchAction))
+  ok('alapból a képen görgetni lehet', 'auto', await p.locator('.kv-moso canvas').first().evaluate((e) => getComputedStyle(e).touchAction))
+  await p.locator('.kv-szivacs-gomb').tap()
+  await p.waitForTimeout(300)
   const r = await p.locator('.kv-moso').first().boundingBox()
   const cdp = await t.ctx.newCDPSession(p)
   const y = r.y + r.height * 0.5
@@ -225,7 +227,7 @@ console.log('\n=== 7) Telefonon: ujjal vízszintesen mos, függőlegesen görget
   for (let k = 1; k <= 12; k++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: r.x + 6 + (r.width - 12) * (k / 12), y }] })
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await p.waitForTimeout(300)
-  ok('ujjal vízszintesen húzva lemossa', [0, 0, 255], await alfa(p, 0, [[0.2, 0.5], [0.8, 0.5], [0.5, 0.1]]))
+  ok('a szivacs gomb után ujjal húzva lemossa', [0, 0, 255], await alfa(p, 0, [[0.2, 0.5], [0.8, 0.5], [0.5, 0.1]]))
   await kep(p, '07-telefon-galeria.png')
   await gorget(p, 0)
   await kep(p, '08-telefon-teteje.png')
@@ -309,7 +311,7 @@ console.log('\n=== 9) Admin: Rólunk és Galéria sáv, az alcím a Csomagoknál
   await q.waitForTimeout(400)
   ok('az előnézet azonnal frissül', 'Rólunk röviden', sima(await rol.locator('.kv-rolunk h2').textContent()))
   const gal = q.locator('.pub-sav[data-sav="galeria"]')
-  ok('Galéria sáv: 5 mező és kipróbálható előnézet', [5, 4], [await gal.locator('.pub-szoveg').count(), await gal.locator('.kv-moso').count()])
+  ok('Galéria sáv: 8 mező és kipróbálható előnézet', [8, 4], [await gal.locator('.pub-szoveg').count(), await gal.locator('.kv-galeria-racs .kv-moso').count()])
   const cs = q.locator('.pub-sav[data-sav="csomagok"]')
   await cs.locator('.pub-szoveg[data-kulcs="csomagok.ervenyes"] input').fill('Áraink ettől érvényesek: 2026.03.01.')
   await q.waitForTimeout(300)

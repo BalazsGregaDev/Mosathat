@@ -11,6 +11,7 @@ import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
 import type { Nyelv } from '../../lib/nyelv'
 import { ervenyesBlokkok, type JogiBlokk } from '../../lib/jogiDokumentum'
 import Koncepcio, { KoncepcioKeret } from '../arculat/Koncepcio'
+import { gorgetIde } from '../arculat/gorgetes'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import { FoglalasUrlap, type FoglalasForras } from './FoglalasModul'
 import JogiOldal, { type JogiLap } from './JogiOldal'
@@ -172,7 +173,7 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
     if (!betoltott || lap !== 'fooldal') return
     const cel = window.location.hash.slice(1)
     const osztaly: Record<string, string> = { rolunk: '.kv-rolunk h2', galeria: '.kv-galeria', csomagok: '.kv-csomagok', foglalas: '.kv-foglalas', hely: '.kv-hely', kapcsolat: '.kv-lab' }
-    if (osztaly[cel]) window.setTimeout(() => document.querySelector(osztaly[cel])?.scrollIntoView(), 50)
+    if (osztaly[cel]) window.setTimeout(() => gorgetIde(document.querySelector(osztaly[cel]), false), 50)
   }, [betoltott, lap])
 
   if (hiba) {

@@ -136,7 +136,7 @@ console.log('\n=== 4) Tartalom: magyarázat a kapcsos zárójeles adatok alatt =
 await q.locator('aside.oldalsav .menu button').filter({ hasText: /^Tartalom$/ }).click()
 await q.locator('.pub-szoveg').first().waitFor({ timeout: 20000 })
 const magy = (k) => q.locator(`.pub-szoveg[data-kulcs="${k}"] .pub-valtozo-magyarazat li`).allTextContents().then((l) => l.map(sima))
-ok('123 szöveg (a menü Hol vagyunk pontja is kikerült)', [123, 0], [await q.locator('.pub-szoveg').count(), await q.locator('.pub-szoveg[data-kulcs="menu.hely"]').count()])
+ok('126 szöveg (a menü Hol vagyunk pontja is kikerült)', [126, 0], [await q.locator('.pub-szoveg').count(), await q.locator('.pub-szoveg[data-kulcs="menu.hely"]').count()])
 ok('a menü-előnézetben is ugyanaz az öt pont', ['Rólunk', 'Galéria', 'Csomagok', 'Foglalás', 'Kapcsolat'], (await q.locator('.pub-sav[data-sav="menu"] .kv-nav nav a').allTextContents()).map(sima))
 const elvitel = await magy('foglalas.siker_elvitel')
 ok('Köszönő üzenet: elvitel  →  {mikor} = …', [1, true], [elvitel.length, /^\{mikor\} = az elvitel napja és időablaka, például: .+, 8:00 és 17:00 között$/.test(elvitel[0])])

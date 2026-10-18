@@ -309,10 +309,13 @@ export const SZOVEGEK = [
 
   { kulcs: 'galeria.cim', csoport: 'galeria', cimke: 'Cím', alap: 'Galéria', en: 'Gallery' },
   { kulcs: 'galeria.bevezeto', csoport: 'galeria', cimke: 'Bevezető', sor: true,
-    alap: 'Ugyanaz az autó mosás előtt és után. Húzd végig az egeret vagy az ujjad a képen, és mosd le a koszt.',
-    en: 'The same car before and after a wash. Run your mouse or finger across a photo to wash the dirt off.' },
+    alap: 'A képeken egy régen mosott autót láthatsz, nézd meg mire képes a csapatunk! Használd a szivacsot és mentsd meg a kosztól a Subarut. A következő lehet a te autód is!',
+    en: 'These photos show a car that had not been washed in a long time. See what our team can do! Grab the sponge and save the Subaru from the dirt. Your car could be next!' },
+  { kulcs: 'galeria.foglalas', csoport: 'galeria', cimke: 'Gomb a leírás alatt', alap: 'Időpontfoglalás', en: 'Book an appointment' },
   { kulcs: 'galeria.meret', csoport: 'galeria', cimke: 'A csúszka neve (képernyőolvasónak)', alap: 'Szivacs mérete', en: 'Sponge size' },
   { kulcs: 'galeria.reset', csoport: 'galeria', cimke: 'A Reset gomb neve (képernyőolvasónak, egérrel fölé állva is látszik)', alap: 'Újra koszos', en: 'Make it dirty again' },
+  { kulcs: 'galeria.szivacs', csoport: 'galeria', cimke: 'A szivacs gomb neve (képernyőolvasónak, érintőképernyőn)', alap: 'Szivacs: mosás ujjal', en: 'Sponge: wash with your finger' },
+  { kulcs: 'galeria.vege', csoport: 'galeria', cimke: 'Az X gomb neve (képernyőolvasónak, érintőképernyőn)', alap: 'Mosás vége, görgetés vissza', en: 'Stop washing and scroll again' },
   { kulcs: 'galeria.kep_alt', csoport: 'galeria', cimke: 'A képek leírása (képernyőolvasónak)', alap: 'Ugyanaz az autó koszosan és tisztán', en: 'The same car dirty and clean' },
 
   { kulcs: 'csomagok.cim', csoport: 'csomagok', cimke: 'Cím', alap: 'Csomagok', en: 'Packages' },

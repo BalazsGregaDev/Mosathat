@@ -53,8 +53,8 @@ const SAVOK: Sav[] = [
     kulcsok: ['hero.felcim', 'hero.cim', 'hero.bevezeto', 'hero.mellek', 'hero.borito_helye', 'hero.borito_alt'] },
   { id: 'rolunk', cim: 'Rólunk', leiras: 'A borítókép alatti sötétzöld sáv: cím és két bekezdés. Az első bekezdés nagyobb betűvel jelenik meg.', oldalResz: 'rolunk',
     kulcsok: ['rolunk.cim', 'rolunk.bekezdes1', 'rolunk.bekezdes2'] },
-  { id: 'galeria', cim: 'Galéria', leiras: 'Az előtte–utána képek a Rólunk alatt. A képeken végighúzva lemosható a kosz, a Reset gombbal újra koszos lesz. Az előnézetben is kipróbálhatod.', oldalResz: 'galeria',
-    kulcsok: ['galeria.cim', 'galeria.bevezeto', 'galeria.meret', 'galeria.reset', 'galeria.kep_alt'] },
+  { id: 'galeria', cim: 'Galéria', leiras: 'Az előtte–utána képek a Rólunk alatt. Egérrel végighúzva lemosható a kosz, érintőképernyőn a szivacs gomb bekapcsolása után. A Reset gombbal újra koszos lesz. Az előnézetben is kipróbálhatod.', oldalResz: 'galeria',
+    kulcsok: ['galeria.cim', 'galeria.bevezeto', 'galeria.foglalas', 'galeria.meret', 'galeria.reset', 'galeria.szivacs', 'galeria.vege', 'galeria.kep_alt'] },
   { id: 'csomagok', cim: 'Csomagok táblázat', leiras: 'A táblázat sorai és cellái a Csomagok menüben szerkeszthetők, itt a feliratai.', oldalResz: 'csomagok',
     kulcsok: ['csomagok.cim', 'csomagok.ervenyes', 'csomagok.alcim.szemelyauto', 'csomagok.alcim.suv', 'csomagok.alcim.kisbusz', 'csomagok.kategoria',
       'csomagok.kat.szemelyauto', 'csomagok.kat.suv', 'csomagok.kat.kisbusz', 'csomagok.csoport.kulso', 'csomagok.csoport.belso'] },
@@ -110,6 +110,9 @@ const MIKOR: Partial<Record<SzovegKulcs, string>> = {
   'galeria.meret': 'Nem látszik: a képernyőolvasó olvassa fel a csúszka neveként.',
   'galeria.reset': 'Felirat nélküli gomb: a képernyőolvasó olvassa fel, és egérrel fölé állva jelenik meg.',
   'galeria.kep_alt': 'Nem látszik: a képernyőolvasó olvassa fel a képek helyett.',
+  'galeria.foglalas': 'A Foglalás részhez görget, mint a menü Foglalás pontja.',
+  'galeria.szivacs': 'Csak érintőképernyőn gomb: bekapcsolva ujjal lehet mosni, a görgetés szünetel.',
+  'galeria.vege': 'Csak érintőképernyőn látszik: kikapcsolja a mosást, újra lehet görgetni.',
   'foglalas.arajanlat': 'Csak akkor látszik, ha egy csomagnak nincs fix ára.',
   'foglalas.telefonon': 'Csak akkor látszik, ha egy terjedelem nem foglalható online.',
   'foglalas.ar_egyeztetes': 'Csak az egyeztetendő árú extráknál látszik.',
@@ -337,7 +340,7 @@ function bemutatoAlap(k: Catalog): BemutatoAlap {
   return { csomagId: csomag?.id ?? null, extrak: extra ? { [extra.id]: 1 } : {} }
 }
 
-function Elonezet({ szel, children }: { szel: number; children: ReactNode }) {
+function Elonezet({ szel, keret = false, children }: { szel: number; keret?: boolean; children: ReactNode }) {
   const hely = useRef<HTMLDivElement>(null)
   const [arany, setArany] = useState(1)
   useLayoutEffect(() => {
@@ -351,7 +354,7 @@ function Elonezet({ szel, children }: { szel: number; children: ReactNode }) {
   }, [szel])
   return (
     <div className="pub-elonezet-hely" ref={hely}>
-      <div className="pub-elonezet-lap" style={{ width: szel, zoom: arany }}>{children}</div>
+      <div className={keret ? 'pub-elonezet-lap kv-keret' : 'pub-elonezet-lap'} style={{ width: szel, zoom: arany }}>{children}</div>
     </div>
   )
 }
@@ -407,7 +410,7 @@ function SavElonezet({ sav, pub, forras, alap }: {
   const mod: Mod = pub.arculat === '03' && pub.mod ? pub.mod : 'VILAGOS'
   if (sav.oldalResz) {
     return (
-      <Elonezet szel={1280}>
+      <Elonezet szel={1280} keret>
         {sav.ful && <BongeszoFul />}
         <KoncepcioResz resz={sav.oldalResz} mod={mod} k={pub.katalogus} />
       </Elonezet>

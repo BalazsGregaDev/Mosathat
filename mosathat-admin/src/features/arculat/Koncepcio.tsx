@@ -14,6 +14,7 @@ import { FELIRAT, nyelviUt, type Nyelv } from '../../lib/nyelv'
 import { Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from '../publikus/tartalom'
 import Galeria from './Galeria'
 import { useCsillanas } from './csillanas'
+import { gorgetIde } from './gorgetes'
 
 interface KvAllapot {
   t: CsomagTabla
@@ -79,7 +80,7 @@ function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null, nyilvanos = fa
   const kv = e.currentTarget.closest('.kv')
   const elem = kv?.querySelector(CEL_ELEM[cel])
   if (elem) {
-    elem.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    gorgetIde(elem)
     felvillant(kv?.querySelector<HTMLElement>(CEL_CIM[cel]))
   } else if (nyilvanos) window.location.href = `${nyelviUt('/publikus', nyelv)}#${cel}`
 }
@@ -191,11 +192,34 @@ function Nav({ jobbra }: { jobbra?: ReactNode }) {
   )
 }
 
-function Gomb({ children, cel = 'foglalas' }: { children?: ReactNode; cel?: Cel | null }) {
+function egerKovet(e: PointerEvent<HTMLElement>) {
+  if (e.pointerType !== 'mouse') return
+  const el = e.currentTarget
+  const r = el.getBoundingClientRect()
+  el.style.setProperty('--eger-x', `${Math.round(e.clientX - r.left)}px`)
+  el.style.setProperty('--eger-y', `${Math.round(e.clientY - r.top)}px`)
+  if (!el.hasAttribute('data-eger')) el.setAttribute('data-eger', '')
+}
+
+function egerElhagy(e: PointerEvent<HTMLElement>) {
+  e.currentTarget.removeAttribute('data-eger')
+}
+
+function Gomb({ children, cel = 'foglalas', lakk = false }: { children?: ReactNode; cel?: Cel | null; lakk?: boolean }) {
   const { nyilvanos } = useKv()
   const sz = useSz()
   const nyelv = useNyelv()
-  return <a className="kv-gomb" href="#foglalas" onClick={(e) => ugras(e, cel, nyilvanos, nyelv)}>{children ?? sz('gomb.idopont')}</a>
+  const fenyes = lakk ? { 'data-csillan': '', onPointerMove: egerKovet, onPointerLeave: egerElhagy } : {}
+  return (
+    <a className={lakk ? 'kv-gomb kv-gomb-lakk' : 'kv-gomb'} href="#foglalas" onClick={(e) => ugras(e, cel, nyilvanos, nyelv)} {...fenyes}>
+      {children ?? sz('gomb.idopont')}
+    </a>
+  )
+}
+
+function GaleriaFoglalassal() {
+  const sz = useSz()
+  return <Galeria gomb={<Gomb lakk>{sz('galeria.foglalas')}</Gomb>} />
 }
 
 function Info({ cimke, children }: { cimke: string; children: ReactNode }) {
@@ -420,16 +444,8 @@ function Lab() {
   const sz = useSz()
   const nyelv = useNyelv()
   const jogiCim = nyelv === 'en' ? JOGI_CIM_EN : JOGI_CIM
-  const eger = (e: PointerEvent<HTMLElement>) => {
-    if (e.pointerType !== 'mouse') return
-    const el = e.currentTarget
-    const r = el.getBoundingClientRect()
-    el.style.setProperty('--eger-x', `${Math.round(e.clientX - r.left)}px`)
-    el.style.setProperty('--eger-y', `${Math.round(e.clientY - r.top)}px`)
-    if (!el.hasAttribute('data-eger')) el.setAttribute('data-eger', '')
-  }
   return (
-    <footer className="kv-lab" data-csillan onPointerMove={eger} onPointerLeave={(e) => e.currentTarget.removeAttribute('data-eger')}>
+    <footer className="kv-lab" data-csillan onPointerMove={egerKovet} onPointerLeave={egerElhagy}>
       <div className="kv-lab-fo">
         <div className="kv-lab-elso">
           <span className="kv-logo">{u.nev}</span>
@@ -600,7 +616,7 @@ function Magazin() {
       <Nav />
       <MagazinHero />
       <Rolunk />
-      <Galeria />
+      <GaleriaFoglalassal />
       {foglalas ? (
         <div className="kv-ketoszlop">
           <MagazinCsomagok />
@@ -840,7 +856,7 @@ export function KoncepcioResz({ resz, mod, k }: { resz: KoncepcioReszNev; mod: M
       {resz === 'nav' && <Nav />}
       {resz === 'hero' && <MagazinHero />}
       {resz === 'rolunk' && <Rolunk />}
-      {resz === 'galeria' && <Galeria />}
+      {resz === 'galeria' && <GaleriaFoglalassal />}
       {resz === 'csomagok' && <MagazinCsomagok />}
       {resz === 'hely' && <Terkep />}
       {resz === 'lab' && <Lab />}
