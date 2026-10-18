@@ -52,6 +52,23 @@ köti a hozzáférést.
 A PGlite ilyenkor **le sem töltődik** — dinamikus importtal külön darabba
 kerül, amit csak a demó kér be. (Fő bundle: ~180 KB. PGlite: ~13 MB.)
 
+## Publikus és belépéshez kötött oldalak
+
+Belépés nélkül elérhető: `/publikus` (angolul `/publikus?lang=en`), `/impresszum`,
+`/adatvedelem` és a lemondó link (`/lemondas/...`). Ezek csak az öt `publikus_*`
+adatbázis-függvényt hívják, amit a névtelen (anon) kulcs is hívhat.
+
+Minden más útvonal (`/`, `/idopontok`, ...) az admin: belépés nélkül csak a
+belépőképernyő látszik, és az adatbázis (RLS) sem ad ki adatot. Ez csak
+`VITE_DATA_SOURCE=supabase` mellett igaz: demó módban a belépőképernyő bármit
+elfogad, ezért a Vercelen mindig `supabase` legyen beállítva.
+
+A publikus oldalaknak saját HTML-jük van (`publikus.html`, a `vercel.json`
+irányítja oda őket), hogy a linkelőnézet (Messenger, Viber, e-mail) a valódi
+címet és a borítóképet mutassa, ne az admin címét. Az `og:image` teljes URL-t
+kér: a hivatalos domainre költözéskor a `publikus.html`-ben a
+`https://mosathat.vercel.app` részt is át kell írni.
+
 ## Az adatbázis
 
 A `supabase/` mappa a **repó gyökerében** van, nem az admin appon belül —
