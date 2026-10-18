@@ -97,7 +97,7 @@ await sugo(p, 'fogl-8').scrollIntoViewIfNeeded()
 await kep(p, '01-sugo-8-lepes-elott.png')
 
 console.log('\n=== 2) Impresszum és Adatvédelem linkje nem szerkeszthető ===\n')
-ok('112 szöveg, 16 sáv, a lábléc sávban nincs linkszöveg', [112, 16, 0, 0], [
+ok('121 szöveg, 18 sáv, a lábléc sávban nincs linkszöveg', [121, 18, 0, 0], [
   await p.locator('.pub-szoveg').count(), await p.locator('.pub-sav').count(),
   await p.locator('.pub-szoveg[data-kulcs="lab.impresszum"]').count(), await p.locator('.pub-szoveg[data-kulcs="lab.adatvedelem"]').count(),
 ])

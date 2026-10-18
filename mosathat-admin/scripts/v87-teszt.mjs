@@ -196,7 +196,7 @@ await menu('Tartalom').waitFor({ timeout: 30000 })
 await menu('Tartalom').click()
 await q.locator('.pub-szoveg').first().waitFor({ timeout: 20000 })
 {
-  ok('16 sáv, mindegyik fejlécében HU-EN csúszka', [16, 16], [await q.locator('.pub-sav').count(), await q.locator('.pub-sav > h3 .nyelv-kapcsolo').count()])
+  ok('18 sáv, mindegyik fejlécében HU-EN csúszka', [18, 18], [await q.locator('.pub-sav').count(), await q.locator('.pub-sav > h3 .nyelv-kapcsolo').count()])
   const hero = q.locator('.pub-sav[data-sav="hero"]')
   await hero.locator('.nyelv-kapcsolo').click()
   await q.waitForTimeout(800)

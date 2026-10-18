@@ -266,11 +266,13 @@ export interface SzovegDef {
   valtozok?: string[]
 }
 
-export type SzovegCsoport = 'menu' | 'hero' | 'csomagok' | 'foglalas' | 'adatok' | 'hely' | 'lab' | 'cimkek' | 'oldal'
+export type SzovegCsoport = 'menu' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'foglalas' | 'adatok' | 'hely' | 'lab' | 'cimkek' | 'oldal'
 
 export const CSOPORT_NEV: Record<SzovegCsoport, string> = {
   menu: 'Menü és gombok',
   hero: 'Nyitó rész',
+  rolunk: 'Rólunk',
+  galeria: 'Galéria',
   csomagok: 'Csomagok táblázat',
   foglalas: 'Időpontfoglalás',
   adatok: 'Időpontfoglalás: adatok és beküldés',
@@ -295,7 +297,24 @@ export const SZOVEGEK = [
   { kulcs: 'hero.borito_alt', csoport: 'hero', cimke: 'Borítókép leírása (képernyőolvasónak)', alap: '{nev} — kézi autókozmetika a {haz} mélygarázsában', en: '{nev} — hand car detailing in the underground car park of {haz}' },
   { kulcs: 'hero.borito_helye', csoport: 'hero', cimke: 'Felirat, amíg nincs borítókép', alap: 'Fotó helye — garázs, munka közben', en: 'Photo placeholder — the garage, at work' },
 
+  { kulcs: 'rolunk.cim', csoport: 'rolunk', cimke: 'Cím', alap: 'Rólunk', en: 'About us' },
+  { kulcs: 'rolunk.bekezdes1', csoport: 'rolunk', cimke: 'Első bekezdés (nagyobb betűvel)', sor: true,
+    alap: 'Látogass el a XIII. kerületi autómosónkba, ha autódnak egy igazán alapos tisztításra van szüksége. Kézi mosónkban biztos lehetsz benne, hogy kiváló kiszolgálásban lesz részed.',
+    en: 'Visit our car wash in Budapest’s District XIII when your car needs a truly thorough clean. At our hand car wash, you can be sure of excellent service.' },
+  { kulcs: 'rolunk.bekezdes2', csoport: 'rolunk', cimke: 'Második bekezdés', sor: true,
+    alap: 'A gyors és minőségi kiszolgálás garanciáját a szakembereink többéves tapasztalata biztosítja. Mosás közben csak és kizárólag a legjobb minőségű eszközöket és anyagokat használjuk, mert hiszünk abban, hogy egy autó azt érdemli, amit a tulajdonosa: törődést a legmagasabb színvonalon. Az autónk több, mint egy használati tárgy, éveken keresztül kísér el bennünket, ezért fontos, hogy komfortosan érezzük magunkat benne rövid és hosszútávon egyaránt.',
+    en: 'Our specialists’ years of experience guarantee fast, high-quality service. We only ever use the best tools and products, because we believe a car deserves the same as its owner: care of the highest standard. A car is more than an everyday object — it stays with us for years, so it matters that we feel comfortable in it, in the short run and the long run alike.' },
+
+  { kulcs: 'galeria.cim', csoport: 'galeria', cimke: 'Cím', alap: 'Galéria', en: 'Gallery' },
+  { kulcs: 'galeria.bevezeto', csoport: 'galeria', cimke: 'Bevezető', sor: true,
+    alap: 'Ugyanaz az autó mosás előtt és után. Húzd végig az egeret vagy az ujjad a képen, és mosd le a koszt.',
+    en: 'The same car before and after a wash. Run your mouse or finger across a photo to wash the dirt off.' },
+  { kulcs: 'galeria.meret', csoport: 'galeria', cimke: 'A csúszka neve (képernyőolvasónak)', alap: 'Szivacs mérete', en: 'Sponge size' },
+  { kulcs: 'galeria.reset', csoport: 'galeria', cimke: 'A Reset gomb neve (képernyőolvasónak, egérrel fölé állva is látszik)', alap: 'Újra koszos', en: 'Make it dirty again' },
+  { kulcs: 'galeria.kep_alt', csoport: 'galeria', cimke: 'A képek leírása (képernyőolvasónak)', alap: 'Ugyanaz az autó koszosan és tisztán', en: 'The same car dirty and clean' },
+
   { kulcs: 'csomagok.cim', csoport: 'csomagok', cimke: 'Cím', alap: 'Csomagok', en: 'Packages' },
+  { kulcs: 'csomagok.ervenyes', csoport: 'csomagok', cimke: 'Alcím: az árak érvényessége', alap: 'Áraink ettől érvényesek: 2026.01.01.', en: 'Our prices are valid from 1 January 2026.' },
   { kulcs: 'csomagok.alcim.szemelyauto', csoport: 'csomagok', cimke: 'Alcím: személyautónál', alap: 'Személygépjármű — sedan, kombi, ferdehátú', en: 'Passenger car — saloon, estate, hatchback' },
   { kulcs: 'csomagok.alcim.suv', csoport: 'csomagok', cimke: 'Alcím: SUV-nál', alap: 'SUV, egyterű', en: 'SUV, MPV' },
   { kulcs: 'csomagok.alcim.kisbusz', csoport: 'csomagok', cimke: 'Alcím: kisbusznál', alap: 'Kisbusz, furgon', en: 'Minibus, van' },

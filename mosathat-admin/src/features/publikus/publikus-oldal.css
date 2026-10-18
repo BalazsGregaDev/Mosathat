@@ -15,7 +15,7 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
   --pl: max(var(--px), calc(env(safe-area-inset-left, 0px) + 12px));
   --pr: max(var(--px), calc(env(safe-area-inset-right, 0px) + 12px));
 }
-.pub-keret .kv[data-k] > :is(.kv-nav, .kv-hero, .kv-csomagok, .kv-foglalas, .kv-hely, .kv-lab, .kv-jogi) {
+.pub-keret .kv[data-k] > :is(.kv-nav, .kv-hero, .kv-rolunk, .kv-galeria, .kv-csomagok, .kv-foglalas, .kv-hely, .kv-lab, .kv-jogi) {
   padding-left: var(--pl); padding-right: var(--pr);
 }
 .pub-keret .kv[data-k] > .kv-foto { margin-left: var(--pl); margin-right: var(--pr); }

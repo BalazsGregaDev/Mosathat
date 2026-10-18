@@ -23,9 +23,9 @@ for (const f of ['online_foglalas(jsonb)', 'day_bookings(date)', 'quote_booking(
 
 console.log('\n=== 2) Napi foglaltság: csak időadat ===\n')
 await anon()
-const ma = (await egy(`select ((now() at time zone 'Europe/Budapest')::date)::text d`)).d
+const ma = (await egy(`select ((now() at time zone 'Europe/Budapest')::date + case when extract(isodow from now() at time zone 'Europe/Budapest') = 7 then 1 else 0 end)::text d`)).d
 const n = (await egy(`select publikus_nap($1::date) x`, [ma])).x
-t.ok('van foglalás és sáv a mai napra', [true, true], [n.foglalasok.length > 0, n.savok.length > 0])
+t.ok('van foglalás és sáv a mai (vasárnap a holnapi) napra', [true, true], [n.foglalasok.length > 0, n.savok.length > 0])
 const kulcsok = [...new Set(n.foglalasok.flatMap((f) => Object.keys(f)))].sort()
 t.ok('csak a beosztáshoz kellő mezők, nincs név, telefon, rendszám, ár', [
   'befejezve', 'booking_type', 'deadline_at', 'drop_off_at', 'id', 'kezdve', 'last_day', 'napi_perc', 'not_fitted',

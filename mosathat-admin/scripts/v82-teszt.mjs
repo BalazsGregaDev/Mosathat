@@ -113,12 +113,12 @@ console.log('\n=== 3) Tartalom ===\n')
 await menuPont(p, 'Tartalom').click()
 await p.locator('.pub-szoveg').first().waitFor({ timeout: 15000 })
 const kulcsok = await p.locator('.pub-szoveg').evaluateAll((l) => l.map((e) => e.dataset.kulcs))
-ok('minden szöveg pontosan egyszer, sávokba rendezve (112 mező, 16 sáv)', [112, 112, 16],
+ok('minden szöveg pontosan egyszer, sávokba rendezve (121 mező, 18 sáv)', [121, 121, 18],
   [kulcsok.length, new Set(kulcsok).size, await p.locator('.pub-sav').count()])
 ok('nincs már „Így jelenik meg” sor', 0, await p.getByText('Így jelenik meg').count())
 const sav = (id) => p.locator(`.pub-sav[data-sav="${id}"]`)
 ok('a sávok sorrendje követi az oldalt, a foglalás lépésenként',
-  ['menu', 'hero', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs', 'fogl-6', 'fogl-8', 'fogl-osszeg', 'fogl-siker', 'hely', 'lab'],
+  ['menu', 'hero', 'rolunk', 'galeria', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs', 'fogl-6', 'fogl-8', 'fogl-osszeg', 'fogl-siker', 'hely', 'lab'],
   await p.locator('.pub-sav').evaluateAll((l) => l.map((e) => e.dataset.sav)))
 await p.waitForTimeout(2500)
 const lathato = async (id) => sav(id).locator('.fogl > *').evaluateAll((l) => l.filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.dataset.lepes))

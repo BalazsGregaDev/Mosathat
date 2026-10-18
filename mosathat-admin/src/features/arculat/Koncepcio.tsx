@@ -12,6 +12,8 @@ import { katKulcs, type SzovegKulcs, type Uzlet } from '../../lib/publikusTartal
 import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
 import { FELIRAT, nyelviUt, type Nyelv } from '../../lib/nyelv'
 import { Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from '../publikus/tartalom'
+import Galeria from './Galeria'
+import { useCsillanas } from './csillanas'
 
 interface KvAllapot {
   t: CsomagTabla
@@ -376,7 +378,7 @@ function Lab() {
   const nyelv = useNyelv()
   const jogiCim = nyelv === 'en' ? JOGI_CIM_EN : JOGI_CIM
   return (
-    <footer className="kv-lab">
+    <footer className="kv-lab" data-csillan>
       <div className="kv-lab-fo">
         <div className="kv-lab-elso">
           <span className="kv-logo">{u.nev}</span>
@@ -521,7 +523,21 @@ function MagazinCsomagok() {
         <h2>{sz('csomagok.cim')}</h2>
         <Alcim />
       </div>
+      <p className="kv-ervenyes">{sz('csomagok.ervenyes')}</p>
       <Tabla />
+    </section>
+  )
+}
+
+function Rolunk() {
+  const sz = useSz()
+  return (
+    <section className="kv-rolunk" data-csillan>
+      <h2>{sz('rolunk.cim')}</h2>
+      <div className="kv-rolunk-szoveg">
+        <p className="kv-rolunk-elso"><Gazdag s={sz('rolunk.bekezdes1')} /></p>
+        <p><Gazdag s={sz('rolunk.bekezdes2')} /></p>
+      </div>
     </section>
   )
 }
@@ -532,6 +548,8 @@ function Magazin() {
     <>
       <Nav />
       <MagazinHero />
+      <Rolunk />
+      <Galeria />
       {foglalas ? (
         <div className="kv-ketoszlop">
           <MagazinCsomagok />
@@ -729,9 +747,11 @@ function KvKornyezet({
   const nyelv = useNyelv()
   const t = useMemo(() => csomagTabla(k, kat, nyelv), [k, kat, nyelv])
   const tol = useMemo(() => kategoriaTol(k), [k])
+  const gyoker = useRef<HTMLDivElement>(null)
+  useCsillanas(gyoker)
   return (
     <Kv.Provider value={{ t, kat, setKat, tol, nyilvanos, foglalas, kiemelt, onCsomag, nyelvValaszto }}>
-      <div className="kv" lang={nyelv} data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
+      <div className="kv" ref={gyoker} lang={nyelv} data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
         {children}
       </div>
     </Kv.Provider>
@@ -761,13 +781,15 @@ export function KoncepcioLap({ mod, k, children }: { mod: Mod; k: Catalog; child
   return <KvKornyezet kod="03" mod={mod} k={k}>{children}</KvKornyezet>
 }
 
-export type KoncepcioReszNev = 'nav' | 'hero' | 'csomagok' | 'hely' | 'lab'
+export type KoncepcioReszNev = 'nav' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'hely' | 'lab'
 
 export function KoncepcioResz({ resz, mod, k }: { resz: KoncepcioReszNev; mod: Mod; k: Catalog }) {
   return (
     <KvKornyezet kod="03" mod={mod} k={k}>
       {resz === 'nav' && <Nav />}
       {resz === 'hero' && <MagazinHero />}
+      {resz === 'rolunk' && <Rolunk />}
+      {resz === 'galeria' && <Galeria />}
       {resz === 'csomagok' && <MagazinCsomagok />}
       {resz === 'hely' && <Terkep />}
       {resz === 'lab' && <Lab />}

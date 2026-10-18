@@ -18,7 +18,7 @@ async function oldal(viewport, kep) {
   const p = await ctx.newPage()
   const hibak = []
   p.on('pageerror', (e) => hibak.push(e.message.slice(0, 160)))
-  if (kep) await p.route('**/kepek/borito.jpg', (r) => r.fulfill({ contentType: 'image/png', body: kep }))
+  await p.route('**/kepek/borito.jpg', (r) => (kep ? r.fulfill({ contentType: 'image/png', body: kep }) : r.fulfill({ status: 404, body: '' })))
   await p.goto(CIM + '/publikus')
   await p.locator('.kv-foto').waitFor({ timeout: 60000 })
   await p.waitForFunction(() => document.querySelector('.kv-foto')?.dataset.kep !== 'tolt', null, { timeout: 15000 })
