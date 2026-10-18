@@ -31,3 +31,29 @@ export function useCsillanas(gyoker: RefObject<HTMLElement | null>) {
     }
   }, [gyoker])
 }
+
+export function useVaszonSzin(gyoker: RefObject<HTMLElement | null>, be: boolean) {
+  useEffect(() => {
+    const g = gyoker.current
+    if (!be || !g) return
+    const html = document.documentElement
+    let kocka = 0
+    const frissit = () => {
+      kocka = 0
+      const s = getComputedStyle(g)
+      const lent = window.scrollY > (html.scrollHeight - window.innerHeight) / 2
+      const szin = (lent ? s.getPropertyValue('--lakk-mely') : s.getPropertyValue('--bg')).trim()
+      if (szin) html.style.backgroundColor = szin
+    }
+    const kerel = () => { if (!kocka) kocka = requestAnimationFrame(frissit) }
+    frissit()
+    window.addEventListener('scroll', kerel, { passive: true })
+    window.addEventListener('resize', kerel)
+    return () => {
+      cancelAnimationFrame(kocka)
+      window.removeEventListener('scroll', kerel)
+      window.removeEventListener('resize', kerel)
+      html.style.backgroundColor = ''
+    }
+  }, [gyoker, be])
+}

@@ -213,6 +213,19 @@ export default function CsomagSzerkeszto() {
     setV((x) => x && { ...x, extrak: x.extrak.map((e) => (e.id === id ? { ...e, [mezo]: ertek } : e)) })
   }
 
+  function extraMozgat(id: string, irany: -1 | 1) {
+    setUzenet(null)
+    setV((x) => {
+      if (!x) return x
+      const i = x.extrak.findIndex((e) => e.id === id)
+      const j = i + irany
+      if (j < 0 || j >= x.extrak.length) return x
+      const ex = x.extrak.slice()
+      ;[ex[i], ex[j]] = [ex[j], ex[i]]
+      return { ...x, extrak: ex }
+    })
+  }
+
   const sorNeve = (s: Sor, en: boolean) => (en ? s.name_en.trim() || s.name : s.name)
   const cellaNeve = (s: Sor, c: Cella | undefined, en: boolean) => {
     if (!c) return sorNeve(s, en)
@@ -538,8 +551,9 @@ export default function CsomagSzerkeszto() {
           <NyelvKapcsolo nyelv={extraNyelv} onValt={setExtraNyelv} cimke="Extrák neve és leírása" />
         </h3>
         <div className="panel-torzs szerk-extrak">
-          {v.extrak.map((e) => (
+          {v.extrak.map((e, i) => (
             <div className="szerk-extra" key={e.id} data-extra={e.id}>
+              <span className="szerk-extra-sorszam" aria-hidden="true">{i + 1}.</span>
               {extraEn ? (
                 <>
                   <input className="beviteli" lang="en" value={e.name_en} placeholder={e.name}
@@ -559,11 +573,17 @@ export default function CsomagSzerkeszto() {
                          onChange={(x) => extraValt(e.id, 'description', x.target.value)} />
                 </>
               )}
+              <span className="szerk-sor-gombok">
+                <button type="button" className="btn btn-kicsi" aria-label={`${e.name || 'Extra'}: feljebb`}
+                        disabled={i === 0} onClick={() => extraMozgat(e.id, -1)}>Fel</button>
+                <button type="button" className="btn btn-kicsi" aria-label={`${e.name || 'Extra'}: lejjebb`}
+                        disabled={i === v.extrak.length - 1} onClick={() => extraMozgat(e.id, 1)}>Le</button>
+              </span>
             </div>
           ))}
         </div>
         <p className="halk szerk-tipp szerk-extrak-tipp">
-          A foglalás 4. lépésében látszanak. Az árat, az időt és azt, hogy melyik csomagban van benne,
+          A foglalás 4. lépésében ebben a sorrendben látszanak. Az árat, az időt és azt, hogy melyik csomagban van benne,
           a Szolgáltatások menüben állíthatod.{extraEn ? ' Ha az angol név üres, a magyar jelenik meg.' : ''}
         </p>
       </div>

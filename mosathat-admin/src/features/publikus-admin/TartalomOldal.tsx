@@ -110,7 +110,7 @@ const MIKOR: Partial<Record<SzovegKulcs, string>> = {
   'galeria.meret': 'Nem látszik: a képernyőolvasó olvassa fel a csúszka neveként.',
   'galeria.reset': 'Felirat nélküli gomb: a képernyőolvasó olvassa fel, és egérrel fölé állva jelenik meg.',
   'galeria.kep_alt': 'Nem látszik: a képernyőolvasó olvassa fel a képek helyett.',
-  'galeria.foglalas': 'A Foglalás részhez görget, mint a menü Foglalás pontja.',
+  'galeria.foglalas': 'A Foglalás részhez görget, mint a menü Foglalás pontja. Telefonon ugyanez a gomb a nyitó részben is megjelenik.',
   'galeria.szivacs': 'Csak érintőképernyőn gomb: bekapcsolva ujjal lehet mosni, a görgetés szünetel.',
   'galeria.vege': 'Csak érintőképernyőn látszik: kikapcsolja a mosást, újra lehet görgetni.',
   'foglalas.arajanlat': 'Csak akkor látszik, ha egy csomagnak nincs fix ára.',

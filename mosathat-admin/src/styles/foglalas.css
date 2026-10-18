@@ -157,6 +157,7 @@
 
 @media (max-width: 700px) {
   .fogl-csomagok, .fogl-valaszto.harom, .fogl-extrak, .fogl-urlap { grid-template-columns: 1fr; }
+  .fogl-extra:not([data-be]) .nev small { display: none; }
   .fogl-valaszto.ketto { grid-template-columns: 1fr; }
   .fogl-fs { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; }
   .fogl-fs input { margin-top: 4px; }

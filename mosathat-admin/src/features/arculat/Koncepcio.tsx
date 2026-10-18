@@ -13,7 +13,7 @@ import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
 import { FELIRAT, nyelviUt, type Nyelv } from '../../lib/nyelv'
 import { Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from '../publikus/tartalom'
 import Galeria from './Galeria'
-import { useCsillanas } from './csillanas'
+import { useCsillanas, useVaszonSzin } from './csillanas'
 import { gorgetIde } from './gorgetes'
 
 interface KvAllapot {
@@ -573,6 +573,7 @@ function MagazinHero() {
         <span className="kv-kicker">{sz('hero.felcim')}</span>
         <h1><Gazdag s={sz('hero.cim')} /></h1>
         <div className="kv-hasabok">
+          <div className="kv-hero-foglalas"><Gomb lakk>{sz('galeria.foglalas')}</Gomb></div>
           <p className="kv-lede"><Gazdag s={sz('hero.bevezeto')} /></p>
           <p className="kv-halk"><Gazdag s={sz('hero.mellek')} /></p>
         </div>
@@ -816,6 +817,7 @@ function KvKornyezet({
   const tol = useMemo(() => kategoriaTol(k), [k])
   const gyoker = useRef<HTMLDivElement>(null)
   useCsillanas(gyoker)
+  useVaszonSzin(gyoker, nyilvanos)
   return (
     <Kv.Provider value={{ t, kat, setKat, tol, nyilvanos, foglalas, kiemelt, onCsomag, nyelvValaszto }}>
       <div className="kv" ref={gyoker} lang={nyelv} data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
