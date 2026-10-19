@@ -42,22 +42,28 @@ function useErinto() {
   return erinto
 }
 
+interface KepVezerlo {
+  vaszon: () => HTMLCanvasElement | null
+  atmero: (r: DOMRect) => number
+  mos: (x: number, y: number, r: DOMRect) => void
+  toll: () => void
+}
+
 interface KepProps {
   n: number
   meret: number
   reset: number
   alt: string
-  ujjal: boolean
   onMos: () => void
+  regisztral: (n: number, v: KepVezerlo | null) => void
 }
 
-function MosoKep({ n, meret, reset, alt, ujjal, onMos }: KepProps) {
+function MosoKep({ n, meret, reset, alt, onMos, regisztral }: KepProps) {
   const doboz = useRef<HTMLDivElement>(null)
   const vaszon = useRef<HTMLCanvasElement>(null)
   const kep = useRef<HTMLImageElement>(null)
   const gyuru = useRef<HTMLSpanElement>(null)
   const utolso = useRef<{ x: number; y: number } | null>(null)
-  const nyomva = useRef(false)
   const resetFut = useRef(false)
   const elsoReset = useRef(reset)
   const [kesz, setKesz] = useState(false)
@@ -129,10 +135,6 @@ function MosoKep({ n, meret, reset, alt, ujjal, onMos }: KepProps) {
     return () => { cancelAnimationFrame(kocka); resetFut.current = false }
   }, [reset, rajzolTeljes])
 
-  useEffect(() => {
-    if (!ujjal) nyomva.current = false
-  }, [ujjal])
-
   const pont = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const c = e.currentTarget
     const r = c.getBoundingClientRect()
@@ -188,12 +190,16 @@ function MosoKep({ n, meret, reset, alt, ujjal, onMos }: KepProps) {
     onMos()
   }
 
-  const szabad = (e: ReactPointerEvent<HTMLCanvasElement>) => e.pointerType === 'mouse' || ujjal
+  useEffect(() => {
+    regisztral(n, { vaszon: () => vaszon.current, atmero, mos, toll: () => { utolso.current = null } })
+    return () => regisztral(n, null)
+  })
 
   const mozog = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType !== 'mouse') return
     const { x, y, r } = pont(e)
-    if (e.pointerType === 'mouse') gyuruMutat(x, y, r)
-    if (e.pointerType === 'mouse' || (nyomva.current && ujjal)) mos(x, y, r)
+    gyuruMutat(x, y, r)
+    mos(x, y, r)
   }
 
   return (
@@ -208,17 +214,13 @@ function MosoKep({ n, meret, reset, alt, ujjal, onMos }: KepProps) {
       <canvas ref={vaszon} className="kv-moso-vaszon" aria-hidden="true"
               onPointerMove={mozog}
               onPointerEnter={(e) => { if (e.pointerType === 'mouse') utolso.current = null }}
-              onPointerLeave={() => { utolso.current = null; nyomva.current = false; gyuruMutat(0, 0, null) }}
+              onPointerLeave={(e) => { if (e.pointerType === 'mouse') { utolso.current = null; gyuruMutat(0, 0, null) } }}
               onPointerDown={(e) => {
-                if (!szabad(e)) return
-                nyomva.current = true
+                if (e.pointerType !== 'mouse') return
                 utolso.current = null
                 const { x, y, r } = pont(e)
-                if (e.pointerType !== 'mouse') e.currentTarget.setPointerCapture?.(e.pointerId)
                 mos(x, y, r)
-              }}
-              onPointerUp={() => { nyomva.current = false; utolso.current = null }}
-              onPointerCancel={() => { nyomva.current = false; utolso.current = null }} />
+              }} />
       <span className="kv-moso-gyuru" ref={gyuru} aria-hidden="true" />
     </div>
   )
@@ -236,7 +238,36 @@ export default function Galeria({ gomb }: { gomb?: ReactNode }) {
   const mosasIdo = useRef<number | undefined>(undefined)
   const resetIdo = useRef<number | undefined>(undefined)
   const xIdo = useRef<number | undefined>(undefined)
+  const kepek = useRef(new Map<number, KepVezerlo>())
+  const ujj = useRef<{ id: number; erintett: Set<number> } | null>(null)
   const ujjal = erinto && szivacs
+
+  const regisztral = useCallback((n: number, v: KepVezerlo | null) => {
+    if (v) kepek.current.set(n, v)
+    else kepek.current.delete(n)
+  }, [])
+
+  const ujjalMos = (x: number, y: number) => {
+    const most = new Set<number>()
+    for (const [n, k] of kepek.current) {
+      const c = k.vaszon()
+      if (!c) continue
+      const r = c.getBoundingClientRect()
+      if (!r.width || !r.height) continue
+      const fel = k.atmero(r) / 2
+      if (x < r.left - fel || x > r.right + fel || y < r.top - fel || y > r.bottom + fel) continue
+      most.add(n)
+      k.mos(x - r.left, y - r.top, r)
+    }
+    for (const n of ujj.current?.erintett ?? []) if (!most.has(n)) kepek.current.get(n)?.toll()
+    if (ujj.current) ujj.current.erintett = most
+  }
+
+  const ujjVege = (e: ReactPointerEvent<HTMLElement>) => {
+    if (ujj.current?.id !== e.pointerId) return
+    for (const k of kepek.current.values()) k.toll()
+    ujj.current = null
+  }
 
   useEffect(() => () => {
     window.clearTimeout(mosasIdo.current)
@@ -282,10 +313,21 @@ export default function Galeria({ gomb }: { gomb?: ReactNode }) {
 
   const szivacsMeret = { '--szivacs': (meret - MERET_MIN) / (MERET_MAX - MERET_MIN) } as CSSProperties
   const szivacsKep = <img src={`${MAPPA}/${mosas ? 'szivacs.gif' : 'szivacs.png'}`} alt="" width={56} height={56} draggable={false} />
-  const kepProps = { meret, reset, alt: sz('galeria.kep_alt'), ujjal, onMos }
+  const kepProps = { meret, reset, alt: sz('galeria.kep_alt'), onMos, regisztral }
 
   return (
-    <section className="kv-galeria" data-ujjal={ujjal || undefined}>
+    <section className="kv-galeria" data-ujjal={ujjal || undefined}
+             onPointerDown={(e) => {
+               if (e.pointerType === 'mouse' || !ujjal) return
+               if (!(e.target instanceof Element) || !e.target.closest('.kv-moso-vaszon')) return
+               e.target.setPointerCapture?.(e.pointerId)
+               for (const k of kepek.current.values()) k.toll()
+               ujj.current = { id: e.pointerId, erintett: new Set() }
+               ujjalMos(e.clientX, e.clientY)
+             }}
+             onPointerMove={(e) => { if (ujjal && ujj.current?.id === e.pointerId) ujjalMos(e.clientX, e.clientY) }}
+             onPointerUp={ujjVege}
+             onPointerCancel={ujjVege}>
       <div className="kv-galeria-fej">
         <h2>{sz('galeria.cim')}</h2>
         <div className="kv-galeria-szoveg">
