@@ -24,9 +24,7 @@ import ProfilPage from '../profil/ProfilPage'
 import ArlistaPanel, { PANEL_ALAP, type PanelAllapot } from '../services/ArlistaPanel'
 import ArlistaGombok, { type ArlistaFul } from '../services/ArlistaGombok'
 import JelszoModal from '../common/JelszoModal'
-import FoglalasModul from '../publikus/FoglalasModul'
 import KeresFigyelo from '../keresek/KeresFigyelo'
-import { foglalasModulLatja } from '../../lib/jogok'
 import { billentyuElore, celraUgrik, type Honnan, type Ugras } from './ugras'
 import type { Nyelv } from '../../lib/nyelv'
 
@@ -36,14 +34,13 @@ const TartalomOldal = lazy(() => import('../publikus-admin/TartalomOldal'))
 const CsomagokOldal = lazy(() => import('../publikus-admin/CsomagokOldal'))
 const CegadatokOldal = lazy(() => import('../publikus-admin/CegadatokOldal'))
 const JogiSzovegekOldal = lazy(() => import('../publikus-admin/JogiSzovegekOldal'))
-const CegLinkekOldal = lazy(() => import('../ceglink/CegLinkekOldal'))
 
 type Oldal =
   | 'attekintes' | 'nap' | 'szolgaltatasok' | 'partnerek' | 'ugyfelek'
-  | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo' | 'foglalas' | 'arculat' | 'ceglinkek'
+  | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo' | 'arculat'
   | 'pub-elerhetoseg' | 'pub-tartalom' | 'pub-csomagok' | 'pub-cegadatok' | 'pub-jogi'
 
-type MenuPont = { id: Oldal; cimke: string; tulaj?: boolean; foglalas?: boolean }
+type MenuPont = { id: Oldal; cimke: string; tulaj?: boolean }
 
 const MENU: MenuPont[] = [
   { id: 'attekintes', cimke: 'Áttekintés', tulaj: true },
@@ -51,12 +48,10 @@ const MENU: MenuPont[] = [
   { id: 'igazolo', cimke: 'Igazolólap' },
   { id: 'szolgaltatasok', cimke: 'Szolgáltatások' },
   { id: 'partnerek', cimke: 'Cégek és bérletesek' },
-  { id: 'ceglinkek', cimke: 'Céges linkek', tulaj: true },
   { id: 'ugyfelek', cimke: 'Ügyfelek' },
   { id: 'felhasznalok', cimke: 'Felhasználók', tulaj: true },
   { id: 'beallitasok', cimke: 'Beállítások', tulaj: true },
   { id: 'profilom', cimke: 'Profilom' },
-  { id: 'foglalas', cimke: 'Időpontfoglalás', foglalas: true },
 ]
 
 const MENU_PUB: MenuPont[] = [
@@ -77,8 +72,7 @@ export default function AppShell() {
   const { user, data, signOut, refresh } = useApp()
 
   const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
-  const foglalasJog = foglalasModulLatja(user)
-  const menu = MENU.filter((m) => (!m.tulaj || teljesJogu) && (!m.foglalas || foglalasJog))
+  const menu = MENU.filter((m) => !m.tulaj || teljesJogu)
   const pubMenu = teljesJogu ? MENU_PUB : []
 
   const [oldal, setOldal] = useState<Oldal>(teljesJogu ? 'attekintes' : 'nap')
@@ -341,11 +335,6 @@ export default function AppShell() {
             ? <PartnersPage fokuszCeg={szerzodesCeg} />
             : <PartnersView fokuszCeg={szerzodesCeg} />)}
 
-          {oldal === 'ceglinkek' && teljesJogu && (
-            <Suspense fallback={<div className="betolt">Betöltés…</div>}>
-              <CegLinkekOldal onSzerzodes={() => setOldal('partnerek')} />
-            </Suspense>
-          )}
 
           {oldal === 'igazolo' && (
             <IgazoloOldal onSzerzodes={(cegId) => { setSzerzodesCeg(cegId); setOldal('partnerek') }} />
@@ -354,9 +343,6 @@ export default function AppShell() {
           {oldal === 'felhasznalok' && <UsersPage />}
           {oldal === 'beallitasok' && <SettingsPage kezdoFul={beallFul} />}
           {oldal === 'profilom' && <ProfilPage onJelszo={() => setJelszoNyitva(true)} />}
-          {oldal === 'foglalas' && foglalasJog && (
-            <FoglalasModul onNapiNezet={(d) => { setNap(d); setNezet('nap'); setOldal('nap') }} />
-          )}
           {teljesJogu && (oldal === 'arculat' || oldal.startsWith('pub-')) && (
             <Suspense fallback={<div className="betolt">Betöltés…</div>}>
               {oldal === 'arculat' && <ArculatPage />}

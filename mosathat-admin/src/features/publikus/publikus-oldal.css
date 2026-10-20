@@ -145,7 +145,20 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
 
 .pub-ceg .kv-ceg-foglalas { border-top: 0; }
 .pub-ceg .kv-ceg-foglalas .fogl { max-width: 760px; margin: 0 auto; gap: 41px; }
-.pub-ceg .kv-ceg-foglalas .fogl > section { position: relative; }
+.pub-ceg .kv-ceg-foglalas .fogl > section:not(.fogl-osszeg) { position: relative; }
+
+@keyframes fogl-elobujik {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+.pub-ceg .kv-ceg-foglalas .fogl > section,
+.pub-ceg .kv-ceg-foglalas :is(.fogl-al, .fogl-idok, .fogl-hatarido, .fogl-erkezes, .fogl-figyel) {
+  animation: fogl-elobujik 2s cubic-bezier(.2, .7, .2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pub-ceg .kv-ceg-foglalas .fogl > section,
+  .pub-ceg .kv-ceg-foglalas :is(.fogl-al, .fogl-idok, .fogl-hatarido, .fogl-erkezes, .fogl-figyel) { animation: none; }
+}
 .pub-ceg .kv-ceg-foglalas .fogl > section + section:not(.fogl-osszeg)::before {
   content: ''; position: absolute; left: 8%; right: 8%; top: -21px; height: 1px; background: var(--vonal);
 }

@@ -181,9 +181,7 @@ await menu(d, 'Cégek és bérletesek')
 await d.locator('.fulek button').filter({ hasText: 'Szerződéses cégek' }).click()
 await d.waitForTimeout(600)
 {
-  const kartya = d.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).first()
-  await kartya.locator('.kartya-nyito').click()
-  await d.waitForTimeout(300)
+  const kartya = d.locator('.cegtabla-sor').filter({ hasText: 'Autó Trans' }).first()
   await kartya.getByRole('button', { name: 'Szerkesztés' }).click()
   await d.waitForTimeout(800)
   ok('a meglévő csomagok ki vannak választva', ['Start', 'Premium', 'Elit'],
@@ -191,10 +189,7 @@ await d.waitForTimeout(600)
   await d.locator('input[aria-label="Elit · Nagy méret · Magán ár"]').fill('31000')
   await d.getByRole('button', { name: 'Mentés', exact: true }).click()
   await d.waitForTimeout(1500)
-  const k2 = d.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).first()
-  if ((await k2.getAttribute('data-nyitva')) !== 'true') {
-    await k2.locator('.kartya-nyito').click(); await d.waitForTimeout(300)
-  }
+  const k2 = d.locator('.cegtabla-sor').filter({ hasText: 'Autó Trans' }).first()
   const sor = await k2.locator('.szerzodes-arak tr').filter({ hasText: 'Elit · Nagy' }).innerText()
   ok('az Elit · Nagy Magán ára elmentve', true, sor.replace(/\s/g, '').includes('31000Ft'))
 }

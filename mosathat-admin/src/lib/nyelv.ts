@@ -99,6 +99,12 @@ export const FELIRAT = {
     menuBezar: 'Menü bezárása',
     fomenu: 'Főmenü',
     cegesValtozas: 'Ha bármi változás van, ezen a telefonszámon elérsz:',
+    hozomviszem: 'Hozom-viszem',
+    hozomviszemLeiras: 'Elmegyünk az autóért, és visszavisszük.',
+    hvKerdes: 'Hány órára mehetünk érte?',
+    hvVisszaKerdes: 'Hány órára vigyük vissza?',
+    hvErte: 'érte megyünk',
+    hvVissza: 'visszavisszük',
   },
   en: {
     bennevan: 'included',
@@ -118,6 +124,12 @@ export const FELIRAT = {
     menuBezar: 'Close menu',
     fomenu: 'Main menu',
     cegesValtozas: 'If anything changes, you can reach us on this number:',
+    hozomviszem: 'Pick-up & delivery',
+    hozomviszemLeiras: 'We collect the car and bring it back.',
+    hvKerdes: 'What time can we collect the car?',
+    hvVisszaKerdes: 'What time should we bring it back?',
+    hvErte: 'collection',
+    hvVissza: 'return',
   },
 } as const
 
@@ -165,6 +177,7 @@ const HIBAK: [RegExp, (m: RegExpExecArray) => string][] = [
   [/^Ehhez a céghez most túl sok kérés vár visszaigazolásra\. Kérjük, hívj minket: (.+?)\.?$/,
     (m) => `Too many requests from this company are waiting for confirmation. Please call us: ${m[1]}.`],
   [/^Ez a csomag nem szerepel a cég szerződésében\./, () => 'This package is not part of your company’s contract.'],
+  [/^A cég szerződésében nincs hozom-viszem\./, () => 'Pick-up & delivery is not part of your company’s contract.'],
   [/^Céges foglalásnál 7:30 és 17:00 között lehet időpontot választani\./, () => 'Company bookings can be made between 7:30 and 17:00.'],
   [HALOZATI, () => 'We could not reach the server. Please check your internet connection and try again.'],
 ]

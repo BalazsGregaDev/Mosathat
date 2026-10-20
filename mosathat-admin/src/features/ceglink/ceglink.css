@@ -1,34 +1,3 @@
-.ceglink-oldal .magyarazat { margin-bottom: var(--t4); }
-
-.ceglink-lista {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: var(--lap);
-  border: 1px solid var(--keret);
-  border-radius: var(--r);
-}
-
-.ceglink-sor > td, .ceglink-sor > th {
-  padding: var(--t3) var(--t4);
-  border-bottom: 1px solid var(--keret);
-  vertical-align: top;
-  text-align: left;
-}
-.ceglink-sor > td.ceglink-ceg { width: 22%; }
-.ceglink-sor > td.ceglink-link, .ceglink-sor > td.ceglink-uzenet { width: 39%; }
-tbody .ceglink-sor:last-child > td { border-bottom: none; }
-
-.ceglink-fejlec > th {
-  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
-  padding-top: var(--t2); padding-bottom: var(--t2);
-}
-
-.ceglink-ceg > * { display: block; }
-.ceglink-ceg small { margin-top: 2px; }
-.ceglink-ceg strong { font-size: var(--m-alap); overflow-wrap: anywhere; }
-
 .ceglink-link > * + *, .ceglink-uzenet > * + * { margin-top: var(--t2); }
 
 .ceglink-link-sor { display: flex; align-items: center; gap: var(--t2); min-width: 0; }
@@ -66,12 +35,60 @@ tbody .ceglink-sor:last-child > td { border-bottom: none; }
 }
 .ceglink-jelzes.hiba { color: var(--piros-sotet); background: var(--piros-halvany); }
 
-.ceglink-ures { padding: var(--t4); display: flex; flex-direction: column; gap: var(--t2); align-items: flex-start; }
 
-@media (max-width: 900px) {
-  .ceglink-lista, .ceglink-lista tbody, .ceglink-sor, .ceglink-sor > td { display: block; width: auto !important; }
-  .ceglink-lista thead { display: none; }
-  .ceglink-sor { border-bottom: 1px solid var(--keret); padding: var(--t2) 0; }
-  tbody .ceglink-sor:last-child { border-bottom: none; }
-  .ceglink-sor > td { border-bottom: none; padding: var(--t2) var(--t3); }
+.cegtabla-keret { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.cegtabla {
+  width: 100%;
+  border-collapse: separate; border-spacing: 0;
+  background: var(--lap);
+  border: 1px solid var(--keret);
+  border-radius: var(--r);
+  table-layout: fixed;
+}
+.cegtabla > thead th {
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  text-align: left; padding: var(--t2) var(--t4);
+  border-bottom: 1px solid var(--keret);
+}
+.cegtabla-sor > td {
+  padding: var(--t4);
+  vertical-align: top;
+  border-bottom: 1px solid var(--keret);
+}
+.cegtabla > tbody > .cegtabla-sor:last-child > td { border-bottom: none; }
+.cegtabla-sor[data-kiemelt] > td { background: var(--zold-halvany); transition: background 1s ease; }
+.cegtabla > thead th:nth-child(1) { width: 25%; }
+.cegtabla > thead th:nth-child(2) { width: 29%; }
+.cegtabla[data-linkkel] > thead th:nth-child(3),
+.cegtabla[data-linkkel] > thead th:nth-child(4) { width: 23%; }
+.cegtabla:not([data-linkkel]) > thead th:nth-child(2) { width: auto; }
+
+.cegtabla-ceg > strong { display: block; font-size: var(--m-md); margin-bottom: var(--t2); overflow-wrap: anywhere; }
+.cegtabla-adatok {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px var(--t3);
+  margin: 0; font-size: var(--m-sm);
+}
+.cegtabla-adatok dt { color: var(--szoveg-halk); }
+.cegtabla-adatok dd { margin: 0; text-align: right; overflow-wrap: break-word; }
+.cegtabla-gombok { display: flex; flex-wrap: wrap; gap: var(--t2); margin-top: var(--t3); }
+.cegtabla-arak .artabla { min-width: 0; }
+
+@media (max-width: 1100px) {
+  .cegtabla, .cegtabla > tbody, .cegtabla-sor, .cegtabla-sor > td { display: block; width: auto !important; min-width: 0 !important; }
+  .cegtabla > thead { display: none; }
+  .cegtabla-sor { border-bottom: 1px solid var(--keret); }
+  .cegtabla > tbody > .cegtabla-sor:last-child { border-bottom: none; }
+  .cegtabla-sor > td { border-bottom: none; padding: var(--t3) var(--t4) 0; }
+  .cegtabla-sor > td:last-child { padding-bottom: var(--t4); }
+  .cegtabla-sor > td.cegtabla-link::before,
+  .cegtabla-sor > td.cegtabla-uzenet::before,
+  .cegtabla-sor > td.cegtabla-arak::before {
+    display: block; margin-bottom: var(--t2);
+    font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+  }
+  .cegtabla-sor > td.cegtabla-arak::before { content: 'Szerződéses árak'; }
+  .cegtabla-sor > td.cegtabla-link::before { content: 'Foglalási link'; }
+  .cegtabla-sor > td.cegtabla-uzenet::before { content: 'Üzenet a foglalóknak'; }
 }

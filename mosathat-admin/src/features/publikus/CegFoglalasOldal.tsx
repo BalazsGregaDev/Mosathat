@@ -94,7 +94,7 @@ function CegesFoglalas({ betoltott, token, adat }: { betoltott: Betoltve; token:
       </section>
       <section className="kv-foglalas kv-foglalas-elo kv-ceg-foglalas">
         <FoglalasUrlap data={data} katalogus={katalogus} revision={revision} refresh={refresh}
-                       nyilvanos ceges lemondasOra={betoltott.adat.lemondasOra} cegUzenet={adat.uzenet} />
+                       nyilvanos ceges hozomviszem={adat.hozomviszem} lemondasOra={betoltott.adat.lemondasOra} cegUzenet={adat.uzenet} />
       </section>
     </>
   )

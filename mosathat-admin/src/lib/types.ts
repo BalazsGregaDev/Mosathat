@@ -774,7 +774,7 @@ export interface OnlineBookingInput {
   next_day_pick_up: boolean
   pick_up_time: string | null
   extras: { extra_id: string; quantity: number }[]
-  booking_type: 'VAROS' | 'LEADOS'
+  booking_type: 'VAROS' | 'LEADOS' | 'HOZOMVISZEM'
   service_date: string
   start_time: string | null
   drop_off_time: string | null
@@ -800,6 +800,7 @@ export interface CegLink {
 export interface CegLinkAdat {
   ceg: string
   uzenet: string | null
+  hozomviszem: boolean
   csomagok: string[]
 }
 

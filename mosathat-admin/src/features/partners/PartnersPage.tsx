@@ -10,8 +10,9 @@ import {
 import KartyaFej from '../common/KartyaFej'
 import { useKerdes } from '../common/Kerdes'
 import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../common/Ceg'
-import SzerzodesArak, { FAJTAK, MERETEK } from './SzerzodesArak'
-import IgazoloLap from '../igazolo/IgazoloLap'
+import { FAJTAK, MERETEK } from './SzerzodesArak'
+import CegTabla from './CegTabla'
+import { useCegLinkek } from '../ceglink/useCegLinkek'
 import KetallasuCsuszka from '../common/KetallasuCsuszka'
 import Csuszka from '../common/Csuszka'
 import Ablak from '../common/Ablak'
@@ -21,6 +22,9 @@ export default function PartnersPage({ fokuszCeg }: {
 } = {}) {
   const { data, user } = useApp()
   const szerkesztheto = user?.canEditCustomers === true
+  const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
+  const [frissites, setFrissites] = useState(0)
+  const linkek = useCegLinkek(teljesJogu, frissites)
   const [ful, setFul] = useState<'berletek' | 'cegek'>('cegek')
   const [passes, setPasses] = useState<PassBalanceRow[]>([])
   const [contracts, setContracts] = useState<ContractRow[]>([])
@@ -35,6 +39,7 @@ export default function PartnersPage({ fokuszCeg }: {
       const [p, c] = await Promise.all([data.listPasses(), data.listContracts()])
       setPasses(p)
       setContracts(c)
+      setFrissites((n) => n + 1)
       setHiba(null)
     } catch (e) {
       setHiba(hibaSzoveg(e))
@@ -168,77 +173,25 @@ export default function PartnersPage({ fokuszCeg }: {
             <div className="panel"><div className="ures">Még nincs szerződéses cég.</div></div>
           )}
 
-          <div className="panelek panelek-ugyfel">
-            {contracts.map((c) => (
-              <CegKartya key={c.id} cim={c.company_name ?? c.customer_name}
-                         cegId={c.company_id}
-                         kiemelt={fokuszCeg === c.company_id}
-                         nev={c.customer_name} hozomViszem={c.pickup_delivery}
-                         arDb={c.prices.length} autok={c.jarmuvek}>
-                  {c.tax_number && (
-                    <div className="adatsor">
-                      <span>Adószám</span><span className="ertek">{c.tax_number}</span>
-                    </div>
-                  )}
-                  {c.pickup_delivery && c.pickup_delivery_fee_huf != null && (
-                    <div className="adatsor">
-                      <span>Fuvar</span>
-                      <span className="ertek">{ft(c.pickup_delivery_fee_huf)} / út</span>
-                    </div>
-                  )}
-
-                  <div className="adatsor">
-                    <span>Flottás autók</span>
-                    <span className="ertek">{c.fleet_cars ? 'igen' : 'nem'}</span>
-                  </div>
-
-                  <div className="adatsor">
-                    <span>Igazolólap időszaka</span>
-                    <span className="ertek">
-                      {c.cycle_day > 1
-                        ? `${c.cycle_day}. naptól a következő hónap ${c.cycle_day - 1}. napjáig`
-                        : 'naptári hónap'}
-                    </span>
-                  </div>
-
-                  {c.valid_until && (
-                    <div className="adatsor">
-                      <span>Szerződés vége</span>
-                      <span className="ertek">{c.valid_until.slice(0, 10)}</span>
-                    </div>
-                  )}
-
-                  <div style={{ marginTop: 'var(--t3)' }}>
-                    <SzerzodesArak prices={c.prices} netto />
-                  </div>
-
-                  {szerkesztheto && (
-                    <div className="sor-gombok" style={{ marginTop: 'var(--t3)' }}>
-                      <button className="btn btn-kicsi" onClick={() => setSzerkContract(c)}>
-                        Szerkesztés
-                      </button>
-                      <button className="btn btn-kicsi btn-veszelyes"
-                              onClick={async () => {
-                                if (!(await kerdez({
-                                  cim: `Biztosan törlöd a szerződést? ${c.company_name ?? c.customer_name}`,
-                                  szoveg: 'A cég autói ezután listaáron mennek. A cég, az autói és a '
-                                    + 'már felvett foglalások ára megmarad.',
-                                  igen: 'Törlés', nem: 'Mégse', veszelyes: true,
-                                }))) return
-                                try {
-                                  await data.deleteContract(c.id)
-                                  await ujra()
-                                } catch (e) {
-                                  setHiba(hibaSzoveg(e))
-                                }
-                              }}>
-                        Törlés
-                      </button>
-                    </div>
-                  )}
-              </CegKartya>
-            ))}
-          </div>
+          {contracts.length > 0 && (
+            <CegTabla contracts={contracts} fokuszCeg={fokuszCeg} szerkesztheto={szerkesztheto}
+                      linkek={teljesJogu ? linkek : null}
+                      onSzerkeszt={(c) => setSzerkContract(c)}
+                      onTorol={async (c) => {
+                        if (!(await kerdez({
+                          cim: `Biztosan törlöd a szerződést? ${c.company_name ?? c.customer_name}`,
+                          szoveg: 'A cég autói ezután listaáron mennek. A cég, az autói és a '
+                            + 'már felvett foglalások ára megmarad.',
+                          igen: 'Törlés', nem: 'Mégse', veszelyes: true,
+                        }))) return
+                        try {
+                          await data.deleteContract(c.id)
+                          await ujra()
+                        } catch (e) {
+                          setHiba(hibaSzoveg(e))
+                        }
+                      }} />
+          )}
         </>
       )}
 
@@ -755,66 +708,6 @@ function BerletKartya({ cim, maradt, osszes, lejart, children }: {
             {lejart && <span style={{ color: 'var(--v-baj)' }}> · lejárt</span>}
           </span>
         </div>
-        {nyitva && children}
-      </div>
-    </div>
-  )
-}
-
-function CegKartya({ cim, cegId, kiemelt, nev, hozomViszem, arDb, autok, children }: {
-  cim: string
-  kiemelt?: boolean
-  cegId: string | null
-  nev: string
-  hozomViszem: boolean
-  arDb: number
-  autok: number
-  children: React.ReactNode
-}) {
-  const [nyitva, setNyitva] = useState(kiemelt === true)
-  const doboz = useRef<HTMLDivElement>(null)
-  const [villan, setVillan] = useState(kiemelt === true)
-  useEffect(() => {
-    if (!kiemelt) return
-    doboz.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    const t = window.setTimeout(() => setVillan(false), 2500)
-    return () => window.clearTimeout(t)
-  }, [kiemelt])
-  const [lapNyitva, setLapNyitva] = useState(false)
-  return (
-    <div className="panel" data-nyitva={nyitva} data-kiemelt={villan || undefined} ref={doboz}>
-      <KartyaFej nyitva={nyitva} onValt={() => setNyitva(!nyitva)}>
-        {cim}
-      </KartyaFej>
-      <div className="panel-torzs">
-        {cegId && (
-          <div className="ceg-lap-sor">
-            <button className="btn" onClick={() => setLapNyitva(true)}>Igazolólap</button>
-            <span className="halk">havi lap, beállítás, Word letöltés</span>
-          </div>
-        )}
-        {lapNyitva && cegId && (
-          <IgazoloLap cegId={cegId} cegNev={cim} onBezar={() => setLapNyitva(false)} />
-        )}
-        {cim !== nev && (
-          <div className="adatsor">
-            <span>Kapcsolattartó</span><span className="ertek">{nev}</span>
-          </div>
-        )}
-        <div className="adatsor">
-          <span>Hozom-viszem</span>
-          <span className="ertek">{hozomViszem ? 'igen' : 'nem'}</span>
-        </div>
-        <div className="adatsor">
-          <span>Autók</span>
-          <span className="ertek szam">{autok}</span>
-        </div>
-        {!nyitva && (
-          <div className="adatsor">
-            <span>Egyedi ár</span>
-            <span className="ertek szam">{arDb}</span>
-          </div>
-        )}
         {nyitva && children}
       </div>
     </div>

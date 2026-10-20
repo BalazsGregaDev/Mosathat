@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 
-import { useApp, useRevizio, useCatalog } from '../../state/AppContext'
 import { napBeosztasBetolt, type NapBeosztas } from '../../state/napBeosztas'
 import { hataridoLehetosegek, napAllapot, type Lehetoseg, type NapAllapot, type TiltottSav } from '../../lib/befer'
 import { negyedekbol } from '../../lib/beosztas'
@@ -11,10 +10,8 @@ import {
   type BookingScope, type Extra, type MeasureUnit, type Quote, type SeatMaterial, type VehicleCategory,
 } from '../../lib/types'
 import { katKulcs, terjedelemKulcs, ulesKulcs, type SzovegKulcs } from '../../lib/publikusTartalom'
-import { forditott, Gazdag, TartalomProvider, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from './tartalom'
+import { forditott, Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from './tartalom'
 import { FELIRAT, hibaFordit, nyelviUt, type Formatum } from '../../lib/nyelv'
-import { usePublikusAdat } from './usePublikusAdat'
-import { URES_TARTALOM } from '../../lib/publikusTartalom'
 import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
 import { csomagbanBenne } from '../../lib/csomag'
 import type { Catalog, DataSource } from '../../data/source'
@@ -36,6 +33,7 @@ export interface FoglalasKornyezet {
   bemutato?: Bemutato
   cegUzenet?: string | null
   ceges?: boolean
+  hozomviszem?: boolean
 }
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
@@ -59,7 +57,7 @@ const LEGTOBB_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 10, ULES: 9, A
 const ELVITEL_KEZDETE = 8 * 60
 const LEGKESOBB_HATARIDO = 17 * 60
 
-type Tipus = 'VAROS' | 'LEADOS'
+type Tipus = 'VAROS' | 'LEADOS' | 'HOZOMVISZEM'
 type Elvitel = 'AZNAP' | 'MASNAP'
 
 export interface Bemutato {
@@ -96,24 +94,9 @@ const ALLAPOT_KULCS: Record<NapAllapot, SzovegKulcs> = {
   szabad: 'foglalas.allapot.szabad', keves: 'foglalas.allapot.keves', tele: 'foglalas.allapot.tele', zarva: 'foglalas.allapot.zarva',
 }
 
-export default function FoglalasModul({ onNapiNezet }: {
-  onNapiNezet?: (nap: string) => void
-}) {
-  const { data, refresh } = useApp()
-  const revision = useRevizio()
-  const katalogus = useCatalog()
-  const { adat: pub } = usePublikusAdat()
-  return (
-    <TartalomProvider t={pub?.tartalom ?? URES_TARTALOM} lemondasOra={pub?.lemondasOra}>
-      <FoglalasUrlap data={data} katalogus={katalogus} revision={revision} refresh={refresh}
-                     nyilvanos={false} onNapiNezet={onNapiNezet} lemondasOra={pub?.lemondasOra} />
-    </TartalomProvider>
-  )
-}
-
 export function FoglalasUrlap({
   data, katalogus, revision, refresh, nyilvanos, lemondasOra, onNapiNezet,
-  kat: katKulso, onKat, csomagId: csomagKulso, onCsomag, bemutato, cegUzenet, ceges = false,
+  kat: katKulso, onKat, csomagId: csomagKulso, onCsomag, bemutato, cegUzenet, ceges = false, hozomviszem = false,
 }: FoglalasKornyezet) {
   const lepes = ceges ? CEGES_LEPESEK : LEPESEK
   const sz = useSz()
@@ -169,6 +152,8 @@ export function FoglalasUrlap({
   const szaradni = ules !== 'BOR'
   const sc: BookingScope = ceges || fsBe ? 'TELJES' : csomagId && !foglalhato(csomagId, scope) ? 'TELJES' : scope
   const tip: Tipus | null = fsBe ? (elvitel ? 'LEADOS' : null) : tipus
+  const hv = tip === 'HOZOMVISZEM'
+  const tipB: 'VAROS' | 'LEADOS' | null = hv ? 'LEADOS' : tip
   const masnap = fsBe && elvitel === 'MASNAP'
 
   const kinaltExtrak = useMemo(
@@ -247,11 +232,11 @@ export function FoglalasUrlap({
     for (const d of napok) {
       const a = napAdat.get(d)
       if (!a) continue
-      const e = napAllapot(a.negyedek, a.munkak, perc, tip, a.most, ceges ? CEGES_TILTOTT : EBED)
-      m.set(d, ceges ? cegesIdopontok(e, a.negyedek, a.most, tip) : e)
+      const e = napAllapot(a.negyedek, a.munkak, perc, tipB!, a.most, ceges ? CEGES_TILTOTT : EBED)
+      m.set(d, ceges ? cegesIdopontok(e, a.negyedek, a.most, tipB!) : e)
     }
     return m
-  }, [napok, napAdat, perc, tip, ceges])
+  }, [napok, napAdat, perc, tip, tipB, ceges])
 
   useEffect(() => { setIdo(null) }, [perc, tip, nap])
 
@@ -278,7 +263,7 @@ export function FoglalasUrlap({
     if (bemutato?.idot && !ido && elsoIdo) setIdo(elsoIdo)
   }, [bemutato?.idot, ido, elsoIdo])
 
-  const hataridoKell = tip === 'LEADOS' && !masnap
+  const hataridoKell = tipB === 'LEADOS' && !masnap
   const hataridok = useMemo(() => {
     if (!hataridoKell || !ido || !perc || !nap) return []
     const a = napAdat.get(nap)
@@ -305,7 +290,7 @@ export function FoglalasUrlap({
         pick_up_time: hataridoKell && hat !== null ? percIdo(hat) : null,
         booking_type: tip, service_date: nap,
         start_time: tip === 'VAROS' ? percIdo(ido.tol) : null,
-        drop_off_time: tip === 'LEADOS' ? percIdo(ido.tol) : null,
+        drop_off_time: tipB === 'LEADOS' ? percIdo(ido.tol) : null,
         customer_name: adatok.nev.trim(), customer_phone: adatok.telefon.trim(),
         customer_email: adatok.email.trim() || null, plate_raw: adatok.rendszam.trim(),
         brand: adatok.marka.trim() || null, model: adatok.modell.trim() || null,
@@ -315,6 +300,7 @@ export function FoglalasUrlap({
       setKesz({
         id, nap,
         mikor: tip === 'VAROS' ? `${sz('foglalas.kezdes_cimke')}: ${percOra(ido.tol)}`
+          : hv ? `${fe.hvErte}: ${percOra(ido.tol)}${hat !== null ? `, ${fe.hvVissza}: ${percOra(hat)}` : ''}`
           : `${sz('foglalas.hozas_cimke')}: ${percOra(ido.tol)}${hataridoKell && hat !== null ? `, ${sz('foglalas.hatarido_cimke')}: ${percOra(hat)}` : ''}`,
         elvitel: masnap ? elvitelInfo : null,
         email: adatok.email.trim() !== '',
@@ -409,7 +395,7 @@ export function FoglalasUrlap({
           })}
         </div>
 
-        {csomag && (
+        {csomag && !ceges && (
           <label className="fogl-fs" data-be={fsBe || undefined} data-tiltva={!fsLehet || undefined}>
             <input type="checkbox" checked={fsBe} disabled={!fsLehet} onChange={(e) => setFs(e.target.checked)} />
             <span className="nev">
@@ -502,7 +488,7 @@ export function FoglalasUrlap({
       {csomagId && !fsBe && (
         <section className="fogl-kartya" data-lepes="tipus">
           <h2><span className="lepes">{lepes.tipus}</span> {sz('foglalas.var_vagy_hagy')}</h2>
-          <div className="fogl-valaszto ketto">
+          <div className={`fogl-valaszto ${ceges && hozomviszem ? 'harom' : 'ketto'}`}>
             <button type="button" aria-pressed={tipus === 'VAROS'} onClick={() => setTipus('VAROS')}>
               {sz('foglalas.varom')}
               <small>{sz('foglalas.varom_leiras')}</small>
@@ -511,6 +497,12 @@ export function FoglalasUrlap({
               {sz('foglalas.hagyom')}
               <small>{sz('foglalas.hagyom_leiras')}</small>
             </button>
+            {ceges && hozomviszem && (
+              <button type="button" aria-pressed={tipus === 'HOZOMVISZEM'} onClick={() => setTipus('HOZOMVISZEM')}>
+                {fe.hozomviszem}
+                <small>{fe.hozomviszemLeiras}</small>
+              </button>
+            )}
           </div>
         </section>
       )}
@@ -581,7 +573,7 @@ export function FoglalasUrlap({
               {nap && (
                 <>
                   <h2 className="fogl-al"><span className="lepes">{lepes.ido}</span>
-                    {' '}{tip === 'VAROS' ? sz('foglalas.kezdes') : sz('foglalas.hozas')} <small>{f.napCim(nap)}</small>
+                    {' '}{tip === 'VAROS' ? sz('foglalas.kezdes') : hv ? fe.hvKerdes : sz('foglalas.hozas')} <small>{f.napCim(nap)}</small>
                   </h2>
                   {lehetosegek.length === 0 ? (
                     <p className="fogl-figyel">{sz('foglalas.nincs_ido')}</p>
@@ -590,14 +582,14 @@ export function FoglalasUrlap({
                       {lehetosegek.map((l) => (
                         <button key={l.tol} type="button" aria-pressed={ido?.tol === l.tol} onClick={() => setIdo(l)}>
                           {percOra(l.tol)}
-                          {tip === 'LEADOS' && !masnap && <small>{sz('foglalas.kesz_kb')} {l.kesz !== null ? percOra(l.kesz) : '—'}</small>}
+                          {tipB === 'LEADOS' && !masnap && <small>{sz('foglalas.kesz_kb')} {l.kesz !== null ? percOra(l.kesz) : '—'}</small>}
                         </button>
                       ))}
                     </div>
                   )}
                   {ido && hataridoKell && (
                     <div className="fogl-hatarido">
-                      <span className="cimke">{sz('foglalas.hatarido')}</span>
+                      <span className="cimke">{hv ? fe.hvVisszaKerdes : sz('foglalas.hatarido')}</span>
                       {hataridok.length === 0 ? (
                         <p className="fogl-figyel">{sz('foglalas.hatarido_nincs')}</p>
                       ) : (
@@ -704,8 +696,9 @@ export function FoglalasUrlap({
             )}
             {nap && ido && (
               <div>
-                {f.napCim(nap)} · {tip === 'VAROS' ? `${sz('foglalas.kezdes_cimke')}: ${percOra(ido.tol)}` : `${sz('foglalas.hozas_cimke')}: ${percOra(ido.tol)}`}
-                {hataridoKell && hat !== null && ` · ${sz('foglalas.hatarido_cimke')}: ${percOra(hat)}`}
+                {f.napCim(nap)} · {tip === 'VAROS' ? `${sz('foglalas.kezdes_cimke')}: ${percOra(ido.tol)}`
+                  : hv ? `${fe.hvErte}: ${percOra(ido.tol)}` : `${sz('foglalas.hozas_cimke')}: ${percOra(ido.tol)}`}
+                {hataridoKell && hat !== null && ` · ${hv ? fe.hvVissza : sz('foglalas.hatarido_cimke')}: ${percOra(hat)}`}
                 {masnap && elvitelInfo
                   && ` · ${sz('foglalas.elvitel_cimke')}: ${f.napRovidCim(elvitelInfo.nap)} ${percOra(elvitelInfo.tol)}–${percOra(elvitelInfo.ig)}`}
               </div>

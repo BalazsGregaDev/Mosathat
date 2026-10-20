@@ -14,23 +14,12 @@ const dir = await mkdtemp(join(tmpdir(), 'v63-'))
 const belepes = join(dir, 'be.ts')
 await writeFile(belepes, `
 export { keresElhelyez } from '${join(process.cwd(), 'src/lib/befer.ts')}'
-export { foglalasModulLatja } from '${join(process.cwd(), 'src/lib/jogok.ts')}'
 export { napMulva, ota } from '${join(process.cwd(), 'src/lib/format.ts')}'
 `)
 await build({ entryPoints: [belepes], outfile: join(dir, 'b.mjs'), format: 'esm', bundle: true, logLevel: 'error' })
 const L = await import(join(dir, 'b.mjs'))
 
-console.log('=== 1) Ki látja az Időpontfoglalás menüt ===\n')
-ok('fejlesztő, tulajdonos: igen', [true, true], [
-  L.foglalasModulLatja({ role: 'SUPERADMIN', email: 'a@b.hu' }),
-  L.foglalasModulLatja({ role: 'TULAJDONOS', email: 'a@b.hu' })])
-ok('alkalmazott: nem', false, L.foglalasModulLatja({ role: 'STAFF', email: 'gabor@mosathat.hu' }))
-ok('a próbafiók: igen, kis- és nagybetűtől függetlenül', [true, true], [
-  L.foglalasModulLatja({ role: 'STAFF', email: 'hegedusgabor@mosathat.hu' }),
-  L.foglalasModulLatja({ role: 'STAFF', email: ' HegedusGabor@Mosathat.hu ' })])
-ok('kijelentkezve: nem', false, L.foglalasModulLatja(null))
-
-console.log('\n=== 2) Idő szövegek ===\n')
+console.log('=== 1) Idő szövegek ===\n')
 const most = Date.parse('2026-10-12T08:00:00Z')
 ok('ennyi ideje érkezett', ['épp most', '5 perce', '2 órája', '3 napja'], [
   L.ota('2026-10-12T07:59:40Z', most), L.ota('2026-10-12T07:55:00Z', most),
@@ -40,7 +29,7 @@ ok('hány nap múlva', ['ma', 'holnap', 'holnapután', '5 nap múlva', 'tegnap']
   L.napMulva('2026-10-14', '2026-10-12'), L.napMulva('2026-10-17', '2026-10-12'),
   L.napMulva('2026-10-11', '2026-10-12')])
 
-console.log('\n=== 3) Hova fér be a kérés ===\n')
+console.log('\n=== 2) Hova fér be a kérés ===\n')
 const nap = '2026-10-14'
 const hhmm = (p) => `${String(Math.floor(p / 60)).padStart(2, '0')}:${String(p % 60).padStart(2, '0')}`
 const savok = Array.from({ length: 36 }, (_, i) => ({ starts: hhmm(480 + i * 15), ends: hhmm(495 + i * 15), lanes: 2 }))
