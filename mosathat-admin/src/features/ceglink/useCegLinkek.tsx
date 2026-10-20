@@ -6,6 +6,7 @@ import { useMentetlen } from '../../state/useMentetlen'
 import { useKerdes } from '../common/Kerdes'
 import { hibaSzoveg, napRovidCim } from '../../lib/format'
 import { cegLinkCim, cegLinkCsereLevel, cegLinkLevel, vagolapra } from '../../lib/cegLink'
+import QrAblak from './QrAblak'
 import type { CegLink } from '../../lib/types'
 
 function MasolasIkon() {
@@ -35,6 +36,7 @@ export function useCegLinkek(engedett: boolean, frissites: number): CegLinkVezer
   const [jelzes, setJelzes] = useState<Jelzes | null>(null)
   const [uzenetek, setUzenetek] = useState<Record<string, string>>({})
   const [kerdesAblak, kerdez] = useKerdes()
+  const [qr, setQr] = useState<{ nev: string; link: string } | null>(null)
   const idozito = useRef<number | undefined>(undefined)
 
   useEffect(() => {
@@ -145,6 +147,11 @@ export function useCegLinkek(engedett: boolean, frissites: number): CegLinkVezer
                   disabled={megy === c.company_id} onClick={() => void general(c)}>
             {link ? 'Új link' : 'Link készítése'}
           </button>
+          {link && (
+            <button type="button" className="btn btn-kicsi ceglink-qr" onClick={() => setQr({ nev: c.name, link })}>
+              QR-kód
+            </button>
+          )}
           {c.created_at && <small className="halk">Készült: {napRovidCim(c.created_at.slice(0, 10))}</small>}
         </div>
         {jelzo(c.company_id, 'link')}
@@ -184,5 +191,13 @@ export function useCegLinkek(engedett: boolean, frissites: number): CegLinkVezer
     )
   }
 
-  return { kerdesAblak, hiba, linkCella, uzenetCella }
+  return {
+    kerdesAblak: (
+      <>
+        {kerdesAblak}
+        {qr && <QrAblak cegNev={qr.nev} link={qr.link} onBezar={() => setQr(null)} />}
+      </>
+    ),
+    hiba, linkCella, uzenetCella,
+  }
 }

@@ -92,3 +92,17 @@
   .cegtabla-sor > td.cegtabla-link::before { content: 'Foglalási link'; }
   .cegtabla-sor > td.cegtabla-uzenet::before { content: 'Üzenet a foglalóknak'; }
 }
+
+.qr-ablak { width: min(440px, 100%); align-items: stretch; text-align: center; }
+.qr-ablak .qr-ceg { font-size: var(--m-lg); font-weight: var(--vastag-eros); color: var(--szoveg); margin-top: -6px; }
+.qr-kep {
+  display: flex; align-items: center; justify-content: center;
+  width: min(100%, 340px); aspect-ratio: 1; margin: 0 auto;
+  background: #fff; border: 1px solid var(--keret); border-radius: var(--r);
+}
+.qr-kep img { width: 100%; height: 100%; display: block; image-rendering: pixelated; border-radius: var(--r); }
+.qr-ablak .qr-link {
+  font-family: var(--betu-szam); font-size: var(--m-xs); color: var(--szoveg-halk);
+  overflow-wrap: anywhere;
+}
+.qr-ablak .kerdes-gombok a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
