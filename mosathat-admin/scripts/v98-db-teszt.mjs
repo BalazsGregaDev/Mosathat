@@ -54,7 +54,7 @@ t.ok('túl hosszú üzenet elutasítva', true, /1000/.test(await hiba(() => q(`s
 console.log('\n=== 3) A link adatai kívülről ===\n')
 const adat = await anonkent(async () => (await egy(`select ceg_link_adat($1) x`, [elso])).x)
 t.ok('cégnév és üzenet', [ceg.name, 'Kérjük, a forgalmit hagyjátok az autóban.'], [adat.ceg, adat.uzenet])
-t.ok('csak a flotta árak (6 db)', 6, adat.arak.length)
+t.ok('a szerződés három csomagja, ár nélkül', [3, false], [adat.csomagok.length, 'arak' in adat])
 t.ok('ismeretlen kód: nincs adat', null, await anonkent(async () => (await egy(`select ceg_link_adat('aaaaaaaaaaaaaaaaaaaaaaaa') x`)).x))
 t.ok('rossz alakú kód: nincs adat', null, await anonkent(async () => (await egy(`select ceg_link_adat('x'' or 1=1') x`)).x))
 
@@ -62,9 +62,7 @@ console.log('\n=== 4) Ár a linken keresztül ===\n')
 const ajanlat = (k, x = {}) => anonkent(async () => (await egy(`select ceg_ajanlat($1, $2) x`, [k, JSON.stringify({
   package_id: START, category: 'SZEMELYAUTO', scope: 'TELJES', full_service: false, extras: [],
   booking_type: 'LEADOS', service_date: nap, ...x })])).x)
-t.ok('Start, személyautó, teljes: szerződéses ár', 10500, (await ajanlat(elso)).price_huf)
-t.ok('Start, SUV, teljes: szerződéses ár (nagy)', 13500, (await ajanlat(elso, { category: 'SUV' })).price_huf)
-t.ok('Start, csak kívül: listaár', 6000, (await ajanlat(elso, { scope: 'KULSO' })).price_huf)
+t.ok('a céges ajánlat árat nem ad ki, csak munkaidőt', [0, true, 0], [(await ajanlat(elso)).price_huf, (await ajanlat(elso)).work_minutes > 0, (await ajanlat(elso)).lines.length])
 t.ok('ugyanez a publikus oldalon listaáron', 12800,
   (await anonkent(async () => (await egy(`select publikus_ajanlat($1) x`, [JSON.stringify({
     package_id: START, category: 'SZEMELYAUTO', scope: 'TELJES', booking_type: 'LEADOS', service_date: nap })])).x)).price_huf)

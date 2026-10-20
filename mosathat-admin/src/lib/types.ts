@@ -252,6 +252,7 @@ export interface DayBooking {
   fleet_index: number | null
   skip_note?: string | null
   skip_huf?: number | null
+  ceg_link_company?: string | null
   napi_perc?: number | null
   kezdve?: string | null
   befejezve?: string | null
@@ -796,16 +797,10 @@ export interface CegLink {
   valid_until: string | null
 }
 
-export interface CegLinkAr {
-  package_id: string
-  size: 'NORMAL' | 'NAGY'
-  price_huf: number
-}
-
 export interface CegLinkAdat {
   ceg: string
   uzenet: string | null
-  arak: CegLinkAr[]
+  csomagok: string[]
 }
 
 export interface PublikusNapAdat {

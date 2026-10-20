@@ -763,17 +763,17 @@
 
 .kv[data-k='03'] .kv-ervenyes { margin: -6px 0 18px; font-family: var(--talpas); font-style: italic; font-size: 16px; color: var(--halk); }
 
-.kv[data-k='03'] :is(.kv-rolunk, .kv-lab, .kv-gomb-lakk) {
+.kv[data-k='03'] :is(.kv-rolunk, .kv-lab, .kv-gomb-lakk, .kv-ceg-sav) {
   --fg: #f3f1ea; --halk: #a9bcae; --vonal: rgba(243, 241, 234, .16); --vonal-eros: rgba(243, 241, 234, .45); --zold: #a6d9b6; --tele-fg: #0b2116;
   position: relative; isolation: isolate; overflow: hidden; overflow: clip;
   color: var(--fg); background: linear-gradient(175deg, var(--lakk) 0%, var(--lakk-mely) 100%); border-top: 0;
 }
-.kv[data-k='03'] :is(.kv-rolunk, .kv-lab, .kv-gomb-lakk)::before {
+.kv[data-k='03'] :is(.kv-rolunk, .kv-lab, .kv-gomb-lakk, .kv-ceg-sav)::before {
   content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: radial-gradient(70% 130% at calc(10% + var(--feny, .5) * 80%) 0%,
     color-mix(in srgb, var(--lakk-feny) calc(14% + var(--feny-kozep, .5) * 40%), transparent) 0%, transparent 70%);
 }
-.kv[data-k='03'] :is(.kv-rolunk, .kv-lab, .kv-gomb-lakk)::after {
+.kv[data-k='03'] :is(.kv-rolunk, .kv-lab, .kv-gomb-lakk, .kv-ceg-sav)::after {
   content: ''; position: absolute; top: -30%; bottom: -30%; left: -10%; right: -10%; z-index: -1; pointer-events: none;
   background: linear-gradient(104deg,
     transparent 0 40%, rgba(255, 255, 255, .025) 44%, rgba(255, 255, 255, .09) 48.6%, rgba(255, 255, 255, .17) 49.6%,
@@ -798,7 +798,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kv[data-k='03'] :is(.kv-rolunk, .kv-lab, .kv-gomb-lakk)::after { display: none; }
+  .kv[data-k='03'] :is(.kv-rolunk, .kv-lab, .kv-gomb-lakk, .kv-ceg-sav)::after { display: none; }
 }
 .kv[data-k='03'] a.kv-gomb-lakk {
   --csik: 64px; --fenykor: 130px 90px;

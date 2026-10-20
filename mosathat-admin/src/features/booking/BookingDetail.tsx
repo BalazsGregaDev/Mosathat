@@ -26,6 +26,11 @@ import { kovetkezoLepesFut } from './lepes'
 
 const MERET_VALASZTO: Valaszthato[] = KATEGORIAK.map((v) => ({ ertek: v, cimke: CATEGORY_LABEL[v] }))
 
+const CEGES_MERET_VALASZTO: Valaszthato[] = [
+  { ertek: 'SZEMELYAUTO', cimke: 'Normál' },
+  { ertek: 'SUV', cimke: 'Nagy' },
+]
+
 const TERJEDELEM_VALASZTO: Valaszthato[] = TERJEDELMEK.map((v) => ({ ertek: v, cimke: SCOPE_LABEL[v] }))
 
 const TIPUSOK: Valaszthato[] = (['VAROS', 'LEADOS', 'HOZOMVISZEM'] as BookingType[])
@@ -525,10 +530,17 @@ export default function BookingDetail({
                   </span>
                 </div>
 
-                <Szerkesztheto
-                  cimke="Méret" ertek={b.category} zarolt={lezart}
-                  valaszthato={MERET_VALASZTO} gombok
-                  onMent={(v) => mezoMent({ category: v })} />
+                {b.ceg_link_company ? (
+                  <Szerkesztheto
+                    cimke="Méret" ertek={b.category === 'SZEMELYAUTO' ? 'SZEMELYAUTO' : 'SUV'} zarolt={lezart}
+                    valaszthato={CEGES_MERET_VALASZTO} gombok
+                    onMent={(v) => mezoMent({ category: v })} />
+                ) : (
+                  <Szerkesztheto
+                    cimke="Méret" ertek={b.category} zarolt={lezart}
+                    valaszthato={MERET_VALASZTO} gombok
+                    onMent={(v) => mezoMent({ category: v })} />
+                )}
 
                 {b.contract_kind && (
                   <Szerkesztheto

@@ -12,6 +12,7 @@ const MATRIX = `select package_code, slot_name, name, area::text, sort_order fro
 const TOBBLET = `select package_code, parent_name, name from v_package_extra order by 1, 3`
 const FELADAT = `select v.plate_raw || ' ' || b.service_date::text k, t.name, t.area::text, t.sort_order, t.source::text
                    from booking_tasks t join bookings b on b.id = t.booking_id join vehicles v on v.id = b.vehicle_id
+                  where v.plate_raw <> 'CEG-001'
                   order by 1, 2, 3, 4`
 
 console.log('=== 1) Az átállás semmit nem változtat ===\n')

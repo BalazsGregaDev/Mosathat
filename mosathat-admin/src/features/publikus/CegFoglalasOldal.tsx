@@ -16,7 +16,7 @@ const SZOVEG = {
   hu: {
     cimke: 'Céges foglalás',
     cim: 'Céges időpontfoglalás',
-    bevezeto: 'A szerződés szerinti árakon. A kérést telefonon vagy e-mailben visszaigazoljuk.',
+    bevezeto: 'Időpontkérés a cég szerződése alapján. A kérést telefonon vagy e-mailben visszaigazoljuk.',
     ervenytelen: 'Ez a foglalási link nem érvényes',
     ervenytelenSzoveg: 'Lehet, hogy a cég új linket kapott, vagy lejárt a szerződés. Kérd el az új linket a cégednél, vagy hívj minket:',
     hiba: 'Az oldal most nem tölthető be. Kérjük, próbáld újra pár perc múlva, vagy hívj minket:',
@@ -24,7 +24,7 @@ const SZOVEG = {
   en: {
     cimke: 'Company booking',
     cim: 'Company booking',
-    bevezeto: 'At the contract prices. We will confirm your request by phone or e-mail.',
+    bevezeto: 'Booking request under your company’s contract. We will confirm your request by phone or e-mail.',
     ervenytelen: 'This booking link is not valid',
     ervenytelenSzoveg: 'Your company may have received a new link, or the contract has ended. Ask your company for the new link, or call us:',
     hiba: 'The page cannot be loaded right now. Please try again in a few minutes, or call us:',
@@ -32,15 +32,7 @@ const SZOVEG = {
 }
 
 function cegesKatalogus(k: Catalog, adat: CegLinkAdat): Catalog {
-  return {
-    ...k,
-    packagePricing: k.packagePricing.map((pp) => {
-      if (pp.scope !== 'TELJES') return pp
-      const meret = pp.category === 'SZEMELYAUTO' ? 'NORMAL' : 'NAGY'
-      const ar = adat.arak.find((a) => a.package_id === pp.package_id && a.size === meret)
-      return ar ? { ...pp, price_huf: ar.price_huf, requires_quote: false } : pp
-    }),
-  }
+  return { ...k, packages: k.packages.filter((p) => adat.csomagok.includes(p.id)) }
 }
 
 function cegesForras(forras: DataSource, token: string, revision: number): FoglalasForras {
@@ -91,13 +83,20 @@ function CegesFoglalas({ betoltott, token, adat }: { betoltott: Betoltve; token:
   const u = useUzlet()
   const t = SZOVEG[nyelv]
   return (
-    <section className="kv-foglalas kv-foglalas-elo kv-ceg-foglalas">
+    <>
       <Cim szoveg={`${t.cim}: ${adat.ceg} — ${u.nev}`} />
-      <h2>{t.cim}</h2>
-      <p className="kv-bevezeto"><strong>{adat.ceg}</strong> · {t.bevezeto}</p>
-      <FoglalasUrlap data={data} katalogus={katalogus} revision={revision} refresh={refresh}
-                     nyilvanos lemondasOra={betoltott.adat.lemondasOra} cegUzenet={adat.uzenet} />
-    </section>
+      <section className="kv-ceg-sav" data-csillan>
+        <div className="kv-ceg-sav-belso">
+          <span className="kv-ceg-sav-ceg">{adat.ceg}</span>
+          <h1>{t.cim}</h1>
+          <p>{t.bevezeto}</p>
+        </div>
+      </section>
+      <section className="kv-foglalas kv-foglalas-elo kv-ceg-foglalas">
+        <FoglalasUrlap data={data} katalogus={katalogus} revision={revision} refresh={refresh}
+                       nyilvanos ceges lemondasOra={betoltott.adat.lemondasOra} cegUzenet={adat.uzenet} />
+      </section>
+    </>
   )
 }
 

@@ -98,6 +98,7 @@ export const FELIRAT = {
     menu: 'Menü',
     menuBezar: 'Menü bezárása',
     fomenu: 'Főmenü',
+    cegesValtozas: 'Ha bármi változás van, ezen a telefonszámon elérsz:',
   },
   en: {
     bennevan: 'included',
@@ -116,6 +117,7 @@ export const FELIRAT = {
     menu: 'Menu',
     menuBezar: 'Close menu',
     fomenu: 'Main menu',
+    cegesValtozas: 'If anything changes, you can reach us on this number:',
   },
 } as const
 
@@ -158,6 +160,12 @@ const HIBAK: [RegExp, (m: RegExpExecArray) => string][] = [
     (m) => `Several requests from this phone number are already waiting for confirmation. Please call us: ${m[1]}.`],
   [/^Most túl sok kérés érkezett\. Kérjük, próbáld újra később, vagy hívj minket: (.+?)\.?$/,
     (m) => `We are receiving too many requests right now. Please try again later, or call us: ${m[1]}.`],
+  [/^Ez a foglalási link már nem érvényes\. Kérjük, hívj minket: (.+?)\.?$/,
+    (m) => `This booking link is no longer valid. Please call us: ${m[1]}.`],
+  [/^Ehhez a céghez most túl sok kérés vár visszaigazolásra\. Kérjük, hívj minket: (.+?)\.?$/,
+    (m) => `Too many requests from this company are waiting for confirmation. Please call us: ${m[1]}.`],
+  [/^Ez a csomag nem szerepel a cég szerződésében\./, () => 'This package is not part of your company’s contract.'],
+  [/^Céges foglalásnál 7:30 és 17:00 között lehet időpontot választani\./, () => 'Company bookings can be made between 7:30 and 17:00.'],
   [HALOZATI, () => 'We could not reach the server. Please check your internet connection and try again.'],
 ]
 

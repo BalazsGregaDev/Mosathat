@@ -378,6 +378,33 @@ begin
   end if;
 end $$;
 
+do $$
+declare
+  v_nap date;
+  v_id  uuid;
+begin
+  if to_regprocedure('public.ceg_link_csomag(uuid, uuid)') is null then
+    return;
+  end if;
+  select d::date into v_nap
+    from generate_series(current_date + 3, current_date + 21, interval '1 day') d
+   where public.munkanap(d::date)
+   order by d
+   limit 1;
+  v_id := public.ceg_foglalas('autotransdemo2026link', jsonb_build_object(
+    'package_id',     (select id from public.packages where code = 'PREMIUM'),
+    'booking_type',   'LEADOS',
+    'service_date',   v_nap,
+    'drop_off_time',  '08:00',
+    'customer_name',  'Céges Demó Dénes',
+    'customer_phone', '+36 30 999 0001',
+    'plate_raw',      'CEG-001',
+    'brand',          'Skoda',
+    'model',          'Octavia',
+    'notes',          'DEMO — céges foglalási linkről érkezett'));
+  perform public.online_keres_dontes(v_id, true);
+end $$;
+
 select 'ügyfél' as mi, count(*) from public.customers
 union all select 'jármű',    count(*) from public.vehicles
 union all select 'foglalás', count(*) from public.bookings

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 
 import { useApp, useRevizio, useCatalog } from '../../state/AppContext'
 import { napBeosztasBetolt, type NapBeosztas } from '../../state/napBeosztas'
@@ -35,6 +35,7 @@ export interface FoglalasKornyezet {
   onCsomag?: (id: string | null) => void
   bemutato?: Bemutato
   cegUzenet?: string | null
+  ceges?: boolean
 }
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
@@ -45,6 +46,14 @@ const EBED: TiltottSav[] = [
   { tol: 0, ig: 9 * 60 - 1 },
   { tol: 11 * 60 + 15, ig: 12 * 60 + 45 },
 ]
+const CEGES_ELSO = 7 * 60 + 30
+const CEGES_UTOLSO = 17 * 60
+const CEGES_TILTOTT: TiltottSav[] = [
+  { tol: 0, ig: CEGES_ELSO - 1 },
+  { tol: 11 * 60 + 15, ig: 12 * 60 + 45 },
+]
+const LEPESEK = { auto: 1, csomag: 2, mit: 3, extrak: 4, tipus: 5, nap: 6, ido: 7, adatok: 8 }
+const CEGES_LEPESEK = { auto: 0, csomag: 1, mit: 0, extrak: 0, tipus: 2, nap: 3, ido: 4, adatok: 5 }
 const ALAP_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 1, ULES: 5, AJTO: 4, LITER: 1 }
 const LEGTOBB_DB: Record<MeasureUnit, number> = { ALKALOM: 1, DB: 10, ULES: 9, AJTO: 6, LITER: 10 }
 const ELVITEL_KEZDETE = 8 * 60
@@ -104,8 +113,9 @@ export default function FoglalasModul({ onNapiNezet }: {
 
 export function FoglalasUrlap({
   data, katalogus, revision, refresh, nyilvanos, lemondasOra, onNapiNezet,
-  kat: katKulso, onKat, csomagId: csomagKulso, onCsomag, bemutato, cegUzenet,
+  kat: katKulso, onKat, csomagId: csomagKulso, onCsomag, bemutato, cegUzenet, ceges = false,
 }: FoglalasKornyezet) {
+  const lepes = ceges ? CEGES_LEPESEK : LEPESEK
   const sz = useSz()
   const u = useUzlet()
   const nyelv = useNyelv()
@@ -119,7 +129,7 @@ export function FoglalasUrlap({
 
   const [katBelso, setKatBelso] = useState<VehicleCategory>('SZEMELYAUTO')
   const [csomagBelso, setCsomagBelso] = useState<string | null>(bemutato?.csomagId ?? null)
-  const kat = katKulso ?? katBelso
+  const kat = ceges ? 'SZEMELYAUTO' : katKulso ?? katBelso
   const setKat = onKat ?? setKatBelso
   const csomagId = csomagKulso !== undefined ? csomagKulso : csomagBelso
   const setCsomagId = onCsomag ?? setCsomagBelso
@@ -154,10 +164,10 @@ export function FoglalasUrlap({
   const fsSor = csomagId
     ? katalogus.fullServicePricing.find((x) => x.package_id === csomagId && x.category === kat) ?? null
     : null
-  const fsLehet = Boolean(fsSor && fsSor.price_huf != null && !fsSor.requires_quote)
+  const fsLehet = !ceges && Boolean(fsSor && fsSor.price_huf != null && !fsSor.requires_quote)
   const fsBe = fs && fsLehet
   const szaradni = ules !== 'BOR'
-  const sc: BookingScope = fsBe ? 'TELJES' : csomagId && !foglalhato(csomagId, scope) ? 'TELJES' : scope
+  const sc: BookingScope = ceges || fsBe ? 'TELJES' : csomagId && !foglalhato(csomagId, scope) ? 'TELJES' : scope
   const tip: Tipus | null = fsBe ? (elvitel ? 'LEADOS' : null) : tipus
   const masnap = fsBe && elvitel === 'MASNAP'
 
@@ -169,8 +179,8 @@ export function FoglalasUrlap({
   )
   const rejtett = katalogus.extras.filter((e) => e.active && csomagbanBenne(e, csomagId, sc, fsBe)).length
   const valasztottExtrak = useMemo(
-    () => kinaltExtrak.filter((e) => (extrak[e.id] ?? 0) > 0),
-    [kinaltExtrak, extrak],
+    () => (ceges ? [] : kinaltExtrak.filter((e) => (extrak[e.id] ?? 0) > 0)),
+    [ceges, kinaltExtrak, extrak],
   )
   const egyeztetendo = valasztottExtrak.filter(egyeztetesre)
 
@@ -236,10 +246,12 @@ export function FoglalasUrlap({
     if (!perc || !tip) return m
     for (const d of napok) {
       const a = napAdat.get(d)
-      if (a) m.set(d, napAllapot(a.negyedek, a.munkak, perc, tip, a.most, EBED))
+      if (!a) continue
+      const e = napAllapot(a.negyedek, a.munkak, perc, tip, a.most, ceges ? CEGES_TILTOTT : EBED)
+      m.set(d, ceges ? cegesIdopontok(e, a.negyedek, a.most, tip) : e)
     }
     return m
-  }, [napok, napAdat, perc, tip])
+  }, [napok, napAdat, perc, tip, ceges])
 
   useEffect(() => { setIdo(null) }, [perc, tip, nap])
 
@@ -366,28 +378,30 @@ export function FoglalasUrlap({
         </header>
       )}
 
-      <section className="fogl-kartya" data-lepes="auto">
-        <h2><span className="lepes">1</span> {sz('foglalas.auto')}</h2>
-        <div className="fogl-valaszto harom">
-          {KATEGORIAK.map((k) => (
-            <button key={k} type="button" aria-pressed={kat === k} onClick={() => setKat(k)}>
-              {sz(katKulcs.foglalas(k))}
-            </button>
-          ))}
-        </div>
-      </section>
+      {!ceges && (
+        <section className="fogl-kartya" data-lepes="auto">
+          <h2><span className="lepes">{lepes.auto}</span> {sz('foglalas.auto')}</h2>
+          <div className="fogl-valaszto harom">
+            {KATEGORIAK.map((k) => (
+              <button key={k} type="button" aria-pressed={kat === k} onClick={() => setKat(k)}>
+                {sz(katKulcs.foglalas(k))}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="fogl-kartya" data-lepes="csomag">
-        <h2><span className="lepes">2</span> {sz('foglalas.csomag')}</h2>
+        <h2><span className="lepes">{lepes.csomag}</span> {sz('foglalas.csomag')}</h2>
         <div className="fogl-csomagok">
           {csomagok.map((p) => {
             const a = ar(p.id, 'TELJES')
-            const lehet = foglalhato(p.id, 'TELJES')
+            const lehet = ceges || foglalhato(p.id, 'TELJES')
             return (
               <button key={p.id} type="button" className="fogl-csomag" aria-pressed={csomagId === p.id}
                       disabled={!lehet} onClick={() => setCsomagId(p.id)}>
                 <span className="nev">{forditott(p, nyelv)}</span>
-                <span className="ar">{lehet ? f.tol(a!.price_huf!) : sz('foglalas.arajanlat')}</span>
+                {!ceges && <span className="ar">{lehet ? f.tol(a!.price_huf!) : sz('foglalas.arajanlat')}</span>}
                 {a?.duration_minutes ? <span className="ido">{f.kb(f.idotartam(a.duration_minutes))}</span> : null}
                 {csomagLeiras(katalogus, p, nyelv) && <span className="leiras">{csomagLeiras(katalogus, p, nyelv)}</span>}
               </button>
@@ -424,9 +438,9 @@ export function FoglalasUrlap({
         )}
       </section>
 
-      {csomagId && (
+      {csomagId && !ceges && (
         <section className="fogl-kartya" data-lepes="mit">
-          <h2><span className="lepes">3</span> {sz('foglalas.mit')}</h2>
+          <h2><span className="lepes">{lepes.mit}</span> {sz('foglalas.mit')}</h2>
           <div className="fogl-valaszto harom">
             {TERJEDELMEK.map((s) => {
               const a = ar(csomagId, s)
@@ -444,9 +458,9 @@ export function FoglalasUrlap({
         </section>
       )}
 
-      {csomagId && kinaltExtrak.length > 0 && (
+      {csomagId && !ceges && kinaltExtrak.length > 0 && (
         <section className="fogl-kartya" data-lepes="extrak">
-          <h2><span className="lepes">4</span> {sz('foglalas.extrak')} <small>{sz('foglalas.nem_kotelezo')}</small></h2>
+          <h2><span className="lepes">{lepes.extrak}</span> {sz('foglalas.extrak')} <small>{sz('foglalas.nem_kotelezo')}</small></h2>
           {csomag && rejtett > 0 && (
             <p className="fogl-al-szoveg">{sz('foglalas.extrak_benne', { csomag: csomagNev })}</p>
           )}
@@ -487,7 +501,7 @@ export function FoglalasUrlap({
 
       {csomagId && !fsBe && (
         <section className="fogl-kartya" data-lepes="tipus">
-          <h2><span className="lepes">5</span> {sz('foglalas.var_vagy_hagy')}</h2>
+          <h2><span className="lepes">{lepes.tipus}</span> {sz('foglalas.var_vagy_hagy')}</h2>
           <div className="fogl-valaszto ketto">
             <button type="button" aria-pressed={tipus === 'VAROS'} onClick={() => setTipus('VAROS')}>
               {sz('foglalas.varom')}
@@ -503,7 +517,7 @@ export function FoglalasUrlap({
 
       {csomagId && fsBe && (
         <section className="fogl-kartya" data-lepes="elvitel">
-          <h2><span className="lepes">5</span> {sz('foglalas.elvitel')}</h2>
+          <h2><span className="lepes">{lepes.tipus}</span> {sz('foglalas.elvitel')}</h2>
           <p className="fogl-al-szoveg">{sz('foglalas.elvitel_fs')}</p>
           <div className="fogl-valaszto ketto">
             <button type="button" aria-pressed={elvitel === 'AZNAP'} onClick={() => setElvitel('AZNAP')}>
@@ -523,7 +537,7 @@ export function FoglalasUrlap({
 
       {csomagId && tip && (
         <section className="fogl-kartya" data-lepes="nap">
-          <h2><span className="lepes">6</span> {sz('foglalas.nap')}</h2>
+          <h2><span className="lepes">{lepes.nap}</span> {sz('foglalas.nap')}</h2>
           {ajanlatHiba ? (
             <p className="fogl-figyel">{fe.arHiba} {ajanlatHiba}</p>
           ) : !perc ? (
@@ -566,7 +580,7 @@ export function FoglalasUrlap({
 
               {nap && (
                 <>
-                  <h2 className="fogl-al"><span className="lepes">7</span>
+                  <h2 className="fogl-al"><span className="lepes">{lepes.ido}</span>
                     {' '}{tip === 'VAROS' ? sz('foglalas.kezdes') : sz('foglalas.hozas')} <small>{f.napCim(nap)}</small>
                   </h2>
                   {lehetosegek.length === 0 ? (
@@ -609,9 +623,15 @@ export function FoglalasUrlap({
                         : sz('foglalas.elvitel_szamol')}
                     </p>
                   )}
-                  <p className="fogl-erkezes">
-                    <Gazdag s={sz('foglalas.erkezes')} kiemeles="strong" linkek={{ [u.telefon]: telefonLink(u.telefon) }} />
-                  </p>
+                  {ceges ? (
+                    <p className="fogl-erkezes">
+                      {fe.cegesValtozas} <a href={telefonLink(u.telefon)}>{u.telefon}</a>
+                    </p>
+                  ) : (
+                    <p className="fogl-erkezes">
+                      <Gazdag s={sz('foglalas.erkezes')} kiemeles="strong" linkek={{ [u.telefon]: telefonLink(u.telefon) }} />
+                    </p>
+                  )}
                 </>
               )}
             </>
@@ -621,7 +641,7 @@ export function FoglalasUrlap({
 
       {ido && (
         <section className="fogl-kartya" data-lepes="adatok">
-          <h2><span className="lepes">8</span> {sz('foglalas.adatok')}</h2>
+          <h2><span className="lepes">{lepes.adatok}</span> {sz('foglalas.adatok')}</h2>
           <div className="fogl-urlap">
             <div className="mezo"><label htmlFor="fo-nev">{sz('foglalas.mezo.nev')} *</label>
               <input id="fo-nev" className="beviteli" value={adatok.nev} autoComplete="name"
@@ -670,7 +690,7 @@ export function FoglalasUrlap({
             <div>
               <strong>{csomagNeve}</strong>
               {fsBe && <> + {sz('foglalas.fs')}{ules ? ` (${sz(ulesKulcs(ules)).toLowerCase()})` : ''}</>}
-              {' · '}{sz(katKulcs.foglalas(kat))} · {sz(terjedelemKulcs(sc))}
+              {!ceges && <>{' · '}{sz(katKulcs.foglalas(kat))} · {sz(terjedelemKulcs(sc))}</>}
             </div>
             {valasztottExtrak.length > 0 && (
               <div className="halk">
@@ -692,15 +712,23 @@ export function FoglalasUrlap({
             )}
           </div>
           <div className="osszeg">
-            <span className="ar">{ajanlat ? f.ft(ajanlat.price_huf) : '—'}</span>
+            {!ceges && <span className="ar">{ajanlat ? f.ft(ajanlat.price_huf) : '—'}</span>}
             <span className="halk">{perc ? f.kb(f.idotartam(perc)) : ''}</span>
             {egyeztetendo.length > 0 && <span className="halk">{sz('foglalas.egyeztetendo_tetel')}</span>}
           </div>
           <div className="kuld">
             {hiba && <div className="hibauzenet">{hiba}</div>}
-            <button type="button" className="btn btn-fo" disabled={!kuldheto} onClick={() => void kuldes()}>
-              {kuld ? sz('foglalas.kuldes_folyamatban') : sz('foglalas.kuldes')}
-            </button>
+            {ceges ? (
+              <button type="button" className="btn btn-fo kv-gomb-lakk fogl-lakk" disabled={!kuldheto}
+                      data-csillan="" onPointerMove={egerKovet} onPointerLeave={egerElhagy}
+                      onClick={() => void kuldes()}>
+                {kuld ? sz('foglalas.kuldes_folyamatban') : sz('foglalas.kuldes')}
+              </button>
+            ) : (
+              <button type="button" className="btn btn-fo" disabled={!kuldheto} onClick={() => void kuldes()}>
+                {kuld ? sz('foglalas.kuldes_folyamatban') : sz('foglalas.kuldes')}
+              </button>
+            )}
           </div>
         </section>
       )}
@@ -733,6 +761,33 @@ function ProbaSav() {
       eszközön felugrik elfogadásra.
     </div>
   )
+}
+
+function cegesIdopontok(e: ReturnType<typeof napAllapot>, negyedek: { tol: number }[], most: number | null,
+                         tipus: 'VAROS' | 'LEADOS'): ReturnType<typeof napAllapot> {
+  const korabbi: Lehetoseg[] = []
+  const elso = e.lehetosegek[0]
+  const nyit = negyedek[0]?.tol ?? null
+  if (tipus === 'LEADOS' && elso && nyit !== null && elso.tol === nyit) {
+    for (let t = CEGES_ELSO; t < nyit; t += 30) {
+      if (most === null || t >= most) korabbi.push({ tol: t, kesz: elso.kesz })
+    }
+  }
+  const lehetosegek = [...korabbi, ...e.lehetosegek].filter((l) => l.tol >= CEGES_ELSO && l.tol <= CEGES_UTOLSO)
+  return { ...e, lehetosegek, allapot: lehetosegek.length === 0 ? 'tele' : e.allapot }
+}
+
+function egerKovet(e: PointerEvent<HTMLElement>) {
+  if (e.pointerType !== 'mouse') return
+  const el = e.currentTarget
+  const r = el.getBoundingClientRect()
+  el.style.setProperty('--eger-x', `${Math.round(e.clientX - r.left)}px`)
+  el.style.setProperty('--eger-y', `${Math.round(e.clientY - r.top)}px`)
+  if (!el.hasAttribute('data-eger')) el.setAttribute('data-eger', '')
+}
+
+function egerElhagy(e: PointerEvent<HTMLElement>) {
+  e.currentTarget.removeAttribute('data-eger')
 }
 
 function egyeztetesre(e: Extra): boolean {
