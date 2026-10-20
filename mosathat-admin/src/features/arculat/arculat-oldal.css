@@ -1,0 +1,42 @@
+.arculat-oldal .oldal-fej { align-items: baseline; gap: var(--t3); flex-wrap: wrap; }
+.arculat-alcim { font-size: var(--m-sm); }
+
+.arculat-racs { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: var(--t4); align-items: start; }
+
+.arculat-lista { display: flex; flex-direction: column; gap: var(--t2); position: sticky; top: var(--t3); }
+.arculat-lista button {
+  display: grid; grid-template-columns: 30px 1fr; column-gap: var(--t2); row-gap: 2px;
+  text-align: left; padding: 10px 12px;
+  border: 1px solid var(--keret); border-radius: var(--r); background: var(--lap);
+}
+.arculat-lista button:hover { border-color: var(--keret-eros); }
+.arculat-lista button[aria-pressed='true'] { border-color: var(--zold); background: var(--zold-halvany); }
+.arculat-szam { grid-row: span 2; font-family: var(--betu-szam); font-weight: var(--vastag-eros); color: var(--zold); }
+.arculat-nev { font-weight: var(--vastag-eros); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.arculat-leiras { font-size: var(--m-xs); color: var(--szoveg-halk); line-height: 1.35; }
+
+.arculat-elonezet { min-width: 0; display: flex; flex-direction: column; gap: var(--t3); }
+.arculat-eszkozok { display: flex; flex-wrap: wrap; align-items: center; gap: var(--t3); }
+.arculat-cim { margin-right: auto; font-size: var(--m-md); }
+.arculat-valto { display: inline-flex; margin: 0; padding: 0; min-width: 0; border: 1px solid var(--keret-eros); border-radius: var(--r); overflow: hidden; }
+.arculat-valto button { border: 0; background: var(--lap); padding: 8px 14px; font-size: var(--m-sm); }
+.arculat-valto button + button { border-left: 1px solid var(--keret-eros); }
+.arculat-valto button[aria-pressed='true'] { background: var(--sotet); color: var(--sotet-szoveg); }
+
+.arculat-terulet {
+  border: 1px solid var(--keret-eros); border-radius: var(--r); background: var(--keret);
+  overflow: hidden; display: flex; justify-content: center;
+}
+.arculat-keret { flex: none; box-shadow: 0 0 0 1px rgba(0, 0, 0, .08); }
+.arculat-megjegyzes { font-size: var(--m-xs); }
+
+@media (max-width: 1400px) {
+  .arculat-racs { grid-template-columns: 1fr; }
+  .arculat-lista { position: static; flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
+  .arculat-lista button { flex: 0 0 190px; grid-template-columns: 26px 1fr; }
+  .arculat-lista .arculat-leiras { display: none; }
+}
+@media (max-width: 700px) {
+  .arculat-cim { width: 100%; }
+}
+.arculat-megnyit, .arculat-megnyit:visited { color: var(--szoveg); text-decoration: none; }

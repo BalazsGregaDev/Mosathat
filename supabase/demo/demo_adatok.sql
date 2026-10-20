@@ -347,6 +347,15 @@ begin
 
   update public.customers set billing_kind = 'SZERZODESES' where id = v_ceg;
 
+  if to_regclass('public.company_booking_links') is not null then
+    execute $q$
+      insert into public.company_booking_links (company_id, token, message, created_at)
+      select c.company_id, 'autotransdemo2026link', 'DEMO — Kérjük, a forgalmi engedélyt és a kulcsot a portán hagyjátok.', now()
+        from public.customers c where c.id = $1 and c.company_id is not null
+      on conflict (company_id) do nothing
+    $q$ using v_ceg;
+  end if;
+
   select v.id into v_auto from public.vehicles v
    where v.customer_id = v_ceg order by v.plate_raw limit 1;
 

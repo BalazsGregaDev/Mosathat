@@ -1,0 +1,77 @@
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+
+import './publikus-admin.css'
+import { hibaSzoveg } from '../../lib/format'
+
+export type MentesAllapot = '' | 'megy' | 'kesz' | string
+
+export function useMentes() {
+  const [allapot, setAllapot] = useState<MentesAllapot>('')
+  const idozito = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(idozito.current), [])
+  const fut = useCallback(async (f: () => Promise<void>) => {
+    window.clearTimeout(idozito.current)
+    setAllapot('megy')
+    try {
+      await f()
+      setAllapot('kesz')
+      idozito.current = window.setTimeout(() => setAllapot(''), 2500)
+    } catch (e) {
+      setAllapot(hibaSzoveg(e))
+    }
+  }, [])
+  return { allapot, fut }
+}
+
+function Jelzo({ allapot, valtozott }: { allapot: MentesAllapot; valtozott: boolean }) {
+  if (allapot === 'megy') return <span className="halk">Mentés…</span>
+  if (allapot === 'kesz') return <span className="pub-mentve">Mentve, a publikus oldalon már látszik</span>
+  if (allapot) return <span className="pub-hiba">{allapot}</span>
+  if (valtozott) return <span className="pub-valtozott">Nem mentett változás</span>
+  return null
+}
+
+export function PubFej({ cim, alcim, linkek, valtozott, allapot, onMent, onElvet }: {
+  cim: string
+  alcim: ReactNode
+  linkek: [string, string][]
+  valtozott?: boolean
+  allapot?: MentesAllapot
+  onMent?: () => void
+  onElvet?: () => void
+}) {
+  return (
+    <div className="pub-fej">
+      <div className="pub-fej-cim">
+        <h2>{cim}</h2>
+        <p className="halk">{alcim}</p>
+      </div>
+      <div className="pub-fej-jobb">
+        {linkek.map(([nev, href]) => (
+          <a key={href} className="btn btn-kicsi btn-csendes" href={href} target="_blank" rel="noopener">{nev}</a>
+        ))}
+        {onMent && (
+          <>
+            <Jelzo allapot={allapot ?? ''} valtozott={Boolean(valtozott)} />
+            {valtozott && allapot !== 'megy' && (
+              <button type="button" className="btn" onClick={onElvet}>Elvetés</button>
+            )}
+            <button type="button" className="btn btn-fo" disabled={!valtozott || allapot === 'megy'} onClick={onMent}>
+              Mentés
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function Mezo({ cimke, sugo, children }: { cimke: string; sugo?: ReactNode; children: ReactNode }) {
+  return (
+    <label className="mezo pub-mezo">
+      <span>{cimke}</span>
+      {children}
+      {sugo && <small>{sugo}</small>}
+    </label>
+  )
+}

@@ -1,0 +1,176 @@
+.arpanel {
+  position: fixed;
+  z-index: 70;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  background: var(--lap);
+  border: 1px solid var(--keret-eros);
+  border-radius: var(--r-lg);
+  box-shadow: var(--arnyek-lg);
+  overflow: hidden;
+  min-width: 320px;
+  min-height: 220px;
+}
+
+.arpanel-fej {
+  display: flex; align-items: center; gap: var(--t3);
+  padding: var(--t2) var(--t3);
+  background: var(--sotet);
+  color: var(--sotet-szoveg);
+  cursor: grab;
+  user-select: none;
+  flex: 0 0 auto;
+}
+.arpanel-fej:active { cursor: grabbing; }
+.arpanel-fej strong { font-size: var(--m-sm); letter-spacing: .02em; }
+.arpanel-fej .fogo {
+  width: 12px; height: 12px;
+  background-image:
+    linear-gradient(currentColor, currentColor),
+    linear-gradient(currentColor, currentColor);
+  background-size: 12px 1.5px;
+  background-position: 0 4px, 0 8px;
+  background-repeat: no-repeat;
+  opacity: .5;
+  flex: 0 0 auto;
+}
+
+.arpanel-fej .fulek { margin-left: auto; gap: 4px; }
+.arpanel-fej .fulek button {
+  background: transparent;
+  border-color: var(--sotet-keret);
+  color: var(--sotet-halk);
+  padding: 5px 10px;
+  font-size: var(--m-xs);
+}
+.arpanel-fej .fulek button:hover { background: var(--sotet-2); color: var(--sotet-szoveg); }
+.arpanel-fej .fulek button.aktiv { background: var(--lap); border-color: var(--lap); color: var(--szoveg); }
+
+.arpanel-fej .bezar {
+  background: none; border: none;
+  color: var(--sotet-halk);
+  font-size: 20px; line-height: 1;
+  padding: 0 4px;
+  flex: 0 0 auto;
+}
+.arpanel-fej .bezar:hover { color: #fff; }
+
+.arpanel-torzs {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--t3);
+  background: var(--hatter);
+}
+.arpanel-torzs .panel { box-shadow: none; }
+.arpanel-torzs .panelek-szeles { margin-bottom: var(--t3); }
+.arlista.tomor { min-width: 420px; }
+.arlista.tomor th, .arlista.tomor td { padding: 5px 8px; }
+.arlista.tomor .ar { font-size: var(--m-sm); }
+.arpanel-torzs .lista thead th,
+.arpanel-torzs .lista tbody td,
+.arpanel-torzs .lista tbody th { padding: var(--t2) var(--t3); }
+.arpanel-torzs .lista.extra-tomor {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+.arpanel-torzs .lista.extra-tomor thead th,
+.arpanel-torzs .lista.extra-tomor tbody th,
+.arpanel-torzs .lista.extra-tomor tbody td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.arpanel-torzs .lista.extra-tomor thead th:nth-child(2),
+.arpanel-torzs .lista.extra-tomor tbody td:nth-child(2) { width: 30%; }
+.arpanel-torzs .lista.extra-tomor thead th:nth-child(3),
+.arpanel-torzs .lista.extra-tomor tbody td:nth-child(3) { width: 26%; }
+.arpanel-torzs .lista.extra-tomor tbody td:nth-child(3) { white-space: nowrap; }
+
+.arpanel-meret {
+  position: absolute; right: 0; bottom: 0;
+  width: 18px; height: 18px;
+  cursor: nwse-resize;
+  background-image:
+    linear-gradient(135deg, transparent 0 40%, var(--keret-eros) 40% 50%, transparent 50% 65%,
+                    var(--keret-eros) 65% 75%, transparent 75%);
+}
+@media (max-width: 760px) {
+  .arpanel {
+    left: 0 !important; right: 0;
+    top: auto !important; bottom: 0;
+    width: auto !important; height: 68vh !important;
+    height: 68dvh !important;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    border-bottom: none;
+  }
+  .arpanel-fej { cursor: default; }
+  .arpanel-fej .fogo { display: none; }
+  .arpanel-meret { display: none; }
+  body.arlista-nyitva .tartalom,
+  body.arlista-nyitva .lap-torzs {
+    overflow: hidden;
+    touch-action: none;
+  }
+  .arpanel-torzs {
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+  .arpanel-torzs .lista.extra-tomor { font-size: calc(var(--m-sm) - 2px); }
+  .arpanel-torzs .lista.extra-tomor thead th,
+  .arpanel-torzs .lista.extra-tomor tbody th,
+  .arpanel-torzs .lista.extra-tomor tbody td { padding: var(--t2); }
+}
+
+.lap-fej .arlista-gombok.rovid { margin-left: auto; margin-right: var(--t2); }
+.lap-fej .arlista-gombok.rovid button {
+  padding: 5px 11px;
+  font-size: var(--m-xs);
+}
+.arpanel.osztott {
+  left: 52.5%;
+  right: 10%;
+  top: 72px;
+  bottom: 12px;
+  width: auto;
+  height: auto;
+}
+.arpanel.osztott .arpanel-fej { cursor: default; }
+.fedo.osztott {
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 72px 0 12px;
+}
+.fedo.osztott .lap,
+.fedo.osztott .lap-szeles {
+  margin-left: 10%;
+  width: 37.5%;
+  max-width: none;
+  max-height: none;
+  height: 100%;
+}
+@media (max-width: 1200px) {
+  .fedo.osztott .sor-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 1024px) {
+  .arpanel.osztott {
+    left: 0; right: 0; top: auto; bottom: 0;
+    height: 60vh; height: 60dvh; width: auto;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+  }
+  .fedo.osztott {
+    justify-content: center; align-items: flex-start;
+    padding: var(--t4) var(--t4) 62vh;
+    padding-bottom: 62dvh;
+  }
+  .fedo.osztott .lap,
+  .fedo.osztott .lap-szeles {
+    margin-left: 0;
+    width: min(620px, 100%); height: auto; max-height: 100%;
+  }
+}
