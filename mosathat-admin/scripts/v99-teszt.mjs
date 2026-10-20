@@ -34,6 +34,13 @@ const c = await cegesOldal(tel)
 ok('zöld sáv a cégnévvel és a címmel', [true, true, true],
   [await c.locator('.kv-ceg-sav[data-csillan]').isVisible(), (await c.locator('.kv-ceg-sav-ceg').textContent()) === 'Autó Trans Kft.',
    (await c.locator('.kv-ceg-sav h1').innerText()) === 'Céges időpontfoglalás'])
+const sav = await c.locator('.kv-ceg-sav-belso').evaluate((e) => {
+  const gyerek = [...e.children]
+  const h = parseFloat(getComputedStyle(e.querySelector('h1')).fontSize)
+  const ceg = parseFloat(getComputedStyle(e.querySelector('.kv-ceg-sav-ceg')).fontSize)
+  return { utolso: gyerek[gyerek.length - 1].classList.contains('kv-ceg-sav-ceg'), kisebb: ceg < h, nagy: ceg >= h * 0.75 }
+})
+ok('a cégnév a sáv utolsó sora, egy fokkal kisebb a címnél', { utolso: true, kisebb: true, nagy: true }, sav)
 ok('nincs méretválasztó, terjedelem, extra és Full Service', [0, 0, 0, 0],
   [await c.locator('[data-lepes="auto"]').count(), await c.locator('[data-lepes="mit"]').count(),
    await c.locator('[data-lepes="extrak"]').count(), await c.locator('.fogl-fs').count()])

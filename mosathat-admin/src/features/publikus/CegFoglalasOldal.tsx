@@ -87,9 +87,9 @@ function CegesFoglalas({ betoltott, token, adat }: { betoltott: Betoltve; token:
       <Cim szoveg={`${t.cim}: ${adat.ceg} — ${u.nev}`} />
       <section className="kv-ceg-sav" data-csillan>
         <div className="kv-ceg-sav-belso">
-          <span className="kv-ceg-sav-ceg">{adat.ceg}</span>
           <h1>{t.cim}</h1>
           <p>{t.bevezeto}</p>
+          <p className="kv-ceg-sav-ceg">{adat.ceg}</p>
         </div>
       </section>
       <section className="kv-foglalas kv-foglalas-elo kv-ceg-foglalas">

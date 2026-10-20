@@ -139,7 +139,10 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
 
 .pub-ceg .kv-ceg-sav { padding: 56px 24px 60px; text-align: center; }
 .pub-ceg .kv-ceg-sav-belso { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.pub-ceg .kv-ceg-sav-ceg { font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--zold); }
+.pub-ceg .kv-ceg-sav p.kv-ceg-sav-ceg {
+  font-family: var(--fej); font-size: 34px; font-weight: 500; line-height: 1.12;
+  color: var(--zold); max-width: none; margin-top: 10px; overflow-wrap: anywhere;
+}
 .pub-ceg .kv-ceg-sav h1 { font-family: var(--fej); font-size: 44px; font-weight: 400; line-height: 1.08; margin: 0; }
 .pub-ceg .kv-ceg-sav p { color: var(--halk); font-size: 15px; line-height: 1.55; max-width: 520px; margin: 0; }
 
@@ -175,6 +178,7 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
 @container kv (max-width: 700px) {
   .pub-ceg .kv-ceg-sav { padding: 40px 16px 44px; }
   .pub-ceg .kv-ceg-sav h1 { font-size: 34px; }
+  .pub-ceg .kv-ceg-sav p.kv-ceg-sav-ceg { font-size: 27px; }
   .pub-ceg .kv-ceg-foglalas .fogl { gap: 33px; }
   .pub-ceg .kv-ceg-foglalas .fogl > section + section:not(.fogl-osszeg)::before { top: -17px; left: 4%; right: 4%; }
 }
