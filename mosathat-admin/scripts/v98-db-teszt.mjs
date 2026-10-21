@@ -1,3 +1,4 @@
+import { terhel } from './_terheles.mjs'
 import { adatbazis, tesztelo, ALK, TULAJ } from './_db.mjs'
 
 const t = tesztelo()
@@ -19,13 +20,15 @@ const nap = (await egy(`select d::text d from generate_series(
     (now() at time zone 'Europe/Budapest')::date + 2,
     (now() at time zone 'Europe/Budapest')::date + 20, interval '1 day') d
   where munkanap(d::date) order by d limit 1`)).d
+await ki(TULAJ)
+await terhel(q, nap, 50)
 
 console.log('=== 1) Jogosultság ===\n')
 const anonFv = (await q(`select p.proname from pg_proc p
   where p.pronamespace = 'public'::regnamespace and has_function_privilege('anon', p.oid, 'EXECUTE')
   order by 1`)).map((r) => r.proname)
 t.ok('anon: a nyilvános öt + a céges link három függvénye',
-  ['ceg_ajanlat', 'ceg_foglalas', 'ceg_link_adat', 'publikus_ajanlat', 'publikus_foglalas', 'publikus_jogi', 'publikus_nap', 'publikus_oldal'],
+  ['ceg_ajanlat', 'ceg_foglalas', 'ceg_link_adat', 'ceg_teli_napok', 'publikus_ajanlat', 'publikus_foglalas', 'publikus_jogi', 'publikus_nap', 'publikus_oldal'],
   anonFv)
 t.ok('a link tábla kívülről nem olvasható', [false, false],
   [(await egy(`select has_table_privilege('anon', 'public.company_booking_links', 'select') a`)).a,
@@ -70,7 +73,7 @@ t.ok('érvénytelen kóddal hibaüzenet', true,
   /nem érvényes/.test(await hiba(() => ajanlat('aaaaaaaaaaaaaaaaaaaaaaaa')) ?? ''))
 
 console.log('\n=== 5) Foglalási kérés a linken ===\n')
-const kuld = (k, x = {}) => anonkent(async () => (await egy(`select ceg_foglalas($1, $2) id`, [k, JSON.stringify({
+const kuld = (k, x = {}) => anonkent(async () => (await egy(`select ceg_foglalas($1, $2)->>'id' id`, [k, JSON.stringify({
   category: 'SZEMELYAUTO', scope: 'TELJES', package_id: START, full_service: false, extras: [],
   booking_type: 'LEADOS', service_date: nap, drop_off_time: '09:00',
   customer_name: 'Sofőr Sándor', customer_phone: '+36 30 777 8899', customer_email: 'sofor@x.hu',
@@ -131,9 +134,15 @@ t.ok('a naplóban a két csere', ['link_csereve', 'link_csereve'],
 console.log('\n=== 8) Korlátok ===\n')
 t.ok('rejtett mező kitöltve: elutasítva', true,
   /nem küldhető/.test(await hiba(() => kuld(masodik, { weboldal: 'x', plate_raw: 'cgl-103' })) ?? ''))
+const napok4 = (await q(`select d::text d from generate_series(
+    (now() at time zone 'Europe/Budapest')::date + 3,
+    (now() at time zone 'Europe/Budapest')::date + 30, interval '1 day') d
+  where munkanap(d::date) order by d limit 4`)).map((r) => r.d)
+await ki(TULAJ)
+for (const d of napok4) await terhel(q, d, 40)
 let utolso = null
 for (let i = 0; i < 11; i++) {
-  utolso = await hiba(() => kuld(masodik, { plate_raw: `cgk-${200 + i}`, customer_phone: '+36 30 111 0000' }))
+  utolso = await hiba(() => kuld(masodik, { plate_raw: `cgk-${200 + i}`, customer_phone: '+36 30 111 0000', service_date: napok4[i % 4] }))
 }
 t.ok('egy telefonszámról a 10 függő kérés után megáll', true, /több kérés vár/.test(utolso ?? ''))
 

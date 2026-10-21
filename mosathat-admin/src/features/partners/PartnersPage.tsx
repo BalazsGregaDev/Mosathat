@@ -451,6 +451,7 @@ function ContractForm({
   const [lejarat, setLejarat] = useState(contract?.valid_until?.slice(0, 10) ?? '')
   const [fordulo, setFordulo] = useState(contract?.cycle_day ?? 1)
   const [flottas, setFlottas] = useState(contract?.fleet_cars ?? false)
+  const [napiLimit, setNapiLimit] = useState(contract?.napi_limit != null ? String(contract.napi_limit) : '')
   const [arak, setArak] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       (contract?.prices ?? []).map((p) => [arKulcs(p.package_id, p.size, p.kind), String(p.price_huf)]),
@@ -512,6 +513,7 @@ function ContractForm({
         valid_until: lejarat || null,
         notes: contract?.notes ?? null,
         cycle_day: fordulo,
+        napi_limit: napiLimit.trim() !== '' ? Number(napiLimit) : null,
         prices: csomagok.flatMap((pid) => MERETEK.flatMap((m) => FAJTAK.map((f) => ({
           package_id: pid, size: m, kind: f,
           price_huf: Number(arak[arKulcs(pid, m, f)]) || 0,
@@ -594,6 +596,17 @@ function ContractForm({
                 hozzáadása" gomb: több autó vehető fel egyszerre, rendszám nélkül is
                 (pl. „Raiffeisen 4 darab"), egy végső időponttal. A rendszámok utólag
                 írhatók be.
+              </small>
+            </div>
+
+            <div className="mezo">
+              <label htmlFor="napi-limit">Napi limit (autó / nap)</label>
+              <input id="napi-limit" className="beviteli" type="number" inputMode="numeric" min={1} max={200}
+                     value={napiLimit} placeholder="nincs limit"
+                     onChange={(e) => setNapiLimit(e.target.value.replace(/[^0-9]/g, ''))} />
+              <small>
+                Egy napra legfeljebb ennyi autót hozhat a cég. Ha a napon már ennyi foglalása van,
+                a céges foglalási oldalon az a nap nem választható. Üresen hagyva nincs limit.
               </small>
             </div>
 

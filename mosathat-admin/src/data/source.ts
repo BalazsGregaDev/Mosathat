@@ -6,7 +6,7 @@ import type {
   Quote, CompanyHit, CompanyCandidate, AbsenceInput, AbsenceRow, DayAbsence,
   CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, CegLink, CegLinkAdat, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
+  OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
   PublikusNapAdat,
 } from '../lib/types'
 import type { NyitvaNap, PublikusAdatokNyers, PublikusMentes, PublikusTartalomNyers } from '../lib/publikusTartalom'
@@ -120,7 +120,8 @@ export interface DataSource {
   cegLinkUzenet(companyId: string, uzenet: string): Promise<void>
   cegLinkAdat(token: string): Promise<CegLinkAdat | null>
   cegAjanlat(token: string, input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
-  cegFoglalas(token: string, input: OnlineBookingInput): Promise<string>
+  cegFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny>
+  cegTeliNapok(token: string, tol: string, ig: string): Promise<string[]>
   jogiValtozatok(): Promise<JogiValtozat[]>
   jogiFeltoltes(p: JogiFeltoltes): Promise<string>
   jogiFajl(id: string): Promise<JogiFajl>

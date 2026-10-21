@@ -26,19 +26,15 @@ await p.waitForTimeout(2500)
 console.log('=== 1) Szerződés: Flottás autók ===\n')
 await menu(p, 'Cégek és bérletesek')
 {
-  const kartya = p.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).first()
-  await kartya.locator('.kartya-nyito').click(); await p.waitForTimeout(300)
+  const kartya = p.locator('.cegtabla-sor').filter({ hasText: 'Autó Trans' }).first()
   await kartya.getByRole('button', { name: 'Szerkesztés' }).click(); await p.waitForTimeout(800)
   const urlap = p.locator('[aria-label="Szerződés"]')
   const cs = urlap.getByRole('switch', { name: 'Flottás autók' })
   ok('a csúszka alapból ki', 'false', await cs.getAttribute('aria-checked'))
   await cs.click()
   await urlap.getByRole('button', { name: 'Mentés' }).click(); await p.waitForTimeout(1500)
-  if ((await kartya.getAttribute('data-nyitva')) !== 'true') {
-    await kartya.locator('.kartya-nyito').click(); await p.waitForTimeout(300)
-  }
-  ok('a kártyán: Flottás autók igen', true,
-    (await kartya.locator('.adatsor').filter({ hasText: 'Flottás autók' }).innerText()).includes('igen'))
+  ok('a táblázatban: Flottás autók igen', 'igen',
+    await kartya.locator('.cegtabla-adatok dt').filter({ hasText: 'Flottás autók' }).evaluate((dt) => dt.nextElementSibling.textContent.trim()))
 }
 
 console.log('\n=== 2) Új időpont: Autó hozzáadása ===\n')

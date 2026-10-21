@@ -7,7 +7,7 @@ import { hetHetfoje, hibaSzoveg, maStr, napPlusz, percIdo, percOra } from '../..
 import { csomagLeiras } from '../../lib/csomagLeiras'
 import {
   ULESEK,
-  type BookingScope, type Extra, type MeasureUnit, type Quote, type SeatMaterial, type VehicleCategory,
+  type BookingScope, type Extra, type FoglalasEredmeny, type OnlineBookingInput, type MeasureUnit, type Quote, type SeatMaterial, type VehicleCategory,
 } from '../../lib/types'
 import { katKulcs, terjedelemKulcs, ulesKulcs, type SzovegKulcs } from '../../lib/publikusTartalom'
 import { forditott, Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from './tartalom'
@@ -16,7 +16,10 @@ import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
 import { csomagbanBenne } from '../../lib/csomag'
 import type { Catalog, DataSource } from '../../data/source'
 
-export type FoglalasForras = Pick<DataSource, 'quoteBooking' | 'onlineBooking' | 'getDay' | 'getDayLanes'>
+export type FoglalasForras = Pick<DataSource, 'quoteBooking' | 'getDay' | 'getDayLanes'> & {
+  onlineBooking: (input: OnlineBookingInput) => Promise<string | FoglalasEredmeny>
+  teliNapok?: (tol: string, ig: string) => Promise<string[]>
+}
 
 export interface FoglalasKornyezet {
   data: FoglalasForras
@@ -131,7 +134,7 @@ export function FoglalasUrlap({
   const [oldal, setOldal] = useState(0)
   const [kuld, setKuld] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
-  const [kesz, setKesz] = useState<{ id: string; nap: string; mikor: string; elvitel: ElvitelAblak | null; email: boolean } | null>(null)
+  const [kesz, setKesz] = useState<{ id: string; nap: string; mikor: string; elvitel: ElvitelAblak | null; email: boolean; megerositve?: boolean } | null>(null)
   const [reszletek, setReszletek] = useState(false)
 
   const csomagok = useMemo(
@@ -226,17 +229,31 @@ export function FoglalasUrlap({
     return () => { el = false }
   }, [data, napok, holnap, utolsoNap, revision, nyelv])
 
+  const [teliNapok, setTeliNapok] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    if (!data.teliNapok) return
+    let el = true
+    data.teliNapok(napok[0], napok[napok.length - 1])
+      .then((l) => { if (el) setTeliNapok(new Set(l)) })
+      .catch(() => { if (el) setTeliNapok(new Set()) })
+    return () => { el = false }
+  }, [data, napok, revision])
+
   const napErtek = useMemo(() => {
     const m = new Map<string, ReturnType<typeof napAllapot>>()
     if (!perc || !tip) return m
     for (const d of napok) {
       const a = napAdat.get(d)
       if (!a) continue
+      if (teliNapok.has(d)) {
+        m.set(d, { allapot: 'tele', lehetosegek: [], meg: 0 })
+        continue
+      }
       const e = napAllapot(a.negyedek, a.munkak, perc, tipB!, a.most, ceges ? CEGES_TILTOTT : EBED)
       m.set(d, ceges ? cegesIdopontok(e, a.negyedek, a.most, tipB!) : e)
     }
     return m
-  }, [napok, napAdat, perc, tip, tipB, ceges])
+  }, [napok, napAdat, perc, tip, tipB, ceges, teliNapok])
 
   useEffect(() => { setIdo(null) }, [perc, tip, nap])
 
@@ -284,7 +301,7 @@ export function FoglalasUrlap({
     setKuld(true)
     setHiba(null)
     try {
-      const id = await data.onlineBooking({
+      const eredmeny = await data.onlineBooking({
         category: kat, scope: sc, package_id: csomagId, full_service: fsBe,
         seat_material: fsBe ? ules : null, next_day_pick_up: masnap, extras: extraLista,
         pick_up_time: hataridoKell && hat !== null ? percIdo(hat) : null,
@@ -297,8 +314,9 @@ export function FoglalasUrlap({
         notes: adatok.megjegyzes.trim() || null,
         ...(nyilvanos ? { weboldal } : {}),
       })
+      const id = typeof eredmeny === 'string' ? eredmeny : eredmeny.id
       setKesz({
-        id, nap,
+        id, nap, megerositve: typeof eredmeny !== 'string' && eredmeny.megerositve,
         mikor: tip === 'VAROS' ? `${sz('foglalas.kezdes_cimke')}: ${percOra(ido.tol)}`
           : hv ? `${fe.hvErte}: ${percOra(ido.tol)}${hat !== null ? `, ${fe.hvVissza}: ${percOra(hat)}` : ''}`
           : `${sz('foglalas.hozas_cimke')}: ${percOra(ido.tol)}${hataridoKell && hat !== null ? `, ${sz('foglalas.hatarido_cimke')}: ${percOra(hat)}` : ''}`,
@@ -324,7 +342,7 @@ export function FoglalasUrlap({
 
   const bemutatoKesz = bemutato?.kesz ? {
     id: 'bemutato', nap: holnap, mikor: `${sz('foglalas.hozas_cimke')}: 9:00, ${sz('foglalas.hatarido_cimke')}: 16:00`,
-    elvitel: { nap: napPlusz(holnap, 1), tol: ELVITEL_KEZDETE, ig: LEGKESOBB_HATARIDO }, email: true,
+    elvitel: { nap: napPlusz(holnap, 1), tol: ELVITEL_KEZDETE, ig: LEGKESOBB_HATARIDO }, email: true, megerositve: false,
   } : null
   const keszAll = kesz ?? bemutatoKesz
 
@@ -334,11 +352,13 @@ export function FoglalasUrlap({
       <div className="fogl">
         {!nyilvanos && <ProbaSav />}
         <section className="fogl-kartya fogl-siker" data-lepes="siker">
-          <h2>{sz('foglalas.siker')}</h2>
+          <h2>{kesz.megerositve ? fe.megerositveCim : sz('foglalas.siker')}</h2>
           <p>
             {f.napCim(kesz.nap)}, {kesz.mikor}.
             {kesz.elvitel && <> {sz('foglalas.siker_elvitel', { mikor: elvitelSzoveg(kesz.elvitel, f) })}</>}
-            {' '}{kesz.email ? sz('foglalas.siker_email') : sz('foglalas.siker_telefon')}
+            {' '}{kesz.megerositve
+              ? (kesz.email ? fe.megerositveEmail : fe.megerositveSzoveg)
+              : kesz.email ? sz('foglalas.siker_email') : sz('foglalas.siker_telefon')}
           </p>
           <div className="fogl-gombok">
             <button type="button" className="btn" onClick={ujra}>{sz('foglalas.uj')}</button>

@@ -16,7 +16,7 @@ const SZOVEG = {
   hu: {
     cimke: 'Céges foglalás',
     cim: 'Céges időpontfoglalás',
-    bevezeto: 'Időpontkérés a cég szerződése alapján. A kérést telefonon vagy e-mailben visszaigazoljuk.',
+    bevezeto: 'Időpontfoglalás a cég szerződése alapján. Ha a napon van még bőven hely, a foglalás azonnal rögzül, egyébként telefonon vagy e-mailben visszaigazoljuk.',
     ervenytelen: 'Ez a foglalási link nem érvényes',
     ervenytelenSzoveg: 'Lehet, hogy a cég új linket kapott, vagy lejárt a szerződés. Kérd el az új linket a cégednél, vagy hívj minket:',
     hiba: 'Az oldal most nem tölthető be. Kérjük, próbáld újra pár perc múlva, vagy hívj minket:',
@@ -24,7 +24,7 @@ const SZOVEG = {
   en: {
     cimke: 'Company booking',
     cim: 'Company booking',
-    bevezeto: 'Booking request under your company’s contract. We will confirm your request by phone or e-mail.',
+    bevezeto: 'Booking under your company’s contract. If the day still has plenty of room, your booking is confirmed right away; otherwise we will confirm it by phone or e-mail.',
     ervenytelen: 'This booking link is not valid',
     ervenytelenSzoveg: 'Your company may have received a new link, or the contract has ended. Ask your company for the new link, or call us:',
     hiba: 'The page cannot be loaded right now. Please try again in a few minutes, or call us:',
@@ -51,6 +51,7 @@ function cegesForras(forras: DataSource, token: string, revision: number): Fogla
     getDayLanes: (d) => nap(d).then((x) => x.savok),
     quoteBooking: (input) => forras.cegAjanlat(token, input),
     onlineBooking: (input) => forras.cegFoglalas(token, input),
+    teliNapok: (tol, ig) => forras.cegTeliNapok(token, tol, ig),
   }
 }
 

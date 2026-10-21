@@ -43,7 +43,7 @@ console.log('\n=== 1) árlista: kilóg-e a szöveg ===\n')
 {
   const gomb = p.locator('.arlista-gombok button')
   console.log(`         árlista gombok: ${await gomb.count()}`)
-  const lathato = gomb.filter({ visible: true })
+  const lathato = p.locator('.arlista-gombok button:visible')
   console.log(`         láthatóak: ${await lathato.count()}`)
   if (await lathato.count()) await lathato.first().click()
   await p.waitForTimeout(900)

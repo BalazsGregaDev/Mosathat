@@ -105,6 +105,9 @@ export const FELIRAT = {
     hvVisszaKerdes: 'Hány órára vigyük vissza?',
     hvErte: 'érte megyünk',
     hvVissza: 'visszavisszük',
+    megerositveCim: 'Az időpontodat rögzítettük, várunk!',
+    megerositveSzoveg: 'Nem kell visszaigazolásra várnod. Ha bármi változik, hívj minket.',
+    megerositveEmail: 'Nem kell visszaigazolásra várnod, a visszaigazolást a lemondó linkkel e-mailben is elküldjük.',
   },
   en: {
     bennevan: 'included',
@@ -130,6 +133,9 @@ export const FELIRAT = {
     hvVisszaKerdes: 'What time should we bring it back?',
     hvErte: 'collection',
     hvVissza: 'return',
+    megerositveCim: 'Your booking is confirmed, see you soon!',
+    megerositveSzoveg: 'No need to wait for a confirmation. If anything changes, give us a call.',
+    megerositveEmail: 'No need to wait for a confirmation; we’ll also send it by e-mail, with a cancellation link.',
   },
 } as const
 
@@ -177,6 +183,8 @@ const HIBAK: [RegExp, (m: RegExpExecArray) => string][] = [
   [/^Ehhez a céghez most túl sok kérés vár visszaigazolásra\. Kérjük, hívj minket: (.+?)\.?$/,
     (m) => `Too many requests from this company are waiting for confirmation. Please call us: ${m[1]}.`],
   [/^Ez a csomag nem szerepel a cég szerződésében\./, () => 'This package is not part of your company’s contract.'],
+  [/^Erre a napra a cég már nem foglalhat több autót\./, () => 'Your company cannot book more cars for this day. Please choose another day.'],
+  [/^Erre a napra már nincs szabad hely céges foglalásra\./, () => 'There is no free capacity left for company bookings on this day. Please choose another day.'],
   [/^A cég szerződésében nincs hozom-viszem\./, () => 'Pick-up & delivery is not part of your company’s contract.'],
   [/^Céges foglalásnál 7:30 és 17:00 között lehet időpontot választani\./, () => 'Company bookings can be made between 7:30 and 17:00.'],
   [HALOZATI, () => 'We could not reach the server. Please check your internet connection and try again.'],

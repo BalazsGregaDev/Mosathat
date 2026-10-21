@@ -45,6 +45,7 @@ function CegSor({ c, kiemelt, szerkesztheto, linkek, onSzerkeszt, onTorol }: {
               ? `igen${c.pickup_delivery_fee_huf != null ? `, ${ft(c.pickup_delivery_fee_huf)} / út` : ''}`
               : 'nem'}
           </dd>
+          <dt>Napi limit</dt><dd>{c.napi_limit != null ? `${c.napi_limit} autó / nap` : 'nincs'}</dd>
           <dt>Flottás autók</dt><dd>{c.fleet_cars ? 'igen' : 'nem'}</dd>
           <dt>Igazolólap</dt><dd>{idoszak(c.cycle_day)}</dd>
         </dl>

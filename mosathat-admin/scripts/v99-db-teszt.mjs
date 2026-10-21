@@ -1,3 +1,4 @@
+import { terhel } from './_terheles.mjs'
 import { adatbazis, tesztelo, TULAJ } from './_db.mjs'
 
 const t = tesztelo()
@@ -23,6 +24,8 @@ const nap = (await egy(`select d::text d from generate_series(
     (now() at time zone 'Europe/Budapest')::date + 2,
     (now() at time zone 'Europe/Budapest')::date + 20, interval '1 day') d
   where munkanap(d::date) order by d limit 1`)).d
+await ki(TULAJ)
+await terhel(q, nap, 50)
 
 await ki(TULAJ)
 await q(`delete from contract_prices cp using contracts ct
@@ -35,7 +38,7 @@ const ajanlat = (x = {}) => anonkent(async () => (await egy(`select ceg_ajanlat(
   package_id: START, category: 'SZEMELYAUTO', booking_type: 'LEADOS', service_date: nap, ...x })])).x)
 t.ok('Elitre nincs ajánlat', true, /nem szerepel a cég szerződésében/.test(await hiba(() => ajanlat({ package_id: ELIT })) ?? ''))
 
-const kuld = (x = {}) => anonkent(async () => (await egy(`select ceg_foglalas($1, $2) id`, [LINK, JSON.stringify({
+const kuld = (x = {}) => anonkent(async () => (await egy(`select ceg_foglalas($1, $2)->>'id' id`, [LINK, JSON.stringify({
   category: 'SZEMELYAUTO', scope: 'TELJES', package_id: START, full_service: false, extras: [],
   booking_type: 'LEADOS', service_date: nap, drop_off_time: '09:00',
   customer_name: 'Céges Csaba', customer_phone: '+36 30 555 0001', plate_raw: 'CEG-001', ...x })])).id)

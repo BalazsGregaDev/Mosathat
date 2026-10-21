@@ -9,7 +9,7 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, CegLink, CegLinkAdat, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
+  OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
 import type { PublikusMentes } from '../lib/publikusTartalom'
@@ -40,6 +40,9 @@ function emberiHiba(uzenet: string): string {
   }
   if (m.includes('jwt')) {
     return 'a belépés lejárt. Frissítsd az oldalt; ha így sem megy, lépj ki és be.'
+  }
+  if (m.includes('varos_needs_start')) {
+    return 'Megvárós foglaláshoz meg kell adni, mikor kezdjük. Előbb írd be a kezdés idejét, utána állítsd Megvárósra.'
   }
   if (m.includes('invalid email')) {
     return 'az e-mail cím formátuma nem jó.'
@@ -319,10 +322,16 @@ export class SupabaseSource implements DataSource {
     return toQuote(data as Record<string, unknown>)
   }
 
-  async cegFoglalas(token: string, input: OnlineBookingInput): Promise<string> {
+  async cegFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny> {
     const { data, error } = await this.sb.rpc('ceg_foglalas', { p_token: token, p: input })
     if (error) fail('Foglalási kérés', error)
-    return data as string
+    return data as FoglalasEredmeny
+  }
+
+  async cegTeliNapok(token: string, tol: string, ig: string): Promise<string[]> {
+    const { data, error } = await this.sb.rpc('ceg_teli_napok', { p_token: token, p_tol: tol, p_ig: ig })
+    if (error) fail('Szabad napok', error)
+    return (data as string[] | null) ?? []
   }
 
   async jogiValtozatok(): Promise<JogiValtozat[]> {

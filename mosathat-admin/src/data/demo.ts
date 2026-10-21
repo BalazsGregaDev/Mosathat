@@ -17,7 +17,7 @@ import type {
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
   Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
-  OnlineKeres, CegLink, CegLinkAdat, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
+  OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
 import type { PublikusMentes } from '../lib/publikusTartalom'
@@ -304,9 +304,14 @@ export class DemoSource implements DataSource {
     return toQuote(r?.x)
   }
 
-  async cegFoglalas(token: string, input: OnlineBookingInput): Promise<string> {
-    const [r] = await this.rows<{ id: string }>(`select ceg_foglalas($1, $2::jsonb) id`, [token, JSON.stringify(input)])
-    return r.id
+  async cegFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny> {
+    const [r] = await this.rows<{ x: FoglalasEredmeny }>(`select ceg_foglalas($1, $2::jsonb) x`, [token, JSON.stringify(input)])
+    return r.x
+  }
+
+  async cegTeliNapok(token: string, tol: string, ig: string): Promise<string[]> {
+    const [r] = await this.rows<{ x: string[] | null }>(`select ceg_teli_napok($1, $2::date, $3::date) x`, [token, tol, ig])
+    return r?.x ?? []
   }
 
   async jogiValtozatok(): Promise<JogiValtozat[]> {

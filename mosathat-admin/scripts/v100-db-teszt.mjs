@@ -1,3 +1,4 @@
+import { terhel } from './_terheles.mjs'
 import { adatbazis, tesztelo, TULAJ } from './_db.mjs'
 
 const t = tesztelo()
@@ -20,8 +21,10 @@ const nap = (await egy(`select d::text d from generate_series(
     (now() at time zone 'Europe/Budapest')::date + 2,
     (now() at time zone 'Europe/Budapest')::date + 20, interval '1 day') d
   where munkanap(d::date) order by d limit 1`)).d
+await ki(TULAJ)
+await terhel(q, nap, 50)
 
-const kuld = (x = {}) => anonkent(async () => (await egy(`select ceg_foglalas($1, $2) id`, [LINK, JSON.stringify({
+const kuld = (x = {}) => anonkent(async () => (await egy(`select ceg_foglalas($1, $2)->>'id' id`, [LINK, JSON.stringify({
   package_id: START, booking_type: 'HOZOMVISZEM', service_date: nap, drop_off_time: '08:00', pick_up_time: '16:00',
   customer_name: 'Hozom Hugó', customer_phone: '+36 30 555 0101', plate_raw: 'HV-001', ...x })])).id)
 

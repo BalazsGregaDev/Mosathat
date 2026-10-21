@@ -550,6 +550,7 @@ export interface ContractRow {
   jarmuvek: number
   cycle_day: number
   fleet_cars: boolean
+  napi_limit: number | null
 }
 
 export interface ContractInput {
@@ -564,6 +565,7 @@ export interface ContractInput {
   notes: string | null
   prices: { package_id: string; size: ContractSize; kind: ContractKind; price_huf: number }[]
   cycle_day?: number
+  napi_limit?: number | null
 }
 
 export interface BookingExtraRow {
@@ -795,6 +797,11 @@ export interface CegLink {
   message: string | null
   created_at: string | null
   valid_until: string | null
+}
+
+export interface FoglalasEredmeny {
+  id: string
+  megerositve: boolean
 }
 
 export interface CegLinkAdat {

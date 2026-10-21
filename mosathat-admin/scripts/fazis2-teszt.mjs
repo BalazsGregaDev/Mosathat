@@ -125,11 +125,11 @@ await p.locator('.kartya').filter({ hasText: 'TST-001' }).locator('.kartya-nyit'
 await p.waitForTimeout(1500)
 {
   const cimkek = await p.evaluate(() =>
-    [...document.querySelector('.lap-torzs .szakasz').querySelectorAll(':scope > .adatsor')]
+    [...document.querySelectorAll('dialog[aria-label="Munkalap"] .ml-felso .adatsor')]
       .map((e) => e.firstElementChild.textContent.trim()))
   console.log(`         ${JSON.stringify(cimkek)}`)
-  ok('a sorok sorrendje', ['Név', 'Telefon', 'Cég', 'Igazolólap', 'Rendszám', 'Autó', 'Hozza', 'Viszi', 'Kérdőjeles', 'Méret',
-    'Jármű típus', 'Csomag', 'Egyéb szolgáltatás', 'Terjedelem', 'Típus', 'Munkaóra'], cimkek)
+  ok('a mezők sorrendje (mint az Új időpont ablakban)', ['Rendszám', 'Név', 'Telefon', 'Cég', 'Igazolólap', 'Terjedelem', 'Típus',
+    'Hozza', 'Viszi', 'Jármű típus', 'Méret', 'Márka', 'Típus'], cimkek)
   const ceg = await p.locator('.adatsor').filter({ hasText: /^Cég/ }).first().innerText()
   ok('a cég rögzült elsőre is', true, ceg.includes('Autó Trans'))
   ok('Jármű típus: Saját', true,
