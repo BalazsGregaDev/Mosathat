@@ -1,0 +1,169 @@
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
+import { chromium } from 'playwright'
+
+const KEPEK = process.env.KEPEK ?? null
+if (KEPEK) await mkdir(KEPEK, { recursive: true })
+const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
+let baj = 0
+const ok = (mit, v, k) => {
+  const jo = JSON.stringify(v) === JSON.stringify(k)
+  if (!jo) baj++
+  console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
+}
+const hibak = []
+const lap = async (w, h) => {
+  const p = await b.newPage({ viewport: { width: w, height: h } })
+  p.on('pageerror', (e) => hibak.push(e.message.slice(0, 200)))
+  return p
+}
+const kep = async (el, nev) => { if (KEPEK) await el.screenshot({ path: join(KEPEK, `${nev}.png`) }) }
+const sav = '.kv-velemeny-sav'
+const iErtek = (p) => p.evaluate((s) => Number(getComputedStyle(document.querySelector(s)).getPropertyValue('--i')), sav)
+
+console.log('=== 1) Rólunk mondták: a Hol vagyunk fölött, sötétzöld sávban ===\n')
+const p = await lap(1440, 900)
+await p.goto('http://localhost:5180/publikus')
+await p.waitForSelector('.kv-velemenyek', { timeout: 90000 })
+const sz = p.locator('.kv-velemenyek')
+ok('a sáv a csomagok után, a Hol vagyunk előtt', ['kv-velemenyek', 'kv-hely'],
+  await p.evaluate(() => { const e = document.querySelector('.kv-velemenyek'); return [e.className, e.nextElementSibling.className] }))
+ok('cím és Google-link', ['Rólunk mondták', true],
+  [await sz.locator('h2').innerText(), (await sz.locator('a.kv-link').getAttribute('href')).startsWith('https://')])
+ok('sötétzöld háttér, csillanással', [true, true],
+  [(await sz.evaluate((e) => getComputedStyle(e).backgroundImage)).includes('linear-gradient'), (await sz.getAttribute('data-csillan')) !== null])
+ok('öt vélemény (a 3 csillagos nem), háromszor látszik', [5, 3], [
+  await p.locator(`${sav} .kv-velemeny-hely`).count() - 3, await p.locator(`${sav} .kv-velemeny-hely[data-lathato]`).count()])
+ok('a 3 csillagos nincs kint', 0, await p.locator('.kv-velemeny-nev', { hasText: 'Demó Ferenc' }).count())
+ok('lebegnek', true, (await p.locator('.kv-velemeny-hely').first().evaluate((e) => getComputedStyle(e).animationName)) === 'kv-lebeg')
+await sz.scrollIntoViewIfNeeded()
+await p.evaluate(() => window.scrollBy(0, -60))
+await p.waitForTimeout(800)
+const feny1 = await sz.evaluate((e) => e.style.getPropertyValue('--feny'))
+await p.evaluate(() => window.scrollBy(0, 160))
+await p.waitForTimeout(400)
+const feny2 = await sz.evaluate((e) => e.style.getPropertyValue('--feny'))
+ok('görgetésre a csillanás elmozdul, a kártyák is öröklik', [true, true],
+  [Number(feny2) > Number(feny1), (await p.locator('.kv-velemeny').first().evaluate((e) => getComputedStyle(e).getPropertyValue('--feny'))) === feny2])
+await p.evaluate(() => window.scrollBy(0, -100))
+await p.waitForTimeout(300)
+await kep(sz, '21-rolunk-mondtak')
+
+console.log('\n=== 2) Váltakoznak, egérre megállnak és megdőlnek ===\n')
+const i0 = await iErtek(p)
+await p.waitForTimeout(6300)
+ok('magától továbblép', i0 + 1, await iErtek(p))
+await kep(sz, '22-rolunk-mondtak-tovabb')
+const kartya = p.locator(`${sav} .kv-velemeny-hely[data-lathato] .kv-velemeny`).nth(1)
+const r = await kartya.boundingBox()
+await p.mouse.move(r.x + r.width * 0.85, r.y + r.height * 0.2, { steps: 8 })
+await p.waitForTimeout(500)
+const m = await kartya.evaluate((e) => new DOMMatrix(getComputedStyle(e).transform))
+ok('egérre 3D-ben megdől és nagyobb lesz', [true, true, true], [!m.is2D, Math.abs(m.m13) > 0.02 && Math.abs(m.m23) > 0.02, Math.hypot(m.m11, m.m12, m.m13) > 1.05])
+ok('egérrel a csillanás a dőléshez igazodik', true, (await kartya.getAttribute('data-eger')) !== null)
+await kep(sz, '23-rolunk-mondtak-egerrel')
+const i1 = await iErtek(p)
+await p.waitForTimeout(6300)
+ok('egér alatt nem vált', i1, await iErtek(p))
+await sz.locator('h2').hover()
+await p.waitForTimeout(6300)
+ok('a sáv fölött sem vált (a nyilak használatakor sem)', i1, await iErtek(p))
+await p.mouse.move(r.x + r.width * 0.2, r.y + r.height * 0.8, { steps: 4 })
+await p.waitForTimeout(400)
+const m2 = await kartya.evaluate((e) => new DOMMatrix(getComputedStyle(e).transform))
+ok('az egér helyével a dőlés iránya is változik', true, Math.sign(m2.m13) !== Math.sign(m.m13))
+await p.mouse.move(5, 5)
+await p.waitForTimeout(900)
+ok('elengedve visszaáll', true, (await kartya.evaluate((e) => getComputedStyle(e).transform)) === 'none' || (await kartya.getAttribute('data-eger')) === null)
+await sz.locator('button[data-irany="tovabb"]').click()
+await p.waitForTimeout(1200)
+ok('a nyíllal is lapozható', i1 + 1, await iErtek(p))
+for (let x = 0; x < 6; x++) { await sz.locator('button[data-irany="tovabb"]').click(); await p.waitForTimeout(1100) }
+ok('körbeér: a végén elölről kezdi', (i1 + 7) % 5, await iErtek(p))
+await sz.locator('button[data-irany="vissza"]').click()
+await p.waitForTimeout(1300)
+ok('visszafelé is körbeér', ((i1 + 6) % 5 + 5) % 5, await iErtek(p))
+ok('a nem látszó kártyák rejtve vannak a képernyőolvasó elől', await p.locator(`${sav} .kv-velemeny-hely:not([data-lathato])`).count(),
+  await p.locator(`${sav} .kv-velemeny-hely[aria-hidden="true"]`).count())
+
+console.log('\n=== 3) Csomagok: a teljes táblázat egyben, belső görgetés nélkül ===\n')
+for (const [w, h] of [[1440, 900], [1280, 800], [1920, 1080]]) {
+  const c = await lap(w, h)
+  await c.goto('http://localhost:5180/publikus')
+  await c.waitForSelector('.kv-ketoszlop > .kv-csomagok', { timeout: 90000 })
+  await c.waitForTimeout(800)
+  const cs = c.locator('.kv-ketoszlop > .kv-csomagok')
+  await cs.scrollIntoViewIfNeeded()
+  await c.evaluate(() => window.scrollBy(0, 400))
+  await c.waitForTimeout(700)
+  const [kilog, alja, gorget] = await cs.evaluate((e) => [getComputedStyle(e).overflowY, Math.round(e.getBoundingClientRect().bottom), e.scrollHeight > e.clientHeight + 1])
+  ok(`${w}x${h}: nem görgethető, a tábla alja a képen belül`, ['visible', true, false], [kilog, alja <= h, gorget])
+  if (w === 1280) await kep(c, '24-csomagok-1280')
+  await c.close()
+}
+
+console.log('\n=== 4) Telefonon egy kártya, húzással lapozható ===\n')
+const t = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+const tp = await t.newPage()
+tp.on('pageerror', (e) => hibak.push(e.message.slice(0, 200)))
+await tp.goto('http://localhost:5180/publikus')
+await tp.waitForSelector('.kv-velemenyek', { timeout: 90000 })
+await tp.locator('.kv-velemenyek').scrollIntoViewIfNeeded()
+await tp.waitForTimeout(800)
+ok('egy kártya látszik', 1, await tp.locator(`${sav} .kv-velemeny-hely[data-lathato]`).count())
+const ti = await iErtek(tp)
+await tp.locator('.kv-velemeny-ablak').evaluate((el) => {
+  const pont = (x) => new Touch({ identifier: 1, target: el, clientX: x, clientY: 300 })
+  el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [pont(320)], changedTouches: [pont(320)] }))
+  el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [pont(120)] }))
+})
+await tp.waitForTimeout(1200)
+ok('balra húzva a következő', (ti + 1) % 5, (await iErtek(tp)) % 5)
+await kep(tp.locator('.kv-velemenyek'), '25-rolunk-mondtak-telefon')
+await t.close()
+
+console.log('\n=== 5) Admin: Vélemények menü ===\n')
+const a = await lap(1440, 900)
+await a.goto('http://localhost:5180/')
+await a.waitForSelector('input[type="email"]', { timeout: 90000 })
+await a.fill('input[type="email"]', 'tulaj@mosathat.hu')
+await a.fill('input[type="password"]', 'x')
+await a.getByRole('button', { name: /Belépés/ }).click()
+await a.waitForTimeout(3000)
+await a.locator('aside.oldalsav button').filter({ hasText: 'Vélemények' }).first().click()
+await a.waitForSelector('.pub-velemeny', { timeout: 20000 })
+await a.waitForTimeout(1200)
+ok('hat vélemény, ebből öt látszik', ['6', '5 látszik a 6-ból'],
+  [String(await a.locator('.pub-velemeny').count()), (await a.locator('.pub-velemeny-szam').innerText()).trim().toLowerCase()])
+ok('a 3 csillagos halványan', 1, await a.locator('.pub-velemeny[data-rejtett]').count())
+await kep(a, '26-admin-velemenyek')
+await a.getByRole('button', { name: '+ Vélemény' }).click()
+const uj = a.locator('.pub-velemeny').last()
+await uj.locator('[data-mezo="nev"]').fill('Teszt Tamara')
+await uj.locator('[data-mezo="szoveg"]').fill('Gyors, alapos, kedves. Csak ajánlani tudom.')
+await uj.getByRole('radio', { name: '4 csillag' }).click()
+await uj.getByRole('button', { name: 'Fel' }).click()
+await a.waitForTimeout(300)
+ok('az előnézetben már ott van', 1, await a.locator('.pub-velemeny-elonezet .kv-velemeny-nev', { hasText: 'Teszt Tamara' }).count())
+await a.getByRole('button', { name: 'Mentés' }).click()
+await a.waitForTimeout(1500)
+ok('mentve', true, await a.locator('.pub-mentve').count() > 0)
+const lista = await a.evaluate(() => window.mosathatDemoSql(`select nev, csillag from velemenyek order by sort_order`))
+ok('az adatbázisban a hatodik helyen, 4 csillaggal', { nev: 'Teszt Tamara', csillag: 4 }, lista[5])
+const pub = await a.evaluate(() => window.mosathatDemoSql(`select publikus_oldal() x`))
+ok('a publikus oldal is megkapja', true, pub[0].x.velemenyek.some((v) => v.nev === 'Teszt Tamara'))
+await kep(a, '27-admin-velemeny-uj')
+
+console.log('\n=== 6) Tartalom: a sáv feliratai előnézettel ===\n')
+await a.locator('aside.oldalsav button').filter({ hasText: 'Tartalom' }).first().click()
+await a.waitForTimeout(2000)
+const tsav = a.locator('.pub-sav[data-sav="velemenyek"]')
+await tsav.scrollIntoViewIfNeeded()
+await a.waitForTimeout(600)
+ok('van Rólunk mondták sáv előnézettel', [1, true], [await tsav.count(), await tsav.locator('.kv-velemeny').count() > 0])
+await kep(tsav, '28-tartalom-rolunk-mondtak')
+
+ok('nincs JS hiba', [], hibak)
+await b.close()
+console.log(baj ? `\n${baj} HIBA` : '\nMinden rendben.')
+process.exit(baj ? 1 : 0)

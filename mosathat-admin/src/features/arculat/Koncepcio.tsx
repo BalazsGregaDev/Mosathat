@@ -13,6 +13,7 @@ import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
 import { FELIRAT, nyelviUt, type Nyelv } from '../../lib/nyelv'
 import { Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from '../publikus/tartalom'
 import Galeria from './Galeria'
+import Velemenyek from './Velemenyek'
 import { useCsillanas, useVaszonSzin } from './csillanas'
 import { gorgetIde } from './gorgetes'
 
@@ -271,8 +272,9 @@ function useKiemelesKeret(index: number, frissit: unknown) {
       if (!th || !nev) return
       const t = tabla.getBoundingClientRect()
       const c = th.getBoundingClientRect()
-      const top = Math.max(0, nev.getBoundingClientRect().top - t.top - 12)
-      setKeret({ top, left: c.left - t.left, width: c.width, height: t.height - top })
+      const arany = tabla.offsetWidth > 0 ? t.width / tabla.offsetWidth : 1
+      const top = Math.max(0, (nev.getBoundingClientRect().top - t.top) / arany - 12)
+      setKeret({ top, left: (c.left - t.left) / arany, width: c.width / arany, height: t.height / arany - top })
     }
     const figyelo = new ResizeObserver(meres)
     figyelo.observe(tabla)
@@ -472,11 +474,12 @@ function Lab() {
   )
 }
 
-function Vege({ foglalasNelkul = false }: { foglalasNelkul?: boolean }) {
+function Vege({ foglalasNelkul = false, velemenyekkel = false }: { foglalasNelkul?: boolean; velemenyekkel?: boolean }) {
   const { foglalas } = useKv()
   return (
     <>
       {!foglalasNelkul && (foglalas ?? <Foglalas />)}
+      {velemenyekkel && <Velemenyek />}
       <Terkep />
       <Lab />
     </>
@@ -583,10 +586,34 @@ function MagazinHero() {
   )
 }
 
+function useKepernyoreIllesztes(frissit: unknown) {
+  const ref = useRef<HTMLElement>(null)
+  useLayoutEffect(() => {
+    const s = ref.current
+    if (!s) return
+    const illeszt = () => {
+      s.style.zoom = ''
+      if (getComputedStyle(s).position !== 'sticky') return
+      const nav = parseFloat(getComputedStyle(s).getPropertyValue('--nav-h')) || 0
+      const hely = window.innerHeight - nav - 32
+      const magas = s.getBoundingClientRect().height
+      if (magas > hely && hely > 200) s.style.zoom = String(Math.max(0.6, hely / magas))
+    }
+    illeszt()
+    const kesobb = window.setTimeout(illeszt, 500)
+    document.fonts?.ready.then(illeszt).catch(() => {})
+    window.addEventListener('resize', illeszt)
+    return () => { window.clearTimeout(kesobb); window.removeEventListener('resize', illeszt) }
+  }, [frissit])
+  return ref
+}
+
 function MagazinCsomagok() {
   const sz = useSz()
+  const { t } = useKv()
+  const ref = useKepernyoreIllesztes(t)
   return (
-    <section className="kv-csomagok">
+    <section className="kv-csomagok" ref={ref}>
       <div className="kv-szakasz-fej">
         <h2>{sz('csomagok.cim')}</h2>
         <Alcim />
@@ -624,7 +651,7 @@ function Magazin() {
           {foglalas}
         </div>
       ) : <MagazinCsomagok />}
-      <Vege foglalasNelkul={Boolean(foglalas)} />
+      <Vege foglalasNelkul={Boolean(foglalas)} velemenyekkel />
     </>
   )
 }
@@ -850,7 +877,7 @@ export function KoncepcioLap({ mod, k, children }: { mod: Mod; k: Catalog; child
   return <KvKornyezet kod="03" mod={mod} k={k}>{children}</KvKornyezet>
 }
 
-export type KoncepcioReszNev = 'nav' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'hely' | 'lab'
+export type KoncepcioReszNev = 'nav' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'velemenyek' | 'hely' | 'lab'
 
 export function KoncepcioResz({ resz, mod, k }: { resz: KoncepcioReszNev; mod: Mod; k: Catalog }) {
   return (
@@ -860,6 +887,7 @@ export function KoncepcioResz({ resz, mod, k }: { resz: KoncepcioReszNev; mod: M
       {resz === 'rolunk' && <Rolunk />}
       {resz === 'galeria' && <GaleriaFoglalassal />}
       {resz === 'csomagok' && <MagazinCsomagok />}
+      {resz === 'velemenyek' && <Velemenyek minta />}
       {resz === 'hely' && <Terkep />}
       {resz === 'lab' && <Lab />}
     </KvKornyezet>

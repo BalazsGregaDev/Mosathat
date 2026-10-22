@@ -182,3 +182,29 @@
   .jogi-gombok { width: 100%; }
   .jogi-sor .jogi-gombok .btn { flex: 1 1 auto; }
 }
+
+.pub-velemeny-elonezet { margin-bottom: var(--t4); }
+.pub-velemeny-elonezet .pub-elonezet-hely { margin: 0; }
+.pub-velemeny-szam { margin-left: auto; font-size: var(--m-sm); font-weight: 400; }
+.pub-velemeny-lista { display: flex; flex-direction: column; gap: var(--t3); }
+.pub-velemeny {
+  display: flex; flex-direction: column; gap: var(--t2); padding: var(--t3); border: 1px solid var(--keret); border-radius: var(--r-md, 10px);
+  background: var(--lap);
+}
+.pub-velemeny[data-rejtett] { background: var(--lap-2); }
+.pub-velemeny[data-rejtett] textarea, .pub-velemeny[data-rejtett] input:not([type='checkbox']) { color: var(--szoveg-halk); }
+.pub-velemeny-sor { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); gap: var(--t3); align-items: start; }
+.pub-velemeny-sor .mezo + .mezo { margin-top: 0; }
+.pub-velemeny textarea { resize: vertical; min-height: 76px; }
+.pub-velemeny-also { display: flex; align-items: center; justify-content: space-between; gap: var(--t2) var(--t3); flex-wrap: wrap; }
+.pub-csillagok { display: flex; gap: 2px; height: 46px; align-items: center; }
+.pub-csillagok button {
+  width: 30px; height: 30px; padding: 0; border: 0; cursor: pointer; background: var(--keret);
+  clip-path: polygon(50% 0, 61.8% 35.5%, 100% 35.5%, 69.1% 57.4%, 80.9% 93%, 50% 71%, 19.1% 93%, 30.9% 57.4%, 0 35.5%, 38.2% 35.5%);
+}
+.pub-csillagok button[data-tele] { background: #e7b33f; }
+.pub-csillagok button:focus-visible { outline: none; background: var(--zold); }
+@media (max-width: 640px) {
+  .pub-velemeny-sor { grid-template-columns: 1fr 1fr; }
+  .pub-velemeny-sor > :first-child { grid-column: 1 / -1; }
+}

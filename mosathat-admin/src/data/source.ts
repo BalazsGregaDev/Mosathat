@@ -9,7 +9,7 @@ import type {
   OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
   PublikusNapAdat,
 } from '../lib/types'
-import type { NyitvaNap, PublikusAdatokNyers, PublikusMentes, PublikusTartalomNyers } from '../lib/publikusTartalom'
+import type { NyitvaNap, Velemeny, VelemenySor, PublikusAdatokNyers, PublikusMentes, PublikusTartalomNyers } from '../lib/publikusTartalom'
 import type { Kamera } from '../lib/ceg'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
@@ -43,6 +43,7 @@ export interface PublikusNyers {
   szovegek?: Record<string, string>
   szovegek_en?: Record<string, string>
   kamerak?: Kamera[]
+  velemenyek?: Velemeny[]
   extras?: Extra[]
   fullServicePricing?: Catalog['fullServicePricing']
   packages: Catalog['packages']
@@ -70,6 +71,7 @@ export function publikusbol(n: PublikusNyers): PublikusAdat {
       szovegek: n.szovegek ?? {},
       szovegek_en: n.szovegek_en ?? {},
       kamerak: n.kamerak ?? [],
+      velemenyek: n.velemenyek ?? [],
       nyitvatartas: n.nyitvatartas ?? [],
       leadas: n.leadas ?? null,
     },
@@ -112,6 +114,8 @@ export interface DataSource {
   getCsomagSzerkeszto(): Promise<CsomagSzerkesztoAdat>
   getPublikus(): Promise<PublikusAdat>
   savePublikusTartalom(p: PublikusMentes): Promise<void>
+  velemenyekLista(): Promise<VelemenySor[]>
+  velemenyekMentes(lista: VelemenySor[]): Promise<void>
   publikusNap(nap: string): Promise<PublikusNapAdat>
   publikusAjanlat(input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
   publikusFoglalas(input: OnlineBookingInput): Promise<string>

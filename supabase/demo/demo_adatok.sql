@@ -405,6 +405,20 @@ begin
   perform public.online_keres_dontes(v_id, true);
 end $$;
 
+do $$
+begin
+  if to_regclass('public.velemenyek') is null then
+    return;
+  end if;
+  insert into public.velemenyek (nev, csillag, szoveg, datum, sort_order) values
+    ('Demó Anna', 5, 'DEMO értékelés — Nagyon alapos munka, a kutyaszőr is eltűnt a hátsó ülésről. Amíg dolgoztak, fent tudtam dolgozni az irodában.', current_date - 12, 0),
+    ('Demó Bence', 5, 'DEMO értékelés — Kézzel mosnak, nem gép karcolja a fényezést. Pontosan elkészültek, amire mondták.', current_date - 25, 1),
+    ('Demó Csilla', 4, 'DEMO értékelés — Kedves csapat, szép lett a belső. Legközelebb előre foglalok, mert aznapra nem volt hely.', current_date - 40, 2),
+    ('Demó Dávid', 5, 'DEMO értékelés — A felnik olyanok lettek, mint újkorukban. Online foglaltam, minden simán ment.', current_date - 58, 3),
+    ('Demó Eszter', 5, 'DEMO értékelés — Bőrülés ápolás és belső takarítás, nagyon elégedett vagyok. A garázsban könnyű parkolni.', current_date - 71, 4),
+    ('Demó Ferenc', 3, 'DEMO értékelés — Ez 3 csillagos, ezért nem jelenik meg a publikus oldalon.', current_date - 80, 5);
+end $$;
+
 set constraints all immediate;
 
 do $$

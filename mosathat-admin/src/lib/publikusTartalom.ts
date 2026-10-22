@@ -40,7 +40,22 @@ export interface NyitvaNap {
   closes: string | null
 }
 
+export interface Velemeny {
+  nev: string
+  csillag: number
+  szoveg: string
+  datum: string | null
+}
+
+export interface VelemenySor extends Velemeny {
+  id?: string
+  aktiv: boolean
+}
+
+export const GOOGLE_KERESES = 'https://www.google.com/search?q=Mosathat+-+Hand+Car+Wash+Budapest'
+
 export interface PublikusTartalomNyers {
+  velemenyek?: Velemeny[]
   adatok: PublikusAdatokNyers
   szovegek: Record<string, string>
   szovegek_en: Record<string, string>
@@ -267,7 +282,7 @@ export interface SzovegDef {
   valtozok?: string[]
 }
 
-export type SzovegCsoport = 'menu' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'foglalas' | 'adatok' | 'hely' | 'lab' | 'cimkek' | 'oldal' | 'ugyfel'
+export type SzovegCsoport = 'menu' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'foglalas' | 'adatok' | 'hely' | 'lab' | 'cimkek' | 'oldal' | 'ugyfel' | 'velemeny'
 
 export const CSOPORT_NEV: Record<SzovegCsoport, string> = {
   menu: 'Menü és gombok',
@@ -282,6 +297,7 @@ export const CSOPORT_NEV: Record<SzovegCsoport, string> = {
   cimkek: 'Adatcímkék (Hol vagyunk, lábléc)',
   oldal: 'Böngésző',
   ugyfel: 'Foglalás oldala (az ügyfélnek)',
+  velemeny: 'Rólunk mondták',
 }
 
 export const SZOVEGEK = [
@@ -417,6 +433,13 @@ export const SZOVEGEK = [
   { kulcs: 'foglalas.siker_email', csoport: 'adatok', cimke: 'Köszönő üzenet, ha adott meg e-mailt', sor: true, alap: 'Amint visszaigazoltuk, e-mailt küldünk róla, benne a foglalásod oldalának linkjével.', en: 'As soon as we’ve confirmed it, we’ll send you an e-mail with a link to your booking page.' },
   { kulcs: 'foglalas.siker_telefon', csoport: 'adatok', cimke: 'Köszönő üzenet e-mail nélkül', alap: 'Hamarosan visszaigazoljuk telefonon.', en: 'We’ll confirm it by phone shortly.' },
   { kulcs: 'foglalas.uj', csoport: 'adatok', cimke: 'Új foglalás gomb', alap: 'Új foglalás', en: 'New booking' },
+
+  { kulcs: 'velemeny.cim', csoport: 'velemeny', cimke: 'Cím', alap: 'Rólunk mondták', en: 'What people say about us' },
+  { kulcs: 'velemeny.felcim', csoport: 'velemeny', cimke: 'Felcím (a cím fölött)', alap: 'Google-értékelések', en: 'Google reviews' },
+  { kulcs: 'velemeny.osszes', csoport: 'velemeny', cimke: 'Link az összes értékeléshez', alap: 'Összes értékelés a Google-on', en: 'All reviews on Google' },
+  { kulcs: 'velemeny.elozo', csoport: 'velemeny', cimke: 'Előző gomb neve (képernyőolvasónak)', alap: 'Előző vélemények', en: 'Previous reviews' },
+  { kulcs: 'velemeny.kovetkezo', csoport: 'velemeny', cimke: 'Következő gomb neve (képernyőolvasónak)', alap: 'Következő vélemények', en: 'Next reviews' },
+  { kulcs: 'velemeny.csillag', csoport: 'velemeny', cimke: 'A csillagok felolvasva (képernyőolvasónak)', alap: '{n} csillag az 5-ből', valtozok: ['n'], en: '{n} out of 5 stars' },
 
   { kulcs: 'hely.cim', csoport: 'hely', cimke: 'Cím', alap: 'Hol vagyunk', en: 'Where we are' },
   { kulcs: 'hely.bevezeto', csoport: 'hely', cimke: 'Bevezető', sor: true, alap: 'A {haz} mélygarázsában, a −1. szinten. A bejárat a {bejarat} nyílik.', en: 'In the underground car park of {haz}, on level −1. The entrance is {bejarat}.' },

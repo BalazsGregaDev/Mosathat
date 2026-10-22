@@ -1,5 +1,5 @@
 import {
-  Fragment, useDeferredValue, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode,
+  Fragment, useDeferredValue, useEffect, useId, useMemo, useRef, useState,
 } from 'react'
 
 import '../arculat/betuk'
@@ -23,7 +23,7 @@ import type { FoglalasomAdat, OldalAllapot } from '../../../../supabase/function
 import { FoglalasUrlap, type Bemutato, type FoglalasForras } from '../publikus/FoglalasModul'
 import { TartalomProvider, useSz } from '../publikus/tartalom'
 import { usePublikusAdat } from '../publikus/usePublikusAdat'
-import { PubFej, useMentes } from './kozos'
+import { Elonezet, PubFej, useMentes } from './kozos'
 import type { Billentyu, Honnan, Ugras } from '../shell/ugras'
 
 type Szovegek = Record<SzovegKulcs, string>
@@ -100,6 +100,9 @@ const SAVOK: Sav[] = [
   { id: 'fogl-siker', cim: 'Köszönő üzenet', leiras: 'Ez jelenik meg a foglalási kérés elküldése után.', lepes: 'siker',
     bemutato: () => ({ kesz: true }),
     kulcsok: ['foglalas.siker', 'foglalas.siker_elvitel', 'foglalas.siker_email', 'foglalas.siker_telefon', 'foglalas.uj'] },
+  { id: 'velemenyek', cim: 'Rólunk mondták', oldalResz: 'velemenyek',
+    leiras: 'A Hol vagyunk fölötti sötétzöld sáv a Google-értékelésekkel. A véleményeket a Vélemények menüben veheted fel. Amíg nincs egy sem, a publikus oldalon a sáv nem jelenik meg, itt az előnézetben minta kártyák látszanak.',
+    kulcsok: ['velemeny.felcim', 'velemeny.cim', 'velemeny.osszes', 'velemeny.elozo', 'velemeny.kovetkezo', 'velemeny.csillag'] },
   { id: 'hely', cim: 'Hol vagyunk', leiras: 'A címek és az adatok az Elérhetőség menüből jönnek, itt a feliratok.', oldalResz: 'hely',
     kulcsok: ['hely.cim', 'hely.bevezeto', 'cimke.cim', 'cimke.nyitvatartas', 'cimke.leadas', 'cimke.telefon',
       'hely.utvonal', 'hely.terkep_szoveg', 'hely.terkep_gomb'] },
@@ -137,6 +140,10 @@ const MIKOR: Partial<Record<SzovegKulcs, string>> = {
   'galeria.meret': 'Nem látszik: a képernyőolvasó olvassa fel a csúszka neveként.',
   'galeria.reset': 'Felirat nélküli gomb: a képernyőolvasó olvassa fel, és egérrel fölé állva jelenik meg.',
   'galeria.kep_alt': 'Nem látszik: a képernyőolvasó olvassa fel a képek helyett.',
+  'velemeny.osszes': 'Az Elérhetőség menüben megadott Google-értékelés linkre visz, ha nincs megadva, a Google-keresés találatára.',
+  'velemeny.elozo': 'Nyíl gomb, csak akkor látszik, ha több vélemény van, mint amennyi egyszerre elfér. A képernyőolvasó olvassa fel.',
+  'velemeny.kovetkezo': 'Nyíl gomb, csak akkor látszik, ha több vélemény van, mint amennyi egyszerre elfér. A képernyőolvasó olvassa fel.',
+  'velemeny.csillag': 'Nem látszik: a képernyőolvasó olvassa fel a csillagok helyett.',
   'galeria.foglalas': 'A Foglalás részhez görget, mint a menü Foglalás pontja. Telefonon ugyanez a gomb a nyitó részben is megjelenik.',
   'galeria.szivacs': 'Csak érintőképernyőn gomb: bekapcsolva ujjal lehet mosni, a görgetés szünetel.',
   'galeria.vege': 'Csak érintőképernyőn látszik: kikapcsolja a mosást, újra lehet görgetni.',
@@ -189,6 +196,7 @@ function sajatLeiras(nyelv: Nyelv): Record<string, string> {
     tol: 'a legkorábbi vállalható határidő, például: 15:30',
     ig: 'a legkésőbbi vállalható határidő, például: 17:00',
     mikor: `az elvitel napja és időablaka, például: ${f.napCim(kovetkezoHetkoznap())}, ${f.kozott('8:00', '17:00')}`,
+    n: 'a vélemény csillagainak száma, például: 5',
   }
 }
 
@@ -365,25 +373,6 @@ function bemutatoAlap(k: Catalog): BemutatoAlap {
     .filter((e) => e.active && !csomagbanBenne(e, csomag?.id ?? null, 'TELJES', false))
     .sort((a, b) => a.sort_order - b.sort_order)[0]
   return { csomagId: csomag?.id ?? null, extrak: extra ? { [extra.id]: 1 } : {} }
-}
-
-function Elonezet({ szel, keret = false, children }: { szel: number; keret?: boolean; children: ReactNode }) {
-  const hely = useRef<HTMLDivElement>(null)
-  const [arany, setArany] = useState(1)
-  useLayoutEffect(() => {
-    const h = hely.current
-    if (!h) return
-    const szamol = () => setArany(Math.min(1, h.clientWidth / szel))
-    szamol()
-    const figyelo = new ResizeObserver(szamol)
-    figyelo.observe(h)
-    return () => figyelo.disconnect()
-  }, [szel])
-  return (
-    <div className="pub-elonezet-hely" ref={hely}>
-      <div className={keret ? 'pub-elonezet-lap kv-keret' : 'pub-elonezet-lap'} style={{ width: szel, zoom: arany }}>{children}</div>
-    </div>
-  )
 }
 
 function BongeszoFul() {

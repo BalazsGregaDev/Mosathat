@@ -12,7 +12,7 @@ import type {
   OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
-import type { PublikusMentes } from '../lib/publikusTartalom'
+import type { PublikusMentes, VelemenySor } from '../lib/publikusTartalom'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
 import type { FoglalasomAdat } from '../../../supabase/functions/_shared/tipusok.ts'
@@ -379,6 +379,17 @@ export class SupabaseSource implements DataSource {
   async savePublikusTartalom(p: PublikusMentes): Promise<void> {
     const { error } = await this.sb.rpc('publikus_tartalom_mentes', { p })
     if (error) fail('A publikus oldal mentése', error)
+  }
+
+  async velemenyekLista(): Promise<VelemenySor[]> {
+    const { data, error } = await this.sb.rpc('velemenyek_lista')
+    if (error) fail('A vélemények betöltése', error)
+    return (data as VelemenySor[] | null) ?? []
+  }
+
+  async velemenyekMentes(lista: VelemenySor[]): Promise<void> {
+    const { error } = await this.sb.rpc('velemenyek_mentes', { p: lista })
+    if (error) fail('A vélemények mentése', error)
   }
 
   async getPublikus(): Promise<PublikusAdat> {

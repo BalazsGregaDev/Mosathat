@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
 import './publikus-admin.css'
 import { hibaSzoveg } from '../../lib/format'
@@ -73,5 +73,24 @@ export function Mezo({ cimke, sugo, children }: { cimke: string; sugo?: ReactNod
       {children}
       {sugo && <small>{sugo}</small>}
     </label>
+  )
+}
+
+export function Elonezet({ szel, keret = false, children }: { szel: number; keret?: boolean; children: ReactNode }) {
+  const hely = useRef<HTMLDivElement>(null)
+  const [arany, setArany] = useState(1)
+  useLayoutEffect(() => {
+    const h = hely.current
+    if (!h) return
+    const szamol = () => setArany(Math.min(1, h.clientWidth / szel))
+    szamol()
+    const figyelo = new ResizeObserver(szamol)
+    figyelo.observe(h)
+    return () => figyelo.disconnect()
+  }, [szel])
+  return (
+    <div className="pub-elonezet-hely" ref={hely}>
+      <div className={keret ? 'pub-elonezet-lap kv-keret' : 'pub-elonezet-lap'} style={{ width: szel, zoom: arany }}>{children}</div>
+    </div>
   )
 }

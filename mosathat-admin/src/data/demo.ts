@@ -20,7 +20,7 @@ import type {
   OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
-import type { PublikusMentes } from '../lib/publikusTartalom'
+import type { PublikusMentes, VelemenySor } from '../lib/publikusTartalom'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
 import type { FoglalasomAdat } from '../../../supabase/functions/_shared/tipusok.ts'
@@ -354,6 +354,15 @@ export class DemoSource implements DataSource {
 
   async savePublikusTartalom(p: PublikusMentes): Promise<void> {
     await this.rows(`select publikus_tartalom_mentes($1::jsonb)`, [JSON.stringify(p)])
+  }
+
+  async velemenyekLista(): Promise<VelemenySor[]> {
+    const [r] = await this.rows<{ x: VelemenySor[] }>(`select velemenyek_lista() x`)
+    return r.x ?? []
+  }
+
+  async velemenyekMentes(lista: VelemenySor[]): Promise<void> {
+    await this.rows(`select velemenyek_mentes($1::jsonb)`, [JSON.stringify(lista)])
   }
 
   async getPublikus(): Promise<PublikusAdat> {

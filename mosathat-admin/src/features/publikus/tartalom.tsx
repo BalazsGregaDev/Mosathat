@@ -1,8 +1,8 @@
 import { createContext, Fragment, useContext, useMemo, type ReactNode } from 'react'
 
 import {
-  cegbol, jogibol, kitolt, szovegAlap, URES_TARTALOM, uzletbol, uzletValtozok,
-  type CegAdatok, type JogiAdatok, type PublikusTartalomNyers, type SzovegKulcs, type Uzlet, type Valtozok,
+  cegbol, GOOGLE_KERESES, jogibol, kitolt, szovegAlap, URES_TARTALOM, uzletbol, uzletValtozok,
+  type CegAdatok, type JogiAdatok, type PublikusTartalomNyers, type SzovegKulcs, type Uzlet, type Valtozok, type Velemeny,
 } from '../../lib/publikusTartalom'
 import { formatum, type Formatum, type Nyelv } from '../../lib/nyelv'
 
@@ -15,6 +15,8 @@ interface TartalomErtek {
   jogi: JogiAdatok
   nyelv: Nyelv
   f: Formatum
+  velemenyek: Velemeny[]
+  google: string
 }
 
 function ertekbol(t: PublikusTartalomNyers, lemondasOra?: number, nyelv: Nyelv = 'hu'): TartalomErtek {
@@ -27,7 +29,10 @@ function ertekbol(t: PublikusTartalomNyers, lemondasOra?: number, nyelv: Nyelv =
     const sablon = sajat && sajat.trim() ? sajat : alap[kulcs]
     return kitolt(sablon, extra ? { ...valtozok, ...extra } : valtozok)
   }
-  return { sz, u, ceg: cegbol(t, u), jogi: jogibol(t, u, nyelv), nyelv, f: formatum(nyelv) }
+  return {
+    sz, u, ceg: cegbol(t, u), jogi: jogibol(t, u, nyelv), nyelv, f: formatum(nyelv),
+    velemenyek: t.velemenyek ?? [], google: t.adatok.google_ertekeles?.trim() || GOOGLE_KERESES,
+  }
 }
 
 const Ctx = createContext<TartalomErtek>(ertekbol(URES_TARTALOM))
@@ -48,6 +53,8 @@ export const useCeg = () => useContext(Ctx).ceg
 export const useJogi = () => useContext(Ctx).jogi
 export const useNyelv = () => useContext(Ctx).nyelv
 export const useFormatum = () => useContext(Ctx).f
+export const useVelemenyek = () => useContext(Ctx).velemenyek
+export const useGoogle = () => useContext(Ctx).google
 
 export function forditott<T extends { name: string; name_en?: string | null }>(x: T, nyelv: Nyelv): string {
   return nyelv === 'en' ? x.name_en?.trim() || x.name : x.name

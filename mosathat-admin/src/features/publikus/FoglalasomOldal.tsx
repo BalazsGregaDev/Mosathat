@@ -9,14 +9,13 @@ import type { DataSource } from '../../data/source'
 import { UZLET } from '../../lib/arculat'
 import { hibaSzoveg } from '../../lib/format'
 import { hibaFordit, nyelviUt, type Formatum, type Nyelv } from '../../lib/nyelv'
-import { katKulcs, terjedelemKulcs, type SzovegKulcs } from '../../lib/publikusTartalom'
+import { GOOGLE_KERESES, katKulcs, terjedelemKulcs, type SzovegKulcs } from '../../lib/publikusTartalom'
 import { egerElhagy, egerKovet, KoncepcioKeret, terkepCimek } from '../arculat/Koncepcio'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import { betolt, PUBLIKUS_KONCEPCIO, type Betoltve } from './PublikusOldal'
 import { Gazdag, TartalomProvider, telefonLink, useFormatum, useNyelv, useSz, useUzlet, type Sz } from './tartalom'
 
 const FRISSITES_MS = 60_000
-export const GOOGLE_KERESES = 'https://www.google.com/search?q=Mosathat+-+Hand+Car+Wash+Budapest'
 const ZONA = 'Europe/Budapest'
 const NAP_KULCS = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA, year: 'numeric', month: '2-digit', day: '2-digit' })
 const ORA = new Intl.DateTimeFormat('hu-HU', { timeZone: ZONA, hour: 'numeric', minute: '2-digit' })
