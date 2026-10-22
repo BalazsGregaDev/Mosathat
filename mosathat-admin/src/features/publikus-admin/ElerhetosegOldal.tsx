@@ -46,15 +46,18 @@ export default function ElerhetosegOldal({ onBeallitasok, kezdoNyelv = 'hu' }: {
   const [alap, setAlap] = useState(pub)
   const [v, setV] = useState<Record<Mind, string>>(() => kezdo(pub?.tartalom.adatok))
   const [cimNyelv, setCimNyelv] = useState<Nyelv>(kezdoNyelv)
+  const [google, setGoogle] = useState(() => pub?.tartalom.adatok.google_ertekeles ?? '')
   const { allapot, fut } = useMentes()
 
   if (pub !== alap) {
     setAlap(pub)
     setV(kezdo(pub?.tartalom.adatok))
+    setGoogle(pub?.tartalom.adatok.google_ertekeles ?? '')
   }
 
   const eredeti = kezdo(pub?.tartalom.adatok)
-  const valtozott = MIND.some((k) => v[k] !== eredeti[k])
+  const eredetiGoogle = pub?.tartalom.adatok.google_ertekeles ?? ''
+  const valtozott = MIND.some((k) => v[k] !== eredeti[k]) || google.trim() !== eredetiGoogle
   useMentetlen(valtozott)
 
   if (!pub) return <div className="betolt">Betöltés…</div>
@@ -75,9 +78,11 @@ export default function ElerhetosegOldal({ onBeallitasok, kezdoNyelv = 'hu' }: {
         linkek={[['Publikus oldal megnyitása', '/publikus']]}
         valtozott={valtozott}
         allapot={allapot}
-        onElvet={() => setV(eredeti)}
+        onElvet={() => { setV(eredeti); setGoogle(eredetiGoogle) }}
         onMent={() => void fut(async () => {
-          await data.savePublikusTartalom({ adatok: Object.fromEntries(MIND.map((k) => [k, v[k]])) as PublikusAdatokNyers })
+          await data.savePublikusTartalom({
+            adatok: { ...Object.fromEntries(MIND.map((k) => [k, v[k]])), google_ertekeles: google.trim() } as PublikusAdatokNyers,
+          })
           await frissit()
         })}
       />
@@ -85,7 +90,14 @@ export default function ElerhetosegOldal({ onBeallitasok, kezdoNyelv = 'hu' }: {
       <div className="pub-racs">
         <section className="panel">
           <h3>Kapcsolat</h3>
-          <div className="panel-torzs pub-mezok">{MEZOK.map(mezo)}</div>
+          <div className="panel-torzs pub-mezok">
+            {MEZOK.map(mezo)}
+            <Mezo cimke="Google-értékelés linkje"
+                  sugo="Az ügyfél foglalási oldalán, az átvétel után jelenik meg az „Értékelés írása” gomb mögött. A Google Cégprofilban: Értékelések kérése, a megosztható link (https://g.page/r/…/review). Üresen hagyva a gomb a Google-keresés „Mosathat - Hand Car Wash Budapest” találatára visz, ahol az értékelés is megírható.">
+              <input className="beviteli" type="url" value={google} placeholder="https://g.page/r/…/review"
+                     onChange={(e) => setGoogle(e.target.value)} data-mezo="google_ertekeles" />
+            </Mezo>
+          </div>
         </section>
 
         <section className="panel" data-nyelv={cimNyelv}>

@@ -25,6 +25,7 @@ import ArlistaPanel, { PANEL_ALAP, type PanelAllapot } from '../services/Arlista
 import ArlistaGombok, { type ArlistaFul } from '../services/ArlistaGombok'
 import JelszoModal from '../common/JelszoModal'
 import KeresFigyelo from '../keresek/KeresFigyelo'
+import ModositasFigyelo from '../modositas/ModositasFigyelo'
 import { billentyuElore, celraUgrik, type Honnan, type Ugras } from './ugras'
 import type { Nyelv } from '../../lib/nyelv'
 
@@ -225,6 +226,15 @@ export default function AppShell() {
   )
 
   const foglalasNyitva = Boolean(ujNyitva || szerkesztId || reszletId)
+  const [keresLathato, setKeresLathato] = useState(false)
+
+  useEffect(() => {
+    if (data.isDemo) return
+    const kuld = () => { if (document.visibilityState === 'visible') void data.ertesitesekKuldese().catch(() => null) }
+    const elso = window.setTimeout(kuld, 5_000)
+    const t = window.setInterval(kuld, 120_000)
+    return () => { window.clearTimeout(elso); window.clearInterval(t) }
+  }, [data])
   const osztott = foglalasNyitva && arlista !== null
 
   const arlistaGombok = <ArlistaGombok ertek={arlista} onValt={setArlista} />
@@ -401,7 +411,10 @@ export default function AppShell() {
 
       {!panelHely && arlistaPanel}
 
-      <KeresFigyelo onMegnyit={(id) => megnyit(id)} />
+      <KeresFigyelo onMegnyit={(id) => megnyit(id)} onLathato={setKeresLathato} />
+
+      <ModositasFigyelo szabad={!foglalasNyitva && !keresLathato && !jelszoNyitva && arlista === null}
+                        onSzerkeszt={(id) => setSzerkesztId(id)} />
 
       {reszletId && (
         <BookingDetail

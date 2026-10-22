@@ -40,7 +40,7 @@ console.log('=== 1) Névtelen (anon) felhasználó csak a nyilvános oldal függ
 const anonHivhat = await q(`select p.proname from pg_proc p
   where p.pronamespace = 'public'::regnamespace and has_function_privilege('anon', p.oid, 'EXECUTE')
   order by 1`)
-t.ok('anon által hívható függvények: az öt nyilvános és a céges link három', ['ceg_ajanlat', 'ceg_foglalas', 'ceg_link_adat', 'ceg_teli_napok', 'publikus_ajanlat', 'publikus_foglalas', 'publikus_jogi', 'publikus_nap', 'publikus_oldal'],
+t.ok('anon által hívható függvények: az öt nyilvános és a céges link három', ['ceg_ajanlat', 'ceg_foglalas', 'ceg_link_adat', 'ceg_teli_napok', 'foglalasom', 'foglalasom_lemondas', 'foglalasom_modositas', 'publikus_ajanlat', 'publikus_foglalas', 'publikus_jogi', 'publikus_nap', 'publikus_oldal'],
   anonHivhat.map((r) => r.proname))
 const authHivhat = await q(`select
   has_function_privilege('authenticated', 'public.day_absences(date)', 'EXECUTE') as tavollet,

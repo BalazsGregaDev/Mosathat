@@ -102,7 +102,7 @@ export function AdatvedelemEn() {
         <p>
           We cannot accept a request without a name, phone number and licence plate, because we need these to
           arrange the appointment and to identify the car. Giving your e-mail address is voluntary: if you give
-          it, we send the confirmation and the cancellation link there; if not, we contact you by phone.
+          it, we send the confirmation and the link to your booking page there; if not, we contact you by phone.
         </p>
         <p>
           If the phone number you give is already in our records, we link the request to the existing customer
@@ -112,15 +112,18 @@ export function AdatvedelemEn() {
       </Adatkezeles>
 
       <Adatkezeles
-        cim="2.2 Confirmation e-mail and cancellation link"
-        adatok="e-mail address, booking details (time, service, price), the secret code of the cancellation link"
-        cel="confirming the booking, and enabling you to cancel the appointment with the link in the e-mail"
+        cim="2.2 Confirmation e-mail and your booking page"
+        adatok="e-mail address, booking details (time, service, price, the reason for any surcharge), the secret link of the booking page, the text of change requests sent on the page"
+        cel="confirming the booking and showing its status, enabling you to ask for changes or cancel the appointment online, and letting you know when your car is ready"
         jogalap={SZERZODES}
         megorzes={ELEVULES}
       >
         <p>
-          We do not store the secret code of the cancellation link in a recoverable form, only its one-way hash
-          (SHA-256), from which the link cannot be reconstructed. We do not send newsletters or marketing e-mails.
+          Your booking page is available at a secret, unguessable link that you receive by e-mail or directly from
+          us. The page stays available for 10 days after you collect the car, or for 10 days after the original
+          appointment if the booking was cancelled or missed; after that the link no longer shows any data. The page
+          only shows the booking details, not your phone number or e-mail address. We do not send newsletters or
+          marketing e-mails.
         </p>
       </Adatkezeles>
 

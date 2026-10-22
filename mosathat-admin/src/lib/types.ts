@@ -253,6 +253,10 @@ export interface DayBooking {
   skip_note?: string | null
   skip_huf?: number | null
   ceg_link_company?: string | null
+  felar_indok?: string | null
+  price_adjustment_reason?: string | null
+  nyelv?: 'hu' | 'en'
+  ugyfel_email?: string | null
   napi_perc?: number | null
   kezdve?: string | null
   befejezve?: string | null
@@ -703,6 +707,25 @@ export interface FinishPreview {
   skip_note: string | null
   skipped_areas: ServiceArea[]
   skipped_items: string[]
+  vegosszeg?: number
+  email?: boolean
+}
+
+export interface KeszOpciok {
+  ar?: number | null
+  indok?: string | null
+  email?: boolean
+}
+
+export interface ModositasCsoport {
+  booking_id: string
+  plate_raw: string
+  customer_name: string
+  customer_phone: string
+  service_date: string
+  status: BookingStatus
+  elso: string
+  kerelmek: { id: string; uzenet: string; mikor: string }[]
 }
 
 export interface SheetForBooking {
@@ -788,6 +811,7 @@ export interface OnlineBookingInput {
   model: string | null
   notes: string | null
   weboldal?: string
+  nyelv?: 'hu' | 'en'
 }
 
 export interface CegLink {

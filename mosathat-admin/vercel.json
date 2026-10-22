@@ -9,6 +9,10 @@
       "destination": "/publikus.html"
     },
     {
+      "source": "/foglalas/:kod*",
+      "destination": "/publikus.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
@@ -42,6 +46,23 @@
     },
     {
       "source": "/ceg/(.*)",
+      "headers": [
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/foglalas/(.*)",
       "headers": [
         {
           "key": "Referrer-Policy",

@@ -6,7 +6,7 @@ import KeresAblak from './KeresAblak'
 
 const HALASZTAS_MS = 15 * 60_000
 
-export default function KeresFigyelo({ onMegnyit }: { onMegnyit: (id: string) => void }) {
+export default function KeresFigyelo({ onMegnyit, onLathato }: { onMegnyit: (id: string) => void; onLathato?: (lathato: boolean) => void }) {
   const { data } = useApp()
   const revision = useRevizio()
   const [lista, setLista] = useState<OnlineKeres[]>([])
@@ -33,6 +33,8 @@ export default function KeresFigyelo({ onMegnyit }: { onMegnyit: (id: string) =>
   const varo = lista.filter((k) => (halasztva[k.id] ?? 0) <= ora)
   const mutatott = zarolt ?? varo.find((k) => k.id === valasztott) ?? varo[0] ?? null
   const index = mutatott ? varo.indexOf(mutatott) : -1
+  const lathato = mutatott !== null
+  useEffect(() => { onLathato?.(lathato) }, [onLathato, lathato])
 
   function kesobb() {
     const most = Date.now()

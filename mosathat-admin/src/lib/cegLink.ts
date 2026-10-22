@@ -56,3 +56,7 @@ export async function vagolapra(szoveg: string): Promise<boolean> {
     return ok
   }
 }
+
+export function foglalasOldalCim(token: string, alap: string = window.location.origin): string {
+  return `${alap.replace(/\/+$/, '')}/foglalas/${token}`
+}

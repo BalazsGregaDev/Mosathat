@@ -16,13 +16,14 @@ import type {
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
-  Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
+  Quote, CompanyHit, CompanyCandidate, FinishPreview, KeszOpciok, ModositasCsoport, VacationRow, VacationInput, DayLane, OnlineBookingInput,
   OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
 import type { PublikusMentes } from '../lib/publikusTartalom'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
+import type { FoglalasomAdat } from '../../../supabase/functions/_shared/tipusok.ts'
 import { idoRovidit, num, numOrNull, publikusbol, publikusNapbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { DEMO_BELEPOK, DEMO_STAFF_ID } from './demoBelepok'
 
@@ -91,6 +92,9 @@ export class DemoSource implements DataSource {
         ('00000000-0000-4000-8000-000000000005', current_date + 14, current_date + 17, 'DEMO');
     `)
     this.db = db
+    if (import.meta.env.DEV) {
+      Object.assign(window, { mosathatDemoSql: (sql: string, p: unknown[] = []) => this.rows(sql, p) })
+    }
   }
 
   private static readonly PARSERS = {
@@ -314,6 +318,21 @@ export class DemoSource implements DataSource {
     return r?.x ?? []
   }
 
+  async foglalasom(token: string): Promise<FoglalasomAdat> {
+    const [r] = await this.rows<{ x: FoglalasomAdat }>(`select foglalasom($1) x`, [token])
+    return r.x
+  }
+
+  async foglalasomModositas(token: string, uzenet: string): Promise<FoglalasomAdat> {
+    const [r] = await this.rows<{ x: FoglalasomAdat }>(`select foglalasom_modositas($1, $2) x`, [token, uzenet])
+    return r.x
+  }
+
+  async foglalasomLemondas(token: string): Promise<FoglalasomAdat> {
+    const [r] = await this.rows<{ x: FoglalasomAdat }>(`select foglalasom_lemondas($1) x`, [token])
+    return r.x
+  }
+
   async jogiValtozatok(): Promise<JogiValtozat[]> {
     const [r] = await this.rows<{ x: JogiValtozat[] }>(`select jogi_valtozatok() x`)
     return r?.x ?? []
@@ -435,10 +454,26 @@ export class DemoSource implements DataSource {
     return r.p
   }
 
-  async finishBooking(bookingId: string, done: string[]): Promise<FinishPreview> {
+  async finishBooking(bookingId: string, done: string[], opciok: KeszOpciok = {}): Promise<FinishPreview> {
     const [r] = await this.rows<{ p: FinishPreview }>(
-      `select booking_finish($1::uuid, $2::uuid[]) as p`, [bookingId, done])
+      `select booking_finish($1::uuid, $2::uuid[], $3::integer, $4, $5::boolean) as p`,
+      [bookingId, done, opciok.ar ?? null, opciok.indok ?? null, opciok.email === true])
     return r.p
+  }
+
+  async foglalasLink(bookingId: string): Promise<string> {
+    const [r] = await this.rows<{ t: string }>(`select foglalas_link($1::uuid) t`, [bookingId])
+    return r.t
+  }
+
+  async modositasiKerelmek(): Promise<ModositasCsoport[]> {
+    const [r] = await this.rows<{ x: ModositasCsoport[] | null }>(`select modositasi_kerelmek() x`)
+    return r?.x ?? []
+  }
+
+  async modositasElintezve(bookingId: string): Promise<number> {
+    const [r] = await this.rows<{ n: number }>(`select modositas_elintezve($1::uuid) n`, [bookingId])
+    return Number(r?.n ?? 0)
   }
 
   async setContractFleet(contractId: string, value: boolean): Promise<void> {

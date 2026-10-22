@@ -1,0 +1,24 @@
+.modositas-panel { z-index: 71; }
+.modositas-panel .arpanel-fej { cursor: default; }
+.modositas-panel .keres-lapozo { margin-left: auto; display: inline-flex; align-items: center; gap: var(--t2); font-size: var(--m-sm); }
+.modositas-panel .keres-lapozo .btn { background: transparent; color: inherit; border-color: var(--sotet-keret); }
+.modositas-torzs { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--t4); display: flex; flex-direction: column; gap: var(--t3); }
+.modositas-ki { display: flex; align-items: center; flex-wrap: wrap; gap: var(--t2) var(--t3); }
+.modositas-ki .rendszam {
+  font-family: var(--betu-szam); font-weight: var(--vastag-eros); letter-spacing: .06em;
+  border: 1.5px solid var(--keret-eros); border-radius: var(--r-sm); padding: 2px 8px;
+}
+.modositas-ki .hivas { margin-left: 0; }
+.modositas-uzenetek { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--t2); }
+.modositas-uzenetek li {
+  border-left: 4px solid #24418a; background: #eef2fb; border-radius: 0 var(--r) var(--r) 0;
+  padding: var(--t2) var(--t3); display: flex; flex-direction: column; gap: 3px;
+}
+.modositas-uzenetek li .halk { font-size: var(--m-xs); }
+.modositas-uzenetek li p { font-size: var(--m-md); line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+.modositas-tipp { font-size: var(--m-sm); line-height: 1.5; }
+.modositas-lab {
+  flex: none; display: flex; justify-content: flex-end; gap: var(--t2);
+  padding: var(--t3) var(--t4); border-top: 1px solid var(--keret); background: var(--lap-2);
+}
+.modositas-jelzo { background: #6b3fa0; bottom: calc(var(--t4) + 52px + env(safe-area-inset-bottom)); }

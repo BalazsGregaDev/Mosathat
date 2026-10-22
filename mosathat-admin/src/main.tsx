@@ -24,9 +24,12 @@ import { cegLinkToken } from './lib/cegLink'
 
 const PublikusOldal = lazy(() => import('./features/publikus/PublikusOldal'))
 const CegFoglalasOldal = lazy(() => import('./features/publikus/CegFoglalasOldal'))
+const FoglalasomOldal = lazy(() => import('./features/publikus/FoglalasomOldal'))
 
 const lemondas = /^\/lemondas(\/|$)/.test(window.location.pathname)
 const ceges = /^\/ceg(\/|$)/.test(window.location.pathname)
+const foglalasom = /^\/foglalas(\/|$)/.test(window.location.pathname)
+const foglalasomToken = /^\/foglalas\/([a-f0-9]{32})\/?$/.exec(window.location.pathname)?.[1] ?? null
 const PUBLIKUS_LAPOK: Record<string, 'fooldal' | 'impresszum' | 'adatvedelem'> = {
   '/publikus': 'fooldal',
   '/impresszum': 'impresszum',
@@ -34,7 +37,7 @@ const PUBLIKUS_LAPOK: Record<string, 'fooldal' | 'impresszum' | 'adatvedelem'> =
 }
 const publikus = PUBLIKUS_LAPOK[window.location.pathname.replace(/\/+$/, '') || '/'] ?? null
 
-if (!lemondas && !publikus && !ceges) {
+if (!lemondas && !publikus && !ceges && !foglalasom) {
   nagyitasTiltas()
   billentyuzetHelyreallitas()
 }
@@ -43,6 +46,10 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {lemondas ? (
       <LemondasOldal />
+    ) : foglalasom ? (
+      <Suspense fallback={null}>
+        <FoglalasomOldal token={foglalasomToken} />
+      </Suspense>
     ) : ceges ? (
       <Suspense fallback={null}>
         <CegFoglalasOldal token={cegLinkToken(window.location.pathname)} />

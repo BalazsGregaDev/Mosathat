@@ -13,3 +13,7 @@ export function lemondoLink(alap: string, token: string): string {
   u.searchParams.set('t', token)
   return u.toString()
 }
+
+export function foglalasLink(alap: string, token: string): string {
+  return new URL(`/foglalas/${encodeURIComponent(token)}`, alap).toString()
+}

@@ -22,6 +22,7 @@ import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
 import { useKeszAblak } from './KeszAblak'
 import NapOraSor from './NapOraSor'
 import CegSor from './CegSor'
+import UgyfelLinkSor from './UgyfelLinkSor'
 import { kovetkezoLepesFut } from './lepes'
 
 const MERET_VALASZTO: Valaszthato[] = KATEGORIAK.map((v) => ({ ertek: v, cimke: CATEGORY_LABEL[v] }))
@@ -502,6 +503,8 @@ export default function BookingDetail({
                         </span>
                       </div>
                     )}
+
+                    <UgyfelLinkSor b={b} />
                   </div>
 
                   <div className="szakasz ml-csomag">

@@ -85,7 +85,7 @@ function ugras(e: MouseEvent<HTMLAnchorElement>, cel: Cel | null, nyilvanos = fa
   } else if (nyilvanos) window.location.href = `${nyelviUt('/publikus', nyelv)}#${cel}`
 }
 
-function terkepCimek(u: Uzlet, nyelv: Nyelv) {
+export function terkepCimek(u: Uzlet, nyelv: Nyelv) {
   const cim = `${u.cim.replace(/\.$/, '')}, ${u.irsz}`
   return {
     terkep: `https://www.google.com/maps?q=${encodeURIComponent(`${u.nev}, ${cim}`)}&z=16&hl=${nyelv}&output=embed`,
@@ -192,7 +192,7 @@ function Nav({ jobbra }: { jobbra?: ReactNode }) {
   )
 }
 
-function egerKovet(e: PointerEvent<HTMLElement>) {
+export function egerKovet(e: PointerEvent<HTMLElement>) {
   if (e.pointerType !== 'mouse') return
   const el = e.currentTarget
   const r = el.getBoundingClientRect()
@@ -201,7 +201,7 @@ function egerKovet(e: PointerEvent<HTMLElement>) {
   if (!el.hasAttribute('data-eger')) el.setAttribute('data-eger', '')
 }
 
-function egerElhagy(e: PointerEvent<HTMLElement>) {
+export function egerElhagy(e: PointerEvent<HTMLElement>) {
   e.currentTarget.removeAttribute('data-eger')
 }
 

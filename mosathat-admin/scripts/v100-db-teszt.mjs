@@ -20,7 +20,7 @@ const START = (await egy(`select id from packages where code = 'START'`)).id
 const nap = (await egy(`select d::text d from generate_series(
     (now() at time zone 'Europe/Budapest')::date + 2,
     (now() at time zone 'Europe/Budapest')::date + 20, interval '1 day') d
-  where munkanap(d::date) order by d limit 1`)).d
+  where munkanap(d::date) and extract(isodow from d) < 6 order by d limit 1`)).d
 await ki(TULAJ)
 await terhel(q, nap, 50)
 

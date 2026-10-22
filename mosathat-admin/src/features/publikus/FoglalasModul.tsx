@@ -312,7 +312,7 @@ export function FoglalasUrlap({
         customer_email: adatok.email.trim() || null, plate_raw: adatok.rendszam.trim(),
         brand: adatok.marka.trim() || null, model: adatok.modell.trim() || null,
         notes: adatok.megjegyzes.trim() || null,
-        ...(nyilvanos ? { weboldal } : {}),
+        ...(nyilvanos ? { weboldal, nyelv } : {}),
       })
       const id = typeof eredmeny === 'string' ? eredmeny : eredmeny.id
       setKesz({

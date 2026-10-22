@@ -69,7 +69,8 @@ console.log('\n=== 5) A foglalási hibaüzenet a mentett telefonszámot mondja =
 await ki(TULAJ)
 await ment({ adatok: { telefon: '+36 1 222 3333' } })
 await ki('')
-const nap = (await egy(`select ((now() at time zone 'Europe/Budapest')::date + 3)::text d`)).d
+const nap = (await egy(`select d::date::text d from generate_series((now() at time zone 'Europe/Budapest')::date + 3,
+  (now() at time zone 'Europe/Budapest')::date + 20, interval '1 day') d where munkanap(d::date) and extract(isodow from d) < 6 order by d limit 1`)).d
 const P = (await egy(`select id from packages where code = 'START'`)).id
 const alap = {
   category: 'SZEMELYAUTO', scope: 'TELJES', package_id: P, full_service: false, extras: [],

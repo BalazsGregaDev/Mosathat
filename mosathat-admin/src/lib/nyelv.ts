@@ -107,7 +107,7 @@ export const FELIRAT = {
     hvVissza: 'visszavisszük',
     megerositveCim: 'Az időpontodat rögzítettük, várunk!',
     megerositveSzoveg: 'Nem kell visszaigazolásra várnod. Ha bármi változik, hívj minket.',
-    megerositveEmail: 'Nem kell visszaigazolásra várnod, a visszaigazolást a lemondó linkkel e-mailben is elküldjük.',
+    megerositveEmail: 'Nem kell visszaigazolásra várnod, a visszaigazolást a foglalásod oldalának linkjével e-mailben is elküldjük.',
   },
   en: {
     bennevan: 'included',
@@ -135,7 +135,7 @@ export const FELIRAT = {
     hvVissza: 'return',
     megerositveCim: 'Your booking is confirmed, see you soon!',
     megerositveSzoveg: 'No need to wait for a confirmation. If anything changes, give us a call.',
-    megerositveEmail: 'No need to wait for a confirmation; we’ll also send it by e-mail, with a cancellation link.',
+    megerositveEmail: 'No need to wait for a confirmation; we’ll also send it by e-mail, with a link to your booking page.',
   },
 } as const
 
@@ -187,6 +187,15 @@ const HIBAK: [RegExp, (m: RegExpExecArray) => string][] = [
   [/^Erre a napra már nincs szabad hely céges foglalásra\./, () => 'There is no free capacity left for company bookings on this day. Please choose another day.'],
   [/^A cég szerződésében nincs hozom-viszem\./, () => 'Pick-up & delivery is not part of your company’s contract.'],
   [/^Céges foglalásnál 7:30 és 17:00 között lehet időpontot választani\./, () => 'Company bookings can be made between 7:30 and 17:00.'],
+  [/^Ez a link nem érvényes\. Kérjük, hívj minket: (.+?)\.?$/, (m) => `This link is not valid. Please call us: ${m[1]}.`],
+  [/^Ehhez a foglaláshoz már nem kérhető módosítás\. Kérjük, hívj minket: (.+?)\.?$/,
+    (m) => `Changes can no longer be requested for this booking. Please call us: ${m[1]}.`],
+  [/^Írd le röviden, mit szeretnél módosítani\./, () => 'Please describe briefly what you would like to change.'],
+  [/^Az üzenet legfeljebb 1000 karakter lehet\./, () => 'The message can be at most 1000 characters long.'],
+  [/^Ma már több módosítási kérést küldtél\. Kérjük, hívj minket: (.+?)\.?$/,
+    (m) => `You have already sent several change requests today. Please call us: ${m[1]}.`],
+  [/^A foglalás online már nem mondható le\. Kérjük, hívj minket: (.+?)\.?$/,
+    (m) => `The booking can no longer be cancelled online. Please call us: ${m[1]}.`],
   [HALOZATI, () => 'We could not reach the server. Please check your internet connection and try again.'],
 ]
 

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
 import { ft, hibaSzoveg } from '../../lib/format'
-import type { BookingTask, FinishPreview } from '../../lib/types'
+import type { BookingTask, DayBooking, FinishPreview } from '../../lib/types'
 import Ablak from '../common/Ablak'
 
 interface Kerdes {
@@ -42,6 +42,10 @@ interface Csoport {
 function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null) => void }) {
   const { data } = useApp()
   const [lista, setLista] = useState<BookingTask[] | null>(null)
+  const [b, setB] = useState<DayBooking | null>(null)
+  const [arSzoveg, setArSzoveg] = useState<string | null>(null)
+  const [indok, setIndok] = useState<string | null>(null)
+  const [email, setEmail] = useState(false)
   const [pipalt, setPipalt] = useState<Set<string>>(new Set())
   const [elonezet, setElonezet] = useState<FinishPreview | null>(null)
   const [megy, setMegy] = useState(false)
@@ -51,8 +55,8 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
 
   useEffect(() => {
     let el = true
-    data.getTasks(k.bookingId)
-      .then((t) => { if (el) setLista(t) })
+    Promise.all([data.getTasks(k.bookingId), data.getBooking(k.bookingId)])
+      .then(([t, f]) => { if (el) { setLista(t); setB(f) } })
       .catch((e) => { if (el) setHiba(hibaSzoveg(e)) })
     return () => { el = false }
   }, [data, k.bookingId])
@@ -101,14 +105,32 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
     })
   }
 
+  const becsult = b?.estimated_price_huf ?? 0
+  const alap = b ? (b.final_price_huf ?? b.estimated_price_huf) : 0
+  const javasolt = pipalt.size > 0 && elonezet && elonezet.skip_huf > 0 ? Math.max(alap - elonezet.skip_huf, 0) : alap
+  const arBeirt = arSzoveg ?? String(javasolt)
+  const vegosszeg = Math.round(Number(arBeirt))
+  const arJo = arBeirt.trim() !== '' && Number.isFinite(vegosszeg) && vegosszeg >= 0
+  const ceges = Boolean(b?.contract_kind || b?.ceg_link_company)
+  const felar = arJo && vegosszeg > becsult
+  const indokSzoveg = indok ?? (b?.felar_indok || b?.price_adjustment_reason || '')
+  const indokHianyzik = felar && !ceges && indokSzoveg.trim() === ''
+  const kuldheto = arJo && !indokHianyzik && b !== null
+
   async function ment(mind = false) {
-    if (megyRef.current) return
+    if (megyRef.current || !kuldheto) return
     megyRef.current = true
     setMegy(true)
     setHiba(null)
     try {
       const pipak = mind ? (lista ?? []).filter((t) => !t.done).map((t) => t.id) : [...pipalt]
-      onVege(await data.finishBooking(k.bookingId, pipak))
+      const eredmeny = await data.finishBooking(k.bookingId, pipak, {
+        ar: arSzoveg !== null ? vegosszeg : null,
+        indok: felar ? indokSzoveg.trim() : null,
+        email,
+      })
+      if (eredmeny.email) void data.ertesitesekKuldese().catch(() => null)
+      onVege(eredmeny)
     } catch (e) {
       setHiba(hibaSzoveg(e))
       megyRef.current = false
@@ -194,17 +216,52 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
           </div>
         )}
 
+        {b && lista && (
+          <div className="kesz-vegosszeg">
+            <div className="kesz-vegosszeg-sor">
+              <label htmlFor="kesz-ar">Végösszeg</label>
+              <input id="kesz-ar" className="beviteli szam" type="number" inputMode="numeric" min={0} step={100}
+                     value={arBeirt} onChange={(e) => setArSzoveg(e.target.value)} />
+              <span className="halk">Ft</span>
+              <span className="halk kesz-becsult">becsült: {ft(becsult)}</span>
+            </div>
+            {felar && (
+              <div className="kesz-indok">
+                <label htmlFor="kesz-indok">
+                  Miért több? {ceges ? <span className="halk">(céges foglalás, az ügyfél nem látja)</span>
+                    : <span className="halk">Az ügyfél a foglalása oldalán látja.</span>}
+                </label>
+                <textarea id="kesz-indok" className="beviteli" rows={2} maxLength={1000} value={indokSzoveg}
+                          placeholder="pl. erősen kutyaszőrös belső, plusz fél óra porszívózás"
+                          onChange={(e) => setIndok(e.target.value)} />
+              </div>
+            )}
+            {b.ugyfel_email && (
+              <label className="jelolo kesz-email" data-aktiv={email}>
+                <input type="checkbox" checked={email} aria-label="E-mail az ügyfélnek, hogy elkészült"
+                       onChange={(e) => setEmail(e.target.checked)} />
+                <span style={{ flex: 1 }}>
+                  <div>E-mail az ügyfélnek, hogy elkészült</div>
+                  <div className="halk" style={{ fontSize: 'var(--m-xs)' }}>
+                    {b.ugyfel_email}{data.isDemo ? ' · demóban nem megy ki levél' : ''}
+                  </div>
+                </span>
+              </label>
+            )}
+          </div>
+        )}
+
         {hiba && <div className="kartya-hiba" role="alert">{hiba}</div>}
 
         <div className="kerdes-gombok">
           <button type="button" className="btn" disabled={megy} onClick={megse}>Mégse</button>
           {!mindKesz && (
-            <button type="button" className="btn btn-fo" disabled={megy || lista === null}
+            <button type="button" className="btn btn-fo" disabled={megy || lista === null || !kuldheto}
                     onClick={() => void ment(true)}>
               Mindennel elkészültünk
             </button>
           )}
-          <button type="button" className={`btn ${mindKesz ? 'btn-fo' : ''}`} disabled={megy || lista === null}
+          <button type="button" className={`btn ${mindKesz ? 'btn-fo' : ''}`} disabled={megy || lista === null || !kuldheto}
                   onClick={() => void ment()}>
             {mindKesz ? 'Kész van' : 'Kész van, a többi kimaradt'}
           </button>

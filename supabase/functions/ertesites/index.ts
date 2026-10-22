@@ -1,8 +1,21 @@
 import { aktivDolgozo, cors, json, kell, lehet, szerverKliens, uzlet } from '../_shared/kornyezet.ts'
 import { resendKuldes } from '../_shared/resend.ts'
 import { sorFeldolgozas } from '../_shared/sor.ts'
-import { ujToken } from '../_shared/token.ts'
-import type { SorTetel } from '../_shared/tipusok.ts'
+import type { SorTetel, Uzlet } from '../_shared/tipusok.ts'
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
+
+async function uzletAdatai(db: SupabaseClient): Promise<Uzlet> {
+  const alap = uzlet()
+  const { data } = await db.from('publikus_adatok').select('nev, telefon, irsz, cim, haz').maybeSingle()
+  const ertek = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
+  const cim = [ertek(data?.irsz), ertek(data?.cim)].filter(Boolean).join(', ')
+  const haz = ertek(data?.haz)
+  return {
+    nev: ertek(data?.nev) ?? alap.nev,
+    telefon: ertek(data?.telefon) ?? alap.telefon,
+    cim: cim ? (haz ? `${cim} (${haz})` : cim) : alap.cim,
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors() })
@@ -24,10 +37,6 @@ Deno.serve(async (req) => {
         if (error) throw new Error(error.message)
         return (data ?? []) as SorTetel[]
       },
-      async linkMentes(foglalasId, token) {
-        const { error } = await db.rpc('lemondo_link_mentes', { p_booking: foglalasId, p_token: token })
-        if (error) throw new Error(error.message)
-      },
       async eredmeny(id, ok, szolgaltatoId, hiba) {
         const { error } = await db.rpc('ertesites_eredmeny', {
           p_id: id, p_ok: ok, p_provider_id: szolgaltatoId, p_hiba: hiba,
@@ -35,9 +44,8 @@ Deno.serve(async (req) => {
         if (error) throw new Error(error.message)
       },
       kuld: (level) => resendKuldes(resend, level),
-      ujToken,
-      lemondasAlap: kell('LEMONDAS_URL'),
-      uzlet: uzlet(),
+      oldalAlap: kell('LEMONDAS_URL'),
+      uzlet: await uzletAdatai(db),
     })
     return json(eredmeny)
   } catch (e) {

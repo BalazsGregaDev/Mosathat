@@ -405,6 +405,25 @@ begin
   perform public.online_keres_dontes(v_id, true);
 end $$;
 
+set constraints all immediate;
+
+do $$
+begin
+  if to_regclass('public.booking_links') is null then
+    return;
+  end if;
+  with sorrend as (
+    select l.booking_id,
+           left(md5('demo-foglalas-' || v.plate_normalized || '-' || (b.service_date - current_date)::text || '-'
+                    || row_number() over (partition by v.plate_normalized, b.service_date
+                                          order by b.fleet_index nulls first, b.start_at, b.drop_off_at, b.created_at, b.id)::text), 32) as uj
+      from public.booking_links l
+      join public.bookings b on b.id = l.booking_id
+      join public.vehicles v on v.id = b.vehicle_id
+  )
+  update public.booking_links l set token = s.uj from sorrend s where s.booking_id = l.booking_id;
+end $$;
+
 select 'ügyfél' as mi, count(*) from public.customers
 union all select 'jármű',    count(*) from public.vehicles
 union all select 'foglalás', count(*) from public.bookings

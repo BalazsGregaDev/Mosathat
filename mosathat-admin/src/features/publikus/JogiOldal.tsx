@@ -106,7 +106,7 @@ function Adatvedelem() {
         <p>
           A név, a telefonszám és a rendszám megadása nélkül a kérést nem tudjuk fogadni, mert ezek kellenek
           az egyeztetéshez és az autó azonosításához. Az e-mail cím megadása önkéntes: ha megadod, ide küldjük a
-          visszaigazolást és a lemondó linket, ha nem, telefonon keresünk.
+          visszaigazolást és a foglalásod oldalának linkjét, ha nem, telefonon keresünk.
         </p>
         <p>
           Ha a megadott telefonszám már szerepel a nyilvántartásunkban, a kérést a meglévő ügyféladatokhoz
@@ -116,15 +116,17 @@ function Adatvedelem() {
       </Adatkezeles>
 
       <Adatkezeles
-        cim="2.2 Visszaigazoló e-mail és lemondó link"
-        adatok="e-mail cím, a foglalás adatai (időpont, szolgáltatás, ár), a lemondó link titkos kódja"
-        cel="a foglalás visszaigazolása, és hogy az e-mailben kapott linkkel le tudd mondani az időpontot"
+        cim="2.2 Visszaigazoló e-mail és a foglalás oldala"
+        adatok="e-mail cím, a foglalás adatai (időpont, szolgáltatás, ár, egy esetleges felár indoka), a foglalás oldalának titkos linkje, az oldalon küldött módosítási kérések szövege"
+        cel="a foglalás visszaigazolása és állapotának követése, hogy online kérhess módosítást vagy lemondhasd az időpontot, és hogy szólhassunk, ha elkészült az autód"
         jogalap={SZERZODES}
         megorzes={ELEVULES}
       >
         <p>
-          A lemondó link titkos kódját nem tároljuk visszafejthető formában, csak annak egyirányú lenyomatát
-          (SHA-256), így abból a link nem állítható elő. Hírlevelet és reklám célú e-mailt nem küldünk.
+          A foglalás oldala egy titkos, kitalálhatatlan linken érhető el, amelyet e-mailben vagy tőlünk közvetlenül
+          kapsz meg. Az oldal az autó átvétele után 10 napig, lemondott vagy elmaradt foglalásnál az eredeti időpont
+          után 10 napig él, utána a link már nem mutat adatot. Az oldalon csak a foglalás adatai látszanak, a
+          telefonszámod és az e-mail címed nem. Hírlevelet és reklám célú e-mailt nem küldünk.
         </p>
       </Adatkezeles>
 

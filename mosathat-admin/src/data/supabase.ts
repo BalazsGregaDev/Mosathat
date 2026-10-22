@@ -8,13 +8,14 @@ import type {
   ContractInput, ContractRow, Extra, LatestStart,
   NewBookingInput, NewPassInput, NewStaffInput, OpeningDay, PassBalanceRow, SearchHit, ServiceArea,
   RolePermission, ShopSettings, StaffRole, StaffRow, StandingCar, VehicleCategory, WeekDay, WorkWindow,
-  Quote, CompanyHit, CompanyCandidate, FinishPreview, VacationRow, VacationInput, DayLane, OnlineBookingInput,
+  Quote, CompanyHit, CompanyCandidate, FinishPreview, KeszOpciok, ModositasCsoport, VacationRow, VacationInput, DayLane, OnlineBookingInput,
   OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny, PublikusNapAdat,
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
 import type { PublikusMentes } from '../lib/publikusTartalom'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
+import type { FoglalasomAdat } from '../../../supabase/functions/_shared/tipusok.ts'
 import { idoRovidit, num, numOrNull, publikusbol, publikusNapbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { EloFrissites } from './elo'
 import { tokenFetch } from './tokenFetch'
@@ -334,6 +335,24 @@ export class SupabaseSource implements DataSource {
     return (data as string[] | null) ?? []
   }
 
+  async foglalasom(token: string): Promise<FoglalasomAdat> {
+    const { data, error } = await this.sb.rpc('foglalasom', { p_token: token })
+    if (error) fail('Foglalás', error)
+    return data as FoglalasomAdat
+  }
+
+  async foglalasomModositas(token: string, uzenet: string): Promise<FoglalasomAdat> {
+    const { data, error } = await this.sb.rpc('foglalasom_modositas', { p_token: token, p_uzenet: uzenet })
+    if (error) fail('Módosítási kérés', error)
+    return data as FoglalasomAdat
+  }
+
+  async foglalasomLemondas(token: string): Promise<FoglalasomAdat> {
+    const { data, error } = await this.sb.rpc('foglalasom_lemondas', { p_token: token })
+    if (error) fail('Lemondás', error)
+    return data as FoglalasomAdat
+  }
+
   async jogiValtozatok(): Promise<JogiValtozat[]> {
     const { data, error } = await this.sb.rpc('jogi_valtozatok')
     if (error) fail('Jogi szövegek', error)
@@ -481,10 +500,31 @@ export class SupabaseSource implements DataSource {
     return data as FinishPreview
   }
 
-  async finishBooking(bookingId: string, done: string[]): Promise<FinishPreview> {
-    const { data, error } = await this.sb.rpc('booking_finish', { p_booking_id: bookingId, p_done: done })
+  async finishBooking(bookingId: string, done: string[], opciok: KeszOpciok = {}): Promise<FinishPreview> {
+    const { data, error } = await this.sb.rpc('booking_finish', {
+      p_booking_id: bookingId, p_done: done,
+      p_ar: opciok.ar ?? null, p_indok: opciok.indok ?? null, p_email: opciok.email === true,
+    })
     if (error) fail('Kész van', error)
     return data as FinishPreview
+  }
+
+  async foglalasLink(bookingId: string): Promise<string> {
+    const { data, error } = await this.sb.rpc('foglalas_link', { p_booking: bookingId })
+    if (error) fail('Ügyféllink', error)
+    return data as string
+  }
+
+  async modositasiKerelmek(): Promise<ModositasCsoport[]> {
+    const { data, error } = await this.sb.rpc('modositasi_kerelmek')
+    if (error) fail('Módosítási kérések', error)
+    return (data as ModositasCsoport[] | null) ?? []
+  }
+
+  async modositasElintezve(bookingId: string): Promise<number> {
+    const { data, error } = await this.sb.rpc('modositas_elintezve', { p_booking: bookingId })
+    if (error) fail('Módosítási kérés', error)
+    return Number(data ?? 0)
   }
 
   async setContractFleet(contractId: string, value: boolean): Promise<void> {

@@ -742,7 +742,7 @@
 .lap.munkalap-urlap .ml-extrak .extra-cimkek { justify-content: flex-start; }
 .lap.munkalap-urlap .ml-extrak .osszecsuk:disabled { cursor: default; background: var(--lap); }
 
-.lap.munkalap-urlap[data-zarolt] .adatsor:not(.napora-adat) > .ertek {
+.lap.munkalap-urlap[data-zarolt] .adatsor:not(.napora-adat):not(.ml-ugyfellink):not(.ml-igazolo) > .ertek {
   min-height: 44px;
   border: 1px solid var(--keret);
   background: var(--lap-2);
@@ -755,3 +755,19 @@
   .fedo.foglalas-fedo .lap.foglalas-urlap,
   .fedo.munkalap-fedo .lap.munkalap-urlap { zoom: .88; }
 }
+
+.kesz-vegosszeg { display: flex; flex-direction: column; gap: var(--t2); }
+.kesz-vegosszeg-sor { display: flex; align-items: center; gap: var(--t2); flex-wrap: wrap; }
+.kesz-vegosszeg-sor label { font-weight: var(--vastag-eros); margin-right: var(--t1); }
+.kesz-vegosszeg-sor .beviteli { width: 130px; padding: 8px 10px; font-size: var(--m-md); }
+.kesz-becsult { margin-left: auto; font-size: var(--m-sm); }
+.kesz-indok { display: flex; flex-direction: column; gap: 4px; }
+.kesz-indok label { font-size: var(--m-sm); font-weight: var(--vastag-eros); }
+.kesz-indok textarea.beviteli { min-height: 56px; font-size: var(--m-sm); padding: 8px 10px; }
+.kesz-email { padding: 9px var(--t3); }
+
+.lap.munkalap-urlap .adatsor.ml-ugyfellink > .ertek { flex-wrap: wrap; }
+.lap.munkalap-urlap .ml-ugyfellink .btn { flex: 1 1 0; min-width: 110px; justify-content: center; text-align: center; text-decoration: none; }
+.lap.munkalap-urlap .ml-ugyfellink a.btn { color: inherit; }
+.kesz-ablak .kerdes-gombok { flex-wrap: wrap; }
+.kesz-ablak .kerdes-gombok .btn { flex: 1 1 auto; }

@@ -128,7 +128,7 @@ await p.waitForTimeout(1500)
     [...document.querySelectorAll('dialog[aria-label="Munkalap"] .ml-felso .adatsor')]
       .map((e) => e.firstElementChild.textContent.trim()))
   console.log(`         ${JSON.stringify(cimkek)}`)
-  ok('a mezők sorrendje (mint az Új időpont ablakban)', ['Rendszám', 'Név', 'Telefon', 'Cég', 'Igazolólap', 'Terjedelem', 'Típus',
+  ok('a mezők sorrendje (mint az Új időpont ablakban)', ['Rendszám', 'Név', 'Telefon', 'Cég', 'Igazolólap', 'Az ügyfél foglalási oldala', 'Terjedelem', 'Típus',
     'Hozza', 'Viszi', 'Jármű típus', 'Méret', 'Márka', 'Típus'], cimkek)
   const ceg = await p.locator('.adatsor').filter({ hasText: /^Cég/ }).first().innerText()
   ok('a cég rögzült elsőre is', true, ceg.includes('Autó Trans'))

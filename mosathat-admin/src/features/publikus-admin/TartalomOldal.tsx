@@ -17,7 +17,9 @@ import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import type { Catalog, PublikusAdat } from '../../data/source'
 import type { DayLane, Quote } from '../../lib/types'
 import type { Mod } from '../../lib/arculat'
-import { KoncepcioResz, type KoncepcioReszNev } from '../arculat/Koncepcio'
+import { KoncepcioLap, KoncepcioResz, type KoncepcioReszNev } from '../arculat/Koncepcio'
+import { FoglalasomTartalom } from '../publikus/FoglalasomOldal'
+import type { FoglalasomAdat, OldalAllapot } from '../../../../supabase/functions/_shared/tipusok.ts'
 import { FoglalasUrlap, type Bemutato, type FoglalasForras } from '../publikus/FoglalasModul'
 import { TartalomProvider, useSz } from '../publikus/tartalom'
 import { usePublikusAdat } from '../publikus/usePublikusAdat'
@@ -37,6 +39,7 @@ interface Sav {
   bemutato?: (b: BemutatoAlap) => Bemutato
   fej?: boolean
   ful?: boolean
+  ugyfel?: OldalAllapot
 }
 
 interface BemutatoAlap {
@@ -100,6 +103,30 @@ const SAVOK: Sav[] = [
   { id: 'hely', cim: 'Hol vagyunk', leiras: 'A címek és az adatok az Elérhetőség menüből jönnek, itt a feliratok.', oldalResz: 'hely',
     kulcsok: ['hely.cim', 'hely.bevezeto', 'cimke.cim', 'cimke.nyitvatartas', 'cimke.leadas', 'cimke.telefon',
       'hely.utvonal', 'hely.terkep_szoveg', 'hely.terkep_gomb'] },
+  { id: 'ugyfel-alap', cim: 'Foglalás oldala: visszaigazolt foglalás', ugyfel: 'VISSZAIGAZOLVA',
+    leiras: 'Ezt látja az ügyfél a visszaigazoló e-mail linkjén. Az előnézetben a hozás ideje és a csomag módosult, és van egy elintézett módosítási kérés.',
+    kulcsok: ['ugyfel.cim', 'ugyfel.visszaigazolva.cim', 'ugyfel.visszaigazolva.szoveg', 'ugyfel.keres.cim', 'ugyfel.keres.szoveg',
+      'ugyfel.lepes.keres', 'ugyfel.lepes.visszaigazolva', 'ugyfel.lepes.kesz', 'ugyfel.lepes.atveve',
+      'ugyfel.adatok', 'ugyfel.modositva', 'ugyfel.modositva_magyarazat', 'ugyfel.sor.nap', 'ugyfel.sor.kezdes', 'ugyfel.sor.hozas',
+      'ugyfel.sor.erte', 'ugyfel.sor.kesz', 'ugyfel.sor.elvitel', 'ugyfel.sor.vissza', 'ugyfel.sor.zarasig', 'ugyfel.sor.auto',
+      'ugyfel.sor.szolgaltatas', 'ugyfel.sor.extrak', 'ugyfel.sor.ar',
+      'ugyfel.modositas.cim', 'ugyfel.modositas.szoveg', 'ugyfel.modositas.minta', 'ugyfel.modositas.gomb', 'ugyfel.modositas.kuldes',
+      'ugyfel.modositas.uzenetek', 'ugyfel.modositas.elkuldve', 'ugyfel.modositas.elintezve',
+      'ugyfel.lemondas.cim', 'ugyfel.lemondas.szoveg', 'ugyfel.lemondas.gomb', 'ugyfel.lemondas.kerdes', 'ugyfel.lemondas.igen',
+      'ugyfel.lemondas.nem', 'ugyfel.kapcsolat'] },
+  { id: 'ugyfel-kesz', cim: 'Foglalás oldala: elkészült az autó', ugyfel: 'KESZ',
+    leiras: 'A Kész van gomb után. A felár oka csak akkor látszik, ha a végösszeg magasabb lett a becsültnél.',
+    kulcsok: ['ugyfel.kesz.cim', 'ugyfel.kesz.szoveg', 'ugyfel.kesz.doboz', 'ugyfel.kesz.legkesobb', 'ugyfel.sor.vegosszeg',
+      'ugyfel.felar', 'ugyfel.kimaradt'] },
+  { id: 'ugyfel-atveve', cim: 'Foglalás oldala: átvéve', ugyfel: 'ATVEVE',
+    leiras: 'Az Átvette gomb után 10 napig ez látszik. A Google-értékelés linkje az Elérhetőség menüben állítható.',
+    kulcsok: ['ugyfel.atveve.cim', 'ugyfel.atveve.szoveg', 'ugyfel.ertekeles.cim', 'ugyfel.ertekeles.szoveg', 'ugyfel.ertekeles.gomb',
+      'ugyfel.fooldal', 'ugyfel.uj'] },
+  { id: 'ugyfel-egyeb', cim: 'Foglalás oldala: lemondva, lejárt és a többi', ugyfel: 'LEMONDVA',
+    leiras: 'Az előnézet a lemondott foglalás. Ugyanígy néz ki az elutasított, az elmaradt, a be nem fért és a lejárt link is, csak a cím és a szöveg más.',
+    kulcsok: ['ugyfel.lemondva.cim', 'ugyfel.lemondva.szoveg', 'ugyfel.elutasitva.cim', 'ugyfel.elutasitva.szoveg',
+      'ugyfel.nem_jott.cim', 'ugyfel.nem_jott.szoveg', 'ugyfel.nem_fert.cim', 'ugyfel.nem_fert.szoveg',
+      'ugyfel.lejart.cim', 'ugyfel.lejart.szoveg', 'ugyfel.ismeretlen.cim', 'ugyfel.ismeretlen.szoveg'] },
   { id: 'lab', cim: 'Lábléc', leiras: 'Az oldal alja. A Cím és a Nyitvatartás felirat a Hol vagyunk sávban módosítható, az Impresszum és az Adatvédelmi tájékoztató linkje nem módosítható.', oldalResz: 'lab',
     kulcsok: ['lab.leiras', 'lab.leadas', 'cimke.kapcsolat', 'gomb.idopont'] },
 ]
@@ -401,6 +428,27 @@ function FoglalasLepes({ lepes, bemutato, mod, k, lemondasOra, forras }: {
   )
 }
 
+function mintaFoglalas(allapot: OldalAllapot): FoglalasomAdat {
+  const nap = napPlusz(maStr(), 3)
+  const most = {
+    nap, tipus: 'LEADOS' as const, kezdes: null, hozas: '08:00', kesz: null, elvitel_nap: nap, elvitel: '16:30',
+    csomag: 'Premium', csomag_en: 'Premium', full_service: false, terjedelem: 'TELJES' as const, kategoria: 'SZEMELYAUTO' as const,
+    extrak: [], rendszam: 'ABC-123', marka: 'Skoda', modell: 'Octavia', ar: 15600,
+  }
+  const kesz = new Date()
+  kesz.setHours(17, 0, 0, 0)
+  return {
+    allapot, nyelv: 'hu', nev: 'Kovács Péter', ceges: false,
+    most, eredeti: { ...most, hozas: '09:00', csomag: 'Start', csomag_en: 'Start', ar: 12800 },
+    ar: { becsult: 15600, vegleges: 18600, felar_indok: 'erősen kutyaszőrös belső', kimaradt: null, kimaradt_huf: null },
+    kesz_ig: kesz.toISOString(), lemondhato: allapot === 'VISSZAIGAZOLVA', lemondas_hatarido: new Date(Date.now() + 2 * 86400000).toISOString(),
+    modosithato: allapot === 'VISSZAIGAZOLVA' || allapot === 'KESZ',
+    kerelmek: allapot === 'VISSZAIGAZOLVA'
+      ? [{ uzenet: 'Egy órával korábban hoznám, 8:00 körül.', mikor: new Date(Date.now() - 3600000).toISOString(), elintezve: new Date().toISOString() }]
+      : [],
+  }
+}
+
 function SavElonezet({ sav, pub, forras, alap }: {
   sav: Sav
   pub: PublikusAdat
@@ -417,6 +465,17 @@ function SavElonezet({ sav, pub, forras, alap }: {
     )
   }
   if (sav.fej) return <Elonezet szel={660}><FoglalasFej mod={mod} /></Elonezet>
+  if (sav.ugyfel) {
+    return (
+      <Elonezet szel={900} keret>
+        <div className="pub-ceg pub-ugyfel">
+          <KoncepcioLap mod={mod} k={pub.katalogus}>
+            <FoglalasomTartalom adat={mintaFoglalas(sav.ugyfel)} muvelet={null} google="#" />
+          </KoncepcioLap>
+        </div>
+      </Elonezet>
+    )
+  }
   if (sav.lepes && sav.bemutato) {
     return (
       <Elonezet szel={660}>
@@ -548,7 +607,7 @@ export default function TartalomOldal({ onUgras, visszaterve = null }: {
       {SAVOK.map((sav) => {
         const mezok = sav.kulcsok.filter((k) => latszik(k, sav))
         if (mezok.length === 0) return null
-        const szeles = Boolean(sav.oldalResz)
+        const szeles = Boolean(sav.oldalResz || sav.ugyfel)
         const ny = savNyelv[sav.id] ?? 'hu'
         return (
           <Fragment key={sav.id}>

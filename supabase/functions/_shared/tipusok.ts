@@ -34,11 +34,68 @@ export interface LemondasAllapot {
   foglalas?: Foglalas
 }
 
+export type OldalAllapot =
+  | 'KERES' | 'VISSZAIGAZOLVA' | 'KESZ' | 'ATVEVE' | 'NEM_FERT_BE'
+  | 'LEMONDVA' | 'ELUTASITVA' | 'NEM_JOTT' | 'LEJART' | 'ISMERETLEN'
+
+export interface FoglalasKep {
+  nap: string
+  tipus: 'VAROS' | 'LEADOS' | 'HOZOMVISZEM'
+  kezdes: string | null
+  hozas: string | null
+  kesz: string | null
+  elvitel_nap: string | null
+  elvitel: string | null
+  csomag: string | null
+  csomag_en: string | null
+  full_service: boolean
+  terjedelem: 'TELJES' | 'KULSO' | 'BELSO'
+  kategoria: 'SZEMELYAUTO' | 'SUV' | 'KISBUSZ'
+  extrak: { nev: string; nev_en: string; db: number }[]
+  rendszam: string
+  marka: string | null
+  modell: string | null
+  ar?: number | null
+}
+
+export interface ModositasiKerelem {
+  uzenet: string
+  mikor: string
+  elintezve: string | null
+}
+
+export interface FoglalasomAdat {
+  allapot: OldalAllapot
+  nyelv?: 'hu' | 'en'
+  nev?: string
+  ceges?: boolean
+  most?: FoglalasKep
+  eredeti?: FoglalasKep
+  ar?: {
+    becsult: number | null
+    vegleges: number | null
+    felar_indok: string | null
+    kimaradt: string | null
+    kimaradt_huf: number | null
+  } | null
+  kesz_ig?: string | null
+  atveve?: string | null
+  lejar?: string | null
+  lemondhato?: boolean
+  lemondas_hatarido?: string | null
+  modosithato?: boolean
+  nyitott_kerelem?: number
+  kerelmek?: ModositasiKerelem[]
+}
+
 export interface SorTetel {
   id: string
-  kind: 'BOOKING_CONFIRMED'
+  kind: 'BOOKING_CONFIRMED' | 'CAR_READY'
   to: string
+  link: string | null
+  nyelv: 'hu' | 'en'
   lemondas: LemondasAllapot
+  oldal: FoglalasomAdat
 }
 
 export interface Uzlet {

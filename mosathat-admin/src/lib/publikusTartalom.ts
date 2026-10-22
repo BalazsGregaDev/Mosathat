@@ -28,6 +28,7 @@ export interface PublikusAdatokNyers {
   konyvelo_cim?: string | null
   kamera_megorzes?: string | null
   kamera_megorzes_en?: string | null
+  google_ertekeles?: string | null
 }
 
 export type AdatMezo = keyof PublikusAdatokNyers
@@ -266,7 +267,7 @@ export interface SzovegDef {
   valtozok?: string[]
 }
 
-export type SzovegCsoport = 'menu' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'foglalas' | 'adatok' | 'hely' | 'lab' | 'cimkek' | 'oldal'
+export type SzovegCsoport = 'menu' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'foglalas' | 'adatok' | 'hely' | 'lab' | 'cimkek' | 'oldal' | 'ugyfel'
 
 export const CSOPORT_NEV: Record<SzovegCsoport, string> = {
   menu: 'Menü és gombok',
@@ -280,6 +281,7 @@ export const CSOPORT_NEV: Record<SzovegCsoport, string> = {
   lab: 'Lábléc',
   cimkek: 'Adatcímkék (Hol vagyunk, lábléc)',
   oldal: 'Böngésző',
+  ugyfel: 'Foglalás oldala (az ügyfélnek)',
 }
 
 export const SZOVEGEK = [
@@ -400,7 +402,7 @@ export const SZOVEGEK = [
   { kulcs: 'foglalas.mezo.megjegyzes', csoport: 'adatok', cimke: 'Mező: megjegyzés', alap: 'Megjegyzés', en: 'Notes' },
   { kulcs: 'foglalas.minta.megjegyzes', csoport: 'adatok', cimke: 'Megjegyzés mező halvány szövege', alap: 'pl. kutyaszőr a hátsó ülésen', en: 'e.g. dog hair on the back seat' },
   { kulcs: 'foglalas.feltetel', csoport: 'adatok', cimke: 'Elfogadandó feltétel', sor: true,
-    alap: 'Tudomásul veszem, hogy ez foglalási kérés: az időpont akkor végleges, amikor visszaigazoljuk. Ha megadom az e-mail címem, a visszaigazolásban kapok egy lemondó linket, amellyel az időpont előtt legalább {lemondas_ora} órával lemondhatom a foglalást. Ha ez a határidő már lejárt, telefonon tudom jelezni.', en: 'I understand that this is a booking request: the appointment becomes final when you confirm it. If I give my e-mail address, the confirmation will include a cancellation link that I can use to cancel at least {lemondas_ora} hours before the appointment. After that deadline I can let you know by phone.' },
+    alap: 'Tudomásul veszem, hogy ez foglalási kérés: az időpont akkor végleges, amikor visszaigazoljuk. Ha megadom az e-mail címem, a visszaigazolásban kapok egy linket a foglalásom oldalára, ahol módosítást kérhetek, és az időpont előtt legalább {lemondas_ora} órával lemondhatom a foglalást. Ha ez a határidő már lejárt, telefonon tudom jelezni.', en: 'I understand that this is a booking request: the appointment becomes final when you confirm it. If I give my e-mail address, the confirmation will include a link to my booking page, where I can ask for changes and cancel at least {lemondas_ora} hours before the appointment. After that deadline I can let you know by phone.' },
   { kulcs: 'foglalas.adatvedelem', csoport: 'adatok', cimke: 'Adatvédelmi mondat (utána jön a link)', alap: 'A megadott adatokat a foglalás teljesítéséhez kezeljük. Részletek:', en: 'We process the details you provide in order to fulfil your booking. More information:' },
   { kulcs: 'foglalas.kezdes_cimke', csoport: 'adatok', cimke: 'Összegzés: kezdés', alap: 'kezdés', en: 'start' },
   { kulcs: 'foglalas.hozas_cimke', csoport: 'adatok', cimke: 'Összegzés: hozás', alap: 'hozás', en: 'drop-off' },
@@ -412,7 +414,7 @@ export const SZOVEGEK = [
   { kulcs: 'foglalas.kuldes_folyamatban', csoport: 'adatok', cimke: 'Küldés gomb küldés közben', alap: 'Küldés…', en: 'Sending…' },
   { kulcs: 'foglalas.siker', csoport: 'adatok', cimke: 'Köszönő üzenet címe', alap: 'Köszönjük, megkaptuk a foglalási kérésed!', en: 'Thank you, we’ve received your booking request!' },
   { kulcs: 'foglalas.siker_elvitel', csoport: 'adatok', cimke: 'Köszönő üzenet: elvitel', alap: 'Elviheted: {mikor}.', valtozok: ['mikor'], en: 'You can collect it: {mikor}.' },
-  { kulcs: 'foglalas.siker_email', csoport: 'adatok', cimke: 'Köszönő üzenet, ha adott meg e-mailt', sor: true, alap: 'Amint visszaigazoltuk, e-mailt küldünk róla, benne a lemondó linkkel.', en: 'As soon as we’ve confirmed it, we’ll send you an e-mail with a cancellation link.' },
+  { kulcs: 'foglalas.siker_email', csoport: 'adatok', cimke: 'Köszönő üzenet, ha adott meg e-mailt', sor: true, alap: 'Amint visszaigazoltuk, e-mailt küldünk róla, benne a foglalásod oldalának linkjével.', en: 'As soon as we’ve confirmed it, we’ll send you an e-mail with a link to your booking page.' },
   { kulcs: 'foglalas.siker_telefon', csoport: 'adatok', cimke: 'Köszönő üzenet e-mail nélkül', alap: 'Hamarosan visszaigazoljuk telefonon.', en: 'We’ll confirm it by phone shortly.' },
   { kulcs: 'foglalas.uj', csoport: 'adatok', cimke: 'Új foglalás gomb', alap: 'Új foglalás', en: 'New booking' },
 
@@ -433,6 +435,72 @@ export const SZOVEGEK = [
   { kulcs: 'lab.leadas', csoport: 'lab', cimke: 'Leadás sor a nyitvatartás alatt', alap: 'Leadás legkorábban {leadas}', en: 'Drop-off from {leadas}' },
 
   { kulcs: 'oldal.cim', csoport: 'oldal', cimke: 'Az oldal címe a böngészőfülön és a keresőben', alap: '{nev} — kézi autókozmetika, {irsz}, {cim}', en: '{nev} — hand car detailing, {irsz}, {cim}' },
+
+  { kulcs: 'ugyfel.cim', csoport: 'ugyfel', cimke: 'Az oldal neve (fejléc és böngészőfül)', alap: 'Foglalásom', en: 'My booking' },
+  { kulcs: 'ugyfel.keres.cim', csoport: 'ugyfel', cimke: 'Jóváhagyásra vár: cím', alap: 'Megkaptuk a foglalási kérésedet', en: 'We’ve received your booking request' },
+  { kulcs: 'ugyfel.keres.szoveg', csoport: 'ugyfel', cimke: 'Jóváhagyásra vár: szöveg', sor: true, alap: 'Hamarosan visszaigazoljuk. Addig is itt követheted, hol tart.', en: 'We’ll confirm it shortly. In the meantime you can follow it here.' },
+  { kulcs: 'ugyfel.visszaigazolva.cim', csoport: 'ugyfel', cimke: 'Visszaigazolva: cím', alap: 'Visszaigazolt foglalás', en: 'Your booking is confirmed' },
+  { kulcs: 'ugyfel.visszaigazolva.szoveg', csoport: 'ugyfel', cimke: 'Visszaigazolva: szöveg', sor: true, alap: 'Várunk szeretettel a megbeszélt időpontban.', en: 'We look forward to seeing you at the agreed time.' },
+  { kulcs: 'ugyfel.kesz.cim', csoport: 'ugyfel', cimke: 'Elkészült: cím', alap: 'Elkészült az autód', en: 'Your car is ready' },
+  { kulcs: 'ugyfel.kesz.szoveg', csoport: 'ugyfel', cimke: 'Elkészült: szöveg', sor: true, alap: 'Már átveheted, legkésőbb: *{mikor}*.', valtozok: ['mikor'], en: 'You can collect it now, by *{mikor}* at the latest.' },
+  { kulcs: 'ugyfel.atveve.cim', csoport: 'ugyfel', cimke: 'Átvéve: cím', alap: 'Köszönjük, hogy minket választottál!', en: 'Thank you for choosing us!' },
+  { kulcs: 'ugyfel.atveve.szoveg', csoport: 'ugyfel', cimke: 'Átvéve: szöveg', sor: true, alap: 'Reméljük, örömöd leled a tiszta autóban. Várunk vissza szeretettel, legközelebb is mi gondoskodunk róla.', en: 'We hope you enjoy your clean car. We look forward to seeing you again, next time we’ll take care of it too.' },
+  { kulcs: 'ugyfel.nem_fert.cim', csoport: 'ugyfel', cimke: 'Nem fért be: cím', alap: 'Ezúttal nem fért bele az időbe', en: 'We couldn’t fit it in this time' },
+  { kulcs: 'ugyfel.nem_fert.szoveg', csoport: 'ugyfel', cimke: 'Nem fért be: szöveg', sor: true, alap: 'Sajnáljuk, hogy most nem tudtuk elvégezni a munkát. Foglalj új időpontot, vagy hívj minket: {telefon}.', en: 'We’re sorry we couldn’t do the job this time. Book a new appointment, or call us: {telefon}.' },
+  { kulcs: 'ugyfel.lemondva.cim', csoport: 'ugyfel', cimke: 'Lemondva: cím', alap: 'A foglalás lemondva', en: 'Your booking is cancelled' },
+  { kulcs: 'ugyfel.lemondva.szoveg', csoport: 'ugyfel', cimke: 'Lemondva: szöveg', sor: true, alap: 'Ha mégis jönnél, foglalj új időpontot, szívesen látunk.', en: 'If you’d still like to come, book a new appointment, we’ll be glad to see you.' },
+  { kulcs: 'ugyfel.elutasitva.cim', csoport: 'ugyfel', cimke: 'Elutasítva: cím', alap: 'Erre az időpontra nem tudtunk helyet adni', en: 'We couldn’t offer you this time' },
+  { kulcs: 'ugyfel.elutasitva.szoveg', csoport: 'ugyfel', cimke: 'Elutasítva: szöveg', sor: true, alap: 'Sajnáljuk. Válassz másik időpontot, vagy hívj minket: {telefon}.', en: 'We’re sorry. Please choose another time, or call us: {telefon}.' },
+  { kulcs: 'ugyfel.nem_jott.cim', csoport: 'ugyfel', cimke: 'Nem jött el: cím', alap: 'A foglalt időpont elmúlt', en: 'The appointment has passed' },
+  { kulcs: 'ugyfel.nem_jott.szoveg', csoport: 'ugyfel', cimke: 'Nem jött el: szöveg', sor: true, alap: 'Most nem tudtál jönni. Ha szeretnéd, foglalj új időpontot.', en: 'You couldn’t make it this time. Book a new appointment whenever you like.' },
+  { kulcs: 'ugyfel.lejart.cim', csoport: 'ugyfel', cimke: 'Lejárt link: cím', alap: 'Ez a link már nem érvényes', en: 'This link is no longer valid' },
+  { kulcs: 'ugyfel.lejart.szoveg', csoport: 'ugyfel', cimke: 'Lejárt link: szöveg', sor: true, alap: 'A foglalás oldala az átvétel után 10 napig érhető el. Foglalj új időpontot, vagy hívj minket: {telefon}.', en: 'The booking page is available for 10 days after collection. Book a new appointment, or call us: {telefon}.' },
+  { kulcs: 'ugyfel.ismeretlen.cim', csoport: 'ugyfel', cimke: 'Ismeretlen link: cím', alap: 'Ezt a foglalást nem találjuk', en: 'We can’t find this booking' },
+  { kulcs: 'ugyfel.ismeretlen.szoveg', csoport: 'ugyfel', cimke: 'Ismeretlen link: szöveg', sor: true, alap: 'Ellenőrizd, hogy a teljes linket nyitottad-e meg, vagy hívj minket: {telefon}.', en: 'Please check that you opened the full link, or call us: {telefon}.' },
+  { kulcs: 'ugyfel.lepes.keres', csoport: 'ugyfel', cimke: 'Lépés: kérés', alap: 'Kérés', en: 'Request' },
+  { kulcs: 'ugyfel.lepes.visszaigazolva', csoport: 'ugyfel', cimke: 'Lépés: visszaigazolva', alap: 'Visszaigazolva', en: 'Confirmed' },
+  { kulcs: 'ugyfel.lepes.kesz', csoport: 'ugyfel', cimke: 'Lépés: kész', alap: 'Kész', en: 'Ready' },
+  { kulcs: 'ugyfel.lepes.atveve', csoport: 'ugyfel', cimke: 'Lépés: átvéve', alap: 'Átvéve', en: 'Collected' },
+  { kulcs: 'ugyfel.kesz.doboz', csoport: 'ugyfel', cimke: 'Elkészült doboz címe', alap: 'Átvehető', en: 'Ready for collection' },
+  { kulcs: 'ugyfel.kesz.legkesobb', csoport: 'ugyfel', cimke: 'Elkészült doboz: határidő felirata', alap: 'Legkésőbb', en: 'At the latest' },
+  { kulcs: 'ugyfel.felar', csoport: 'ugyfel', cimke: 'A felár oka (a végösszeg alatt)', alap: 'A felár oka: {mit}', valtozok: ['mit'], en: 'Why it costs more: {mit}' },
+  { kulcs: 'ugyfel.kimaradt', csoport: 'ugyfel', cimke: 'Kimaradt munka (a végösszeg alatt)', alap: 'Kimaradt: {mit}, ezért kevesebb az ár.', valtozok: ['mit'], en: 'Left out: {mit}, so the price is lower.' },
+  { kulcs: 'ugyfel.adatok', csoport: 'ugyfel', cimke: 'Az adatok címe', alap: 'A foglalásod', en: 'Your booking' },
+  { kulcs: 'ugyfel.modositva', csoport: 'ugyfel', cimke: 'Módosított sor jelölése', alap: 'módosítva', en: 'changed' },
+  { kulcs: 'ugyfel.modositva_magyarazat', csoport: 'ugyfel', cimke: 'Magyarázat, ha volt módosítás', alap: 'Az áthúzott, halvány érték az eredeti foglalás, mellette a mostani.', en: 'The faded, struck-through value is the original booking; next to it is the current one.' },
+  { kulcs: 'ugyfel.sor.nap', csoport: 'ugyfel', cimke: 'Sor: nap', alap: 'Nap', en: 'Day' },
+  { kulcs: 'ugyfel.sor.kezdes', csoport: 'ugyfel', cimke: 'Sor: kezdés (megvárja)', alap: 'Kezdés', en: 'Start' },
+  { kulcs: 'ugyfel.sor.hozas', csoport: 'ugyfel', cimke: 'Sor: hozás (itt hagyja)', alap: 'Hozod', en: 'Drop-off' },
+  { kulcs: 'ugyfel.sor.erte', csoport: 'ugyfel', cimke: 'Sor: érte megyünk (hozom-viszem)', alap: 'Érte megyünk', en: 'We collect it' },
+  { kulcs: 'ugyfel.sor.kesz', csoport: 'ugyfel', cimke: 'Sor: várható vége (megvárja)', alap: 'Várhatóan kész', en: 'Expected to be ready' },
+  { kulcs: 'ugyfel.sor.elvitel', csoport: 'ugyfel', cimke: 'Sor: elvitel (itt hagyja)', alap: 'Elviheted', en: 'Collection' },
+  { kulcs: 'ugyfel.sor.vissza', csoport: 'ugyfel', cimke: 'Sor: visszaszállítás (hozom-viszem)', alap: 'Visszavisszük', en: 'We bring it back' },
+  { kulcs: 'ugyfel.sor.zarasig', csoport: 'ugyfel', cimke: 'Ha nincs megbeszélt elviteli idő', alap: 'aznap, zárásig', en: 'the same day, by closing time' },
+  { kulcs: 'ugyfel.sor.auto', csoport: 'ugyfel', cimke: 'Sor: autó', alap: 'Autó', en: 'Car' },
+  { kulcs: 'ugyfel.sor.szolgaltatas', csoport: 'ugyfel', cimke: 'Sor: szolgáltatás', alap: 'Szolgáltatás', en: 'Service' },
+  { kulcs: 'ugyfel.sor.extrak', csoport: 'ugyfel', cimke: 'Sor: extrák', alap: 'Extrák', en: 'Extras' },
+  { kulcs: 'ugyfel.sor.ar', csoport: 'ugyfel', cimke: 'Sor: becsült ár', alap: 'Becsült ár', en: 'Estimated price' },
+  { kulcs: 'ugyfel.sor.vegosszeg', csoport: 'ugyfel', cimke: 'Végösszeg felirata', alap: 'Végösszeg', en: 'Total' },
+  { kulcs: 'ugyfel.modositas.cim', csoport: 'ugyfel', cimke: 'Módosítás: cím', alap: 'Valamin változtatnál?', en: 'Need to change something?' },
+  { kulcs: 'ugyfel.modositas.szoveg', csoport: 'ugyfel', cimke: 'Módosítás: magyarázat', sor: true, alap: 'Ha csak apróság, például egy órával korábban hoznád az autót, írd meg itt, és nem kell telefonálnod. Ha sürgős, hívj minket: {telefon}.', en: 'If it’s only something small, for example you’d bring the car an hour earlier, write it here and there’s no need to call. If it’s urgent, call us: {telefon}.' },
+  { kulcs: 'ugyfel.modositas.minta', csoport: 'ugyfel', cimke: 'Módosítás: halvány minta a mezőben', alap: 'pl. 8:00 helyett inkább 7:00 körül hoznám', en: 'e.g. I’d rather bring it around 7:00 instead of 8:00' },
+  { kulcs: 'ugyfel.modositas.gomb', csoport: 'ugyfel', cimke: 'Módosítás: küldés gomb', alap: 'Módosítás kérése', en: 'Request the change' },
+  { kulcs: 'ugyfel.modositas.kuldes', csoport: 'ugyfel', cimke: 'Módosítás: küldés közben', alap: 'Küldés…', en: 'Sending…' },
+  { kulcs: 'ugyfel.modositas.uzenetek', csoport: 'ugyfel', cimke: 'Módosítás: elküldött üzenetek címe', alap: 'Az üzeneteid', en: 'Your messages' },
+  { kulcs: 'ugyfel.modositas.elkuldve', csoport: 'ugyfel', cimke: 'Módosítás: még nincs elintézve', alap: 'Elküldve, hamarosan intézzük.', en: 'Sent, we’ll handle it shortly.' },
+  { kulcs: 'ugyfel.modositas.elintezve', csoport: 'ugyfel', cimke: 'Módosítás: elintézve', alap: 'Elintéztük.', en: 'Done.' },
+  { kulcs: 'ugyfel.lemondas.cim', csoport: 'ugyfel', cimke: 'Lemondás: cím', alap: 'Mégsem jó az időpont?', en: 'Can’t make it?' },
+  { kulcs: 'ugyfel.lemondas.szoveg', csoport: 'ugyfel', cimke: 'Lemondás: szöveg', sor: true, alap: 'Lemondási határidő: {hatarido}. Addig itt lemondhatod, utána már csak telefonon: {telefon}.', valtozok: ['hatarido'], en: 'Cancellation deadline: {hatarido}. Until then you can cancel here; after that only by phone: {telefon}.' },
+  { kulcs: 'ugyfel.lemondas.gomb', csoport: 'ugyfel', cimke: 'Lemondás gomb', alap: 'Foglalás lemondása', en: 'Cancel the booking' },
+  { kulcs: 'ugyfel.lemondas.kerdes', csoport: 'ugyfel', cimke: 'Lemondás: megerősítő kérdés', alap: 'Biztosan lemondod a foglalást?', en: 'Are you sure you want to cancel the booking?' },
+  { kulcs: 'ugyfel.lemondas.igen', csoport: 'ugyfel', cimke: 'Lemondás: igen gomb', alap: 'Igen, lemondom', en: 'Yes, cancel it' },
+  { kulcs: 'ugyfel.lemondas.nem', csoport: 'ugyfel', cimke: 'Lemondás: mégse gomb', alap: 'Mégsem', en: 'Keep it' },
+  { kulcs: 'ugyfel.ertekeles.cim', csoport: 'ugyfel', cimke: 'Értékelés: cím', alap: 'Mesélj másoknak is!', en: 'Tell others about us!' },
+  { kulcs: 'ugyfel.ertekeles.szoveg', csoport: 'ugyfel', cimke: 'Értékelés: szöveg', sor: true, alap: 'Ha elégedett voltál, sokat segítesz egy rövid Google-értékeléssel.', en: 'If you were happy with us, a short Google review helps us a lot.' },
+  { kulcs: 'ugyfel.ertekeles.gomb', csoport: 'ugyfel', cimke: 'Értékelés gomb', alap: 'Értékelés írása', en: 'Write a review' },
+  { kulcs: 'ugyfel.fooldal', csoport: 'ugyfel', cimke: 'Gomb: vissza a főoldalra', alap: 'Vissza a főoldalra', en: 'Back to the home page' },
+  { kulcs: 'ugyfel.uj', csoport: 'ugyfel', cimke: 'Gomb: új időpont', alap: 'Új időpont foglalása', en: 'Book a new appointment' },
+  { kulcs: 'ugyfel.kapcsolat', csoport: 'ugyfel', cimke: 'Elérhetőség címe', alap: 'Elérhetőség', en: 'Contact' },
 ] as const satisfies readonly SzovegDef[]
 
 export type SzovegKulcs = (typeof SZOVEGEK)[number]['kulcs']
