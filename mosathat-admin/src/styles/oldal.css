@@ -297,7 +297,7 @@
   font-size: var(--m-sm);
 }
 .fej-mentes:empty { display: none; }
-.oldal-fej .fej-mentes + .fulek { margin-left: var(--t3); }
+.oldal-fej .fej-mentes:not(:empty) + .fulek { margin-left: var(--t3); }
 .sor-gombok { display: flex; gap: var(--t2); flex-wrap: wrap; }
 .mezo small.hibaszoveg { color: var(--v-baj); }
 .uj-jarmu { margin-top: var(--t3); }
