@@ -718,7 +718,7 @@
 }
 .kv .kv-logo { color: inherit; text-decoration: none; }
 
-.kv-tabla-gorgo { position: relative; }
+.kv-tabla-gorgo { position: relative; overflow-y: hidden; }
 .kv-tabla thead th, .kv-tabla tbody td { transition: opacity .25s ease; }
 .kv-tabla [data-halvany] { opacity: .4; }
 .kv-kiemeles {

@@ -274,8 +274,14 @@ function useKiemelesKeret(index: number, frissit: unknown) {
       const t = tabla.getBoundingClientRect()
       const c = th.getBoundingClientRect()
       const arany = tabla.offsetWidth > 0 ? t.width / tabla.offsetWidth : 1
-      const top = Math.max(0, (nev.getBoundingClientRect().top - t.top) / arany - 12)
-      setKeret({ top, left: (c.left - t.left) / arany, width: c.width / arany, height: t.height / arany - top })
+      const top = Math.max(0, Math.round((nev.getBoundingClientRect().top - t.top) / arany - 12))
+      const uj = {
+        top,
+        left: Math.round((c.left - t.left) / arany),
+        width: Math.round(c.width / arany),
+        height: Math.max(0, Math.floor(tabla.offsetHeight - top - 1)),
+      }
+      setKeret((r) => (r && r.top === uj.top && r.left === uj.left && r.width === uj.width && r.height === uj.height ? r : uj))
     }
     const figyelo = new ResizeObserver(meres)
     figyelo.observe(tabla)
