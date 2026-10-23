@@ -60,7 +60,8 @@ const SAVOK: Sav[] = [
     kulcsok: ['galeria.cim', 'galeria.bevezeto', 'galeria.foglalas', 'galeria.meret', 'galeria.reset', 'galeria.szivacs', 'galeria.vege', 'galeria.kep_alt'] },
   { id: 'csomagok', cim: 'Csomagok táblázat', leiras: 'A táblázat sorai és cellái a Csomagok menüben szerkeszthetők, itt a feliratai.', oldalResz: 'csomagok',
     kulcsok: ['csomagok.cim', 'csomagok.ervenyes', 'csomagok.alcim.szemelyauto', 'csomagok.alcim.suv', 'csomagok.alcim.kisbusz', 'csomagok.kategoria',
-      'csomagok.kat.szemelyauto', 'csomagok.kat.suv', 'csomagok.kat.kisbusz', 'csomagok.csoport.kulso', 'csomagok.csoport.belso'] },
+      'csomagok.kat.szemelyauto', 'csomagok.kat.suv', 'csomagok.kat.kisbusz', 'csomagok.csoport.kulso', 'csomagok.csoport.belso',
+      'csomagok.csak.kulso', 'csomagok.csak.belso', 'csomagok.egyeb.cim', 'csomagok.egyeb.kulso', 'csomagok.egyeb.belso', 'csomagok.egyeb.benne'] },
   { id: 'fogl-fej', cim: 'Időpontfoglalás: cím és bevezető', leiras: 'A foglalás szakasz feje, a csomagtáblázat mellett.', fej: true,
     kulcsok: ['foglalas.cim', 'foglalas.bevezeto'] },
   { id: 'fogl-1', cim: '1. lépés: az autó', leiras: 'Az első kérdés és a három járműkategória.', lepes: 'auto', bemutato: () => ({}),
@@ -204,6 +205,7 @@ function sajatLeiras(nyelv: Nyelv): Record<string, string> {
     ig: 'a legkésőbbi vállalható határidő, például: 17:00',
     mikor: `az elvitel napja és időablaka, például: ${f.napCim(kovetkezoHetkoznap())}, ${f.kozott('8:00', '17:00')}`,
     n: 'a vélemény csillagainak száma, például: 5',
+    csomagok: 'a csomagok neve, amelyekben a szolgáltatás benne van, például: Elit',
   }
 }
 

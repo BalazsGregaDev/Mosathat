@@ -207,7 +207,7 @@ console.log('\n=== 7) Asztali gép: semmi sem változik ===\n')
     ket,
     (await doboz(p, '.kv-lab .kv-logo')).left,
   ])
-  ok('a két oszlopon belül a csomagok szakasz 14 px-es helyet hagy a címkiemelésnek', ['14px', '14px'], await p.locator('.kv-ketoszlop > .kv-csomagok').evaluate((e) => [getComputedStyle(e).paddingLeft, getComputedStyle(e).paddingRight]))
+  ok('a két oszlopon belül a csomagok szakasz 14 px-es helyet hagy a címkiemelésnek', ['14px', '14px'], await p.locator('.kv-ketoszlop .kv-csomagok').evaluate((e) => [getComputedStyle(e).paddingLeft, getComputedStyle(e).paddingRight]))
   ok('lábléc alja a régi 18 px', '18px', await p.locator('.kv-lab').evaluate((e) => getComputedStyle(e).paddingBottom))
   await ctx.close()
 }

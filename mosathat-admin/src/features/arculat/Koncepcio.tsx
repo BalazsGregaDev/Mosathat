@@ -3,7 +3,7 @@ import {
 } from 'react'
 
 import type { Catalog } from '../../data/source'
-import type { VehicleCategory } from '../../lib/types'
+import type { Extra, ServiceArea, VehicleCategory } from '../../lib/types'
 import {
   csomagTabla, kategoriaTol, KATEGORIAK, szam,
   type Cella, type CsomagTabla, type KoncepcioKod, type Mod,
@@ -11,7 +11,7 @@ import {
 import { katKulcs, type SzovegKulcs, type Uzlet } from '../../lib/publikusTartalom'
 import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
 import { FELIRAT, nyelviUt, type Nyelv } from '../../lib/nyelv'
-import { Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from '../publikus/tartalom'
+import { forditott, Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from '../publikus/tartalom'
 import Galeria from './Galeria'
 import Velemenyek from './Velemenyek'
 import GyikSzakasz, { GyikOldal } from './Gyik'
@@ -19,6 +19,7 @@ import { useCsillanas, useVaszonSzin } from './csillanas'
 import { gorgetIde } from './gorgetes'
 
 interface KvAllapot {
+  k: Catalog
   t: CsomagTabla
   kat: VehicleCategory
   setKat: (k: VehicleCategory) => void
@@ -279,7 +280,7 @@ function useKiemelesKeret(index: number, frissit: unknown) {
         top,
         left: Math.round((c.left - t.left) / arany),
         width: Math.round(c.width / arany),
-        height: Math.max(0, Math.floor(tabla.offsetHeight - top - 1)),
+        height: Math.max(0, Math.floor(tabla.offsetHeight - top)),
       }
       setKeret((r) => (r && r.top === uj.top && r.left === uj.left && r.width === uj.width && r.height === uj.height ? r : uj))
     }
@@ -335,11 +336,25 @@ function Tabla({ sorszam = false, ft = true }: { sorszam?: boolean; ft?: boolean
         </thead>
         {t.csoportok.map((g) => (
           <tbody key={g.terulet}>
-            <tr className="kv-csoport">
-              <th scope="colgroup" colSpan={t.csomagok.length + 1}>
-                {sz(g.terulet === 'BELSO' ? 'csomagok.csoport.belso' : 'csomagok.csoport.kulso')}
-              </th>
-            </tr>
+            {g.arak.some((a) => a != null) ? (
+              <tr className="kv-csoport" data-arakkal>
+                <th scope="rowgroup">
+                  <span className="kv-csoport-nev">{sz(g.terulet === 'BELSO' ? 'csomagok.csoport.belso' : 'csomagok.csoport.kulso')}</span>
+                  <span className="kv-csak">{sz(g.terulet === 'BELSO' ? 'csomagok.csak.belso' : 'csomagok.csak.kulso')}</span>
+                </th>
+                {g.arak.map((a, i) => (
+                  <td key={i} className="kv-csak-ar" data-halvany={halvany(i)}>
+                    {a == null ? '—' : a === 'egyedi' ? FELIRAT[nyelv].egyedi : arSzoveg(a)}
+                  </td>
+                ))}
+              </tr>
+            ) : (
+              <tr className="kv-csoport">
+                <th scope="colgroup" colSpan={t.csomagok.length + 1}>
+                  {sz(g.terulet === 'BELSO' ? 'csomagok.csoport.belso' : 'csomagok.csoport.kulso')}
+                </th>
+              </tr>
+            )}
             {g.sorok.map((s) => {
               n++
               return (
@@ -617,19 +632,74 @@ function useKepernyoreIllesztes(frissit: unknown) {
   return ref
 }
 
-function MagazinCsomagok() {
+function EgyebKartya({ e }: { e: Extra }) {
+  const { k } = useKv()
+  const sz = useSz()
+  const nyelv = useNyelv()
+  const f = useFormatum()
+  const leiras = (nyelv === 'en' ? e.description_en?.trim() || e.description : e.description)?.trim()
+  const egyeztet = e.requires_quote || e.price_huf == null
+  const ar = egyeztet ? sz('foglalas.ar_egyeztetes')
+    : `${f.ft(e.price_huf ?? 0)}${e.price_unit !== 'ALKALOM' ? ` / ${f.egyseg(e.price_unit)}` : ''}`
+  const benne = k.packages
+    .filter((p) => p.active && e.included_in_packages.includes(p.id))
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((p) => forditott(p, nyelv))
+  return (
+    <details className="kv-egyeb-kartya">
+      <summary>
+        <span>{forditott(e, nyelv)}</span>
+        <span className="kv-egyeb-jel" aria-hidden="true" />
+      </summary>
+      <div className="kv-egyeb-tartalom">
+        {leiras && <p>{leiras}</p>}
+        <p className="kv-egyeb-ar" data-egyeztet={egyeztet || undefined}>{ar}</p>
+        {benne.length > 0 && <p className="kv-egyeb-benne">{sz('csomagok.egyeb.benne', { csomagok: benne.join(', ') })}</p>}
+      </div>
+    </details>
+  )
+}
+
+function EgyebSzolgaltatasok() {
+  const { k } = useKv()
+  const sz = useSz()
+  const aktiv = k.extras.filter((e) => e.active).sort((a, b) => a.sort_order - b.sort_order)
+  if (aktiv.length === 0) return null
+  const oszlopok: [ServiceArea, Extra[]][] = [
+    ['KULSO', aktiv.filter((e) => e.area !== 'BELSO')],
+    ['BELSO', aktiv.filter((e) => e.area === 'BELSO')],
+  ]
+  return (
+    <section className="kv-egyeb" aria-labelledby="kv-egyeb-cim">
+      <h3 id="kv-egyeb-cim">{sz('csomagok.egyeb.cim')}</h3>
+      <div className="kv-egyeb-oszlopok">
+        {oszlopok.filter(([, l]) => l.length > 0).map(([ter, l]) => (
+          <div key={ter} className="kv-egyeb-oszlop" data-terulet={ter}>
+            <h4>{sz(ter === 'BELSO' ? 'csomagok.egyeb.belso' : 'csomagok.egyeb.kulso')}</h4>
+            {l.map((e) => <EgyebKartya key={e.id} e={e} />)}
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function MagazinCsomagok({ egyebNelkul = false }: { egyebNelkul?: boolean }) {
   const sz = useSz()
   const { t } = useKv()
   const ref = useKepernyoreIllesztes(t)
   return (
-    <section className="kv-csomagok" ref={ref}>
-      <div className="kv-szakasz-fej">
-        <h2>{sz('csomagok.cim')}</h2>
-        <Alcim />
-      </div>
-      <p className="kv-ervenyes">{sz('csomagok.ervenyes')}</p>
-      <Tabla />
-    </section>
+    <>
+      <section className="kv-csomagok" ref={ref}>
+        <div className="kv-szakasz-fej">
+          <h2>{sz('csomagok.cim')}</h2>
+          <Alcim />
+        </div>
+        <p className="kv-ervenyes">{sz('csomagok.ervenyes')}</p>
+        <Tabla />
+      </section>
+      {!egyebNelkul && <EgyebSzolgaltatasok />}
+    </>
   )
 }
 
@@ -656,7 +726,8 @@ function Magazin() {
       <GaleriaFoglalassal />
       {foglalas ? (
         <div className="kv-ketoszlop">
-          <MagazinCsomagok />
+          <div className="kv-csomag-hely"><MagazinCsomagok egyebNelkul /></div>
+          <EgyebSzolgaltatasok />
           {foglalas}
         </div>
       ) : <MagazinCsomagok />}
@@ -855,7 +926,7 @@ function KvKornyezet({
   useCsillanas(gyoker)
   useVaszonSzin(gyoker, nyilvanos)
   return (
-    <Kv.Provider value={{ t, kat, setKat, tol, nyilvanos, foglalas, kiemelt, onCsomag, nyelvValaszto }}>
+    <Kv.Provider value={{ k, t, kat, setKat, tol, nyilvanos, foglalas, kiemelt, onCsomag, nyelvValaszto }}>
       <div className="kv" ref={gyoker} lang={nyelv} data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
         {children}
       </div>

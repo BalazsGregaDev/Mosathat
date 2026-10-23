@@ -53,10 +53,13 @@ export interface TablaSor {
   cellak: Cella[]
 }
 
+export type CsakAr = number | 'egyedi' | null
+
 export interface TablaCsoport {
   terulet: ServiceArea
   cim: string
   sorok: TablaSor[]
+  arak: CsakAr[]
 }
 
 export interface CsomagTabla {
@@ -124,9 +127,16 @@ export function csomagTabla(k: Catalog, kat: VehicleCategory = 'SZEMELYAUTO', ny
     s.cella[r.package_id] = (en && r.name_en?.trim()) || r.name
   }
 
+  const csakAr = (id: string, terulet: ServiceArea): CsakAr => {
+    const r = k.packagePricing.find((x) => x.package_id === id && x.category === kat && x.scope === terulet)
+    if (!r) return null
+    return r.requires_quote ? 'egyedi' : r.price_huf
+  }
+
   const csoport = (terulet: ServiceArea, cim: string): TablaCsoport => ({
     terulet,
     cim,
+    arak: aktiv.map((p) => csakAr(p.id, terulet)),
     sorok: [...sorok.values()]
       .filter((s) => s.terulet === terulet)
       .sort((a, b) => a.rend - b.rend)

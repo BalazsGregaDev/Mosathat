@@ -90,9 +90,9 @@ console.log('\n=== 3) Csomagok: a teljes táblázat egyben, belső görgetés n�
 for (const [w, h] of [[1440, 900], [1280, 800], [1920, 1080]]) {
   const c = await lap(w, h)
   await c.goto('http://localhost:5180/publikus')
-  await c.waitForSelector('.kv-ketoszlop > .kv-csomagok', { timeout: 90000 })
+  await c.waitForSelector('.kv-ketoszlop .kv-csomagok', { timeout: 90000 })
   await c.waitForTimeout(800)
-  const cs = c.locator('.kv-ketoszlop > .kv-csomagok')
+  const cs = c.locator('.kv-ketoszlop .kv-csomagok')
   await cs.scrollIntoViewIfNeeded()
   await c.evaluate(() => window.scrollBy(0, 400))
   await c.waitForTimeout(700)

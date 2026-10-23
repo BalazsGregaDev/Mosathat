@@ -350,6 +350,12 @@ export const SZOVEGEK = [
   { kulcs: 'csomagok.kat.kisbusz', csoport: 'csomagok', cimke: 'Kategória gomb: kisbusz', alap: 'Kisbusz, Furgon', en: 'Minibus, Van' },
   { kulcs: 'csomagok.csoport.kulso', csoport: 'csomagok', cimke: 'Sorcsoport: külső munkák', alap: 'Mosás', en: 'Exterior' },
   { kulcs: 'csomagok.csoport.belso', csoport: 'csomagok', cimke: 'Sorcsoport: belső munkák', alap: 'Takarítás', en: 'Interior' },
+  { kulcs: 'csomagok.csak.kulso', csoport: 'csomagok', cimke: 'A Mosás sor felirata az árak előtt', alap: 'Csak mosás:', en: 'Exterior only:' },
+  { kulcs: 'csomagok.csak.belso', csoport: 'csomagok', cimke: 'A Takarítás sor felirata az árak előtt', alap: 'Csak takarítás:', en: 'Interior only:' },
+  { kulcs: 'csomagok.egyeb.cim', csoport: 'csomagok', cimke: 'Egyéb szolgáltatások: cím a táblázat alatt', alap: 'Egyéb szolgáltatások', en: 'Other services' },
+  { kulcs: 'csomagok.egyeb.kulso', csoport: 'csomagok', cimke: 'Egyéb szolgáltatások: külső oszlop', alap: 'Külső', en: 'Exterior' },
+  { kulcs: 'csomagok.egyeb.belso', csoport: 'csomagok', cimke: 'Egyéb szolgáltatások: belső oszlop', alap: 'Belső', en: 'Interior' },
+  { kulcs: 'csomagok.egyeb.benne', csoport: 'csomagok', cimke: 'Egyéb szolgáltatások: ha egy csomagban benne van', alap: 'Benne van: {csomagok}', valtozok: ['csomagok'], en: 'Included in: {csomagok}' },
 
   { kulcs: 'foglalas.cim', csoport: 'foglalas', cimke: 'Cím', alap: 'Időpontfoglalás', en: 'Online booking' },
   { kulcs: 'foglalas.bevezeto', csoport: 'foglalas', cimke: 'Bevezető', sor: true,
