@@ -21,6 +21,8 @@ import type {
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
 import type { PublikusMentes, VelemenySor } from '../lib/publikusTartalom'
+import type { GyikAdmin, GyikMod, GyikSor } from '../lib/gyik'
+import { adatUrl, kepKicsinyit } from '../lib/kep'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
 import type { FoglalasomAdat } from '../../../supabase/functions/_shared/tipusok.ts'
@@ -363,6 +365,32 @@ export class DemoSource implements DataSource {
 
   async velemenyekMentes(lista: VelemenySor[]): Promise<void> {
     await this.rows(`select velemenyek_mentes($1::jsonb)`, [JSON.stringify(lista)])
+  }
+
+  async gyikLista(): Promise<GyikAdmin> {
+    const [r] = await this.rows<{ x: GyikAdmin }>(`select gyik_lista() x`)
+    return r.x
+  }
+
+  async gyikMentes(k: Partial<GyikSor> & { kerdes: string }): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select gyik_mentes($1::jsonb) id`, [JSON.stringify(k)])
+    return r.id
+  }
+
+  async gyikTorles(id: string): Promise<void> {
+    await this.rows(`select gyik_torles($1::uuid)`, [id])
+  }
+
+  async gyikSorrend(ids: string[]): Promise<void> {
+    await this.rows(`select gyik_sorrend($1::uuid[])`, [ids])
+  }
+
+  async gyikBeallitas(mod: GyikMod, max: number): Promise<void> {
+    await this.rows(`select gyik_beallitas($1, $2)`, [mod, max])
+  }
+
+  async gyikKepFeltoltes(f: Blob): Promise<string> {
+    return adatUrl(await kepKicsinyit(f, 1000, 0.72))
   }
 
   async getPublikus(): Promise<PublikusAdat> {

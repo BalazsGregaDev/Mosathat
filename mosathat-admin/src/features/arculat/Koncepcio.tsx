@@ -14,6 +14,7 @@ import { FELIRAT, nyelviUt, type Nyelv } from '../../lib/nyelv'
 import { Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from '../publikus/tartalom'
 import Galeria from './Galeria'
 import Velemenyek from './Velemenyek'
+import GyikSzakasz, { GyikOldal } from './Gyik'
 import { useCsillanas, useVaszonSzin } from './csillanas'
 import { gorgetIde } from './gorgetes'
 
@@ -465,6 +466,7 @@ function Lab() {
       <div className="kv-lab-also">
         <span>© {new Date().getFullYear()} {u.nev}</span>
         <nav>
+          <a href={nyelviUt('/gyik', nyelv)} onClick={nyilvanos ? undefined : (e) => ugras(e, null)}>{sz('gyik.cim')}</a>
           {LAB_MENU.map((m) => (
             <a key={m} href={nyelviUt(`/${m}`, nyelv)} onClick={nyilvanos ? undefined : (e) => ugras(e, null)}>{jogiCim[m]}</a>
           ))}
@@ -475,12 +477,13 @@ function Lab() {
 }
 
 function Vege({ foglalasNelkul = false, velemenyekkel = false }: { foglalasNelkul?: boolean; velemenyekkel?: boolean }) {
-  const { foglalas } = useKv()
+  const { foglalas, nyilvanos } = useKv()
   return (
     <>
       {!foglalasNelkul && (foglalas ?? <Foglalas />)}
       {velemenyekkel && <Velemenyek />}
       <Terkep />
+      {velemenyekkel && <GyikSzakasz nyilvanos={nyilvanos} />}
       <Lab />
     </>
   )
@@ -877,7 +880,7 @@ export function KoncepcioLap({ mod, k, children }: { mod: Mod; k: Catalog; child
   return <KvKornyezet kod="03" mod={mod} k={k}>{children}</KvKornyezet>
 }
 
-export type KoncepcioReszNev = 'nav' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'velemenyek' | 'hely' | 'lab'
+export type KoncepcioReszNev = 'nav' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'velemenyek' | 'hely' | 'gyik' | 'gyikoldal' | 'lab'
 
 export function KoncepcioResz({ resz, mod, k }: { resz: KoncepcioReszNev; mod: Mod; k: Catalog }) {
   return (
@@ -889,6 +892,8 @@ export function KoncepcioResz({ resz, mod, k }: { resz: KoncepcioReszNev; mod: M
       {resz === 'csomagok' && <MagazinCsomagok />}
       {resz === 'velemenyek' && <Velemenyek minta />}
       {resz === 'hely' && <Terkep />}
+      {resz === 'gyik' && <GyikSzakasz nyilvanos={false} minta />}
+      {resz === 'gyikoldal' && <GyikOldal nyilvanos={false} minta />}
       {resz === 'lab' && <Lab />}
     </KvKornyezet>
   )

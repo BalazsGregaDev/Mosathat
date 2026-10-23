@@ -141,10 +141,12 @@ const napok4 = (await q(`select d::text d from generate_series(
 await ki(TULAJ)
 for (const d of napok4) await terhel(q, d, 40)
 let utolso = null
-for (let i = 0; i < 11; i++) {
+let sikeres = 0
+for (let i = 0; i < 16 && !/több kérés vár/.test(utolso ?? ''); i++) {
   utolso = await hiba(() => kuld(masodik, { plate_raw: `cgk-${200 + i}`, customer_phone: '+36 30 111 0000', service_date: napok4[i % 4] }))
+  if (!utolso) sikeres++
 }
-t.ok('egy telefonszámról a 10 függő kérés után megáll', true, /több kérés vár/.test(utolso ?? ''))
+t.ok('egy telefonszámról a 10 függő kérés után megáll', [10, true], [sikeres, /több kérés vár/.test(utolso ?? '')])
 
 console.log('\n=== 9) Lejárt szerződésnél a link nem működik ===\n')
 await ki(TULAJ)

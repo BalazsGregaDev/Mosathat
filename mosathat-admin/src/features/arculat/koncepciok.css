@@ -1042,3 +1042,95 @@
   .kv-velemeny-hely { animation: none; }
   .kv-velemeny-sav[data-forog], .kv-velemeny, .kv-velemeny::after, .kv-velemeny-hely { transition: none; }
 }
+
+.kv-gyik { padding: 64px var(--px, 24px) 72px; background: var(--beton, var(--bg)); }
+.kv-gyik-fej h2 { margin-bottom: 12px; }
+.kv-gyik-fej .kv-bevezeto { font-size: 15px; line-height: 1.6; }
+.kv a.kv-gyik-tovabb { margin-top: 4px; }
+.kv-gyik-lista { border-bottom: 1px solid var(--vonal-eros); }
+.kv-gyik-elem { border-top: 1px solid var(--vonal-eros); }
+.kv-gyik-elem > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 0;
+  list-style: none; cursor: pointer;
+}
+.kv-gyik-elem > summary::-webkit-details-marker { display: none; }
+.kv-gyik-elem > summary:focus-visible { outline: 2px solid var(--zold); outline-offset: 4px; }
+.kv-gyik-kerdes { font-family: var(--fej); font-size: 19px; line-height: 1.35; }
+.kv-gyik-elem > summary:hover .kv-gyik-kerdes { color: var(--zold); }
+.kv-gyik-jel { position: relative; flex: none; width: 30px; height: 30px; border: 1px solid var(--vonal-eros); border-radius: 50%; transition: background-color .2s ease, border-color .2s ease; }
+.kv-gyik-jel::before, .kv-gyik-jel::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 11px; height: 1.5px; background: currentColor;
+  transform: translate(-50%, -50%); transition: transform .3s ease;
+}
+.kv-gyik-jel::after { transform: translate(-50%, -50%) rotate(90deg); }
+.kv-gyik-elem[open] .kv-gyik-jel { background: var(--zold); border-color: var(--zold); color: var(--bg); }
+.kv-gyik-elem[open] .kv-gyik-jel::after { transform: translate(-50%, -50%) rotate(0deg); }
+.kv-gyik-valasz { padding: 0 54px 24px 0; font-size: 15px; line-height: 1.7; color: color-mix(in srgb, var(--fg) 86%, transparent); }
+.kv-gyik-valasz > * + * { margin-top: 12px; }
+.kv-gyik-valasz h3, .kv-gyik-valasz h4 { font-family: var(--betu); font-size: 15px; font-weight: 700; color: var(--fg); margin-top: 18px; }
+.kv-gyik-valasz ul { list-style: disc; padding-left: 20px; }
+.kv-gyik-valasz ol { list-style: decimal; padding-left: 22px; }
+.kv-gyik-valasz li + li { margin-top: 4px; }
+.kv-gyik-valasz li > p { margin: 0; }
+.kv-gyik-valasz a { color: var(--zold); text-decoration: underline; text-underline-offset: 2px; }
+.kv-gyik-valasz img { display: block; max-width: min(100%, 640px); height: auto; border-radius: 6px; }
+.kv-gyik-valasz blockquote { padding-left: 14px; border-left: 3px solid var(--zold); font-family: var(--talpas); font-style: italic; }
+.kv-gyik-valasz hr { border: 0; border-top: 1px solid var(--vonal); }
+@supports (interpolate-size: allow-keywords) {
+  .kv-gyik-lista { interpolate-size: allow-keywords; }
+  .kv-gyik-elem::details-content { block-size: 0; overflow: clip; transition: block-size .35s ease, content-visibility .35s allow-discrete; }
+  .kv-gyik-elem[open]::details-content { block-size: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kv-gyik-elem::details-content, .kv-gyik-jel, .kv-gyik-jel::before, .kv-gyik-jel::after { transition: none; }
+}
+@container kv (min-width: 1000px) {
+  .kv-gyik { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr); gap: 0 56px; align-items: start; }
+  .kv-gyik-fej { position: sticky; top: calc(var(--nav-h, 0px) + 24px); }
+}
+@container kv (max-width: 999px) {
+  .kv-gyik-fej { margin-bottom: 18px; }
+}
+@container kv (max-width: 800px) {
+  .kv-gyik { padding: 44px 16px 52px; }
+  .kv-gyik-kerdes { font-size: 17px; }
+  .kv-gyik-valasz { padding-right: 0; }
+}
+
+.kv-gyik-oldal { padding: 48px var(--px, 24px) 64px; display: grid; grid-template-areas: 'fej' 'lista' 'segitseg'; gap: 0; }
+.kv-gyik-oldal-fej { grid-area: fej; }
+.kv-gyik-oldal-lista { grid-area: lista; }
+.kv-gyik-oldal .kv-gyik-segitseg { grid-area: segitseg; }
+.kv[data-k] .kv-gyik-oldal h1 { font-family: var(--fej); font-weight: 400; font-size: clamp(34px, 4.4cqw, 52px); line-height: 1.06; margin: 0 0 14px; }
+.kv-gyik-oldal-fej .kv-bevezeto { max-width: 46ch; font-size: 16px; line-height: 1.6; }
+.kv-gyik-szuro { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 30px; }
+.kv-gyik-szuro button {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--vonal-eros); border-radius: 999px;
+  background: transparent; color: var(--fg); font: inherit; font-size: 13px; font-weight: 600; letter-spacing: .04em; cursor: pointer;
+}
+.kv-gyik-szuro button span { font-weight: 400; color: var(--halk); }
+.kv-gyik-szuro button:hover { border-color: var(--fg); }
+.kv-gyik-szuro button[aria-pressed='true'] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.kv-gyik-szuro button[aria-pressed='true'] span { color: inherit; opacity: .7; }
+.kv-gyik-szuro button:focus-visible { outline: 2px solid var(--zold); outline-offset: 2px; }
+.kv-gyik-csoport + .kv-gyik-csoport { margin-top: 44px; }
+.kv[data-k] .kv-gyik-csoport > h2 {
+  font-family: var(--betu); font-size: 12px; font-weight: 700; line-height: 1.2; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--zold); margin: 0 0 12px;
+}
+.kv-gyik-segitseg { margin-top: 48px; padding: 26px 28px; border-radius: 4px; background: var(--beton, var(--bg)); }
+.kv[data-k] .kv-gyik-segitseg h2 { font-family: var(--fej); font-size: 26px; font-weight: 500; line-height: 1.2; margin: 0 0 8px; }
+.kv-gyik-segitseg p { font-size: 15px; line-height: 1.6; margin-bottom: 14px; }
+.kv-gyik-segitseg p a { color: var(--zold); text-decoration: underline; text-underline-offset: 2px; }
+@container kv (min-width: 1000px) {
+  .kv-gyik-oldal {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr); grid-template-rows: auto 1fr;
+    grid-template-areas: 'fej lista' 'segitseg lista'; column-gap: 56px; align-items: start;
+  }
+  .kv-gyik-oldal .kv-gyik-segitseg { position: sticky; top: calc(var(--nav-h, 0px) + 24px); margin-top: 8px; }
+  .kv-gyik-szuro { margin-bottom: 0; }
+}
+@container kv (max-width: 700px) {
+  .kv-gyik-oldal { padding: 32px 16px 48px; }
+  .kv-gyik-segitseg { padding: 20px; }
+}

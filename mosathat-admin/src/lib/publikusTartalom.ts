@@ -1,3 +1,4 @@
+import type { GyikPublikus } from './gyik'
 import { UZLET } from './arculat'
 import { ADATFELDOLGOZOK, CEG, JOGI_HATALY, TERVEZET, type Kamera } from './ceg'
 import type { Nyelv } from './nyelv'
@@ -56,6 +57,7 @@ export const GOOGLE_KERESES = 'https://www.google.com/search?q=Mosathat+-+Hand+C
 
 export interface PublikusTartalomNyers {
   velemenyek?: Velemeny[]
+  gyik?: GyikPublikus
   adatok: PublikusAdatokNyers
   szovegek: Record<string, string>
   szovegek_en: Record<string, string>
@@ -282,7 +284,7 @@ export interface SzovegDef {
   valtozok?: string[]
 }
 
-export type SzovegCsoport = 'menu' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'foglalas' | 'adatok' | 'hely' | 'lab' | 'cimkek' | 'oldal' | 'ugyfel' | 'velemeny'
+export type SzovegCsoport = 'menu' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'foglalas' | 'adatok' | 'hely' | 'lab' | 'cimkek' | 'oldal' | 'ugyfel' | 'velemeny' | 'gyik'
 
 export const CSOPORT_NEV: Record<SzovegCsoport, string> = {
   menu: 'Menü és gombok',
@@ -298,6 +300,7 @@ export const CSOPORT_NEV: Record<SzovegCsoport, string> = {
   oldal: 'Böngésző',
   ugyfel: 'Foglalás oldala (az ügyfélnek)',
   velemeny: 'Rólunk mondták',
+  gyik: 'Gyakran ismételt kérdések',
 }
 
 export const SZOVEGEK = [
@@ -440,6 +443,18 @@ export const SZOVEGEK = [
   { kulcs: 'velemeny.elozo', csoport: 'velemeny', cimke: 'Előző gomb neve (képernyőolvasónak)', alap: 'Előző vélemények', en: 'Previous reviews' },
   { kulcs: 'velemeny.kovetkezo', csoport: 'velemeny', cimke: 'Következő gomb neve (képernyőolvasónak)', alap: 'Következő vélemények', en: 'Next reviews' },
   { kulcs: 'velemeny.csillag', csoport: 'velemeny', cimke: 'A csillagok felolvasva (képernyőolvasónak)', alap: '{n} csillag az 5-ből', valtozok: ['n'], en: '{n} out of 5 stars' },
+
+  { kulcs: 'gyik.cim', csoport: 'gyik', cimke: 'Cím (a főoldalon, az aloldalon és a lábléc linkjében)', alap: 'Gyakran ismételt kérdések', en: 'Frequently asked questions' },
+  { kulcs: 'gyik.bevezeto', csoport: 'gyik', cimke: 'Bevezető a főoldalon', sor: true, alap: 'Amit a legtöbben kérdeznek tőlünk a garázsban és telefonon.', en: 'What people ask us most often, in the garage and on the phone.' },
+  { kulcs: 'gyik.tovabb', csoport: 'gyik', cimke: 'Gomb az aloldalra', alap: 'További kérdések', en: 'More questions' },
+  { kulcs: 'gyik.oldal_bevezeto', csoport: 'gyik', cimke: 'Bevezető az aloldalon', sor: true, alap: 'Összegyűjtöttük, amit a legtöbben kérdeznek a mosásról, a belső takarításról és a foglalásról.', en: 'We’ve collected the questions we hear most about washing, interior cleaning and booking.' },
+  { kulcs: 'gyik.leiras', csoport: 'gyik', cimke: 'Az aloldal leírása a keresőknek (Google-találat alatti szöveg)', sor: true, alap: 'Válaszok a leggyakoribb kérdésekre a kézi autómosásról, a belső takarításról és a foglalásról — {nev}, {kerulet}.', en: 'Answers to the most common questions about hand car washing, interior cleaning and booking — {nev}, {kerulet}.' },
+  { kulcs: 'gyik.osszes', csoport: 'gyik', cimke: 'Szűrő: összes kérdés', alap: 'Összes', en: 'All' },
+  { kulcs: 'gyik.kat.kulso', csoport: 'gyik', cimke: 'Kategória: külső', alap: 'Külső', en: 'Exterior' },
+  { kulcs: 'gyik.kat.belso', csoport: 'gyik', cimke: 'Kategória: belső', alap: 'Belső', en: 'Interior' },
+  { kulcs: 'gyik.kat.egyeb', csoport: 'gyik', cimke: 'Kategória: egyéb', alap: 'Egyéb', en: 'Other' },
+  { kulcs: 'gyik.nem_talalod', csoport: 'gyik', cimke: 'Doboz az aloldal alján: cím', alap: 'Nem találtad a választ?', en: 'Didn’t find your answer?' },
+  { kulcs: 'gyik.nem_talalod_szoveg', csoport: 'gyik', cimke: 'Doboz az aloldal alján: szöveg', sor: true, alap: 'Hívj minket a {telefon} számon, vagy írj az {email} címre.', en: 'Call us on {telefon}, or write to {email}.' },
 
   { kulcs: 'hely.cim', csoport: 'hely', cimke: 'Cím', alap: 'Hol vagyunk', en: 'Where we are' },
   { kulcs: 'hely.bevezeto', csoport: 'hely', cimke: 'Bevezető', sor: true, alap: 'A {haz} mélygarázsában, a −1. szinten. A bejárat a {bejarat} nyílik.', en: 'In the underground car park of {haz}, on level −1. The entrance is {bejarat}.' },

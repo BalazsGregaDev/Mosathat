@@ -11,6 +11,7 @@ import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
 import type { Nyelv } from '../../lib/nyelv'
 import { ervenyesBlokkok, type JogiBlokk } from '../../lib/jogiDokumentum'
 import Koncepcio, { KoncepcioKeret } from '../arculat/Koncepcio'
+import { GyikOldal } from '../arculat/Gyik'
 import { gorgetIde } from '../arculat/gorgetes'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import { FoglalasUrlap, type FoglalasForras } from './FoglalasModul'
@@ -19,13 +20,14 @@ import { TartalomProvider, useNyelv, useSz, useUzlet } from './tartalom'
 
 export const PUBLIKUS_KONCEPCIO: KoncepcioKod = '03'
 
-export type PublikusLap = 'fooldal' | JogiLap
+export type PublikusLap = 'fooldal' | 'gyik' | JogiLap
 
 function Cim({ lap }: { lap: PublikusLap }) {
   const sz = useSz()
   const u = useUzlet()
   const nyelv = useNyelv()
   const cim = lap === 'fooldal' ? sz('oldal.cim')
+    : lap === 'gyik' ? `${sz('gyik.cim')} — ${u.nev}`
     : `${(nyelv === 'en' ? JOGI_CIM_EN : JOGI_CIM)[lap]} — ${u.nev}`
   useEffect(() => { document.title = cim }, [cim])
   return null
@@ -82,10 +84,10 @@ export function betolt(): Promise<Betoltve> {
 const jogiTar = new Map<string, JogiBlokk[] | null>()
 
 function useFeltoltottJogi(forras: DataSource | null, lap: PublikusLap, nyelv: Nyelv): { kesz: boolean; blokkok: JogiBlokk[] | null } {
-  const kulcs = lap === 'fooldal' ? null : `${lap}:${nyelv}`
+  const kulcs = lap === 'fooldal' || lap === 'gyik' ? null : `${lap}:${nyelv}`
   const [, ujraRajzol] = useReducer((x: number) => x + 1, 0)
   useEffect(() => {
-    if (!forras || !kulcs || lap === 'fooldal' || jogiTar.has(kulcs)) return
+    if (!forras || !kulcs || lap === 'fooldal' || lap === 'gyik' || jogiTar.has(kulcs)) return
     let el = true
     forras.publikusJogi(lap, nyelv)
       .then((b) => { jogiTar.set(kulcs, ervenyesBlokkok(b)) })
@@ -172,7 +174,7 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
   useEffect(() => {
     if (!betoltott || lap !== 'fooldal') return
     const cel = window.location.hash.slice(1)
-    const osztaly: Record<string, string> = { rolunk: '.kv-rolunk h2', galeria: '.kv-galeria', csomagok: '.kv-csomagok', foglalas: '.kv-foglalas', hely: '.kv-hely', kapcsolat: '.kv-lab' }
+    const osztaly: Record<string, string> = { rolunk: '.kv-rolunk h2', galeria: '.kv-galeria', csomagok: '.kv-csomagok', foglalas: '.kv-foglalas', hely: '.kv-hely', gyik: '.kv-gyik', kapcsolat: '.kv-lab' }
     if (osztaly[cel]) window.setTimeout(() => gorgetIde(document.querySelector(osztaly[cel]), false), 50)
   }, [betoltott, lap])
 
@@ -203,6 +205,10 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
           <Koncepcio kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos nyelvValaszto={valaszto}
                      kat={kat} onKat={setKat} kiemelt={csomagId} onCsomag={setCsomagId}
                      foglalas={<EloFoglalas {...betoltott} valasztas={valasztas} />} />
+        ) : lap === 'gyik' ? (
+          <KoncepcioKeret kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos nyelvValaszto={valaszto}>
+            <GyikOldal nyilvanos />
+          </KoncepcioKeret>
         ) : (
           <KoncepcioKeret kod={PUBLIKUS_KONCEPCIO} mod={mod} k={adat.katalogus} nyilvanos nyelvValaszto={valaszto}>
             {jogi.kesz

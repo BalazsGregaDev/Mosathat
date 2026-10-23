@@ -30,8 +30,9 @@ const lemondas = /^\/lemondas(\/|$)/.test(window.location.pathname)
 const ceges = /^\/ceg(\/|$)/.test(window.location.pathname)
 const foglalasom = /^\/foglalas(\/|$)/.test(window.location.pathname)
 const foglalasomToken = /^\/foglalas\/([a-f0-9]{32})\/?$/.exec(window.location.pathname)?.[1] ?? null
-const PUBLIKUS_LAPOK: Record<string, 'fooldal' | 'impresszum' | 'adatvedelem'> = {
+const PUBLIKUS_LAPOK: Record<string, 'fooldal' | 'gyik' | 'impresszum' | 'adatvedelem'> = {
   '/publikus': 'fooldal',
+  '/gyik': 'gyik',
   '/impresszum': 'impresszum',
   '/adatvedelem': 'adatvedelem',
 }

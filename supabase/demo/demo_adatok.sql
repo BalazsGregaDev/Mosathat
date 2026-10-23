@@ -419,6 +419,33 @@ begin
     ('Demó Ferenc', 3, 'DEMO értékelés — Ez 3 csillagos, ezért nem jelenik meg a publikus oldalon.', current_date - 80, 5);
 end $$;
 
+do $$
+begin
+  if to_regclass('public.gyik') is null then
+    return;
+  end if;
+  insert into public.gyik (kerdes, valasz, kerdes_en, valasz_en, kategoria, publikalt, kiemelt, sort_order, publikalva_at) values
+    ('Mennyi ideig tart egy mosás?', '<p>DEMO válasz — A csomagtól és az autó méretétől függ. A foglalásnál minden csomagnál látod a becsült időt, és azt is, mikorra készülünk el.</p>',
+     'How long does a wash take?', '<p>DEMO answer — It depends on the package and the size of the car. When booking you can see the estimated time for every package.</p>',
+     'EGYEB', true, true, 0, now() - interval '20 days'),
+    ('Meg kell várnom az autót, vagy itt hagyhatom?', '<p>DEMO válasz — Mindkettő lehet. Ha itt hagyod, a foglalásnál megadod, mikor hozod, és mi szólunk, amikor elkészült.</p>',
+     null, null, 'EGYEB', true, true, 1, now() - interval '19 days'),
+    ('Gépi kefével mostok?', '<p>DEMO válasz — Nem. <strong>Kézzel mosunk</strong>, puha mosókesztyűvel, így a fényezés nem karcolódik.</p><ul><li>előmosás aktív habbal</li><li>kézi mosás samponnal</li><li>szárítás mikroszálas kendővel</li></ul>',
+     null, null, 'KULSO', true, true, 2, now() - interval '18 days'),
+    ('Eltávolítjátok a bogarakat és a kátrányt?', '<p>DEMO válasz — A bogároldás minden csomagban benne van. A kátrányeltávolítás külön extra, a foglalásnál választható.</p>',
+     null, null, 'KULSO', true, false, 3, now() - interval '17 days'),
+    ('Mi a különbség a gyors viasz és a hosszantartó vax között?', '<h3>Röviden</h3><p>DEMO válasz — A gyors viasz pár hétig ad fényt és vízlepergetést, a hosszantartó vax hónapokig védi a fényezést.</p>',
+     null, null, 'KULSO', true, false, 4, now() - interval '16 days'),
+    ('Kiszedik a kutyaszőrt az ülésekből?', '<p>DEMO válasz — Igen, a belső takarításnál porszívózunk és kefével is átmegyünk a kárpiton. Erősen szőrös belsőnél a végösszeg magasabb lehet, ezt mindig előre jelezzük.</p>',
+     null, null, 'BELSO', true, true, 5, now() - interval '15 days'),
+    ('Megszárad aznapra a kárpit a mélytisztítás után?', '<p>DEMO válasz — Általában igen, de ha teheted, hagyd nálunk éjszakára, így biztosan teljesen kiszárad.</p>',
+     null, null, 'BELSO', true, false, 6, now() - interval '14 days'),
+    ('Hogyan tudom lemondani a foglalást?', '<p>DEMO válasz — A visszaigazoló e-mailben kapott linken, a foglalásod oldalán egy gombnyomással.</p>',
+     null, null, 'EGYEB', true, false, 7, now() - interval '13 days'),
+    ('Piszkozat: kerámia bevonat?', '<p>Ez még nincs publikálva, ezért a publikus oldalon nem látszik.</p>',
+     null, null, 'KULSO', false, false, 8, null);
+end $$;
+
 set constraints all immediate;
 
 do $$

@@ -13,6 +13,8 @@ import type {
 } from '../lib/types'
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
 import type { PublikusMentes, VelemenySor } from '../lib/publikusTartalom'
+import type { GyikAdmin, GyikMod, GyikSor } from '../lib/gyik'
+import { kepKicsinyit } from '../lib/kep'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
 import type { FoglalasomAdat } from '../../../supabase/functions/_shared/tipusok.ts'
@@ -390,6 +392,42 @@ export class SupabaseSource implements DataSource {
   async velemenyekMentes(lista: VelemenySor[]): Promise<void> {
     const { error } = await this.sb.rpc('velemenyek_mentes', { p: lista })
     if (error) fail('A vélemények mentése', error)
+  }
+
+  async gyikLista(): Promise<GyikAdmin> {
+    const { data, error } = await this.sb.rpc('gyik_lista')
+    if (error) fail('A kérdések betöltése', error)
+    return data as GyikAdmin
+  }
+
+  async gyikMentes(k: Partial<GyikSor> & { kerdes: string }): Promise<string> {
+    const { data, error } = await this.sb.rpc('gyik_mentes', { p: k })
+    if (error) fail('A kérdés mentése', error)
+    return data as string
+  }
+
+  async gyikTorles(id: string): Promise<void> {
+    const { error } = await this.sb.rpc('gyik_torles', { p_id: id })
+    if (error) fail('A kérdés törlése', error)
+  }
+
+  async gyikSorrend(ids: string[]): Promise<void> {
+    const { error } = await this.sb.rpc('gyik_sorrend', { p_ids: ids })
+    if (error) fail('A sorrend mentése', error)
+  }
+
+  async gyikBeallitas(mod: GyikMod, max: number): Promise<void> {
+    const { error } = await this.sb.rpc('gyik_beallitas', { p_mod: mod, p_max: max })
+    if (error) fail('A beállítás mentése', error)
+  }
+
+  async gyikKepFeltoltes(f: Blob): Promise<string> {
+    const kep = await kepKicsinyit(f, 1600, 0.82)
+    const ut = `${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.webp`
+    const tar = this.sb.storage.from('gyik-kepek')
+    const { error } = await tar.upload(ut, kep, { contentType: 'image/webp', cacheControl: '31536000', upsert: false })
+    if (error) fail('A kép feltöltése', error)
+    return tar.getPublicUrl(ut).data.publicUrl
   }
 
   async getPublikus(): Promise<PublikusAdat> {

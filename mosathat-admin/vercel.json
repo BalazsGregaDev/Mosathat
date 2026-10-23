@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(publikus|impresszum|adatvedelem)",
+      "source": "/(publikus|gyik|impresszum|adatvedelem)",
       "destination": "/publikus.html"
     },
     {
@@ -36,7 +36,7 @@
       ]
     },
     {
-      "source": "/(publikus|impresszum|adatvedelem)",
+      "source": "/(publikus|gyik|impresszum|adatvedelem)",
       "headers": [
         {
           "key": "X-Robots-Tag",
