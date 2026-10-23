@@ -114,9 +114,16 @@ export default function VelemenyekOldal() {
                     ))}
                   </div>
                 </div>
-                <Mezo cimke="Dátum">
-                  <input className="beviteli" type="date" value={v.datum ?? ''} onChange={(e) => valt(i, { datum: e.target.value || null })} data-mezo="datum" />
-                </Mezo>
+                <div className="mezo pub-mezo">
+                  <span>Dátum (nem kötelező)</span>
+                  <div className="pub-velemeny-datum">
+                    <input className="beviteli" type="date" value={v.datum ?? ''} aria-label={`${i + 1}. vélemény dátuma`}
+                           onChange={(e) => valt(i, { datum: e.target.value || null })} data-mezo="datum" />
+                    {v.datum && (
+                      <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => valt(i, { datum: null })}>Dátum törlése</button>
+                    )}
+                  </div>
+                </div>
               </div>
               <Mezo cimke="Szöveg">
                 <textarea className="beviteli" rows={3} value={v.szoveg} maxLength={1500}
@@ -137,7 +144,7 @@ export default function VelemenyekOldal() {
           ))}
           <div>
             <button type="button" className="btn btn-kicsi" disabled={lista.length >= 60}
-                    onClick={() => setLista([...lista, { ...UJ, datum: new Date().toISOString().slice(0, 10) }])}>
+                    onClick={() => setLista([...lista, { ...UJ }])}>
               + Vélemény
             </button>
           </div>

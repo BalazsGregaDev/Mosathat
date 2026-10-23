@@ -208,3 +208,5 @@
   .pub-velemeny-sor { grid-template-columns: 1fr 1fr; }
   .pub-velemeny-sor > :first-child { grid-column: 1 / -1; }
 }
+.pub-velemeny-datum { display: flex; align-items: center; gap: var(--t2); }
+.pub-velemeny-datum .beviteli { flex: 1; min-width: 0; }
