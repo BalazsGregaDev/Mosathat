@@ -11,6 +11,7 @@ const TABLAK = [
   'vehicles',
   'company_sheet_rows',
   'company_sheets',
+  'pass_usages',
 ] as const
 
 const OSSZEVONAS_MS = 400

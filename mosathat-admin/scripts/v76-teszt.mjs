@@ -71,9 +71,9 @@ await arMezo.fill('24900'); await arMezo.blur(); await p.waitForTimeout(1200)
 const idoMezo = gold.getByLabel('Gold · Sedan · Teljes időtartama')
 if (await idoMezo.count()) { await idoMezo.fill('150'); await idoMezo.blur(); await p.waitForTimeout(1200) }
 
-await menu('Időpontfoglalás'); await p.waitForTimeout(1500)
-const fogl = p.locator('.fogl-csomagok')
-ok('Időpontfoglalás: négy csomag', 4, await fogl.locator('.fogl-csomag').count())
+await menu('Tartalom'); await p.waitForTimeout(2500)
+const fogl = p.locator('.pub-sav[data-sav="fogl-2"] .fogl-csomagok')
+ok('a foglalás csomaglépése (Tartalom előnézet): négy csomag', 4, await fogl.locator('.fogl-csomag').count())
 ok('a Gold a beállított árral', true, /Gold.*24 900 Ft-tól/.test(sima(await fogl.innerText())))
 if (KEPEK) await p.screenshot({ path: join(KEPEK, 'v76-foglalas.png') })
 
@@ -94,8 +94,8 @@ await mentes.click(); await p.waitForTimeout(2500)
 ok('mentéskor törölve', true, /1 csomag törölve/.test(sima(await p.locator('.szerk-allapot').innerText())))
 ok('a régi csomagoknál „Kivezetés” áll (van foglalásuk)', ['Kivezetés', 'Kivezetés', 'Kivezetés'],
   await szovegek(p.locator('.szerk-csomag .btn-veszelyes')))
-await menu('Időpontfoglalás'); await p.waitForTimeout(1500)
-ok('a foglalásból is eltűnt', 3, await p.locator('.fogl-csomagok .fogl-csomag').count())
+await menu('Tartalom'); await p.waitForTimeout(2500)
+ok('a foglalásból is eltűnt', 3, await p.locator('.pub-sav[data-sav="fogl-2"] .fogl-csomagok .fogl-csomag').count())
 ok('nincs JS hiba', [], hibak)
 
 await b.close()

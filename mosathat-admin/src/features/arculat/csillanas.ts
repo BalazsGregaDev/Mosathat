@@ -1,4 +1,17 @@
-import { useEffect, type RefObject } from 'react'
+import { useEffect, type PointerEvent, type RefObject } from 'react'
+
+export function egerKovet(e: PointerEvent<HTMLElement>) {
+  if (e.pointerType !== 'mouse') return
+  const el = e.currentTarget
+  const r = el.getBoundingClientRect()
+  el.style.setProperty('--eger-x', `${Math.round(e.clientX - r.left)}px`)
+  el.style.setProperty('--eger-y', `${Math.round(e.clientY - r.top)}px`)
+  if (!el.hasAttribute('data-eger')) el.setAttribute('data-eger', '')
+}
+
+export function egerElhagy(e: PointerEvent<HTMLElement>) {
+  e.currentTarget.removeAttribute('data-eger')
+}
 
 export function useCsillanas(gyoker: RefObject<HTMLElement | null>) {
   useEffect(() => {

@@ -52,7 +52,7 @@ export function nyelvre(k: GyikKerdes, nyelv: Nyelv): GyikMegjelenes {
   }
 }
 
-export function keveres<T>(l: T[], veletlen: () => number = Math.random): T[] {
+function keveres<T>(l: T[], veletlen: () => number = Math.random): T[] {
   const x = [...l]
   for (let i = x.length - 1; i > 0; i--) {
     const j = Math.floor(veletlen() * (i + 1))

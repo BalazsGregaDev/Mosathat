@@ -24,6 +24,10 @@ const honapNev = new Intl.DateTimeFormat('hu-HU', {
   year: 'numeric', month: 'long', timeZone: TZ,
 })
 
+const datumRovid = new Intl.DateTimeFormat('hu-HU', {
+  year: 'numeric', month: 'short', day: 'numeric', timeZone: TZ,
+})
+
 export function ora(iso: string | null | undefined): string {
   if (!iso) return '—'
   return hhmm.format(new Date(iso))
@@ -82,6 +86,10 @@ export function napCim(datum: string): string {
 
 export function napRovidCim(datum: string): string {
   return napRovid.format(new Date(`${datum}T12:00:00Z`))
+}
+
+export function rovidDatum(iso: string | null | undefined): string {
+  return iso ? datumRovid.format(new Date(iso)) : ''
 }
 
 export function ft(v: number | null | undefined): string {

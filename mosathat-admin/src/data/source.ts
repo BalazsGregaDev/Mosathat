@@ -7,7 +7,7 @@ import type {
   CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow, FinishPreview, KeszOpciok, ModositasCsoport, VacationRow, VacationInput, DayLane, OnlineBookingInput,
   OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
-  PublikusNapAdat,
+  PublikusNapAdat, BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput,
 } from '../lib/types'
 import { URES_GYIK, type GyikAdmin, type GyikMod, type GyikPublikus, type GyikSor } from '../lib/gyik'
 import type { NyitvaNap, Velemeny, VelemenySor, PublikusAdatokNyers, PublikusMentes, PublikusTartalomNyers } from '../lib/publikusTartalom'
@@ -92,7 +92,6 @@ export interface SessionUser {
 }
 
 export interface DataSource {
-  readonly label: string
   readonly isDemo: boolean
 
   init(): Promise<void>
@@ -108,7 +107,6 @@ export interface DataSource {
   getRangeOrder(from: string, to: string): Promise<Map<string, number>>
   getDayLanes(date: string): Promise<DayLane[]>
   getStartMinutes(): Promise<number | null>
-  onlineBooking(input: OnlineBookingInput): Promise<string>
   listOnlineKeresek(): Promise<OnlineKeres[]>
   onlineKeresDontes(bookingId: string, elfogad: boolean): Promise<DontesEredmeny>
   ertesitesekKuldese(): Promise<KuldesEredmeny | null>
@@ -151,7 +149,7 @@ export interface DataSource {
   getStandingCars(): Promise<StandingCar[]>
 
   searchCustomers(q: string, limit?: number, mezo?: KeresesMezo): Promise<SearchHit[]>
-  quoteBooking(input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
+  quoteBooking(input: Partial<NewBookingInput> & CalcInput & { booking_id?: string | null }): Promise<Quote>
 
   setDayOrder(date: string, ids: string[]): Promise<void>
 
@@ -212,6 +210,11 @@ export interface DataSource {
   sheetForBooking(bookingId: string): Promise<SheetForBooking>
   saveSheetRow(input: SheetRowInput): Promise<string>
   deleteSheetRow(id: string): Promise<void>
+  berletLapok(): Promise<BerletLapListaElem[]>
+  berletLap(passId: string): Promise<BerletLap>
+  berletFoglalashoz(bookingId: string): Promise<BerletFoglalashoz>
+  saveBerletSor(input: BerletSorInput): Promise<string>
+  deleteBerletSor(id: string): Promise<void>
   closeSheet(companyId: string, month: string): Promise<void>
   reopenSheet(companyId: string, month: string): Promise<void>
   saveSheetSettings(companyId: string, s: { columns: SheetColumn[]; footer_text: string | null }): Promise<void>
@@ -322,6 +325,15 @@ export function toQuote(r: Record<string, unknown> | null | undefined): Quote {
       Object.entries((r?.contract_prices as Record<string, unknown> | null) ?? {})
         .map(([k, v]) => [k, num(v)]),
     ),
+    berlet: r?.berlet && typeof r.berlet === 'object'
+      ? {
+          pass_item_id: String((r.berlet as Record<string, unknown>).pass_item_id),
+          pass_id: String((r.berlet as Record<string, unknown>).pass_id),
+          nev: String((r.berlet as Record<string, unknown>).nev ?? ''),
+          maradt: num((r.berlet as Record<string, unknown>).maradt),
+        }
+      : null,
+    berlet_csomagok: Array.isArray(r?.berlet_csomagok) ? (r!.berlet_csomagok as unknown[]).map(String) : [],
   }
 }
 

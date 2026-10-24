@@ -75,7 +75,7 @@ const a = await publikus('/publikus', { width: 1440, height: 900 })
   ok('EN aktív, ?lang=en az URL-ben, megjegyezve, html lang=en', { lang: 'en', url: '?lang=en', tar: 'en', be: 'true' }, await allapot(p))
   ok('menü', ['About us', 'Gallery', 'Packages', 'Booking', 'Contact'], (await p.locator('.kv-nav nav a').allTextContents()).map(sima))
   ok('nyitó rész', ['HAND CAR DETAILING — BUDAPEST, DISTRICT XIII', 'Your car isn’t just a thing. It’s with you for years.'],
-    [sima(await p.locator('.kv-kicker').innerText()), sima(await p.locator('.kv-hero h1').innerText())])
+    [sima(await p.locator('.kv-hero .kv-kicker').innerText()), sima(await p.locator('.kv-hero h1').innerText())])
   ok('böngészőfül', 'Mosathat — hand car detailing, 1138 Budapest, Váci út 140.', await p.title())
   ok('táblázat fejléce és árai', [['START', 'HUF 12,800'], ['PREMIUM', 'HUF 15,600'], ['ELITE', 'HUF 19,800']],
     await p.locator('.kv-tabla thead th:not(.kv-fej-bal)').evaluateAll((l) => l.map((e) => [e.querySelector('.kv-csomag-nev').innerText.trim(), e.querySelector('.kv-ar').innerText.trim()])))
@@ -84,7 +84,7 @@ const a = await publikus('/publikus', { width: 1440, height: 900 })
     [sorok[0], sorok[1], sorok.find((x) => x.startsWith('Door')), sorok.at(-1)].map(sima))
   ok('eltérő cellák angolul', ['wipe-down', 'wipe-down', 'deep clean'],
     await p.locator('.kv-tabla tbody tr').filter({ hasText: 'Door shut' }).locator('.kv-mas').allTextContents())
-  ok('sorcsoportok és kategóriák', ['EXTERIOR', 'INTERIOR', 'PASSENGER CAR — SALOON, ESTATE, HATCHBACK'],
+  ok('sorcsoportok a csak mosás és csak takarítás árával, kategóriák', ['EXTERIOR Exterior only:', 'INTERIOR Interior only:', 'PASSENGER CAR — SALOON, ESTATE, HATCHBACK'],
     [...(await p.locator('.kv-csoport th').allInnerTexts()).map(sima), sima(await p.locator('.kv-alcim').innerText())])
   ok('foglalás: cím és első lépés', ['Online booking', 'What car are you bringing?'],
     [sima(await p.locator('.kv-foglalas > h2').textContent()), sima(await p.locator('[data-lepes="auto"] h2').innerText()).replace(/^1 /, '')])
@@ -92,10 +92,10 @@ const a = await publikus('/publikus', { width: 1440, height: 900 })
     [sima(await p.locator('.fogl-csomag').nth(1).locator('.nev').textContent()), sima(await p.locator('.fogl-csomag').nth(1).locator('.ar').textContent()),
      sima(await p.locator('.fogl-csomag').nth(1).locator('.ido').textContent())])
   ok('automatikus csomagleírás angolul', true, /^Everything in Start, plus: Tyre dressing, Quick wax/.test(sima(await p.locator('.fogl-csomag').nth(1).locator('.leiras').textContent())))
-  ok('lábléc és Hol vagyunk', ['Where we are', 'Monday–Friday 9:00–17:00, Saturday 8:00–14:00', 'Legal notice', 'Privacy policy'],
+  ok('lábléc és Hol vagyunk', ['Where we are', 'Monday–Friday 9:00–17:00, Saturday 8:00–14:00', 'Frequently asked questions', 'Legal notice', 'Privacy policy'],
     [sima(await p.locator('.kv-hely h2').textContent()), sima(await p.locator('.kv-hely .kv-info').nth(1).locator('.kv-ertek').textContent()),
      ...(await p.locator('.kv-lab-also nav a').allTextContents()).map(sima)])
-  ok('a jogi linkek angol oldalra visznek', ['/impresszum?lang=en', '/adatvedelem?lang=en'],
+  ok('a GYIK és a jogi linkek angol oldalra visznek', ['/gyik?lang=en', '/impresszum?lang=en', '/adatvedelem?lang=en'],
     await p.locator('.kv-lab-also nav a').evaluateAll((l) => l.map((x) => x.getAttribute('href'))))
   await kep(p, '02-publikus-en.png')
   await p.locator('.kv-nav nav a').filter({ hasText: 'Packages' }).click()
@@ -196,7 +196,8 @@ await menu('Tartalom').waitFor({ timeout: 30000 })
 await menu('Tartalom').click()
 await q.locator('.pub-szoveg').first().waitFor({ timeout: 20000 })
 {
-  ok('18 sáv, mindegyik fejlécében HU-EN csúszka', [18, 18], [await q.locator('.pub-sav').count(), await q.locator('.pub-sav > h3 .nyelv-kapcsolo').count()])
+  const savSzam = await q.locator('.pub-sav').count()
+  ok('minden sáv fejlécében HU-EN csúszka', [true, savSzam], [savSzam > 0, await q.locator('.pub-sav > h3 .nyelv-kapcsolo').count()])
   const hero = q.locator('.pub-sav[data-sav="hero"]')
   await hero.locator('.nyelv-kapcsolo').click()
   await q.waitForTimeout(800)

@@ -97,11 +97,12 @@ await sugo(p, 'fogl-8').scrollIntoViewIfNeeded()
 await kep(p, '01-sugo-8-lepes-elott.png')
 
 console.log('\n=== 2) Impresszum és Adatvédelem linkje nem szerkeszthető ===\n')
-ok('126 szöveg, 18 sáv, a lábléc sávban nincs linkszöveg', [126, 18, 0, 0], [
-  await p.locator('.pub-szoveg').count(), await p.locator('.pub-sav').count(),
+const szovegSzam = await p.evaluate(async () => (await import('/src/lib/publikusTartalom.ts')).SZOVEGEK.length)
+ok('minden szöveg szerkeszthető, a lábléc sávban nincs linkszöveg', [szovegSzam, 0, 0], [
+  await p.locator('.pub-szoveg').count(),
   await p.locator('.pub-szoveg[data-kulcs="lab.impresszum"]').count(), await p.locator('.pub-szoveg[data-kulcs="lab.adatvedelem"]').count(),
 ])
-ok('a lábléc-előnézetben a két link változatlanul ott van', ['Impresszum', 'Adatvédelmi tájékoztató'],
+ok('a lábléc-előnézetben a GYIK és a két jogi link változatlanul ott van', ['Gyakran ismételt kérdések', 'Impresszum', 'Adatvédelmi tájékoztató'],
   await p.locator('.pub-sav[data-sav="lab"] .kv-lab-also nav a').allTextContents())
 
 console.log('\n=== 3) Asztali gép: {telefon} az Elérhetőségbe visz, kijelölt mezővel ===\n')
@@ -245,7 +246,7 @@ console.log('\n=== 11) Publikus oldal: a jogi linkek szövege rögzített ===\n'
   const q = await ctx.newPage()
   await q.goto(CIM + '/publikus')
   await q.locator('.kv-lab').waitFor({ timeout: 60000 })
-  ok('a láblécben Impresszum és Adatvédelmi tájékoztató', ['Impresszum', 'Adatvédelmi tájékoztató'], await q.locator('.kv-lab-also nav a').allTextContents())
+  ok('a láblécben GYIK, Impresszum és Adatvédelmi tájékoztató', ['Gyakran ismételt kérdések', 'Impresszum', 'Adatvédelmi tájékoztató'], await q.locator('.kv-lab-also nav a').allTextContents())
   await q.goto(CIM + '/adatvedelem')
   await q.locator('.kv-jogi h1').waitFor({ timeout: 60000 })
   ok('a jogi oldal címe és a böngészőfül', ['Adatvédelmi tájékoztató', true], [

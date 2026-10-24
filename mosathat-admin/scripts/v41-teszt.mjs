@@ -19,12 +19,8 @@ async function menu(p, nev) {
   await p.locator('aside.oldalsav button').filter({ hasText: nev }).first().click()
   await p.waitForTimeout(1500)
 }
-async function nyit(k) {
-  if ((await k.getAttribute('data-nyitva')) !== 'true') {
-    await k.locator('.kartya-nyito').click()
-    await k.page().waitForTimeout(300)
-  }
-}
+const adat = (k, cim) => k.locator('.cegtabla-adatok').evaluate((dl, c) =>
+  [...dl.querySelectorAll('dt')].find((dt) => dt.textContent.trim() === c)?.nextElementSibling?.textContent.trim() ?? '', cim)
 const ket = (n) => String(n).padStart(2, '0')
 const rovid = new Intl.DateTimeFormat('hu-HU', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 const nap = (d) => rovid.format(new Date(`${d}T12:00:00Z`))
@@ -46,10 +42,8 @@ const kovVeg = new Date(Date.UTC(ev, ho + 1, 14)).toISOString().slice(0, 10)
 
 console.log('=== 1) Szerződés: fordulónap ===\n')
 await menu(p, 'Cégek és bérletesek')
-const kartya = p.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).first()
-await nyit(kartya)
-ok('a kártyán: naptári hónap (alap)', true,
-  (await kartya.locator('.adatsor').filter({ hasText: 'Igazolólap időszaka' }).innerText()).includes('naptári hónap'))
+const kartya = p.locator('.cegtabla-sor').filter({ hasText: 'Autó Trans' }).first()
+ok('a sorban: naptári hónap (alap)', 'naptári hónap', await adat(kartya, 'Igazolólap'))
 await kartya.getByRole('button', { name: 'Szerkesztés' }).click()
 await p.waitForTimeout(800)
 {
@@ -63,13 +57,10 @@ await p.waitForTimeout(800)
   await p.waitForTimeout(1500)
   ok('mentve, az űrlap bezárult', 0, await p.locator('[aria-label="Szerződés"]').count())
 }
-await nyit(kartya)
-ok('a kártyán az időszak', true,
-  (await kartya.locator('.adatsor').filter({ hasText: 'Igazolólap időszaka' }).innerText())
-    .includes('15. naptól a következő hónap 14. napjáig'))
+ok('a sorban az időszak', '15. naptól a következő hónap 14. napjáig', await adat(kartya, 'Igazolólap'))
 
 console.log('\n=== 2) Igazolólap: az időszak ===\n')
-await kartya.locator('.ceg-lap-sor button').click()
+await kartya.getByRole('button', { name: 'Igazolólap' }).click()
 await p.waitForSelector('.lap-igazolo')
 await p.waitForTimeout(1000)
 const lap = p.locator('.lap-igazolo')
@@ -105,7 +96,6 @@ const lap = p.locator('.lap-igazolo')
 }
 
 console.log('\n=== 3) Fordulónap-váltás kitöltött, nyitott lap mellett ===\n')
-await nyit(kartya)
 await kartya.getByRole('button', { name: 'Szerkesztés' }).click()
 await p.waitForTimeout(800)
 {

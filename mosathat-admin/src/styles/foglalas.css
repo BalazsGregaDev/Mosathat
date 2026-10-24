@@ -4,15 +4,6 @@
   padding-bottom: var(--t5);
 }
 
-.fogl-proba {
-  font-size: var(--m-sm); padding: var(--t2) var(--t3);
-  border-radius: var(--r); border: 1px dashed var(--keret-eros);
-  background: var(--lap-2); color: var(--szoveg-halk);
-}
-
-.fogl-fej h1 { font-size: 30px; margin: 0; }
-.fogl-fej p { color: var(--szoveg-halk); margin: 4px 0 0; }
-
 .fogl-kartya {
   background: var(--lap); border: 1px solid var(--keret); border-radius: var(--r-lg);
   padding: var(--t4); display: flex; flex-direction: column; gap: var(--t3);
@@ -135,6 +126,7 @@
 .fogl-figyel { margin: 0; padding: var(--t2) var(--t3); border-radius: var(--r); background: #fdf5e4; color: #7a4e0d; }
 .fogl-urlap { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--t3); }
 .fogl-urlap .szeles { grid-column: 1 / -1; }
+.fogl-urlap textarea.beviteli { font-size: var(--m-md); }
 .fogl-urlap .fogl-ceg-uzenet {
   display: block; margin: 0;
   white-space: pre-line; overflow-wrap: anywhere;
@@ -160,9 +152,6 @@
 
 .fogl-siker { text-align: left; }
 .fogl-gombok { display: flex; gap: var(--t2); flex-wrap: wrap; }
-
-.fogl-fejleszto { font-size: var(--m-xs); color: var(--szoveg-halk); }
-.fogl-fejleszto ul { margin: 4px 0 0; padding-left: 18px; }
 
 @media (max-width: 700px) {
   .fogl-csomagok, .fogl-valaszto.harom, .fogl-extrak, .fogl-urlap { grid-template-columns: 1fr; }

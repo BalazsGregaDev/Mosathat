@@ -31,7 +31,7 @@ const at = sima(await a.p.locator('.kv-jogi').innerText())
 const cimek = (await a.p.locator('.kv-jogi-kezeles h3').allTextContents()).map(sima)
 ok('az adatkezelések sorrendje és számozása', [
   '2.1 Online időpontfoglalás',
-  '2.2 Visszaigazoló e-mail és lemondó link',
+  '2.2 Visszaigazoló e-mail és a foglalás oldala',
   '2.3 Telefonos és személyes foglalás, ügyfél- és járműnyilvántartás',
   '2.4 Kapcsolattartás e-mailben és telefonon',
   '2.5 Céges ügyfelek kapcsolattartói',

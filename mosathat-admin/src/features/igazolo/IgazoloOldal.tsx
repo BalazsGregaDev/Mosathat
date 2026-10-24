@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { hibaSzoveg, honapCim, honapPlusz, maStr } from '../../lib/format'
-import type { SheetCompany } from '../../lib/types'
+import type { BerletLapListaElem, SheetCompany } from '../../lib/types'
 import { idoszakNapok, naptariHonap } from '../../lib/igazolo'
+import { berletAllapot, ervenyesseg } from '../../lib/berlet'
 import IgazoloLap from './IgazoloLap'
 import HonapUgras from './HonapUgras'
+import BerletLapAblak from './BerletLapAblak'
 
 export default function IgazoloOldal({ onSzerzodes }: {
   onSzerzodes?: (cegId: string) => void
@@ -16,6 +18,10 @@ export default function IgazoloOldal({ onSzerzodes }: {
   const [hiba, setHiba] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [nyitott, setNyitott] = useState<{ ceg: SheetCompany; ujSor: boolean } | null>(null)
+  const [ful, setFul] = useState<'cegek' | 'berletek'>('cegek')
+  const [berletek, setBerletek] = useState<BerletLapListaElem[] | null>(null)
+  const [berletHiba, setBerletHiba] = useState<string | null>(null)
+  const [berletNyitott, setBerletNyitott] = useState<string | null>(null)
 
   const kerSzam = useRef(0)
   const betolt = useCallback(async () => {
@@ -33,6 +39,22 @@ export default function IgazoloOldal({ onSzerzodes }: {
   useEffect(() => { void betolt() }, [betolt])
   useEffect(() => data.subscribe(() => void betolt()), [data, betolt])
 
+  const berletSzam = useRef(0)
+  const betoltBerletek = useCallback(async () => {
+    const n = ++berletSzam.current
+    try {
+      const r = await data.berletLapok()
+      if (n !== berletSzam.current) return
+      setBerletek(r)
+      setBerletHiba(null)
+    } catch (e) {
+      if (n === berletSzam.current) setBerletHiba(hibaSzoveg(e))
+    }
+  }, [data])
+
+  useEffect(() => { void betoltBerletek() }, [betoltBerletek])
+  useEffect(() => data.subscribe(() => void betoltBerletek()), [data, betoltBerletek])
+
   function lep(uj: string) {
     if (uj === honap) return
     setHonap(uj)
@@ -41,13 +63,74 @@ export default function IgazoloOldal({ onSzerzodes }: {
 
   const szurt = (cegek ?? []).filter((c) =>
     q.trim() === '' || c.name.toLowerCase().includes(q.trim().toLowerCase()))
+  const szurtBerlet = (berletek ?? []).filter((b) =>
+    q.trim() === '' || b.customer_name.toLowerCase().includes(q.trim().toLowerCase()))
 
   return (
     <div className="oldal">
       <div className="oldal-fej">
         <h2>Igazolólap</h2>
+        <div className="fulek">
+          <button className={ful === 'cegek' ? 'aktiv' : ''} onClick={() => setFul('cegek')}>
+            Cégek
+          </button>
+          <button className={ful === 'berletek' ? 'aktiv' : ''} onClick={() => setFul('berletek')}>
+            Bérletek
+            {berletek && berletek.length > 0 && <span className="jelzo">{berletek.length}</span>}
+          </button>
+        </div>
       </div>
 
+      {ful === 'berletek' && (
+        <>
+          <input className="beviteli" style={{ margin: '0 0 var(--t4)' }}
+                 value={q} onChange={(e) => setQ(e.target.value)}
+                 placeholder="Ügyfél neve" aria-label="Bérletes ügyfél keresése" />
+          {berletHiba && <div className="hibauzenet">{berletHiba}</div>}
+          {!berletek && !berletHiba && <div className="betolt">Betöltés…</div>}
+          {berletek && szurtBerlet.length === 0 && (
+            <div className="panel">
+              <div className="ures">
+                {berletek.length === 0
+                  ? 'Még nincs bérlet. Bérletet a Cégek és bérletesek oldalon lehet kiadni.'
+                  : 'Nincs találat.'}
+              </div>
+            </div>
+          )}
+          {szurtBerlet.length > 0 && (
+            <div className="panel igazolo-cegek">
+              {szurtBerlet.map((b) => {
+                const allapot = berletAllapot(b)
+                return (
+                  <div className="igazolo-ceg" key={b.id} data-kell={!allapot}>
+                    <button className="igazolo-ceg-nyit" onClick={() => setBerletNyitott(b.id)}>
+                      <span className="nev">
+                        {b.customer_name}
+                        <span className="cimke-pill szerzodes-pill">{b.name}</span>
+                        {allapot && <span className="cimke-pill">{allapot}</span>}
+                      </span>
+                      <span className="idoszak halk">érvényes: {ervenyesseg(b)}</span>
+                      <span className="allas">
+                        <span>{b.used} / {b.total} alkalom felhasználva</span>
+                        {b.reserved > 0 && <span>{b.reserved} lefoglalva</span>}
+                        {b.unsigned > 0 && <span className="figyel">{b.unsigned} aláírás hiányzik</span>}
+                      </span>
+                    </button>
+                    <div className="igazolo-ceg-gombok">
+                      <button className="btn btn-kicsi" onClick={() => setBerletNyitott(b.id)}>
+                        Megnyitás
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {ful === 'cegek' && (
+      <>
       <div className="igazolo-oldal-fej">
         <div className="honap-lepteto">
           <button className="btn btn-kicsi" aria-label="Előző hónap"
@@ -124,6 +207,14 @@ export default function IgazoloOldal({ onSzerzodes }: {
             </div>
           ))}
         </div>
+      )}
+
+      </>
+      )}
+
+      {berletNyitott && (
+        <BerletLapAblak passId={berletNyitott}
+                        onBezar={() => { setBerletNyitott(null); void betoltBerletek() }} />
       )}
 
       {nyitott && (

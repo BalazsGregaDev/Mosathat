@@ -4,7 +4,7 @@ import { useApp } from '../../state/AppContext'
 import { aktualisAuto, autoNev, csoportOsszeg } from '../../lib/flotta'
 import { hibaSzoveg } from '../../lib/format'
 import type { DayBooking } from '../../lib/types'
-import { igazoloKell } from '../igazolo/IgazoloGomb'
+import { igazoloFajta } from '../igazolo/IgazoloGomb'
 import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
 
 export default function FlottaLepteto({ groupId, tagok, onValtozas }: {
@@ -29,10 +29,14 @@ export default function FlottaLepteto({ groupId, tagok, onValtozas }: {
       const id = await data.fleetStep(groupId, irany)
       onValtozas()
       const auto = tagok.find((t) => t.id === id)
-      if (irany === 1 && id && auto && igazoloKell(auto)) {
+      const fajta = auto ? igazoloFajta(auto) : null
+      if (irany === 1 && id && auto && fajta) {
         await kapu.alairat(id,
           `${autoNev(auto)} kész. `
-          + 'Írasd alá az igazolólapot (km, név, aláírás) — vagy zárd be, és pótold később.')
+          + (fajta === 'BERLET'
+            ? 'Az alkalmat levontuk a bérletből. Írasd alá a bérlet igazolólapját (név, aláírás) — vagy zárd be, és pótold később.'
+            : 'Írasd alá az igazolólapot (km, név, aláírás) — vagy zárd be, és pótold később.'),
+          fajta)
         onValtozas()
       }
     } catch (e) {

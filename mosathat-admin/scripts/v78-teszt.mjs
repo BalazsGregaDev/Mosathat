@@ -122,18 +122,6 @@ const tj = await oldal('/adatvedelem', { width: 390, height: 844 })
 ok('a tájékoztató telefonon sem lóg ki', true, await tj.p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))
 await tj.ctx.close()
 
-console.log('\n=== 7) Az admin előnézet változatlan ===\n')
-const ctx = await b.newContext({ viewport: { width: 1600, height: 1000 } })
-const p = await ctx.newPage()
-await p.goto(CIM + '/')
-await p.waitForSelector('input[type="email"]', { timeout: 60000 })
-await p.fill('input[type="email"]', 'tulaj@mosathat.hu'); await p.fill('input[type="password"]', 'x')
-await p.getByRole('button', { name: /Belépés/ }).click(); await p.waitForTimeout(2500)
-await p.locator('aside.oldalsav button').filter({ hasText: 'Időpontfoglalás' }).first().click(); await p.waitForTimeout(1500)
-ok('belépve: előnézet sáv és fejlesztői részletek megvannak, robotcsapda nincs', [1, 1, 0],
-  [await p.locator('.fogl-proba').count(), await p.locator('.fogl-fejleszto').count(), await p.locator('#fo-weboldal').count()])
-await ctx.close()
-
 await b.close()
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)
 process.exit(baj === 0 ? 0 : 1)

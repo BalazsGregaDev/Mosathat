@@ -1,5 +1,6 @@
 import { chromium } from 'playwright'
 import { hetkoznapra } from './_munkanap.mjs'
+import { foglalasOldal, urestNapotValaszt } from './_publikus.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -106,11 +107,11 @@ await fsz.getByRole('button', { name: 'Szabadság rögzítése' }).click(); awai
 ok('Gábor szabadsága rögzítve a fejlesztőtől', true, (await fsz.locator('.valtozas-lista').innerText()).includes('Gábor'))
 
 console.log('\n=== 8) Időpontfoglalás: ebédszünetben nincs ajánlott időpont ===\n')
-await menu(f, 'Időpontfoglalás')
-const m = f.locator('.fogl')
-await m.locator('.fogl-csomag', { has: f.locator('.nev', { hasText: /^Start$/ }) }).click()
-await m.locator('.fogl-valaszto button').filter({ hasText: 'Megvárom' }).click(); await f.waitForTimeout(3500)
-await m.locator('.fogl-nap[data-allapot="szabad"], .fogl-nap[data-allapot="keves"]').first().click(); await f.waitForTimeout(500)
+const pub = await foglalasOldal(b, { hiba: (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ } })
+const m = pub.m
+await m.locator('.fogl-csomag', { has: pub.p.locator('.nev', { hasText: /^Start$/ }) }).click()
+await m.locator('.fogl-valaszto button').filter({ hasText: 'Megvárom' }).click(); await pub.p.waitForTimeout(3500)
+await urestNapotValaszt(m, pub.sql)
 const idok = (await m.locator('.fogl-idok button').allTextContents()).map((x) => x.split('–')[0].trim())
 console.log(`         kezdések: ${idok.join(', ')}`)
 ok('nincs 11:30, 12:00, 12:30', [false, false, false], ['11:30', '12:00', '12:30'].map((t) => idok.includes(t)))

@@ -230,7 +230,7 @@ console.log('\n=== 10) foglalásfelvétel: a két írásmód UGYANAZ az ügyfél
 await belep(TULAJ)
 {
   const [{ id: pkg }] = (await db.query(`select id from packages where code='START'`)).rows
-  const ma = new Date().toISOString().slice(0, 10)
+  const ma = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest' }).format(new Date())
   const foglal = (tel, rendszam) => futtat(`select create_booking($1::jsonb) as id`, [JSON.stringify({
     customer_name: 'Kettéhasadt Károly', customer_phone: tel, plate_raw: rendszam,
     category: 'SZEMELYAUTO', scope: 'TELJES', booking_type: 'LEADOS',
@@ -289,13 +289,16 @@ console.log('\n=== 11) bérlet és szerződés: ugyanez a jog ===\n')
   const fogl = await futtat(`select create_booking($1::jsonb) as id`, [JSON.stringify({
     customer_id: bUgyfel, vehicle_id: bAuto, category: 'SZEMELYAUTO',
     scope: 'TELJES', booking_type: 'LEADOS',
-    service_date: new Date().toISOString().slice(0, 10), drop_off_time: '13:00',
+    service_date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest' }).format(new Date()), drop_off_time: '13:00',
     package_id: pkg, extras: [],
   })])
   ok('bérletes autóra tud foglalni', true, !!fogl.rows?.[0]?.id)
-  const hasznal = await futtat(`select use_pass($1::uuid) as item`, [fogl.rows?.[0]?.id])
-  ok('és le tudja vonni az alkalmat', true, !!hasznal.rows?.[0]?.item)
-  if (hasznal.hiba) console.log('         ', hasznal.hiba)
+  const fedezet = await futtat(`select pass_item_id from bookings where id = $1::uuid`, [fogl.rows?.[0]?.id])
+  ok('a foglalás magától a bérletre kerül', true, !!fedezet.rows?.[0]?.pass_item_id)
+  const kesz = await futtat(`select booking_finish($1::uuid, '{}'::uuid[])`, [fogl.rows?.[0]?.id])
+  if (kesz.hiba) console.log('         ', kesz.hiba)
+  const hasznal = await futtat(`select count(*)::int as n from pass_usages where booking_id = $1::uuid`, [fogl.rows?.[0]?.id])
+  ok('és a Kész van levonja az alkalmat', 1, hasznal.rows?.[0]?.n)
   ok('de nem tudja kikapcsolni a bérletet', true,
     /tulajdonos kezeli/.test((await futtat(`select deactivate_pass($1::uuid)`, [b.rows[0].id])).hiba ?? ''))
 }

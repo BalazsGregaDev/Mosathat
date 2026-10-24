@@ -16,6 +16,7 @@ import { useCegLinkek } from '../ceglink/useCegLinkek'
 import KetallasuCsuszka from '../common/KetallasuCsuszka'
 import Csuszka from '../common/Csuszka'
 import Ablak from '../common/Ablak'
+import BerletLapAblak from '../igazolo/BerletLapAblak'
 
 export default function PartnersPage({ fokuszCeg }: {
   fokuszCeg?: string | null
@@ -31,6 +32,7 @@ export default function PartnersPage({ fokuszCeg }: {
   const [tolt, setTolt] = useState(true)
   const [hiba, setHiba] = useState<string | null>(null)
   const [ujBerlet, setUjBerlet] = useState(false)
+  const [berletLap, setBerletLap] = useState<string | null>(null)
   const [szerkContract, setSzerkContract] = useState<ContractRow | 'uj' | null>(null)
   const [kerdesAblak, kerdez] = useKerdes()
 
@@ -123,7 +125,10 @@ export default function PartnersPage({ fokuszCeg }: {
                               {t.package_name ?? 'Bármelyik csomag'}
                               {t.category && ` · ${CATEGORY_SHORT[t.category]}`}
                             </th>
-                            <td className="szam">{t.qty_left} / {t.qty_total}</td>
+                            <td className="szam">
+                              {t.qty_left} / {t.qty_total}
+                              {t.qty_reserved > 0 && <span className="halk"> · {t.qty_reserved} lefoglalva</span>}
+                            </td>
                             <td>
                               <span className="savtart" style={{ width: 90 }}>
                                 <span className="betelt"
@@ -135,12 +140,17 @@ export default function PartnersPage({ fokuszCeg }: {
                       </tbody>
                     </table>
 
+                    <div className="berlet-gombok">
+                    <button className="btn btn-kicsi" onClick={() => setBerletLap(fej.pass_id)}>
+                      Igazolólap
+                    </button>
                     {fej.active && szerkesztheto && (
-                      <button className="btn btn-kicsi" style={{ marginTop: 'var(--t3)' }}
+                      <button className="btn btn-kicsi"
                               onClick={async () => {
                                 if (!(await kerdez({
                                   cim: 'Biztosan kivezeted ezt a bérletet?',
-                                  szoveg: 'A megmaradt alkalmak ezután nem használhatók fel.',
+                                  szoveg: 'A megmaradt alkalmak ezután nem használhatók fel. '
+                                    + 'A már lefoglalt, de még le nem vont időpontok listaárra állnak.',
                                   igen: 'Kivezetés', nem: 'Mégse', veszelyes: true,
                                 }))) return
                                 try {
@@ -153,6 +163,7 @@ export default function PartnersPage({ fokuszCeg }: {
                         Kivezetés
                       </button>
                     )}
+                    </div>
                 </BerletKartya>
               )
             })}
@@ -206,6 +217,9 @@ export default function PartnersPage({ fokuszCeg }: {
           onBezar={() => setSzerkContract(null)}
           onKesz={() => { setSzerkContract(null); void ujra() }}
         />
+      )}
+      {berletLap && (
+        <BerletLapAblak passId={berletLap} onBezar={() => { setBerletLap(null); void ujra() }} />
       )}
       {kerdesAblak}
     </div>

@@ -5,13 +5,14 @@ import {
 import '../arculat/betuk'
 import '../arculat/koncepciok.css'
 import { useApp } from '../../state/AppContext'
+import { useMentes } from '../../state/useMentes'
 import { useMentetlen } from '../../state/useMentetlen'
 import {
   FORDITHATO_ADATOK, foSzakaszNapok, KOZOS_VALTOZOK, SZOVEGEK, uzletbol, uzletValtozok,
   type NyitvaNap, type SzovegDef, type SzovegKulcs, type Valtozok,
 } from '../../lib/publikusTartalom'
 import { csomagbanBenne } from '../../lib/csomag'
-import { maStr, napPlusz } from '../../lib/format'
+import { maStr, napPlusz, percIdo } from '../../lib/format'
 import { formatum, NYELVEK, type Nyelv } from '../../lib/nyelv'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import type { Catalog, PublikusAdat } from '../../data/source'
@@ -23,7 +24,7 @@ import type { FoglalasomAdat, OldalAllapot } from '../../../../supabase/function
 import { FoglalasUrlap, type Bemutato, type FoglalasForras } from '../publikus/FoglalasModul'
 import { TartalomProvider, useSz } from '../publikus/tartalom'
 import { usePublikusAdat } from '../publikus/usePublikusAdat'
-import { Elonezet, PubFej, useMentes } from './kozos'
+import { Elonezet, PubFej } from './kozos'
 import type { Billentyu, Honnan, Ugras } from '../shell/ugras'
 
 type Szovegek = Record<SzovegKulcs, string>
@@ -340,11 +341,9 @@ function Sugo({ id, valtozok, onValtozo }: { id: string; valtozok: Valtozok; onV
 
 const kisbetu = (s: string) => s.toLocaleLowerCase('hu')
 
-const ido = (p: number) => `${String(Math.floor(p / 60)).padStart(2, '0')}:${String(p % 60).padStart(2, '0')}`
-
 function negyedek(tol: number, ig: number, lanes: number): DayLane[] {
   const ki: DayLane[] = []
-  for (let t = tol; t < ig; t += 15) ki.push({ starts: ido(t), ends: ido(t + 15), lanes })
+  for (let t = tol; t < ig; t += 15) ki.push({ starts: percIdo(t), ends: percIdo(t + 15), lanes })
   return ki
 }
 
@@ -368,6 +367,7 @@ function bemutatoForras(k: Catalog): FoglalasForras {
         price_huf: (fs?.price_huf ?? pp?.price_huf ?? 0) + extrak,
         work_minutes: pp?.duration_minutes ?? 90, rest_minutes: 0, requires_quote: false, duration_known: true,
         lines: [], company_id: null, contract_id: null, contract_kind: null, contract_price: false, contract_prices: {},
+        berlet: null, berlet_csomagok: [],
       }
       return q
     },
@@ -419,7 +419,7 @@ function FoglalasLepes({ lepes, bemutato, mod, k, lemondasOra, forras }: {
     <div className="kv" data-k="03" data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
       <section className="kv-foglalas kv-foglalas-elo pub-fogl-elonezet" data-elonezet={id}>
         <style>{`[data-elonezet="${id}"] .fogl > :not([data-lepes="${lepes}"]) { display: none !important; }`}</style>
-        <FoglalasUrlap data={forras} katalogus={k} revision={0} refresh={() => {}} nyilvanos
+        <FoglalasUrlap data={forras} katalogus={k} revision={0} refresh={() => {}}
                        lemondasOra={lemondasOra} bemutato={bemutato} />
       </section>
     </div>
@@ -665,5 +665,3 @@ export default function TartalomOldal({ onUgras, visszaterve = null }: {
     </div>
   )
 }
-
-export const SAV_KULCSOK = SAVOK.flatMap((s) => s.kulcsok)

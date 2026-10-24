@@ -4,9 +4,9 @@ import { join } from 'node:path'
 import { chromium } from 'playwright'
 
 import { adatbazis, TULAJ } from './_db.mjs'
-import { hetkoznapra } from './_munkanap.mjs'
+import { adminOldal, foglalasOldal, onlineKeres, valtozas } from './_publikus.mjs'
 
-const CIM = process.env.CIM ?? 'http://localhost:5180'
+const CIM = process.env.CIM ?? 'http://localhost:5181'
 const KEPEK = process.env.KEPEK ?? null
 if (KEPEK) await mkdir(KEPEK, { recursive: true })
 
@@ -25,7 +25,7 @@ const egy = async (s, p = []) => (await db.query(s, p)).rows[0]
 await db.query(`select set_config('app.uid', $1, false)`, [TULAJ])
 const PREMIUM = (await egy(`select id from packages where code = 'PREMIUM'`)).id
 const nap = (await egy(
-  `select d::date::text d from generate_series(current_date + 4, current_date + 50, interval '1 day') d
+  `select d::date::text d from generate_series(public.budapest_ma() + 4, public.budapest_ma() + 50, interval '1 day') d
     where munkanap(d::date) order by d limit 1`)).d
 let sorszam = 0
 async function foglalas(x = {}) {
@@ -159,17 +159,9 @@ ok('a lemondó oldalakon nincs JS hiba', [], tel.hibak)
 await tel.ctx.close()
 
 console.log('\n=== 4) Admin: beállítás és online kérés ===\n')
-const admin = await b.newContext({ viewport: { width: 1440, height: 900 } })
-const p = await admin.newPage()
 const adminHibak = []
-p.on('pageerror', (e) => adminHibak.push(e.message.slice(0, 160)))
-await hetkoznapra(p)
-await p.goto(`${CIM}/`)
-await p.waitForSelector('input[type="email"]', { timeout: 60000 })
-await p.fill('input[type="email"]', 'tulaj@mosathat.hu')
-await p.fill('input[type="password"]', 'x')
-await p.getByRole('button', { name: /Belépés/ }).click()
-await p.waitForTimeout(2500)
+const { ctx: admin, p, sql, belep } = await adminOldal(b, { hiba: (e) => adminHibak.push(e.message.slice(0, 160)) })
+await belep('tulaj@mosathat.hu')
 const menu = (szoveg) => p.locator('aside.oldalsav button').filter({ hasText: szoveg }).first()
 
 await menu('Beállítások').click(); await p.waitForTimeout(800)
@@ -188,26 +180,33 @@ await kep(p, '11-beallitas.png')
 await mezo.fill('24')
 await p.locator('.fej-mentes button').filter({ hasText: 'Mentés' }).click(); await p.waitForTimeout(1000)
 
-await menu('Időpontfoglalás').click(); await p.waitForTimeout(1500)
-const m = p.locator('.fogl')
-const gomb = (szoveg) => m.locator('.fogl-valaszto button').filter({ hasText: szoveg })
-await gomb('Személyautó').click()
-await m.locator('.fogl-csomag', { has: p.locator('.nev', { hasText: /^Premium$/ }) }).click(); await p.waitForTimeout(900)
-await gomb('Itt hagyom').click(); await p.waitForTimeout(3500)
-await m.locator('.fogl-nap[data-allapot="szabad"]').first().click(); await p.waitForTimeout(1500)
-await m.locator('.fogl-idok button').first().click(); await p.waitForTimeout(800)
-await p.fill('#fo-nev', 'Email Emma')
-await p.fill('#fo-tel', '+36 30 999 6701')
-await p.fill('#fo-email', 'emma@pelda.hu')
-await p.fill('#fo-rsz', 'eml-671')
-await m.locator('.fogl-feltetel input').check()
-await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
-ok('a köszönő oldal ígéri az e-mailt', true,
-  (await m.locator('.fogl-siker p').innerText()).includes('e-mailt küldünk róla, benne a lemondó linkkel'))
+{
+  const pub = await foglalasOldal(b, { hiba: (e) => adminHibak.push(e.message.slice(0, 160)) })
+  const m = pub.m
+  const gomb = (szoveg) => m.locator('.fogl-valaszto button').filter({ hasText: szoveg })
+  await gomb('Személyautó').click()
+  await m.locator('.fogl-csomag', { has: pub.p.locator('.nev', { hasText: /^Premium$/ }) }).click(); await pub.p.waitForTimeout(900)
+  await gomb('Itt hagyom').click(); await pub.p.waitForTimeout(3500)
+  await m.locator('.fogl-nap[data-allapot="szabad"]').first().click(); await pub.p.waitForTimeout(1500)
+  await m.locator('.fogl-idok button').first().click(); await pub.p.waitForTimeout(800)
+  await pub.p.fill('#fo-nev', 'Email Emma')
+  await pub.p.fill('#fo-tel', '+36 30 999 6701')
+  await pub.p.fill('#fo-email', 'emma@pelda.hu')
+  await pub.p.fill('#fo-rsz', 'eml-671')
+  await m.locator('.fogl-feltetel input').check()
+  await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await pub.p.waitForTimeout(2500)
+  ok('a köszönő oldal ígéri az e-mailt a foglalás oldalával', true,
+    (await m.locator('.fogl-siker p').innerText()).includes('e-mailt küldünk róla, benne a foglalásod oldalának linkjével'))
+  ok('a kérésben az e-mail cím', [{ email: 'emma@pelda.hu' }],
+    await pub.sql(`select ugyfel_email email from v_online_kerelmek k join vehicles v on v.id = k.vehicle_id where upper(v.plate_raw) = 'EML-671'`))
+  await pub.ctx.close()
+}
+await onlineKeres(sql, { plate_raw: 'eml-671', customer_name: 'Email Emma', customer_phone: '+36 30 999 6701', customer_email: 'emma@pelda.hu' })
+await valtozas(p)
 const popup = p.locator('dialog[aria-label="Online foglalási kérés"]')
 await popup.waitFor({ timeout: 10000 })
-ok('a kérés ablaka szól, hogy élesben e-mail megy', true,
-  (await popup.locator('.keres-tipp').first().innerText()).includes('visszaigazoló e-mailt kap, benne a lemondó linkkel'))
+ok('a kérés ablaka szól, hogy élesben e-mail megy a foglalási oldal linkjével', true,
+  (await popup.locator('.keres-tipp').first().innerText()).includes('visszaigazoló e-mailt kap, benne a foglalási oldala linkjével'))
 await kep(p, '12-keres-ablak.png')
 await popup.getByRole('button', { name: 'Elfogadom' }).click(); await p.waitForTimeout(2000)
 ok('demóban elfogadás után bezárul', 0, await popup.count())

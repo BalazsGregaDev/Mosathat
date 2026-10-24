@@ -20,8 +20,8 @@ const alap = (await egy(`select sheet_alap_oszlopok() o`)).o
 await q(`select sheet_settings_save($1, $2::jsonb)`, [ceg, JSON.stringify({
   columns: alap, footer_text: 'Régi szöveg' })])
 
-const regi = (await egy(`select (date_trunc('month', current_date) - interval '24 months')::date::text m`)).m
-const most = (await egy(`select date_trunc('month', current_date)::date::text m`)).m
+const regi = (await egy(`select (date_trunc('month', public.budapest_ma()) - interval '24 months')::date::text m`)).m
+const most = (await egy(`select date_trunc('month', public.budapest_ma())::date::text m`)).m
 await belep(ALK)
 await q(`select sheet_row_save($1::jsonb)`, [JSON.stringify({
   company_id: ceg, day: regi, plate: 'REG-001', net_huf: 10000, name: 'Régi Rudi' })])

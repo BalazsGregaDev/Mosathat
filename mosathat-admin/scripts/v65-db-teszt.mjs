@@ -15,7 +15,7 @@ const PREMIUM = await csomag('PREMIUM')
 const ELIT = await csomag('ELIT')
 
 const elsoNap = async (napja) => (await egy(
-  `select d::date::text d from generate_series(current_date + 1, current_date + 50, interval '1 day') d
+  `select d::date::text d from generate_series(public.budapest_ma() + 1, public.budapest_ma() + 50, interval '1 day') d
     where extract(isodow from d) = $1 and munkanap(d::date) limit 1`, [napja])).d
 const kovetkezoNyitott = async (nap) => (await egy(
   `select min(d)::date::text d from generate_series($1::date + 1, $1::date + 14, interval '1 day') d
@@ -70,7 +70,7 @@ t.ok('a kérések listájában is látszik az ülés', ['KARPIT', true], [keres.
 
 console.log('\n=== 3) Zárva tartó nap után a következő nyitvatartási napon viheti ===\n')
 const zarasElott = (await egy(
-  `select d::date::text d from generate_series(current_date + 1, current_date + 50, interval '1 day') d
+  `select d::date::text d from generate_series(public.budapest_ma() + 1, public.budapest_ma() + 50, interval '1 day') d
     where munkanap(d::date) and not munkanap(d::date + 1) limit 1`)).d
 const utana = await kovetkezoNyitott(zarasElott)
 const zarasId = await kuld({ service_date: zarasElott, plate_raw: 'FSV-651', seat_material: 'KARPIT_BOR' })
@@ -116,7 +116,7 @@ t.ok('visszaigazolva, az ülés megmaradt', ['CONFIRMED', 'KARPIT'], [(await hel
 
 console.log('\n=== 7) A nyitvatartási nap ugyanaz a felületnek és az adatbázisnak ===\n')
 const elteres = await q(
-  `select d::date::text d from generate_series(current_date, current_date + 60, interval '1 day') d
+  `select d::date::text d from generate_series(public.budapest_ma(), public.budapest_ma() + 60, interval '1 day') d
     where munkanap(d::date) <> exists (select 1 from day_lanes(d::date))`)
 t.ok('ahol munkanap, ott van sáv, és fordítva', [], elteres.map((r) => r.d))
 

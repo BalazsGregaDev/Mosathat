@@ -6,7 +6,7 @@ export interface LemondasValasz extends LemondasAllapot {
   hiba?: string
 }
 
-export function lemondasVegpont(): string | null {
+function lemondasVegpont(): string | null {
   const alap = (import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\s+/g, '').replace(/\/+$/, '')
   return alap ? `${alap}/functions/v1/lemondas` : null
 }

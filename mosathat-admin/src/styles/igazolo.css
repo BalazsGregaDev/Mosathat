@@ -194,6 +194,16 @@
   padding: var(--t3); font-size: var(--m-sm);
 }
 .igazolo-idoszak { font-size: var(--m-sm); margin-top: calc(-1 * var(--t2)); }
+.berlet-alkalom { font-weight: var(--vastag-eros); }
+.berlet-tetelek { display: flex; flex-direction: column; gap: var(--t2); font-size: var(--m-sm); }
+.berlet-tetel {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--t1) var(--t3);
+  padding-bottom: var(--t2); border-bottom: 1px solid var(--keret);
+}
+.berlet-tetel .szamok { color: var(--szoveg-halk); font-family: var(--betu-szam); }
+.berlet-foglalt { display: flex; flex-direction: column; gap: 2px; font-size: var(--m-sm); }
+.berlet-foglalt .szakasz-cim { margin-top: 0; }
+.berlet-gombok { display: flex; flex-wrap: wrap; gap: var(--t2); margin-top: var(--t3); }
 .igazolo-ceg-nyit .idoszak { font-size: var(--m-xs); }
 .panel[data-kiemelt], .ceg-kartya[data-kiemelt] {
   box-shadow: 0 0 0 3px var(--zold);

@@ -36,8 +36,8 @@ async function hibaUzenet(fn) {
 
 await belep(TULAJ)
 const csomag = (await egy(`select id from packages where code = 'PREMIUM'`)).id
-const szerda = (await egy(`select (date_trunc('week', current_date) + interval '9 days')::date::text d`)).d
-const csutortok = (await egy(`select (date_trunc('week', current_date) + interval '10 days')::date::text d`)).d
+const szerda = (await egy(`select (date_trunc('week', public.budapest_ma()) + interval '9 days')::date::text d`)).d
+const csutortok = (await egy(`select (date_trunc('week', public.budapest_ma()) + interval '10 days')::date::text d`)).d
 const alap = {
   category: 'SZEMELYAUTO', scope: 'TELJES', package_id: csomag, full_service: false, extras: [],
   booking_type: 'LEADOS', service_date: szerda, start_time: null, drop_off_time: '08:30',
@@ -58,13 +58,13 @@ t.ok('új ügyfél: nincs előzmény', [0, null, 0, 0],
 
 console.log('\n=== 2) Visszatérő ügyfél előzményei ===\n')
 const regi = await kuld({ service_date: csutortok, plate_raw: 'KER-063' })
-await q(`update bookings set status = 'COMPLETED', service_date = current_date - 20, last_day = current_date - 20
+await q(`update bookings set status = 'COMPLETED', service_date = public.budapest_ma() - 20, last_day = public.budapest_ma() - 20
           where id = $1`, [regi])
 const nemJott = await kuld({ service_date: csutortok, plate_raw: 'KER-063' })
-await q(`update bookings set status = 'NO_SHOW', service_date = current_date - 10, last_day = current_date - 10
+await q(`update bookings set status = 'NO_SHOW', service_date = public.budapest_ma() - 10, last_day = public.budapest_ma() - 10
           where id = $1`, [nemJott])
 const elotte = await egy(`select korabbi_db, utolso_nap::text u, nem_jott_db from v_online_kerelmek where id = $1`, [elso])
-const husz = (await egy(`select (current_date - 20)::text d`)).d
+const husz = (await egy(`select (public.budapest_ma() - 20)::text d`)).d
 t.ok('egy elvégzett munka, utoljára 20 napja, egyszer nem jött el', [1, husz, 1],
   [elotte.korabbi_db, elotte.u, elotte.nem_jott_db])
 
@@ -81,7 +81,7 @@ t.ok('a kezelt kérések lekerültek a listáról', [], lista.map((r) => r.id))
 
 console.log('\n=== 4) A múltbeli kérés nem ugrik fel ===\n')
 const multbeli = await kuld({ plate_raw: 'MLT-001' })
-await q(`update bookings set service_date = current_date - 1, last_day = current_date - 1 where id = $1`, [multbeli])
+await q(`update bookings set service_date = public.budapest_ma() - 1, last_day = public.budapest_ma() - 1 where id = $1`, [multbeli])
 t.ok('tegnapi kérés nincs a listán', 0, (await q(`select id from v_online_kerelmek where id = $1`, [multbeli])).length)
 
 console.log('\n=== 5) Jogosultság ===\n')

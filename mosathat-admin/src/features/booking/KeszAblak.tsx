@@ -63,7 +63,7 @@ function KeszAblak({ k, onVege }: { k: Kerdes; onVege: (v: FinishPreview | null)
 
   const csoportok = useMemo<Csoport[]>(() => {
     if (!lista) return []
-    const rend = (a: BookingTask, b: BookingTask) => a.sort_order - b.sort_order
+    const rend = (x: BookingTask, y: BookingTask) => x.sort_order - y.sort_order
     const csomag = lista.filter((t) => t.source === 'PACKAGE')
     return ([
       { kulcs: 'KULSO', cim: 'Külső', pontok: csomag.filter((t) => t.area === 'KULSO').sort(rend) },

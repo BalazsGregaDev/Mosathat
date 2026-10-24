@@ -49,7 +49,7 @@ const authHivhat = await q(`select
   has_function_privilege('service_role', 'public.create_booking(jsonb)', 'EXECUTE') as szerviz`)
 t.ok('bejelentkezve hívható: távollét, foglalás; a vészjelszó nem; a szerver kulcs megmarad',
   { tavollet: true, foglalas: true, veszjelszo: false, szerviz: true }, authHivhat[0])
-const anonHiba = await szerepkorben('anon', () => hibaUzenet(() => q(`select * from day_absences(current_date)`)))
+const anonHiba = await szerepkorben('anon', () => hibaUzenet(() => q(`select * from day_absences(public.budapest_ma())`)))
 t.ok('anonként a távollét-lista elutasítva', true, /permission denied/i.test(anonHiba ?? ''))
 
 console.log('\n=== 2) Sorszintű jogok: a policyk egyszer számolják a jogot ===\n')
@@ -66,11 +66,11 @@ t.ok('anonként a táblához nincs hozzáférés', true, anonLat !== null)
 
 console.log('\n=== 3) Távollét-lista csak dolgozónak ===\n')
 await belep(TULAJ)
-await q(`insert into staff_absences (staff_id, day, kind, starts) values ($1, current_date, 'KORABBAN_TAVOZIK', '15:00')`, [ALK])
-const dolgozo = await szerepkorben('authenticated', () => q(`select * from day_absences(current_date)`))
+await q(`insert into staff_absences (staff_id, day, kind, starts) values ($1, public.budapest_ma(), 'KORABBAN_TAVOZIK', '15:00')`, [ALK])
+const dolgozo = await szerepkorben('authenticated', () => q(`select * from day_absences(public.budapest_ma())`))
 t.ok('dolgozóként látszik', 1, dolgozo.length)
 await belep(null)
-const idegen = await szerepkorben('authenticated', () => q(`select * from day_absences(current_date)`))
+const idegen = await szerepkorben('authenticated', () => q(`select * from day_absences(public.budapest_ma())`))
 t.ok('idegenként üres', 0, idegen.length)
 
 console.log('\n=== 4) Bérlet: az ügyfél-jogú alkalmazott is felveheti ===\n')
@@ -109,16 +109,19 @@ const halott = await q(`select count(*)::int n from pg_proc where pronamespace =
 t.ok('my_absences, sheet_honap_nev, lookup_plate', 0, halott[0].n)
 
 console.log('\n=== 6) Az adatbázis-leírások (régi kommentek) törlődnek ===\n')
-await belep(TULAJ)
-await q(`comment on table public.bookings is 'régi leírás'`)
-await q(`comment on column public.bookings.notes is 'régi leírás'`)
-await q(`comment on view public.v_day_bookings is 'régi leírás'`)
-await q(`comment on function public.calc_service is 'régi leírás'`)
-await db.exec(await readFile(join(GYOKER, 'supabase', 'migrations', '20261010090000_biztonsag_takaritas.sql'), 'utf8'))
-const leiras = await q(`select count(*)::int n from pg_description d
+const regi = await adatbazis({ elotte: SUPABASE_JOGOK, meddig: '20261024120000' })
+const rq = async (s, p) => (await regi.query(s, p)).rows
+await rq(`select set_config('app.uid', $1, false)`, [TULAJ])
+await rq(`comment on table public.bookings is 'régi leírás'`)
+await rq(`comment on column public.bookings.notes is 'régi leírás'`)
+await rq(`comment on view public.v_day_bookings is 'régi leírás'`)
+await rq(`comment on function public.calc_service is 'régi leírás'`)
+await regi.exec(await readFile(join(GYOKER, 'supabase', 'migrations', '20261010090000_biztonsag_takaritas.sql'), 'utf8'))
+const leiras = await rq(`select count(*)::int n from pg_description d
   where (d.classoid = 'pg_class'::regclass and exists (select 1 from pg_class c where c.oid = d.objoid and c.relnamespace = 'public'::regnamespace))
      or (d.classoid = 'pg_proc'::regclass and exists (select 1 from pg_proc p where p.oid = d.objoid and p.pronamespace = 'public'::regnamespace))`)
-t.ok('a migráció újrafuttatva is hibátlan, és nem marad leírás', 0, leiras[0].n)
+t.ok('a migráció újrafuttatva is hibátlan (a bérlet-igazolólap előtti sémán), és nem marad leírás', 0, leiras[0].n)
 
+await regi.close()
 await db.close()
 t.vege()

@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { foglalasOldal, urestNapotValaszt } from './_publikus.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -39,13 +40,11 @@ ok('a Profilom „Kinek" listájában nincs ott (nem ember)', 0,
   await p.locator('#mv-kinek option').filter({ hasText: 'Gábor' }).count())
 
 console.log('\n=== 2) Időpontfoglalás: a legkorábbi időpont 9:00 ===\n')
-const f = await belep('demo@mosathat.hu')
-await menu(f, 'Időpontfoglalás')
-const m = f.locator('.fogl')
+const { p: f, m, sql } = await foglalasOldal(b, { hiba: (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ } })
 await m.locator('.fogl-csomag', { has: f.locator('.nev', { hasText: /^Start$/ }) }).click()
 for (const tipus of ['Megvárom', 'Itt hagyom']) {
   await m.locator('.fogl-valaszto button').filter({ hasText: tipus }).click(); await f.waitForTimeout(3500)
-  await m.locator('.fogl-nap[data-allapot="szabad"], .fogl-nap[data-allapot="keves"]').first().click(); await f.waitForTimeout(500)
+  await urestNapotValaszt(m, sql)
   const idok = (await m.locator('.fogl-idok button').allTextContents()).map((x) => x.replace(/kész.*/, '').trim())
   ok(`${tipus}: az első időpont 9:00, előtte nincs`, ['9:00', false, false],
     [idok[0], idok.includes('8:00'), idok.includes('8:30')])

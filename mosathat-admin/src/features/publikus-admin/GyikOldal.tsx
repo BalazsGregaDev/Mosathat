@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import './gyik-admin.css'
 import { useApp } from '../../state/AppContext'
+import { useMentes } from '../../state/useMentes'
 import { useMentetlen } from '../../state/useMentetlen'
-import { hibaSzoveg } from '../../lib/format'
+import { hibaSzoveg, rovidDatum } from '../../lib/format'
 import { GYIK_KATEGORIAK, uresValasz, type GyikAdmin, type GyikKategoria, type GyikMod, type GyikSor } from '../../lib/gyik'
 import type { Nyelv } from '../../lib/nyelv'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import SzovegSzerkeszto from '../common/SzovegSzerkeszto'
-import { Mezo, PubFej, useMentes } from './kozos'
+import { Mezo, PubFej } from './kozos'
 
 const KAT_NEV: Record<GyikKategoria, string> = { KULSO: 'Külső', BELSO: 'Belső', EGYEB: 'Egyéb' }
 
@@ -35,11 +36,6 @@ function vazlatbol(k: GyikSor): Vazlat {
 }
 
 const tartalma = (v: Vazlat) => JSON.stringify([v.kerdes.trim(), v.valasz, v.kerdes_en.trim(), v.valasz_en, v.kategoria, v.kiemelt])
-
-function datum(s?: string | null) {
-  if (!s) return ''
-  return new Intl.DateTimeFormat('hu-HU', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(s))
-}
 
 function Csillag({ be, tiltva, onClick, cim }: { be: boolean; tiltva?: boolean; onClick: () => void; cim: string }) {
   return (
@@ -244,7 +240,7 @@ export default function GyikAdminOldal() {
                     <span className="gyik-sor-meta">
                       <span className="gyik-cimke" data-kat={k.kategoria}>{KAT_NEV[k.kategoria]}</span>
                       <span className="gyik-allapot" data-allapot={k.publikalt ? 'kint' : 'piszkozat'}>
-                        {k.publikalt ? `Publikálva ${datum(k.publikalva_at)}` : 'Piszkozat'}
+                        {k.publikalt ? `Publikálva ${rovidDatum(k.publikalva_at)}` : 'Piszkozat'}
                       </span>
                       {!k.kerdes_en && <span className="halk">nincs angolul</span>}
                     </span>
@@ -362,7 +358,7 @@ export default function GyikAdminOldal() {
                       <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => setTorles(false)}>Mégse</button>
                     </span>
                   )}
-                  {sajat?.updated_at && <span className="halk">Utoljára módosítva: {datum(sajat.updated_at)}</span>}
+                  {sajat?.updated_at && <span className="halk">Utoljára módosítva: {rovidDatum(sajat.updated_at)}</span>}
                   <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => megnyit('bezar')}>Bezárás</button>
                 </div>
               </div>

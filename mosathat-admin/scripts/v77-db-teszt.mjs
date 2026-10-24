@@ -19,8 +19,8 @@ t.ok('a kiválasztás azonnal látszik', ['05', 'SOTET'], [a.arculat, a.arculat_
 await q(`select set_config('app.uid', '', false)`)
 a = await adat()
 t.ok('belépés nélkül is ugyanazt adja', ['05', 3], [a.arculat, a.packages.length])
-t.ok('csak nyilvános mezők: nincs ügyfél, foglalás, beszerzési adat', [],
-  Object.keys(a).filter((k) => !['arculat', 'arculat_mod', 'lemondas_ora', 'packages', 'packagePricing', 'packageItems', 'packageExtras', 'extras', 'fullServicePricing', 'leadas', 'nyitvatartas', 'adatok', 'szovegek', 'szovegek_en', 'kamerak'].includes(k)))
+t.ok('csak nyilvános mezők: nincs ügyfél, foglalás, beszerzési adat (a vélemények és a GYIK nyilvános)', [],
+  Object.keys(a).filter((k) => !['arculat', 'arculat_mod', 'lemondas_ora', 'packages', 'packagePricing', 'packageItems', 'packageExtras', 'extras', 'fullServicePricing', 'leadas', 'nyitvatartas', 'adatok', 'szovegek', 'szovegek_en', 'kamerak', 'velemenyek', 'gyik'].includes(k)))
 t.ok('az extráknál csak nyilvános szolgáltatásadat', [
   'active', 'area', 'description', 'description_en', 'duration_unit', 'id', 'included_in_full_service', 'included_in_packages', 'name',
   'name_en', 'price_huf', 'price_unit', 'recommends_overnight', 'requires_quote', 'rest_minutes', 'sort_order', 'work_minutes'],

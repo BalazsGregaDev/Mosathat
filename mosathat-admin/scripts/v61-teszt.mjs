@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { adminOldal, napra, onlineKeres } from './_publikus.mjs'
 
 const URL = 'http://localhost:5180/'
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
@@ -41,11 +42,11 @@ const kilog = (p) => p.evaluate(() => document.documentElement.scrollWidth - win
 const lathatoHiba = (p) => p.locator('.hibauzenet:visible').count()
 
 console.log('=== 1) Füstteszt: minden menüpont, minden szerepkör, asztal és telefon ===\n')
+const TELJES = ['Áttekintés', 'Időpontok', 'Igazolólap', 'Szolgáltatások', 'Cégek és bérletesek', 'Ügyfelek', 'Felhasználók',
+  'Beállítások', 'Profilom', 'Elérhetőség', 'Tartalom', 'Csomagok', 'Vélemények', 'GYIK', 'Cégadatok', 'Jogi szövegek', 'Arculat']
 const SZEREPEK = [
-  ['demo@mosathat.hu', ['Áttekintés', 'Időpontok', 'Igazolólap', 'Szolgáltatások', 'Cégek és bérletesek',
-    'Ügyfelek', 'Felhasználók', 'Beállítások', 'Profilom', 'Időpontfoglalás']],
-  ['tulaj@mosathat.hu', ['Áttekintés', 'Időpontok', 'Igazolólap', 'Szolgáltatások', 'Cégek és bérletesek',
-    'Ügyfelek', 'Felhasználók', 'Beállítások', 'Profilom', 'Időpontfoglalás']],
+  ['demo@mosathat.hu', TELJES],
+  ['tulaj@mosathat.hu', TELJES],
   ['alkalmazott@mosathat.hu', ['Időpontok', 'Igazolólap', 'Szolgáltatások', 'Cégek és bérletesek', 'Ügyfelek', 'Profilom']],
 ]
 for (const [email, menupontok] of SZEREPEK) {
@@ -53,6 +54,10 @@ for (const [email, menupontok] of SZEREPEK) {
     const { ctx, p, hibak } = await oldal(viewport)
     await belep(p, email)
     const mobil = nev === 'telefon'
+    if (!mobil) {
+      ok(`${email.split('@')[0]}: a menüpontok`, menupontok,
+        await p.locator('aside.oldalsav .menu button:not([disabled])').evaluateAll((l) => l.map((e) => e.textContent.trim())))
+    }
     const kilogo = []
     const hibas = []
     for (const m of menupontok) {
@@ -123,8 +128,7 @@ console.log('\n=== 6) Flotta: idő írható, a sorrend megmarad, a Szerkesztés 
   const { ctx, p } = await oldal()
   await belep(p, 'tulaj@mosathat.hu')
   await menu(p, 'Cégek és bérletesek')
-  const kartya = p.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).first()
-  await kartya.locator('.kartya-nyito').click(); await p.waitForTimeout(300)
+  const kartya = p.locator('.cegtabla-sor').filter({ hasText: 'Autó Trans' }).first()
   await kartya.getByRole('button', { name: 'Szerkesztés' }).click(); await p.waitForTimeout(800)
   const urlap = p.locator('[aria-label="Szerződés"]')
   await urlap.getByRole('switch', { name: 'Flottás autók' }).click()
@@ -185,23 +189,13 @@ console.log('\n=== 6) Flotta: idő írható, a sorrend megmarad, a Szerkesztés 
 
 console.log('\n=== 7) Online kérés munkalapja: Elutasít, utána Mégis jön ===\n')
 {
-  const { ctx, p } = await oldal()
-  await belep(p, 'demo@mosathat.hu')
-  await menu(p, 'Időpontfoglalás')
-  const m = p.locator('.fogl')
-  await m.locator('.fogl-valaszto button').filter({ hasText: 'Személyautó' }).click()
-  await m.locator('.fogl-csomag', { has: p.locator('.nev', { hasText: /^Premium$/ }) }).click(); await p.waitForTimeout(800)
-  await m.locator('.fogl-valaszto button').filter({ hasText: 'Itt hagyom' }).click(); await p.waitForTimeout(3500)
-  await m.locator('.fogl-nap[data-allapot="szabad"]').first().click(); await p.waitForTimeout(600)
-  await m.locator('.fogl-idok button').first().click(); await p.waitForTimeout(300)
-  await p.fill('#fo-nev', 'Kérő Kata')
-  await p.fill('#fo-tel', '+36 30 999 1122')
-  await p.fill('#fo-rsz', 'KRS-001')
-  await m.locator('.fogl-feltetel input').check()
-  await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2000)
+  const { ctx, p, sql, belep: be } = await adminOldal(b)
+  const k = await onlineKeres(sql, { customer_name: 'Kérő Kata', customer_phone: '+36 30 999 1122', customer_email: null, plate_raw: 'KRS-001' })
+  await be('demo@mosathat.hu')
   await p.locator('dialog[aria-label="Online foglalási kérés"] .keres-lab button').filter({ hasText: 'Később' }).click()
   await p.waitForTimeout(400)
-  await m.getByRole('button', { name: 'Megnézem a napi nézetben' }).click(); await p.waitForTimeout(2500)
+  await menu(p, 'Időpontok')
+  await napra(p, k.nap)
   await p.locator('.napi-lista .kartya').filter({ hasText: 'KRS-001' }).first().locator('.kartya-nyit').click()
   await p.waitForTimeout(1500)
   const lab = p.locator('dialog[aria-label="Munkalap"] .munkalap-lab')

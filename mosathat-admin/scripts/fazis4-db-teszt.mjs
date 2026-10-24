@@ -13,13 +13,13 @@ const csomag = Object.fromEntries((await q(`select code, id from packages`)).map
 console.log('=== A) Munkaidő-változások ===\n')
 await belep(ALK)
 await q(`select set_absence($1::jsonb)`, [JSON.stringify({
-  day: (await egy(`select (current_date + 1)::text d`)).d, kind: 'KESOBB_ERKEZIK', ends: '10:00',
+  day: (await egy(`select (public.budapest_ma() + 1)::text d`)).d, kind: 'KESOBB_ERKEZIK', ends: '10:00',
   note: 'fogorvos helyett: csak késik' })])
 await belep(TULAJ)
 await q(`select set_absence($1::jsonb)`, [JSON.stringify({
-  day: (await egy(`select (current_date + 2)::text d`)).d, kind: 'EGESZ_NAP' })])
+  day: (await egy(`select (public.budapest_ma() + 2)::text d`)).d, kind: 'EGESZ_NAP' })])
 await q(`select set_absence($1::jsonb)`, [JSON.stringify({
-  staff_id: ALK, day: (await egy(`select (current_date + 3)::text d`)).d,
+  staff_id: ALK, day: (await egy(`select (public.budapest_ma() + 3)::text d`)).d,
   kind: 'TAVOL', starts: '11:00', ends: '13:00' })])
 
 await belep(ALK)
@@ -51,7 +51,7 @@ t.ok('ugyanaz a név (ékezet nélkül) még egyszer nem', true,
 console.log('\n=== C) Ügyfelek: rendszámok, cég, cég szerinti nézet ===\n')
 const foglal = async (adat) => (await egy(`select create_booking($1::jsonb) as id`, [JSON.stringify({
   category: 'SZEMELYAUTO', scope: 'TELJES', booking_type: 'LEADOS',
-  service_date: (await egy(`select (current_date + 7)::text d`)).d,
+  service_date: (await egy(`select (public.budapest_ma() + 7)::text d`)).d,
   drop_off_time: '09:00', package_id: csomag.START, extras: [], ...adat,
 })])).id
 await foglal({ customer_name: 'Sofőr Sanyi', customer_phone: '+36301110010', plate_raw: 'FLT-001', company_name: 'Flotta Kft.' })
@@ -73,7 +73,7 @@ t.ok('rendszámra keresve is a cég jön, minden autójával', 3,
 
 console.log('\n=== D) Szerződés csomagonként, Céges és Magán áron ===\n')
 await q(`select save_contract($1::jsonb)`, [JSON.stringify({
-  company_name: 'Flotta Kft.', valid_until: (await egy(`select (current_date + 300)::text d`)).d,
+  company_name: 'Flotta Kft.', valid_until: (await egy(`select (public.budapest_ma() + 300)::text d`)).d,
   prices: [
     { package_id: csomag.ELIT, size: 'NORMAL', kind: 'FLOTTA', price_huf: 21000 },
     { package_id: csomag.ELIT, size: 'NAGY', kind: 'FLOTTA', price_huf: 26000 },

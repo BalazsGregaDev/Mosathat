@@ -7,9 +7,9 @@ const egy = async (sql, p = []) => (await q(sql, p))[0]
 await db.exec(`select set_config('app.uid','${TULAJ}',false)`)
 
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
-const { ma } = await egy(`select current_date::text as ma`)
-const { holnap } = await egy(`select (current_date + 1)::text as holnap`)
-const { tegnap } = await egy(`select (current_date - 2)::text as tegnap`)
+const { ma } = await egy(`select public.budapest_ma()::text as ma`)
+const { holnap } = await egy(`select (public.budapest_ma() + 1)::text as holnap`)
+const { tegnap } = await egy(`select (public.budapest_ma() - 2)::text as tegnap`)
 
 const foglal = async (adat) => (await egy(`select create_booking($1::jsonb) as id`, [JSON.stringify({
   category: 'SZEMELYAUTO', scope: 'TELJES', booking_type: 'LEADOS', service_date: ma,
@@ -22,10 +22,10 @@ const f3 = await foglal({ customer_name: 'Hozom Viszem', customer_phone: '+36301
   plate_raw: 'HV-0001', booking_type: 'HOZOMVISZEM', service_date: tegnap,
   pick_up_date: holnap, pick_up_time: '16:00' })
 const f4 = await foglal({ customer_name: 'Lejárt Lajos', customer_phone: '+36301112235',
-  plate_raw: 'LEJ-001', service_date: tegnap, pick_up_date: (await egy(`select (current_date - 1)::text d`)).d })
+  plate_raw: 'LEJ-001', service_date: tegnap, pick_up_date: (await egy(`select (public.budapest_ma() - 1)::text d`)).d })
 
-const d = (await egy(`select dashboard_summary(current_date) as d`)).d
-const k = await egy(`select * from day_capacity(current_date)`)
+const d = (await egy(`select dashboard_summary(public.budapest_ma()) as d`)).d
+const k = await egy(`select * from day_capacity(public.budapest_ma())`)
 
 console.log('=== A) A „Ma" számai a day_capacity-ből ===\n')
 t.ok('autók száma = a kapacitás-kártya autószáma', k.cars, d.ma.db)
@@ -47,7 +47,7 @@ t.ok('soronként egy foglalás, munkalapot nyit', true,
 t.ok('a lejárt súlyosabb', 3, hat.find((g) => g.foglalasok[0].id === f4)?.suly)
 
 await db.query(`update bookings set status = 'READY' where id = $1`, [f3])
-const d2 = (await egy(`select dashboard_summary(current_date) as d`)).d
+const d2 = (await egy(`select dashboard_summary(public.budapest_ma()) as d`)).d
 t.ok('a kész autó határideje nem figyelmeztet', ['LEJ-001'],
   d2.gondok.filter((g) => g.cimke === 'Határidő').map((g) => g.foglalasok[0].plate_raw))
 

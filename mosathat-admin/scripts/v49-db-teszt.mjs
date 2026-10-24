@@ -7,7 +7,7 @@ const egy = async (sql, p = []) => (await q(sql, p))[0]
 const belep = (id) => db.exec(`select set_config('app.uid','${id}',false)`)
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
 const extra = Object.fromEntries((await q(`select name, id from extras`)).map((r) => [r.name, r.id]))
-const ma = (await egy(`select current_date::text d`)).d
+const ma = (await egy(`select public.budapest_ma()::text d`)).d
 
 await belep(ALK)
 async function uj(rendszam, extras = [], scope = 'TELJES') {

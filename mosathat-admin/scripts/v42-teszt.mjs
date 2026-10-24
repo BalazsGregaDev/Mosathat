@@ -39,19 +39,18 @@ console.log('=== Tulajdonos ===\n')
     (await p.locator('.oldal-fej h2').innerText()).trim())
   ok('a Szerződéses cégek fül aktív', true,
     (await p.locator('.fulek button.aktiv').innerText()).includes('Szerződéses cégek'))
-  const kartya = p.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).first()
-  ok('a cég kártyája nyitva', 'true', await kartya.getAttribute('data-nyitva'))
-  ok('kiemelve', 'true', await kartya.getAttribute('data-kiemelt'))
-  ok('a részletek látszanak (Szerkesztés gomb)', 1, await kartya.getByRole('button', { name: 'Szerkesztés' }).count())
-  ok('a kártya a képernyőn', true, await lathato(kartya))
+  const kartya = p.locator('.cegtabla-sor').filter({ hasText: 'Autó Trans' }).first()
+  ok('a cég sora kiemelve', 'true', await kartya.getAttribute('data-kiemelt'))
+  ok('a sorban a Szerkesztés gomb', 1, await kartya.getByRole('button', { name: 'Szerkesztés' }).count())
+  ok('a sor a képernyőn', true, await lathato(kartya))
   await p.screenshot({ path: '/tmp/v42-tulaj.png' })
   await p.waitForTimeout(2800)
   ok('a kiemelés elhalványul', null, await kartya.getAttribute('data-kiemelt'))
 
   await menu(p, 'Időpontok')
   await menu(p, 'Cégek és bérletesek')
-  ok('a menüből odalépve nincs kinyitva', 'false',
-    await p.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).first().getAttribute('data-nyitva'))
+  ok('a menüből odalépve nincs kiemelve', null,
+    await p.locator('.cegtabla-sor').filter({ hasText: 'Autó Trans' }).first().getAttribute('data-kiemelt'))
   await ctx.close()
 }
 

@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useApp } from '../../state/AppContext'
+import { useMentes } from '../../state/useMentes'
 import { hibaSzoveg, idoMezo, maStr, napRovidCim } from '../../lib/format'
 import IdoMezo from '../common/IdoMezo'
 import type { DayOverride, OpeningDay, ShopSettings, ValidityKind } from '../../lib/types'
@@ -55,24 +56,6 @@ export default function SettingsPage({ kezdoFul = 'ido' }: { kezdoFul?: Ful }) {
       </FejHely.Provider>
     </div>
   )
-}
-
-function useMentes() {
-  const [allapot, setAllapot] = useState<'' | 'megy' | 'kesz' | string>('')
-  const idozito = useRef<number | undefined>(undefined)
-  useEffect(() => () => window.clearTimeout(idozito.current), [])
-  const fut = useCallback(async (f: () => Promise<void>) => {
-    window.clearTimeout(idozito.current)
-    setAllapot('megy')
-    try {
-      await f()
-      setAllapot('kesz')
-      idozito.current = window.setTimeout(() => setAllapot(''), 2500)
-    } catch (e) {
-      setAllapot(hibaSzoveg(e))
-    }
-  }, [])
-  return { allapot, fut }
 }
 
 function MentesJelzo({ allapot }: { allapot: string }) {

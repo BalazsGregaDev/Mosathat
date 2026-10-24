@@ -3,13 +3,14 @@ import { useEffect, useMemo, useState } from 'react'
 import '../arculat/betuk'
 import '../arculat/koncepciok.css'
 import { useApp } from '../../state/AppContext'
+import { useMentes } from '../../state/useMentes'
 import { useMentetlen } from '../../state/useMentetlen'
 import type { VelemenySor } from '../../lib/publikusTartalom'
 import type { Mod } from '../../lib/arculat'
 import { KoncepcioResz } from '../arculat/Koncepcio'
 import { TartalomProvider } from '../publikus/tartalom'
 import { usePublikusAdat } from '../publikus/usePublikusAdat'
-import { Elonezet, Mezo, PubFej, useMentes } from './kozos'
+import { Elonezet, Mezo, PubFej } from './kozos'
 
 const UJ: VelemenySor = { nev: '', csillag: 5, szoveg: '', datum: null, aktiv: true }
 

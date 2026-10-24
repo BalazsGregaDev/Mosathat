@@ -78,7 +78,7 @@
 
 .pub-ugyfel .ugy-modositas textarea {
   width: 100%; box-sizing: border-box; min-height: 92px; resize: vertical;
-  font: inherit; font-size: 15px; line-height: 1.5; color: var(--fg); background: var(--bg);
+  font: inherit; font-size: 16px; line-height: 1.5; color: var(--fg); background: var(--bg);
   border: 1px solid var(--vonal-eros); border-radius: 2px; padding: 12px 14px;
 }
 .pub-ugyfel .ugy-modositas textarea:focus { outline: 2px solid var(--zold); outline-offset: 1px; }

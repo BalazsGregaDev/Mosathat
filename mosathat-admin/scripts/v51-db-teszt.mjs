@@ -6,7 +6,7 @@ const q = async (sql, p = []) => (await db.query(sql, p)).rows
 const egy = async (sql, p = []) => (await q(sql, p))[0]
 const belep = (id) => db.exec(`select set_config('app.uid','${id}',false)`)
 const hiba = async (sql, p = []) => { try { await q(sql, p); return null } catch (e) { return e.message } }
-const szerda = (await egy(`select (date_trunc('week', current_date) + interval '9 days')::date::text d`)).d
+const szerda = (await egy(`select (date_trunc('week', public.budapest_ma()) + interval '9 days')::date::text d`)).d
 const nap = async (n) => (await egy(`select ($1::date + $2::int)::text d`, [szerda, n])).d
 
 console.log('=== rögzítés ===\n')

@@ -40,7 +40,15 @@ function wordFajlnev(lap: SheetDetail): string {
   return `Igazololap_${ceg || 'ceg'}_${mikor}.docx`
 }
 
-export async function igazoloWord(lap: SheetDetail): Promise<Blob> {
+export interface WordBeallitas {
+  cim?: string
+  alcim?: string
+  fajlnev?: string
+  suly?: Record<string, number>
+  uresSorok?: number
+}
+
+async function igazoloWord(lap: SheetDetail, beall: WordBeallitas = {}): Promise<Blob> {
   const d = await import('docx')
   const {
     AlignmentType, BorderStyle, Document, Footer, HeightRule, ImageRun, Packer,
@@ -52,7 +60,7 @@ export async function igazoloWord(lap: SheetDetail): Promise<Blob> {
   const fekvo = oszlopok.length > 6
   const hasznos = (fekvo ? A4_MAG : A4_SZEL) - 2 * MARGO
 
-  const sulyok = oszlopok.map((o) => SULY[o.key] ?? 1.2)
+  const sulyok = oszlopok.map((x) => beall.suly?.[x.key] ?? SULY[x.key] ?? 1.2)
   const osszSuly = sulyok.reduce((a, b) => a + b, 0)
   const szelessegek = sulyok.map((s) => Math.floor((hasznos * s) / osszSuly))
 
@@ -115,7 +123,8 @@ export async function igazoloWord(lap: SheetDetail): Promise<Blob> {
       o.key === 'ALAIRAS' ? alairasCella(r, i) : cella(cellaSzoveg(o, r), i, o)),
   }))
 
-  const uresSorok = lap.rows.length > 0 ? [] : Array.from({ length: URES_SOROK }, () => new TableRow({
+  const uresDb = beall.uresSorok ?? (lap.rows.length > 0 ? 0 : URES_SOROK)
+  const uresSorok = Array.from({ length: Math.max(uresDb, 0) }, () => new TableRow({
     height: sorMagassag,
     children: oszlopok.map((o, i) => (o.key === 'ALAIRAS' ? alairasCella(null, i) : cella('', i, o))),
   }))
@@ -140,14 +149,15 @@ export async function igazoloWord(lap: SheetDetail): Promise<Blob> {
 
   const alcim = [idoszakCim(lap.period_start, lap.period_end)]
   if (lap.company.tax_number) alcim.push(`Adószám: ${lap.company.tax_number}`)
+  const cim = beall.cim ?? `${lap.company.name} – igazolólap`
   const fej = [
     new Paragraph({
       spacing: { after: 60 },
-      children: [new TextRun({ text: `${lap.company.name} – igazolólap`, bold: true, size: 32 })],
+      children: [new TextRun({ text: cim, bold: true, size: 32 })],
     }),
     new Paragraph({
       spacing: { after: 240 },
-      children: [new TextRun({ text: alcim.join(' · '), size: 22, color: '555555' })],
+      children: [new TextRun({ text: beall.alcim ?? alcim.join(' · '), size: 22, color: '555555' })],
     }),
   ]
 
@@ -163,7 +173,7 @@ export async function igazoloWord(lap: SheetDetail): Promise<Blob> {
 
   const doc = new Document({
     creator: 'Mosathat',
-    title: `${lap.company.name} – igazolólap – ${idoszakCim(lap.period_start, lap.period_end)}`,
+    title: beall.cim ?? `${lap.company.name} – igazolólap – ${idoszakCim(lap.period_start, lap.period_end)}`,
     styles: { default: { document: { run: { font: 'Calibri', size: 20 } } } },
     sections: [{
       properties: {
@@ -180,12 +190,12 @@ export async function igazoloWord(lap: SheetDetail): Promise<Blob> {
   return Packer.toBlob(doc)
 }
 
-export async function igazoloLetolt(lap: SheetDetail): Promise<void> {
-  const blob = await igazoloWord(lap)
+export async function igazoloLetolt(lap: SheetDetail, beall: WordBeallitas = {}): Promise<void> {
+  const blob = await igazoloWord(lap, beall)
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = wordFajlnev(lap)
+  a.download = beall.fajlnev ?? wordFajlnev(lap)
   document.body.appendChild(a)
   a.click()
   a.remove()

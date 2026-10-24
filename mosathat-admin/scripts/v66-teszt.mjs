@@ -1,6 +1,6 @@
 import { chromium } from 'playwright'
 
-import { hetkoznapra } from './_munkanap.mjs'
+import { adminOldal, foglalasOldal, onlineKeres } from './_publikus.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -13,30 +13,14 @@ const sima = (s) => s.replace(/\s+/g, ' ').trim()
 const perc = (s) => { const [o, p] = s.split(':').map(Number); return o * 60 + p }
 
 async function oldal(beall = { viewport: { width: 1440, height: 900 } }) {
-  const ctx = await b.newContext(beall)
-  const p = await ctx.newPage()
   const hibak = []
-  p.on('pageerror', (e) => hibak.push(`pageerror: ${e.message.slice(0, 160)}`))
-  p.on('console', (m) => { if (m.type() === 'error') hibak.push(`console: ${m.text().slice(0, 160)}`) })
-  await hetkoznapra(p)
-  await p.goto('http://localhost:5180/')
-  await p.waitForSelector('input[type="email"]', { timeout: 60000 })
-  await p.fill('input[type="email"]', 'tulaj@mosathat.hu')
-  await p.fill('input[type="password"]', 'x')
-  await p.getByRole('button', { name: /Belépés/ }).click()
-  await p.waitForTimeout(2500)
-  const hamburger = p.locator('.hamburger:visible')
-  if (await hamburger.count()) {
-    await hamburger.first().click(); await p.waitForTimeout(400)
-    await p.locator('.fiok button').filter({ hasText: 'Időpontfoglalás' }).first().click()
-  } else {
-    await p.locator('aside.oldalsav button').filter({ hasText: 'Időpontfoglalás' }).first().click()
-  }
-  await p.waitForTimeout(1500)
-  return { ctx, p, m: p.locator('.fogl'), hibak }
+  const { viewport, ...kontextus } = beall
+  const o = await foglalasOldal(b, { viewport, kontextus, hiba: (e) => hibak.push(`pageerror: ${e.message.slice(0, 160)}`) })
+  o.p.on('console', (m) => { if (m.type() === 'error') hibak.push(`console: ${m.text().slice(0, 160)}`) })
+  return { ...o, hibak }
 }
 
-const { ctx, p, m, hibak } = await oldal()
+const { ctx, p, m, sql, hibak } = await oldal()
 const gomb = (szoveg) => m.locator('.fogl-valaszto button').filter({ hasText: szoveg })
 const hataridok = m.locator('.fogl-hataridok button')
 const kijelolt = async () => sima(await m.locator('.fogl-hataridok button[aria-pressed="true"]').innerText())
@@ -48,7 +32,8 @@ await gomb('Itt hagyom').click(); await p.waitForTimeout(3500)
 await m.locator('.fogl-nap[data-allapot="szabad"]').first().click(); await p.waitForTimeout(1500)
 ok('hozási idő előtt nincs határidő választó', 0, await m.locator('.fogl-hatarido').count())
 const elsoIdo = m.locator('.fogl-idok button').first()
-const hozas = perc(sima(await elsoIdo.innerText()).split(' ')[0])
+const hozasIdo = sima(await elsoIdo.innerText()).split(' ')[0]
+const hozas = perc(hozasIdo)
 await elsoIdo.click(); await p.waitForTimeout(800)
 const idok = (await hataridok.allInnerTexts()).map(sima)
 ok('legkorábban a munka vége, legkésőbb 17:00', [true, '17:00'], [perc(idok[0]) >= hozas + 90, idok.at(-1)])
@@ -70,12 +55,22 @@ await p.fill('#fo-rsz', 'hat-661')
 await m.locator('.fogl-feltetel input').check()
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
 ok('a köszönő oldal mondja a határidőt', true, (await m.locator('.fogl-siker p').innerText()).includes(`határidő: ${valasztott}`))
-const popup = p.locator('dialog[aria-label="Online foglalási kérés"]')
-const mikor = sima(await popup.locator('.keres-adatok').innerText())
 const varOra = valasztott.padStart(5, '0')
-ok('a kérés ablakában: viszi a választott időben', true, mikor.includes(`viszi ${varOra}`))
-ok('befér a határidőre', 'true', await popup.locator('.keres-itelet').getAttribute('data-befer'))
-await popup.getByRole('button', { name: 'Elfogadom' }).click(); await p.waitForTimeout(1500)
+ok('a kérésben a választott határidő', [{ hozza: hozasIdo.padStart(5, '0'), viszi: varOra }],
+  await sql(`select to_char(b.drop_off_at at time zone 'Europe/Budapest', 'HH24:MI') hozza, to_char(b.pick_up_at at time zone 'Europe/Budapest', 'HH24:MI') viszi
+    from bookings b join vehicles v on v.id = b.vehicle_id where upper(v.plate_raw) = 'HAT-661'`))
+{
+  const a = await adminOldal(b)
+  await onlineKeres(a.sql, { drop_off_time: hozasIdo.padStart(5, '0'), pick_up_time: varOra, plate_raw: 'hat-661',
+    customer_name: 'Határidő Hanna', customer_phone: '+36 30 999 6601', customer_email: null })
+  await a.belep('tulaj@mosathat.hu')
+  const popup = a.p.locator('dialog[aria-label="Online foglalási kérés"]')
+  const mikor = sima(await popup.locator('.keres-adatok').innerText())
+  ok('a kérés ablakában: viszi a választott időben', true, mikor.includes(`viszi ${varOra}`))
+  ok('befér a határidőre', 'true', await popup.locator('.keres-itelet').getAttribute('data-befer'))
+  await popup.getByRole('button', { name: 'Elfogadom' }).click(); await a.p.waitForTimeout(1500)
+  await a.ctx.close()
+}
 
 console.log('\n=== 3) Hol nincs határidő választó ===\n')
 await m.getByRole('button', { name: 'Új foglalás' }).click(); await p.waitForTimeout(800)

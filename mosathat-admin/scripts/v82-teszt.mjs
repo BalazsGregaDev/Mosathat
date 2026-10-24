@@ -94,8 +94,8 @@ await belep(p)
 const menu = await p.locator('aside.oldalsav .menu').evaluate((m) => [...m.children].map((e) =>
   e.classList.contains('menu-cim') ? `# ${e.textContent.trim()}` : e.textContent.trim()))
 const pubIdx = menu.indexOf('# Publikus')
-ok('a Publikus címke alatt: Elérhetőség, Tartalom, Csomagok, Cégadatok, Jogi szövegek, Arculat',
-  ['Elérhetőség', 'Tartalom', 'Csomagok', 'Cégadatok', 'Jogi szövegek', 'Arculat'], menu.slice(pubIdx + 1, pubIdx + 7))
+ok('a Publikus címke alatt: Elérhetőség, Tartalom, Csomagok, Vélemények, GYIK, Cégadatok, Jogi szövegek, Arculat',
+  ['Elérhetőség', 'Tartalom', 'Csomagok', 'Vélemények', 'GYIK', 'Cégadatok', 'Jogi szövegek', 'Arculat'], menu.slice(pubIdx + 1, pubIdx + 9))
 ok('az Arculat már nem a fő menüben van, a Később alatt nincs Tartalom', [false, ['Készlet', 'Galéria']],
   [menu.slice(0, pubIdx).includes('Arculat'), menu.slice(menu.indexOf('# Később') + 1)])
 if (KEPEK) await p.locator('aside.oldalsav').screenshot({ path: join(KEPEK, 'v82-menu.png') })
@@ -113,12 +113,14 @@ console.log('\n=== 3) Tartalom ===\n')
 await menuPont(p, 'Tartalom').click()
 await p.locator('.pub-szoveg').first().waitFor({ timeout: 15000 })
 const kulcsok = await p.locator('.pub-szoveg').evaluateAll((l) => l.map((e) => e.dataset.kulcs))
-ok('minden szöveg pontosan egyszer, sávokba rendezve (126 mező, 18 sáv)', [126, 126, 18],
-  [kulcsok.length, new Set(kulcsok).size, await p.locator('.pub-sav').count()])
+const mindenKulcs = await p.evaluate(async () => (await import('/src/lib/publikusTartalom.ts')).SZOVEGEK.map((s) => s.kulcs))
+ok('minden szöveg pontosan egyszer, sávokba rendezve', [mindenKulcs.length, mindenKulcs.length, []],
+  [kulcsok.length, new Set(kulcsok).size, mindenKulcs.filter((k) => !kulcsok.includes(k))])
 ok('nincs már „Így jelenik meg” sor', 0, await p.getByText('Így jelenik meg').count())
 const sav = (id) => p.locator(`.pub-sav[data-sav="${id}"]`)
 ok('a sávok sorrendje követi az oldalt, a foglalás lépésenként',
-  ['menu', 'hero', 'rolunk', 'galeria', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs', 'fogl-6', 'fogl-8', 'fogl-osszeg', 'fogl-siker', 'hely', 'lab'],
+  ['menu', 'hero', 'rolunk', 'galeria', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs', 'fogl-6', 'fogl-8', 'fogl-osszeg', 'fogl-siker',
+   'velemenyek', 'hely', 'gyik', 'gyik-oldal', 'ugyfel-alap', 'ugyfel-kesz', 'ugyfel-atveve', 'ugyfel-egyeb', 'lab'],
   await p.locator('.pub-sav').evaluateAll((l) => l.map((e) => e.dataset.sav)))
 await p.waitForTimeout(2500)
 const lathato = async (id) => sav(id).locator('.fogl > *').evaluateAll((l) => l.filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.dataset.lepes))
@@ -137,7 +139,7 @@ await szoveg(p, 'foglalas.kuldes').locator('input').fill('Kérés elküldése')
 await p.waitForTimeout(600)
 ok('az előnézet élőben követi a gépelést: kiemelés, behelyettesített telefonszám, foglalás lépései', ['Kiemelt', true, true, 'Kérés elküldése'],
   [sima(await sav('hero').locator('.kv-hero h1 em').textContent()),
-   /Hívj: \+36 1 506 0420/i.test(sima(await sav('hero').locator('.kv-kicker').textContent())),
+   /Hívj: \+36 1 506 0420/i.test(sima(await sav('hero').locator('.kv-hero .kv-kicker').textContent())),
    /Mivel érkezel\?/.test(await sav('fogl-1').locator('[data-lepes="auto"] h2').textContent()),
    sima(await sav('fogl-osszeg').locator('.fogl-osszeg .btn-fo').textContent())])
 ok('jelzi a nem mentett változást és a módosított mezőket', [true, 4],
@@ -208,7 +210,7 @@ await n.p.goto(CIM + '/publikus')
 await n.p.locator('.kv-hero h1').waitFor({ timeout: 60000 })
 ok('nagy cím sortöréssel és kiemeléssel', ['Teszt nyitó cím. Kiemelt második sor', 'Kiemelt', 1],
   [sima(await n.p.locator('.kv-hero h1').innerText()), sima(await n.p.locator('.kv-hero h1 em').textContent()), await n.p.locator('.kv-hero h1 br').count()])
-ok('felcím az új telefonszámmal (az Elérhetőségből)', 'HÍVJ: +36 1 777 8888', sima(await n.p.locator('.kv-kicker').innerText()))
+ok('felcím az új telefonszámmal (az Elérhetőségből)', 'HÍVJ: +36 1 777 8888', sima(await n.p.locator('.kv-hero .kv-kicker').innerText()))
 ok('a foglalás 1. lépése', true, /Mivel érkezel\?/.test(await n.p.locator('.kv-foglalas-elo .fogl-kartya h2').first().textContent()))
 ok('lábléc: új telefon hívható linkkel, új e-mail', ['tel:+3617778888', 'mailto:foglalas@mosathat.hu'],
   [await n.p.locator('.kv-lab a[href^="tel:"]').getAttribute('href'), await n.p.locator('.kv-lab a[href^="mailto:"]').getAttribute('href')])

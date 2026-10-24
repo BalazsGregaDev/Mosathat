@@ -17,7 +17,7 @@ import { csomagLeiras } from '../../lib/csomagLeiras'
 import Ablak from '../common/Ablak'
 import Kerdojel from '../day/Kerdojel'
 import FlottaMunkalap from './FlottaMunkalap'
-import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
+import IgazoloGomb, { igazoloFajta } from '../igazolo/IgazoloGomb'
 import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
 import { useKeszAblak } from './KeszAblak'
 import NapOraSor from './NapOraSor'
@@ -229,7 +229,7 @@ export default function BookingDetail({
   async function kovetkezoLepes(cel: Parameters<typeof data.setStatus>[1]) {
     if (!b || lepesMegy) return
     await kovetkezoLepesFut({
-      bookingId: b.id, cel, felirat: (b.plate_raw ?? '').toUpperCase(), igazolo: igazoloKell(b),
+      bookingId: b.id, cel, felirat: (b.plate_raw ?? '').toUpperCase(), igazolo: igazoloFajta(b),
       kapu, keszVan, kerdez, allapot: (c) => allapot(c),
       keszUtan: async () => { valtozott.current = true; await betolt() },
       hiba: setHiba,
@@ -400,6 +400,8 @@ export default function BookingDetail({
 
   const kovetkezo = b ? NEXT_STATUS[b.status] : undefined
   const lemondott = b ? lemondottE(b.status) : false
+  const igazolo = b ? igazoloFajta(b) : null
+  const berletes = Boolean(b?.pass_item_id) && !lemondott && !b?.not_fitted
   const keres = b?.status === 'REQUESTED'
   const lemondhato = b ? !lezart && eloE(b.status) && !keres : false
   const keszLista = lista.filter((t) => t.done).length
@@ -495,11 +497,12 @@ export default function BookingDetail({
                       <CegSor b={b} zarolt={lezart} onMent={mezoMent} />
                     </div>
 
-                    {igazoloKell(b) && (
+                    {igazolo && (
                       <div className="adatsor ml-igazolo">
-                        <span>Igazolólap</span>
+                        <span>{igazolo === 'BERLET' ? 'Bérlet igazolólap' : 'Igazolólap'}</span>
                         <span className="ertek">
-                          <IgazoloGomb bookingId={b.id} className="btn" felirat="Kitöltés, aláírás" />
+                          <IgazoloGomb bookingId={b.id} fajta={igazolo}
+                                       className="btn" felirat="Kitöltés, aláírás" />
                         </span>
                       </div>
                     )}
@@ -524,7 +527,8 @@ export default function BookingDetail({
                             </span>
                             <span className="arblokk">
                               <div className="ar">
-                                {szerzodeses ? 'Szerződéses'
+                                {berletes && b.package_id === p.id ? 'Bérletből'
+                                  : szerzodeses ? 'Szerződéses'
                                   : ar?.requires_quote || ar?.price_huf == null ? 'Érdeklődjön'
                                   : ft(ar.price_huf)}
                               </div>
@@ -965,7 +969,9 @@ export default function BookingDetail({
               <div className="lab-fent">
                 <div className="osszeg">
                   <span className="ertek">{ft(b.final_price_huf ?? b.estimated_price_huf)}</span>
-                  <span className="alatta">{b.final_price_huf ? 'végleges' : 'becsült'}</span>
+                  <span className="alatta">
+                    {b.final_price_huf ? 'végleges' : 'becsült'}{berletes ? ' · a csomag bérletből' : ''}
+                  </span>
                 </div>
                 {!lezart && (
                   <button className="btn" onClick={() => onSzerkeszt(bookingId)}>

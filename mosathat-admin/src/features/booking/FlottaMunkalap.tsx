@@ -14,7 +14,7 @@ import DatumMezo from '../common/DatumMezo'
 import { NEM_FERT_BE_KERDES } from '../common/kerdesek'
 import { useKerdes } from '../common/Kerdes'
 import Ablak from '../common/Ablak'
-import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
+import IgazoloGomb, { igazoloFajta } from '../igazolo/IgazoloGomb'
 
 const TIPUSOK: BookingType[] = ['LEADOS', 'HOZOMVISZEM']
 
@@ -273,7 +273,9 @@ function AutoSor({ t, megy, soron, onRendszam, onMeret, onTorol, onNemFert, onMe
         {lemondott ? 'törölve' : t.not_fitted ? 'nem fért be' : lezart ? 'kész' : soron ? 'most ez' : 'vár'}
       </span>
       <span className="flotta-gombok">
-        {!lemondott && igazoloKell(t) && <IgazoloGomb bookingId={t.id} className="btn btn-kicsi" />}
+        {!lemondott && igazoloFajta(t) && (
+          <IgazoloGomb bookingId={t.id} fajta={igazoloFajta(t) ?? 'CEG'} className="btn btn-kicsi" />
+        )}
         <button className="btn btn-kicsi" onClick={onReszletek}>Részletek</button>
         {lemondott && (
           <button className="btn btn-kicsi" disabled={megy} onClick={onMegisJon}>Mégis jön</button>

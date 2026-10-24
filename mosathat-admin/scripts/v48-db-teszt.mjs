@@ -6,7 +6,7 @@ const q = async (sql, p = []) => (await db.query(sql, p)).rows
 const egy = async (sql, p = []) => (await q(sql, p))[0]
 const belep = (id) => db.exec(`select set_config('app.uid','${id}',false)`)
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
-const ma = (await egy(`select current_date::text d`)).d
+const ma = (await egy(`select public.budapest_ma()::text d`)).d
 
 await belep(ALK)
 const id = (await egy(`select create_booking($1::jsonb) as id`, [JSON.stringify({

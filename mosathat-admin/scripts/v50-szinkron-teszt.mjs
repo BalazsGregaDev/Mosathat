@@ -70,7 +70,7 @@ console.log('\n=== 2) EloFrissites ===\n')
   const le1 = elo.feliratkoz(() => a++)
   const le2 = elo.feliratkoz(() => b++)
   ok('két feliratkozó, egy csatorna', 1, csatornak.length)
-  ok('minden foglalási tábla figyelve', 10, csatornak[0].figyelok.length)
+  ok('minden foglalási tábla figyelve', 11, csatornak[0].figyelok.length)
 
   for (let i = 0; i < 10; i++) csatornak[0].figyelok[i % 10]()
   await var_(600)

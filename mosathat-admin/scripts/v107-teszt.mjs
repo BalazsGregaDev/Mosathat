@@ -18,7 +18,7 @@ const lap = async (w, h) => {
   p.on('pageerror', (e) => hibak.push(e.message.slice(0, 200)))
   return p
 }
-const KEPFAJL = new URL('../public/kepek/sub2b.jpg', import.meta.url).pathname
+const KEPFAJL = new URL('../public/kepek/galeria/sub2b.jpg', import.meta.url).pathname
 
 console.log('=== 1) Admin: GYIK menü, lista, beállítás ===\n')
 const a = await lap(1440, 900)

@@ -422,12 +422,6 @@
 }
 .ertek-gombok button:disabled { opacity: .55; cursor: default; }
 
-.adatsor.extra-sor { align-items: flex-start; }
-.adatsor.extra-sor .ertek {
-  display: flex; align-items: flex-start; justify-content: flex-end;
-  gap: var(--t2); flex-wrap: wrap;
-}
-
 .extra-cimkek {
   display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end;
   min-width: 0;
@@ -450,54 +444,6 @@ button.extra-cimke:hover:not(:disabled) {
 }
 .extra-cimke .le { font-size: var(--m-xs); opacity: .7; }
 button.extra-cimke:disabled { opacity: .55; cursor: default; }
-
-.extra-hozzaad { flex: 0 0 auto; }
-.extra-valaszto {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  align-items: start;
-  gap: 4px var(--t3);
-  margin: var(--t2) 0 var(--t3);
-  padding: var(--t3);
-  border: 1px solid var(--keret);
-  border-radius: var(--r);
-  background: var(--lap-2);
-}
-.extra-tetel {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0 6px;
-  align-items: start;
-  padding: 7px 8px;
-  border-radius: var(--r-sm);
-  font-size: var(--m-sm);
-  line-height: 1.35;
-  min-width: 0;
-}
-.extra-tetel:hover { background: var(--lap); }
-
-.extra-valaszt {
-  grid-column: 1; grid-row: 1;
-  display: flex; align-items: start; gap: 9px;
-  cursor: pointer; min-width: 0;
-}
-.extra-tetel input {
-  flex: 0 0 auto;
-  width: 16px; height: 16px;
-  margin: 1px 0 0; cursor: pointer;
-  accent-color: var(--narancs);
-}
-.extra-tetel .nev { min-width: 0; }
-.extra-tetel .ar {
-  grid-column: 1; grid-row: 2;
-  padding-left: 25px;
-  font-size: var(--m-xs); color: var(--szoveg-halk);
-  font-variant-numeric: tabular-nums;
-}
-.extra-tetel .ar.nincs-ar { color: var(--v-baj); }
-.extra-tetel[data-kert='true'] { background: var(--narancs-halvany); }
-.extra-tetel[data-kert='true'] .nev { font-weight: var(--vastag-eros); color: var(--narancs-sotet); }
-.extra-valaszto .ures { grid-column: 1 / -1; }
 
 .sugo-gomb {
   grid-column: 2; grid-row: 1;
@@ -538,13 +484,7 @@ button.extra-cimke:disabled { opacity: .55; cursor: default; }
   margin-bottom: 3px;
 }
 .sugo-szoveg { color: var(--szoveg-halk); }
-.fedo.osztott .extra-valaszto { grid-template-columns: repeat(2, 1fr); }
-
-@media (max-width: 720px) {
-  .extra-valaszto { grid-template-columns: 1fr 1fr; }
-}
 @media (max-width: 480px) {
-  .extra-valaszto { grid-template-columns: 1fr; }
   .ertek-gombok, .extra-cimkek { justify-content: flex-start; }
 }
 

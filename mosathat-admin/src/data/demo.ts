@@ -11,6 +11,7 @@ import demoAdatok from '../../../supabase/demo/demo_adatok.sql?raw'
 import type {
   AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
   SheetColumn, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput,
+  BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput,
   BookingStatus, BookingTask, CalcInput, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
@@ -47,10 +48,10 @@ end $$;
 `
 
 export class DemoSource implements DataSource {
-  readonly label = 'Demó adatbázis'
   readonly isDemo = true
   private db: PGlite | null = null
   private user: SessionUser | null = null
+  private figyelok = new Set<() => void>()
 
   private get pg(): PGlite {
     if (!this.db) throw new Error('Az adatbázis még nem indult el.')
@@ -88,14 +89,17 @@ export class DemoSource implements DataSource {
         ('00000000-0000-4000-8000-000000000005', 'Péter', 'STAFF')
       on conflict (id) do nothing;
       insert into public.staff_absences (staff_id, day, kind, starts, note) values
-        ('00000000-0000-4000-8000-000000000004', current_date, 'KORABBAN_TAVOZIK',
+        ('00000000-0000-4000-8000-000000000004', public.budapest_ma(), 'KORABBAN_TAVOZIK',
          '16:00', 'DEMO — korábban megy');
       insert into public.staff_vacations (staff_id, from_day, to_day, note) values
-        ('00000000-0000-4000-8000-000000000005', current_date + 14, current_date + 17, 'DEMO');
+        ('00000000-0000-4000-8000-000000000005', public.budapest_ma() + 14, public.budapest_ma() + 17, 'DEMO');
     `)
     this.db = db
     if (import.meta.env.DEV) {
-      Object.assign(window, { mosathatDemoSql: (sql: string, p: unknown[] = []) => this.rows(sql, p) })
+      Object.assign(window, {
+        mosathatDemoSql: (sql: string, p: unknown[] = []) => this.rows(sql, p),
+        mosathatDemoValtozas: () => { for (const f of this.figyelok) f() },
+      })
     }
   }
 
@@ -234,11 +238,6 @@ export class DemoSource implements DataSource {
   async getStartMinutes(): Promise<number | null> {
     const [r] = await this.rows<{ p: number | null }>(`select start_perc() as p`)
     return r?.p == null ? null : Number(r.p)
-  }
-
-  async onlineBooking(input: OnlineBookingInput): Promise<string> {
-    const [r] = await this.rows<{ id: string }>(`select online_foglalas($1::jsonb) as id`, [JSON.stringify(input)])
-    return r.id
   }
 
   async listOnlineKeresek(): Promise<OnlineKeres[]> {
@@ -448,7 +447,7 @@ export class DemoSource implements DataSource {
       `select * from search_customers($1, $2::integer, $3)`, [q, limit, mezo])
   }
 
-  async quoteBooking(input: Partial<NewBookingInput> & CalcInput): Promise<Quote> {
+  async quoteBooking(input: Partial<NewBookingInput> & CalcInput & { booking_id?: string | null }): Promise<Quote> {
     const [r] = await this.rows<{ r: Record<string, unknown> }>(
       `select quote_booking($1::jsonb) as r`, [JSON.stringify(input)])
     return toQuote(r?.r)
@@ -694,6 +693,32 @@ export class DemoSource implements DataSource {
     await this.pg.query(`select sheet_row_delete($1::uuid)`, [id])
   }
 
+  async berletLapok(): Promise<BerletLapListaElem[]> {
+    const [r] = await this.rows<{ d: BerletLapListaElem[] }>(`select berlet_lapok() as d`)
+    return r.d ?? []
+  }
+
+  async berletLap(passId: string): Promise<BerletLap> {
+    const [r] = await this.rows<{ d: BerletLap }>(`select berlet_lap($1::uuid) as d`, [passId])
+    return r.d
+  }
+
+  async berletFoglalashoz(bookingId: string): Promise<BerletFoglalashoz> {
+    const [r] = await this.rows<{ d: BerletFoglalashoz }>(
+      `select berlet_lap_foglalashoz($1::uuid) as d`, [bookingId])
+    return r.d
+  }
+
+  async saveBerletSor(input: BerletSorInput): Promise<string> {
+    const [r] = await this.rows<{ id: string }>(`select berlet_sor_mentes($1::jsonb) as id`,
+      [JSON.stringify(input)])
+    return r.id
+  }
+
+  async deleteBerletSor(id: string): Promise<void> {
+    await this.pg.query(`select berlet_sor_torles($1::uuid)`, [id])
+  }
+
   async closeSheet(companyId: string, month: string): Promise<void> {
     await this.pg.query(`select sheet_close($1::uuid, $2::date)`, [companyId, month])
   }
@@ -849,8 +874,9 @@ export class DemoSource implements DataSource {
     await this.pg.query(`select set_booking_extra_qty($1::uuid, $2::numeric)`, [itemId, qty])
   }
 
-  subscribe(): () => void {
-    return () => {}
+  subscribe(onValtozas: () => void): () => void {
+    this.figyelok.add(onValtozas)
+    return () => { this.figyelok.delete(onValtozas) }
   }
 
   async getTasks(bookingId: string): Promise<BookingTask[]> {

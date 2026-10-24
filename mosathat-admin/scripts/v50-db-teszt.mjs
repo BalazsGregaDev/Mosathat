@@ -5,8 +5,8 @@ const t = tesztelo()
 const q = async (sql, p = []) => (await db.query(sql, p)).rows
 const egy = async (sql, p = []) => (await q(sql, p))[0]
 await db.exec(`select set_config('app.uid','${ALK}',false)`)
-const ma = (await egy(`select current_date::text d`)).d
-const het = (await egy(`select (date_trunc('week', current_date))::date::text d`)).d
+const ma = (await egy(`select public.budapest_ma()::text d`)).d
+const het = (await egy(`select (date_trunc('week', public.budapest_ma()))::date::text d`)).d
 
 const napi = async (d) => (await q(`select (x->>'id') id from day_bookings($1::date) x`, [d])).map((r) => r.id)
 const heti = async (d) => (await q(
@@ -29,6 +29,6 @@ t.ok('a heti is', uj, await heti(ma))
 
 console.log('\n=== túl nagy kérés: üres ===\n')
 t.ok('43 napnál hosszabb: nincs sor', 0,
-  (await q(`select * from range_order(current_date, current_date + 60)`)).length)
+  (await q(`select * from range_order(public.budapest_ma(), public.budapest_ma() + 60)`)).length)
 
 t.vege()

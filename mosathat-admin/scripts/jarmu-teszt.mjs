@@ -85,12 +85,12 @@ const [{ id: pkg }] = await q(`select id from packages where code='START'`)
 const [{ create_booking: bid }] = await q(`select create_booking($1::jsonb)`, [JSON.stringify({
   customer_name: 'Először Jött', customer_phone: '+36309998877', plate_raw: 'ZZZ-999',
   category: 'SZEMELYAUTO', scope: 'TELJES', booking_type: 'LEADOS',
-  service_date: new Date().toISOString().slice(0, 10), drop_off_time: '09:00',
+  service_date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest' }).format(new Date()), drop_off_time: '09:00',
   package_id: pkg, extras: [],
 })])
-const elozoKap = (await q(`select booked_minutes from day_capacity(current_date)`))[0]
+const elozoKap = (await q(`select booked_minutes from day_capacity(public.budapest_ma())`))[0]
 await q(`select set_booking_status($1::uuid,'CANCELLED_BY_CUSTOMER','Telefonon lemondta')`, [bid])
-const utanKap = (await q(`select booked_minutes from day_capacity(current_date)`))[0]
+const utanKap = (await q(`select booked_minutes from day_capacity(public.budapest_ma())`))[0]
 const [b] = await q(`select status from bookings where id=$1`, [bid])
 const [ugy] = await q(`select count(*)::int n from customers where name='Először Jött'`)
 const [jar] = await q(`select count(*)::int n from vehicles where plate_raw='ZZZ-999'`)

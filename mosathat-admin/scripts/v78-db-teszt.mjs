@@ -32,8 +32,8 @@ t.ok('csak a beosztáshoz kellő mezők, nincs név, telefon, rendszám, ár', [
   'pick_up_at', 'planned_duration_minutes', 'rest_minutes', 'service_date', 'start_at', 'status', 'tentative'], kulcsok)
 const valodi = (await q(`select id::text from bookings`)).map((r) => r.id)
 t.ok('az azonosító sem a valódi foglalás-azonosító', false, n.foglalasok.some((f) => valodi.includes(f.id)))
-t.ok('múltbeli nap: üres', 0, (await egy(`select jsonb_array_length(publikus_nap(current_date - 1)->'foglalasok') n`)).n)
-t.ok('túl távoli nap: üres', 0, (await egy(`select jsonb_array_length(publikus_nap(current_date + 100)->'savok') n`)).n)
+t.ok('múltbeli nap: üres', 0, (await egy(`select jsonb_array_length(publikus_nap(public.budapest_ma() - 1)->'foglalasok') n`)).n)
+t.ok('túl távoli nap: üres', 0, (await egy(`select jsonb_array_length(publikus_nap(public.budapest_ma() + 100)->'savok') n`)).n)
 
 console.log('\n=== 3) Árajánlat ===\n')
 const aj = (await egy(`select publikus_ajanlat($1) x`, [JSON.stringify({

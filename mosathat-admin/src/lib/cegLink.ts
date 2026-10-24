@@ -1,4 +1,4 @@
-export const CEG_LINK_UT = '/ceg/'
+const CEG_LINK_UT = '/ceg/'
 
 export function cegLinkCim(token: string, alap: string = window.location.origin): string {
   return `${alap.replace(/\/+$/, '')}${CEG_LINK_UT}${token}`

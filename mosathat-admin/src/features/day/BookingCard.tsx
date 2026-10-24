@@ -10,7 +10,7 @@ import {
   type BookingStatus, type DayBooking,
 } from '../../lib/types'
 import { azonosito } from './MiniKartya'
-import IgazoloGomb, { igazoloKell } from '../igazolo/IgazoloGomb'
+import IgazoloGomb, { igazoloFajta } from '../igazolo/IgazoloGomb'
 import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
 import { useKeszAblak } from '../booking/KeszAblak'
 import { kovetkezoLepesFut } from '../booking/lepes'
@@ -63,7 +63,7 @@ export default function BookingCard({
   const tobbnapos = napok > 1
   const viszi = b.pick_up_at ?? b.deadline_at
   const megjegyzes = (b.notes ?? '').trim()
-  const igazolo = igazoloKell(b)
+  const igazolo = igazoloFajta(b)
 
   async function allapot(cel: BookingStatus) {
     if (megy) return
@@ -171,6 +171,7 @@ export default function BookingCard({
             <span className="ido-hianyzik">idő hiányzik</span>
           )}
           {b.rest_minutes > 0 && <span title="száradási idő">száradás</span>}
+          {igazolo === 'BERLET' && <span title="A csomag a bérletből megy">bérlet</span>}
           <span className="ar-kiemelt">{ft(b.final_price_huf ?? b.estimated_price_huf)}</span>
           {b.tasks_total > 0 && (
             <span className="lista-jelzo">
@@ -190,7 +191,7 @@ export default function BookingCard({
                 Elutasít
               </button>
             )}
-            {igazolo && <IgazoloGomb bookingId={b.id} />}
+            {igazolo && <IgazoloGomb bookingId={b.id} fajta={igazolo} />}
             {torolheto && (
               <button className="btn btn-kerdojel" disabled={megy}
                       onClick={() => void nemFertBe()}>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
+import { useMentes } from '../../state/useMentes'
 import { useMentetlen } from '../../state/useMentetlen'
 import {
   ELERHETOSEG_ALAP, ELERHETOSEG_ALAP_EN, FORDITHATO_ADATOK, uzletbol, type PublikusAdatokNyers,
@@ -8,7 +9,7 @@ import {
 import type { Nyelv } from '../../lib/nyelv'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import { usePublikusAdat } from '../publikus/usePublikusAdat'
-import { Mezo, PubFej, useMentes } from './kozos'
+import { Mezo, PubFej } from './kozos'
 
 type Kulcs = keyof typeof ELERHETOSEG_ALAP
 type AngolKulcs = `${(typeof FORDITHATO_ADATOK)[number]}_en`

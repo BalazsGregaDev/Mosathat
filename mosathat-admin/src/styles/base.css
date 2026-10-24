@@ -248,7 +248,6 @@ input[type='time'].beviteli {
 .cimke-pill.nem-fert-be { background: var(--lap-2); color: var(--szoveg-halk); border: 1px solid var(--keret); }
 .btn-kerdojel { border-color: #f0d58a; color: #7a5a14; background: #fffaf0; }
 .btn-kerdojel:hover { background: #fff3cd; }
-.kerdojel-sor { display: inline-flex; align-items: center; gap: var(--t3); flex-wrap: wrap; }
 .minikartya .cimke-pill.kerdojel, .minikartya .cimke-pill.nem-fert-be,
 .hetsav .cimke-pill, .honap-sav .cimke-pill {
   font-size: 9px; padding: 0 4px; line-height: 1.4; flex: none;

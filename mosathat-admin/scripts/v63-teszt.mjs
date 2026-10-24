@@ -1,6 +1,7 @@
 import { chromium } from 'playwright'
 
 import { hetkoznapra } from './_munkanap.mjs'
+import { napra, onlineKeres, szabadNap, valtozas } from './_publikus.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -41,49 +42,23 @@ async function menu(p, nev) {
   await p.waitForTimeout(1500)
 }
 
-async function menupontok(p) {
-  const hamburger = p.locator('.hamburger:visible')
-  if (await hamburger.count()) {
-    await hamburger.first().click(); await p.waitForTimeout(400)
-    const l = await p.locator('.fiok .menu button').allInnerTexts()
-    await p.keyboard.press('Escape'); await p.waitForTimeout(300)
-    return l.map((x) => x.trim())
-  }
-  return (await p.locator('aside.oldalsav .menu button').allInnerTexts()).map((x) => x.trim())
-}
-
-async function kuldes(p, rsz, nev, tel) {
-  const m = p.locator('.fogl')
-  if (await m.locator('.fogl-siker').count()) {
-    await m.getByRole('button', { name: 'Új foglalás' }).click(); await p.waitForTimeout(500)
-  }
-  await m.locator('.fogl-valaszto button').filter({ hasText: 'Személyautó' }).click()
-  await m.locator('.fogl-csomag', { has: p.locator('.nev', { hasText: /^Premium$/ }) }).click(); await p.waitForTimeout(800)
-  await m.locator('.fogl-valaszto button').filter({ hasText: 'Megvárom' }).click(); await p.waitForTimeout(3500)
-  await m.locator('.fogl-nap[data-allapot="szabad"]').first().click(); await p.waitForTimeout(600)
-  await m.locator('.fogl-idok button').first().click(); await p.waitForTimeout(300)
-  await p.fill('#fo-nev', nev)
-  await p.fill('#fo-tel', tel)
-  await p.fill('#fo-rsz', rsz)
-  await m.locator('.fogl-feltetel input').check()
-  await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
+let kerNap = null
+async function kuldes(p, rsz, nev, tel, ido = '09:00') {
+  const sql = (q, par = []) => p.evaluate(([q2, p2]) => window.mosathatDemoSql(q2, p2), [q, par])
+  if (!kerNap) kerNap = await szabadNap(sql)
+  await onlineKeres(sql, { booking_type: 'VAROS', start_time: ido, drop_off_time: null, service_date: kerNap,
+    plate_raw: rsz, customer_name: nev, customer_phone: tel, customer_email: null })
+  await valtozas(p)
+  await p.waitForTimeout(1500)
 }
 
 const POPUP = 'dialog[aria-label="Online foglalási kérés"]'
 const nyitottak = (p) => p.evaluate(() => [...document.querySelectorAll('dialog')]
   .filter((d) => d.open && d.matches(':modal')).map((d) => d.getAttribute('aria-label')))
 
-console.log('=== 1) Időpontfoglalás menü ===\n')
-{
-  const a = await oldal('alkalmazott@mosathat.hu')
-  ok('az alkalmazottnál nincs', false, (await menupontok(a.p)).includes('Időpontfoglalás'))
-  await a.ctx.close()
-}
 const { ctx, p, hibak } = await oldal('tulaj@mosathat.hu')
-ok('a tulajdonosnál ott van', true, (await menupontok(p)).includes('Időpontfoglalás'))
 
-console.log('\n=== 2) Beküldés után azonnal felugrik ===\n')
-await menu(p, 'Időpontfoglalás')
+console.log('=== 1) Beérkezéskor azonnal felugrik ===\n')
 await kuldes(p, 'krs-631', 'Kérő Kata', '+36 30 999 6301')
 const popup = p.locator(POPUP)
 ok('megjelent a kérés ablaka', [1, true], [await popup.count(), (await nyitottak(p)).includes('Online foglalási kérés')])
@@ -100,7 +75,7 @@ ok('a nap kapacitása', 1, await popup.locator('.kapacitas').count())
 ok('a beosztásban kiemelve a kérés', 'KRS-631',
   (await popup.locator('.iv-darab[data-kiemelt]').first().innerText()).trim())
 
-console.log('\n=== 3) Később, jelző, Esc ===\n')
+console.log('\n=== 2) Később, jelző, Esc ===\n')
 await popup.getByRole('button', { name: 'Később' }).click(); await p.waitForTimeout(400)
 const jelzo = p.locator('.keres-jelzo')
 ok('Később: bezárul, alul jelző marad', [0, '1 online foglalási kérés vár'],
@@ -111,24 +86,24 @@ await p.keyboard.press('Escape'); await p.waitForTimeout(400)
 ok('Esc = később', [0, 1], [await popup.count(), await jelzo.count()])
 await jelzo.click(); await p.waitForTimeout(800)
 
-console.log('\n=== 4) Munkalap a kérés fölött ===\n')
+console.log('\n=== 3) Munkalap a kérés fölött ===\n')
 await popup.getByRole('button', { name: 'Munkalap' }).click(); await p.waitForTimeout(1500)
 ok('a munkalap a kérés fölé nyílik', ['Online foglalási kérés', 'Munkalap'], await nyitottak(p))
 await p.keyboard.press('Escape'); await p.waitForTimeout(600)
 ok('bezárva a munkalapot a kérés marad', ['Online foglalási kérés'], await nyitottak(p))
 
-console.log('\n=== 5) Elfogadás ===\n')
+console.log('\n=== 4) Elfogadás ===\n')
 await popup.getByRole('button', { name: 'Elfogadom' }).click(); await p.waitForTimeout(1500)
 ok('elfogadva: nincs ablak, nincs jelző', [0, 0], [await popup.count(), await jelzo.count()])
-await p.locator('.fogl').getByRole('button', { name: 'Megnézem a napi nézetben' }).click(); await p.waitForTimeout(2500)
+await menu(p, 'Időpontok')
+await napra(p, kerNap)
 ok('a napi nézetben visszaigazolt foglalás', 'CONFIRMED',
   await p.locator('.napi-lista .kartya').filter({ hasText: 'KRS-631' }).first().getAttribute('data-allapot'))
 
-console.log('\n=== 6) Több kérés: lapozás, elutasítás ===\n')
-await menu(p, 'Időpontfoglalás')
-await kuldes(p, 'krs-632', 'Első Elek', '+36 30 999 6302')
+console.log('\n=== 5) Több kérés: lapozás, elutasítás ===\n')
+await kuldes(p, 'krs-632', 'Első Elek', '+36 30 999 6302', '10:00')
 await popup.getByRole('button', { name: 'Később' }).click(); await p.waitForTimeout(400)
-await kuldes(p, 'krs-633', 'Második Mária', '+36 30 999 6303')
+await kuldes(p, 'krs-633', 'Második Mária', '+36 30 999 6303', '13:00')
 ok('az új kérés a halasztott után is felugrik', 'KRS-633',
   (await popup.locator('.keres-auto .rendszam').innerText()).trim())
 await popup.getByRole('button', { name: 'Később' }).click(); await p.waitForTimeout(400)
@@ -150,8 +125,8 @@ ok('a megmaradt kérés jön, lapozó nélkül', [elsoRsz, 0], [
 await popup.getByRole('button', { name: 'Elfogadom' }).click(); await p.waitForTimeout(1500)
 ok('mindkettő kezelve', [0, 0], [await popup.count(), await jelzo.count()])
 
-console.log('\n=== 7) Megnyitáskor is felugrik a függő kérés ===\n')
-await kuldes(p, 'krs-634', 'Később Kálmán', '+36 30 999 6304')
+console.log('\n=== 6) Megnyitáskor is felugrik a függő kérés ===\n')
+await kuldes(p, 'krs-634', 'Később Kálmán', '+36 30 999 6304', '14:00')
 await popup.getByRole('button', { name: 'Később' }).click(); await p.waitForTimeout(400)
 await p.locator('.ki').filter({ hasText: 'Kilépés' }).click(); await p.waitForTimeout(1200)
 await belep(p, 'alkalmazott@mosathat.hu')
@@ -160,10 +135,10 @@ ok('belépés után azonnal ott van (alkalmazottnak is)', ['KRS-634'],
 ok('nincs JS vagy konzol hiba', [], hibak)
 await ctx.close()
 
-console.log('\n=== 8) Telefonon ===\n')
+console.log('\n=== 7) Telefonon ===\n')
 {
   const t = await oldal('tulaj@mosathat.hu', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
-  await menu(t.p, 'Időpontfoglalás')
+  kerNap = null
   await kuldes(t.p, 'tel-635', 'Telefon Tamás', '+36 30 999 6305')
   const tp = t.p.locator(POPUP)
   ok('felugrik', 1, await tp.count())

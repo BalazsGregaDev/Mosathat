@@ -19,7 +19,7 @@ const ENGEDETT_URI = /^(?:https?:|mailto:|tel:|\/|#|data:image\/(?:png|jpe?g|web
 
 let horog = false
 
-export function tisztaHtml(html: string): string {
+function tisztaHtml(html: string): string {
   if (!horog) {
     horog = true
     DOMPurify.addHook('afterSanitizeAttributes', (n) => {
@@ -43,7 +43,7 @@ export function tisztaHtml(html: string): string {
   })
 }
 
-export const KAT_KULCS = {
+const KAT_KULCS = {
   KULSO: 'gyik.kat.kulso',
   BELSO: 'gyik.kat.belso',
   EGYEB: 'gyik.kat.egyeb',
@@ -62,7 +62,7 @@ function Elem({ k }: { k: GyikMegjelenes }) {
   )
 }
 
-export function GyikLista({ kerdesek }: { kerdesek: GyikMegjelenes[] }) {
+function GyikLista({ kerdesek }: { kerdesek: GyikMegjelenes[] }) {
   return (
     <div className="kv-gyik-lista">
       {kerdesek.map((k) => <Elem key={k.id} k={k} />)}

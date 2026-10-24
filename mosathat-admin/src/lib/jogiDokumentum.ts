@@ -66,7 +66,7 @@ export interface JogiFajl {
   beepitett: boolean
 }
 
-export const WEBOLDAL = `https://${CEG.honlap}`
+const WEBOLDAL = `https://${CEG.honlap}`
 
 const SAJAT_HOSZT = new Set([CEG.honlap, `www.${CEG.honlap}`])
 
@@ -303,10 +303,6 @@ export function htmlBolBlokkok(gyoker: ParentNode): JogiBlokk[] {
   }
   jar(gyoker)
   return ki
-}
-
-export function fajlnevbol(nev: string): string {
-  return nev.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'dokumentum.docx'
 }
 
 export function base64bol(b64: string): ArrayBuffer {

@@ -32,7 +32,6 @@ export interface PublikusAdatokNyers {
   google_ertekeles?: string | null
 }
 
-export type AdatMezo = keyof PublikusAdatokNyers
 
 export interface NyitvaNap {
   weekday: number
@@ -132,7 +131,7 @@ const NAP_ROVID: Record<Nyelv, string[]> = {
   en: ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
 }
 
-export function ora(hhmm: string | null | undefined): string {
+function ora(hhmm: string | null | undefined): string {
   if (!hhmm) return ''
   const [h, m] = hhmm.split(':')
   return `${Number(h)}:${m ?? '00'}`
@@ -165,7 +164,7 @@ export function foSzakaszNapok(napok: NyitvaNap[]): number[] {
   return fo ? Array.from({ length: fo.ig - fo.tol + 1 }, (_, i) => fo.tol + i) : []
 }
 
-export function nyitvaSzakaszok(napok: NyitvaNap[], nyelv: Nyelv = 'hu'): NyitvaSzakasz[] {
+function nyitvaSzakaszok(napok: NyitvaNap[], nyelv: Nyelv = 'hu'): NyitvaSzakasz[] {
   const nev = NAP_NEV[nyelv]
   const rovid = NAP_ROVID[nyelv]
   return szakaszok(napok).map((s) => ({
@@ -181,8 +180,8 @@ const ertek = (v: string | null | undefined, alap: string) => (v && v.trim() ? v
 
 export function uzletbol(t: PublikusTartalomNyers, nyelv: Nyelv = 'hu'): Uzlet {
   const a = t.adatok
-  const szakaszok = nyitvaSzakaszok(t.nyitvatartas, nyelv)
-  const fo = [...szakaszok].sort((x, y) => y.hossz - x.hossz)[0]
+  const nyitva = nyitvaSzakaszok(t.nyitvatartas, nyelv)
+  const fo = [...nyitva].sort((x, y) => y.hossz - x.hossz)[0]
   const en = nyelv === 'en'
   const forditott = (k: (typeof FORDITHATO_ADATOK)[number]) => (en
     ? a[`${k}_en`]?.trim() || ELERHETOSEG_ALAP_EN[k]
@@ -201,8 +200,8 @@ export function uzletbol(t: PublikusTartalomNyers, nyelv: Nyelv = 'hu'): Uzlet {
     napokRovid: fo?.napokRovid ?? (en ? 'Mon–Fri' : UZLET.napokRovid),
     nyitas: fo?.nyitas ?? UZLET.nyitas,
     zaras: fo?.zaras ?? UZLET.zaras,
-    nyitvatartas: szakaszok.length > 0
-      ? szakaszok.map((s) => `${s.napok} ${s.nyitas}–${s.zaras}`).join(', ')
+    nyitvatartas: nyitva.length > 0
+      ? nyitva.map((s) => `${s.napok} ${s.nyitas}–${s.zaras}`).join(', ')
       : `${en ? 'Monday–Friday' : UZLET.napok} ${UZLET.nyitas}–${UZLET.zaras}`,
     leadas: t.leadas ? ora(t.leadas) : UZLET.leadas,
   }
@@ -285,23 +284,6 @@ export interface SzovegDef {
 }
 
 export type SzovegCsoport = 'menu' | 'hero' | 'rolunk' | 'galeria' | 'csomagok' | 'foglalas' | 'adatok' | 'hely' | 'lab' | 'cimkek' | 'oldal' | 'ugyfel' | 'velemeny' | 'gyik'
-
-export const CSOPORT_NEV: Record<SzovegCsoport, string> = {
-  menu: 'Menü és gombok',
-  hero: 'Nyitó rész',
-  rolunk: 'Rólunk',
-  galeria: 'Galéria',
-  csomagok: 'Csomagok táblázat',
-  foglalas: 'Időpontfoglalás',
-  adatok: 'Időpontfoglalás: adatok és beküldés',
-  hely: 'Hol vagyunk',
-  lab: 'Lábléc',
-  cimkek: 'Adatcímkék (Hol vagyunk, lábléc)',
-  oldal: 'Böngésző',
-  ugyfel: 'Foglalás oldala (az ügyfélnek)',
-  velemeny: 'Rólunk mondták',
-  gyik: 'Gyakran ismételt kérdések',
-}
 
 export const SZOVEGEK = [
   { kulcs: 'menu.rolunk', csoport: 'menu', cimke: 'Menü: rólunk', alap: 'Rólunk', en: 'About us' },
@@ -549,9 +531,9 @@ export const SZOVEGEK = [
 
 export type SzovegKulcs = (typeof SZOVEGEK)[number]['kulcs']
 
-export const SZOVEG_ALAP = Object.fromEntries(SZOVEGEK.map((s) => [s.kulcs, s.alap])) as Record<SzovegKulcs, string>
+const SZOVEG_ALAP = Object.fromEntries(SZOVEGEK.map((s) => [s.kulcs, s.alap])) as Record<SzovegKulcs, string>
 
-export const SZOVEG_ALAP_EN = Object.fromEntries(SZOVEGEK.map((s) => [s.kulcs, s.en])) as Record<SzovegKulcs, string>
+const SZOVEG_ALAP_EN = Object.fromEntries(SZOVEGEK.map((s) => [s.kulcs, s.en])) as Record<SzovegKulcs, string>
 
 export const szovegAlap = (nyelv: Nyelv) => (nyelv === 'en' ? SZOVEG_ALAP_EN : SZOVEG_ALAP)
 

@@ -233,9 +233,10 @@ export function useBookingForm(kezdoNap: string, bookingId?: string | null) {
       customer_id: valasztott?.customer_id ?? ugyfelId,
       vehicle_id: valasztott?.vehicle_id ?? null,
       contract_kind: f.contractKind,
+      booking_id: bookingId ?? null,
     }),
     [f.packageId, f.category, f.scope, f.fullService, extrakLista, f.bookingType, f.date,
-     f.ceg.id, cegNevKesve, valasztott, ugyfelId, f.contractKind],
+     f.ceg.id, cegNevKesve, valasztott, ugyfelId, f.contractKind, bookingId],
   )
 
   useEffect(() => {

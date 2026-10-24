@@ -26,7 +26,7 @@ await p.waitForFunction(() => typeof window.mosathatDemoSql === 'function', null
 const sql = (s, par = []) => p.evaluate(([s2, p2]) => window.mosathatDemoSql(s2, p2), [s, par])
 
 const [cel] = await sql(`select b.id, upper(v.plate_raw) rsz from bookings b join vehicles v on v.id = b.vehicle_id
-  where b.status = 'CONFIRMED' and b.service_date >= current_date and b.contract_kind is null and b.ceg_link_company is null
+  where b.status = 'CONFIRMED' and b.service_date >= public.budapest_ma() and b.contract_kind is null and b.ceg_link_company is null
   order by b.service_date, b.created_at limit 1`)
 await sql(`insert into booking_change_requests (booking_id, uzenet) values ($1, 'Egy órával korábban hoznám, 7:00 körül, ha belefér.')`, [cel.id])
 
@@ -77,7 +77,7 @@ await p.waitForTimeout(600)
 
 console.log('\n=== 3) Kész van: végösszeg, felár oka, e-mail ===\n')
 const [kb] = await sql(`select b.id, upper(v.plate_raw) rsz, b.estimated_price_huf ar from bookings b join vehicles v on v.id = b.vehicle_id
-  where b.status in ('ARRIVED', 'IN_PROGRESS') and b.service_date = current_date and b.contract_kind is null and b.ceg_link_company is null
+  where b.status in ('ARRIVED', 'IN_PROGRESS') and b.service_date = public.budapest_ma() and b.contract_kind is null and b.ceg_link_company is null
   order by b.created_at limit 1`)
 await sql(`update customers set email = 'ugyfel@pelda.hu' where id = (select customer_id from bookings where id = $1)`, [kb.id])
 await p.locator('.napi-lista .kartya').filter({ hasText: kb.rsz }).first().locator('.kartya-nyit').click()

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
+import { useMentes } from '../../state/useMentes'
 import { useMentetlen } from '../../state/useMentetlen'
 import { CEG_ALAP, type PublikusAdatokNyers } from '../../lib/publikusTartalom'
 import { TERVEZET, type Kamera } from '../../lib/ceg'
@@ -8,7 +9,7 @@ import type { Nyelv } from '../../lib/nyelv'
 import type { JogiValtozat } from '../../lib/jogiDokumentum'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import { usePublikusAdat } from '../publikus/usePublikusAdat'
-import { Mezo, PubFej, useMentes } from './kozos'
+import { Mezo, PubFej } from './kozos'
 
 type CegKulcs = keyof typeof CEG_ALAP
 

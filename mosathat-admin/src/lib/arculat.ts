@@ -34,18 +34,6 @@ export const UZLET = {
 
 export const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
 
-export const KAT_NEV: Record<VehicleCategory, string> = {
-  SZEMELYAUTO: 'Személygépjármű',
-  SUV: 'SUV, Egyterű',
-  KISBUSZ: 'Kisbusz, Furgon',
-}
-
-export const KAT_ALCIM: Record<VehicleCategory, string> = {
-  SZEMELYAUTO: 'Személygépjármű — sedan, kombi, ferdehátú',
-  SUV: 'SUV, egyterű',
-  KISBUSZ: 'Kisbusz, furgon',
-}
-
 export type Cella = { tipus: 'van' } | { tipus: 'nincs' } | { tipus: 'mas'; szoveg: string; kiemelt: boolean }
 
 export interface TablaSor {

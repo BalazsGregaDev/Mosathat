@@ -111,8 +111,8 @@ export default function KeresAblak({
   const levelTipp = !keres.ugyfel_email
     ? 'Nincs e-mail címe, ezért a visszaigazolást telefonon kell megadni.'
     : data.isDemo
-      ? 'Élesben elfogadáskor visszaigazoló e-mailt kap, benne a lemondó linkkel. Demóban e-mail nem megy ki.'
-      : 'Elfogadáskor visszaigazoló e-mailt kap, benne a lemondó linkkel.'
+      ? 'Élesben elfogadáskor visszaigazoló e-mailt kap, benne a foglalási oldala linkjével. Demóban e-mail nem megy ki.'
+      : 'Elfogadáskor visszaigazoló e-mailt kap, benne a foglalási oldala linkjével.'
 
   return (
     <Ablak cimke="Online foglalási kérés" onEsc={levelHiba ? onDontott : onKesobb}>

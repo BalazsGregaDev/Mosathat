@@ -6,8 +6,8 @@ const q = async (sql, p = []) => (await db.query(sql, p)).rows
 const egy = async (sql, p = []) => (await q(sql, p))[0]
 const belep = (id) => db.exec(`select set_config('app.uid','${id}',false)`)
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
-const most = (await egy(`select date_trunc('month', current_date)::date::text m`)).m
-const elozo = (await egy(`select (date_trunc('month', current_date) - interval '1 month')::date::text m`)).m
+const most = (await egy(`select date_trunc('month', public.budapest_ma())::date::text m`)).m
+const elozo = (await egy(`select (date_trunc('month', public.budapest_ma()) - interval '1 month')::date::text m`)).m
 const lista = async (h) => (await egy(`select sheet_cegek($1::date) as d`, [h])).d
 
 await belep(TULAJ)

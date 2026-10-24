@@ -13,7 +13,7 @@ declare
   v_kategoria vehicle_category;
   v_felni uuid := (select id from public.extras where name like 'Felni és gumi%');
   v_karp  uuid := (select id from public.extras where name = 'Vizes kárpittisztítás');
-  v_ma    date := current_date;
+  v_ma    date := (now() at time zone 'Europe/Budapest')::date;
 begin
 
   insert into public.customers (type, name, phone, email, internal_notes)
@@ -218,7 +218,7 @@ do $$
 declare
   r        record;
   v_nap    date;
-  v_h      date := date_trunc('week', current_date)::date;
+  v_h      date := date_trunc('week', (now() at time zone 'Europe/Budapest')::date)::date;
   v_cust   uuid;
   v_veh    uuid;
   v_ar     record;
@@ -273,8 +273,8 @@ begin
         r.kat::vehicle_category, 'TELJES', false, '[]'::jsonb, 0, 0);
 
     v_stat := case
-      when v_nap <  current_date then 'COMPLETED'
-      when v_nap =  current_date then 'CONFIRMED'
+      when v_nap <  (now() at time zone 'Europe/Budapest')::date then 'COMPLETED'
+      when v_nap =  (now() at time zone 'Europe/Budapest')::date then 'CONFIRMED'
       else 'CONFIRMED' end::booking_status;
 
     insert into public.bookings (
@@ -315,14 +315,28 @@ begin
     'customer_id',  v_ugyfel,
     'name',         '10 alkalmas bérlet',
     'price_huf',    128000,
-    'valid_from',  (current_date - 40)::text,
-    'valid_until', (current_date + 21)::text,
+    'valid_from',  ((now() at time zone 'Europe/Budapest')::date - 40)::text,
+    'valid_until', ((now() at time zone 'Europe/Budapest')::date + 21)::text,
     'notes',        'DEMO — 8 alkalom Start, 2 alkalom Premium, Start áron',
     'items', jsonb_build_array(
       jsonb_build_object('package_id', v_start, 'category', 'SZEMELYAUTO', 'qty_total', 8),
       jsonb_build_object('package_id', v_prem,  'category', 'SZEMELYAUTO', 'qty_total', 2))));
 
   update public.customers set billing_kind = 'BERLETES' where id = v_ugyfel;
+
+  if to_regclass('public.pass_usages') is not null
+     and exists (select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'pass_usages' and column_name = 'kitoltve_at') then
+    execute $q$
+      insert into public.pass_usages (pass_item_id, booking_id, used_at, day, plate, name, note, kitoltve_at)
+      select i.id, null, now() - x.nap * interval '1 day', (now() at time zone 'Europe/Budapest')::date - x.nap,
+             'ABC-123', 'Kovács Péter', 'DEMO — korábbi alkalom, a papír lapról átvezetve', now()
+        from public.pass_items i
+        join public.passes p on p.id = i.pass_id
+       cross join (values (33), (19)) as x(nap)
+       where p.customer_id = $1 and i.package_id = $2
+    $q$ using v_ugyfel, v_start;
+  end if;
 
   select id into v_ceg from public.customers where name = 'Autó Trans Kft.' limit 1;
 
@@ -331,7 +345,7 @@ begin
     'tax_number',      '12345678-2-41',
     'pickup_delivery', true,
     'pickup_delivery_fee_huf', 4000,
-    'valid_until',     (current_date + 300)::text,
+    'valid_until',     ((now() at time zone 'Europe/Budapest')::date + 300)::text,
     'notes',           'DEMO — flottaszerződés, hozom-viszem szolgáltatással',
     'prices', jsonb_build_array(
       jsonb_build_object('package_code', 'START',   'size', 'NORMAL', 'kind', 'FLOTTA', 'price_huf', 10500),
@@ -365,15 +379,15 @@ begin
       customer_id, vehicle_id, booking_type, status, source, service_date,
       drop_off_at, pick_up_at, package_id, scope, planned_duration_minutes,
       estimated_price_huf, internal_notes)
-    values (v_ceg, v_auto, 'HOZOMVISZEM', 'CONFIRMED', 'TELEFON', current_date,
-      (current_date + time '10:00') at time zone 'Europe/Budapest',
-      (current_date + time '15:00') at time zone 'Europe/Budapest',
+    values (v_ceg, v_auto, 'HOZOMVISZEM', 'CONFIRMED', 'TELEFON', (now() at time zone 'Europe/Budapest')::date,
+      ((now() at time zone 'Europe/Budapest')::date + time '10:00') at time zone 'Europe/Budapest',
+      ((now() at time zone 'Europe/Budapest')::date + time '15:00') at time zone 'Europe/Budapest',
       v_prem, 'TELJES', v_calc.work_minutes, v_calc.price_huf, 'DEMO')
     returning id into v_b;
     perform public.foglalas_tetelek_ir(
       v_b, v_prem, 'SZEMELYAUTO', 'TELJES', false, '[]'::jsonb, 0, 0,
       (select company_id from public.customers where id = v_ceg),
-      'FLOTTA', 'HOZOMVISZEM', current_date);
+      'FLOTTA', 'HOZOMVISZEM', (now() at time zone 'Europe/Budapest')::date);
     perform public.rebuild_booking_tasks(v_b);
   end if;
 end $$;
@@ -387,7 +401,7 @@ begin
     return;
   end if;
   select d::date into v_nap
-    from generate_series(current_date + 3, current_date + 21, interval '1 day') d
+    from generate_series((now() at time zone 'Europe/Budapest')::date + 3, (now() at time zone 'Europe/Budapest')::date + 21, interval '1 day') d
    where public.munkanap(d::date)
    order by d
    limit 1;
@@ -411,12 +425,12 @@ begin
     return;
   end if;
   insert into public.velemenyek (nev, csillag, szoveg, datum, sort_order) values
-    ('Demó Anna', 5, 'DEMO értékelés — Nagyon alapos munka, a kutyaszőr is eltűnt a hátsó ülésről. Amíg dolgoztak, fent tudtam dolgozni az irodában.', current_date - 12, 0),
-    ('Demó Bence', 5, 'DEMO értékelés — Kézzel mosnak, nem gép karcolja a fényezést. Pontosan elkészültek, amire mondták.', current_date - 25, 1),
-    ('Demó Csilla', 4, 'DEMO értékelés — Kedves csapat, szép lett a belső. Legközelebb előre foglalok, mert aznapra nem volt hely.', current_date - 40, 2),
-    ('Demó Dávid', 5, 'DEMO értékelés — A felnik olyanok lettek, mint újkorukban. Online foglaltam, minden simán ment.', current_date - 58, 3),
-    ('Demó Eszter', 5, 'DEMO értékelés — Bőrülés ápolás és belső takarítás, nagyon elégedett vagyok. A garázsban könnyű parkolni.', current_date - 71, 4),
-    ('Demó Ferenc', 3, 'DEMO értékelés — Ez 3 csillagos, ezért nem jelenik meg a publikus oldalon.', current_date - 80, 5);
+    ('Demó Anna', 5, 'DEMO értékelés — Nagyon alapos munka, a kutyaszőr is eltűnt a hátsó ülésről. Amíg dolgoztak, fent tudtam dolgozni az irodában.', (now() at time zone 'Europe/Budapest')::date - 12, 0),
+    ('Demó Bence', 5, 'DEMO értékelés — Kézzel mosnak, nem gép karcolja a fényezést. Pontosan elkészültek, amire mondták.', (now() at time zone 'Europe/Budapest')::date - 25, 1),
+    ('Demó Csilla', 4, 'DEMO értékelés — Kedves csapat, szép lett a belső. Legközelebb előre foglalok, mert aznapra nem volt hely.', (now() at time zone 'Europe/Budapest')::date - 40, 2),
+    ('Demó Dávid', 5, 'DEMO értékelés — A felnik olyanok lettek, mint újkorukban. Online foglaltam, minden simán ment.', (now() at time zone 'Europe/Budapest')::date - 58, 3),
+    ('Demó Eszter', 5, 'DEMO értékelés — Bőrülés ápolás és belső takarítás, nagyon elégedett vagyok. A garázsban könnyű parkolni.', (now() at time zone 'Europe/Budapest')::date - 71, 4),
+    ('Demó Ferenc', 3, 'DEMO értékelés — Ez 3 csillagos, ezért nem jelenik meg a publikus oldalon.', (now() at time zone 'Europe/Budapest')::date - 80, 5);
 end $$;
 
 do $$
@@ -455,7 +469,7 @@ begin
   end if;
   with sorrend as (
     select l.booking_id,
-           left(md5('demo-foglalas-' || v.plate_normalized || '-' || (b.service_date - current_date)::text || '-'
+           left(md5('demo-foglalas-' || v.plate_normalized || '-' || (b.service_date - (now() at time zone 'Europe/Budapest')::date)::text || '-'
                     || row_number() over (partition by v.plate_normalized, b.service_date
                                           order by b.fleet_index nulls first, b.start_at, b.drop_off_at, b.created_at, b.id)::text), 32) as uj
       from public.booking_links l
@@ -471,4 +485,4 @@ union all select 'foglalás', count(*) from public.bookings
 union all select 'tétel',    count(*) from public.booking_items
 union all select 'munkalépés', count(*) from public.booking_tasks;
 
-select * from public.day_capacity(current_date);
+select * from public.day_capacity((now() at time zone 'Europe/Budapest')::date);

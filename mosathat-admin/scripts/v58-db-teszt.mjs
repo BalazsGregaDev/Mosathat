@@ -5,7 +5,7 @@ const t = tesztelo()
 const q = async (sql, p = []) => (await db.query(sql, p)).rows
 const egy = async (sql, p = []) => (await q(sql, p))[0]
 const belep = (id) => db.exec(`select set_config('app.uid','${id}',false)`)
-const sz = (await egy(`select (date_trunc('week', current_date) + interval '9 days')::date::text d`)).d
+const sz = (await egy(`select (date_trunc('week', public.budapest_ma()) + interval '9 days')::date::text d`)).d
 const TABLET = '00000000-0000-4000-8000-0000000000aa'
 const MASIK = '00000000-0000-4000-8000-0000000000ab'
 

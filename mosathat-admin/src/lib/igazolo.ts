@@ -4,7 +4,7 @@ import {
   type ContractPrice, type SheetColumn, type SheetRow,
 } from './types'
 
-function datumPont(nap: string): string {
+export function datumPont(nap: string): string {
   return `${nap.slice(0, 4)}.${nap.slice(5, 7)}.${nap.slice(8, 10)}.`
 }
 

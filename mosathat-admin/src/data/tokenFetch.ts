@@ -9,7 +9,7 @@ const OLVASO_RPC = new Set([
   'week_capacity', 'work_windows',
 ])
 
-export const UJRA_VARAKOZAS_MS = [500, 1500, 3500]
+const UJRA_VARAKOZAS_MS = [500, 1500, 3500]
 
 function cimE(input: RequestInfo | URL): string {
   return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url

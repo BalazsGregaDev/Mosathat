@@ -1,7 +1,7 @@
 import type { Catalog } from '../data/source'
 import type { Nyelv } from './nyelv'
 
-export function automatikusLeiras(k: Catalog | null | undefined, csomagId: string, nyelv: Nyelv = 'hu'): string {
+function automatikusLeiras(k: Catalog | null | undefined, csomagId: string, nyelv: Nyelv = 'hu'): string {
   const plusz = k?.packageExtras.filter((x) => x.package_id === csomagId) ?? []
   if (!plusz.length) return ''
   if (nyelv === 'en') {

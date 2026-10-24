@@ -8,7 +8,7 @@ await q(`select set_config('app.uid', $1, false)`, [TULAJ])
 
 const PREMIUM = (await egy(`select id from packages where code = 'PREMIUM'`)).id
 const nap = (await egy(
-  `select d::date::text d from generate_series(current_date + 4, current_date + 50, interval '1 day') d
+  `select d::date::text d from generate_series(public.budapest_ma() + 4, public.budapest_ma() + 50, interval '1 day') d
     where munkanap(d::date) order by d limit 1`)).d
 const alap = {
   category: 'SZEMELYAUTO', scope: 'TELJES', package_id: PREMIUM, full_service: false, extras: [],

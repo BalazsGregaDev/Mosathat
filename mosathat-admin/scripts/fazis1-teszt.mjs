@@ -12,7 +12,7 @@ const belep = (id) => db.exec(`select set_config('app.uid','${id}',false)`)
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
 
 const { kedd } = await egy(`
-  select (current_date + ((9 - extract(isodow from current_date)::int) % 7) + 14)::text as kedd`)
+  select (public.budapest_ma() + ((9 - extract(isodow from public.budapest_ma())::int) % 7) + 14)::text as kedd`)
 const szerda = (await egy(`select ($1::date + 1)::text as d`, [kedd])).d
 const csutortok = (await egy(`select ($1::date + 2)::text as d`, [kedd])).d
 

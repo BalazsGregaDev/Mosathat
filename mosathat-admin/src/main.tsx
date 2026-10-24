@@ -15,13 +15,12 @@ import './styles/foglalas.css'
 import './styles/keres.css'
 import './styles/lemondas.css'
 
-import { AppProvider } from './state/AppContext'
 import { nagyitasTiltas } from './lib/nagyitas'
 import { billentyuzetHelyreallitas } from './lib/kepernyo'
-import App from './App'
-import LemondasOldal from './features/publikus/LemondasOldal'
 import { cegLinkToken } from './lib/cegLink'
 
+const App = lazy(() => import('./App'))
+const LemondasOldal = lazy(() => import('./features/publikus/LemondasOldal'))
 const PublikusOldal = lazy(() => import('./features/publikus/PublikusOldal'))
 const CegFoglalasOldal = lazy(() => import('./features/publikus/CegFoglalasOldal'))
 const FoglalasomOldal = lazy(() => import('./features/publikus/FoglalasomOldal'))
@@ -38,7 +37,10 @@ const PUBLIKUS_LAPOK: Record<string, 'fooldal' | 'gyik' | 'impresszum' | 'adatve
 }
 const publikus = PUBLIKUS_LAPOK[window.location.pathname.replace(/\/+$/, '') || '/'] ?? null
 
-if (!lemondas && !publikus && !ceges && !foglalasom) {
+if (lemondas || publikus || ceges || foglalasom) {
+  document.querySelector('meta[name="viewport"]')
+    ?.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content')
+} else {
   nagyitasTiltas()
   billentyuzetHelyreallitas()
 }
@@ -46,7 +48,9 @@ if (!lemondas && !publikus && !ceges && !foglalasom) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {lemondas ? (
-      <LemondasOldal />
+      <Suspense fallback={null}>
+        <LemondasOldal />
+      </Suspense>
     ) : foglalasom ? (
       <Suspense fallback={null}>
         <FoglalasomOldal token={foglalasomToken} />
@@ -60,9 +64,9 @@ createRoot(document.getElementById('root')!).render(
         <PublikusOldal lap={publikus} />
       </Suspense>
     ) : (
-      <AppProvider>
+      <Suspense fallback={<div className="betolt" style={{ paddingTop: '22vh' }}>Betöltés…</div>}>
         <App />
-      </AppProvider>
+      </Suspense>
     )}
   </StrictMode>,
 )

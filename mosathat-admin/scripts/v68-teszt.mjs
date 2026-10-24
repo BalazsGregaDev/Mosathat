@@ -99,8 +99,9 @@ console.log('=== 1) Tablet, fekvő ===\n')
   await lap.locator('.osszecsuk').click(); await p.waitForTimeout(400)
   const gomb = await doboz(lap, '.urlap-extrak .osszecsuk')
   const torzs = await doboz(lap, '.lap-torzs')
-  ok('az egyéb szolgáltatás gomb a régi szélességű, középen', [772, true],
-    [gomb.w, Math.abs((gomb.x + gomb.w / 2) - (torzs.x + torzs.w / 2)) <= 8])
+  const nagyitas = await lap.evaluate((e) => Number(getComputedStyle(e).zoom) || 1)
+  ok('az egyéb szolgáltatás gomb a régi szélességű, középen', [true, true],
+    [Math.abs(gomb.w - 772 * nagyitas) <= 1, Math.abs((gomb.x + gomb.w / 2) - (torzs.x + torzs.w / 2)) <= 8])
   const extrak = lap.locator('.urlap-extrak .extrak > div')
   const e0 = await extrak.nth(0).boundingBox()
   const e1 = await extrak.nth(1).boundingBox()

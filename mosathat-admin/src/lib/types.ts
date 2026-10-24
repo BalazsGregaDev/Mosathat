@@ -257,6 +257,7 @@ export interface DayBooking {
   price_adjustment_reason?: string | null
   nyelv?: 'hu' | 'en'
   ugyfel_email?: string | null
+  pass_item_id?: string | null
   napi_perc?: number | null
   kezdve?: string | null
   befejezve?: string | null
@@ -375,6 +376,15 @@ export interface Quote extends CalcResult {
   contract_kind: ContractKind | null
   contract_price: boolean
   contract_prices: Record<string, number>
+  berlet: QuoteBerlet | null
+  berlet_csomagok: string[]
+}
+
+export interface QuoteBerlet {
+  pass_item_id: string
+  pass_id: string
+  nev: string
+  maradt: number
 }
 
 export interface CompanyHit {
@@ -523,6 +533,7 @@ export interface PassBalanceRow {
   qty_total: number
   qty_used: number
   qty_left: number
+  qty_reserved: number
 }
 
 export interface NewPassInput {
@@ -735,6 +746,85 @@ export interface SheetForBooking {
   columns: SheetColumn[]
   closed: boolean
   row: SheetRow
+}
+
+export interface BerletSor {
+  id: string | null
+  booking_id: string | null
+  pass_item_id: string | null
+  day: string
+  plate: string | null
+  name: string | null
+  note: string | null
+  signature: string | null
+  signed_at: string | null
+  kitoltve_at: string | null
+  sorszam: number
+  package_name: string
+  category: VehicleCategory | null
+  kezi: boolean
+}
+
+export interface BerletTetel {
+  id: string
+  package_id: string | null
+  package_name: string
+  category: VehicleCategory | null
+  qty_total: number
+  used: number
+  left: number
+}
+
+export interface BerletLap {
+  pass: {
+    id: string
+    name: string
+    customer_id: string
+    customer_name: string
+    customer_phone: string | null
+    price_huf: number
+    valid_from: string
+    valid_until: string
+    active: boolean
+    lejart: boolean
+    notes: string | null
+  }
+  items: BerletTetel[]
+  rows: BerletSor[]
+  reserved: { booking_id: string; service_date: string; plate: string | null; package_name: string }[]
+}
+
+export interface BerletLapListaElem {
+  id: string
+  name: string
+  customer_name: string
+  valid_from: string
+  valid_until: string
+  active: boolean
+  lejart: boolean
+  total: number
+  used: number
+  unsigned: number
+  reserved: number
+}
+
+export interface BerletFoglalashoz {
+  pass_id: string | null
+  pass_name?: string
+  customer_name?: string
+  total?: number
+  row?: BerletSor
+}
+
+export interface BerletSorInput {
+  id?: string | null
+  booking_id?: string | null
+  pass_item_id?: string | null
+  day: string
+  plate: string | null
+  name: string | null
+  note: string | null
+  signature?: string
 }
 
 export interface SheetRowInput {

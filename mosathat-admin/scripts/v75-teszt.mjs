@@ -109,9 +109,9 @@ ok('nyitott Premium munkalap: új feladatlista', [false, false, true, true],
 await p.keyboard.press('Escape'); await p.waitForTimeout(400)
 void premium
 
-await menu(p, 'Időpontfoglalás'); await p.waitForTimeout(1500)
-const fogl = sima(await p.locator('.fogl-csomagok').innerText())
-ok('Időpontfoglalás modul: új név és leírás', [true, true], [/Prémium/.test(fogl), /Részletesebb kézi tisztítás/.test(fogl)])
+await menu(p, 'Tartalom'); await p.waitForTimeout(2500)
+const fogl = sima(await p.locator('.pub-sav[data-sav="fogl-2"] .fogl-csomagok').innerText())
+ok('a foglalás csomaglépése (Tartalom előnézet): új név és leírás', [true, true], [/Prémium/.test(fogl), /Részletesebb kézi tisztítás/.test(fogl)])
 ok('Elit: automatikus leírás az új tartalommal', true, /Prémium mindene, plusz:.*Falc mély/.test(fogl))
 
 await menu(p, 'Arculat'); await p.waitForTimeout(2000)

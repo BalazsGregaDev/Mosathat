@@ -22,7 +22,7 @@ const PREMIUM = (await egy(`select id from packages where code = 'PREMIUM'`)).id
 const napok = (await q(`select d::date::text d from generate_series(
     (now() at time zone 'Europe/Budapest')::date + 5,
     (now() at time zone 'Europe/Budapest')::date + 40, interval '1 day') d
-  where munkanap(d::date) order by d limit 6`)).map((r) => r.d)
+  where munkanap(d::date) and extract(isodow from d) < 6 order by d limit 6`)).map((r) => r.d)
 
 let sorszam = 0
 async function publikus(x = {}) {

@@ -1,6 +1,6 @@
 import { chromium } from 'playwright'
 
-import { hetkoznapra } from './_munkanap.mjs'
+import { adminOldal, foglalasOldal, napra, onlineKeres } from './_publikus.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -11,35 +11,27 @@ const ok = (mit, v, k) => {
 }
 const sima = (s) => s.replace(/\s+/g, ' ').trim()
 
-async function oldal(email, beall = { viewport: { width: 1440, height: 900 } }) {
-  const ctx = await b.newContext(beall)
-  const p = await ctx.newPage()
+async function oldal(beall = { viewport: { width: 1440, height: 900 } }) {
   const hibak = []
-  p.on('pageerror', (e) => hibak.push(`pageerror: ${e.message.slice(0, 160)}`))
-  p.on('console', (m) => { if (m.type() === 'error') hibak.push(`console: ${m.text().slice(0, 160)}`) })
-  await hetkoznapra(p)
-  await p.goto('http://localhost:5180/')
-  await p.waitForSelector('input[type="email"]', { timeout: 60000 })
-  await p.fill('input[type="email"]', email)
-  await p.fill('input[type="password"]', 'x')
-  await p.getByRole('button', { name: /Belépés/ }).click()
-  await p.waitForTimeout(2500)
-  return { ctx, p, m: p.locator('.fogl'), hibak }
+  const { viewport, ...kontextus } = beall
+  const o = await foglalasOldal(b, { viewport, kontextus, hiba: (e) => hibak.push(`pageerror: ${e.message.slice(0, 160)}`) })
+  o.p.on('console', (m) => { if (m.type() === 'error') hibak.push(`console: ${m.text().slice(0, 160)}`) })
+  return { ...o, hibak }
 }
 
 async function menu(p, nev) {
-  const hamburger = p.locator('.hamburger:visible')
-  if (await hamburger.count()) {
-    await hamburger.first().click(); await p.waitForTimeout(400)
-    await p.locator('.fiok button').filter({ hasText: nev }).first().click()
-  } else {
-    await p.locator('aside.oldalsav button').filter({ hasText: nev }).first().click()
-  }
+  await p.locator('aside.oldalsav button').filter({ hasText: nev }).first().click()
   await p.waitForTimeout(1500)
 }
 
-const { ctx, p, m, hibak } = await oldal('tulaj@mosathat.hu')
-await menu(p, 'Időpontfoglalás')
+async function admin(keres) {
+  const a = await adminOldal(b)
+  const k = keres ? await onlineKeres(a.sql, keres) : null
+  await a.belep('tulaj@mosathat.hu')
+  return { ...a, k, popup: a.p.locator('dialog[aria-label="Online foglalási kérés"]') }
+}
+
+const { ctx, p, m, sql, hibak } = await oldal()
 const csomag = async (nev) => {
   await m.locator('.fogl-csomag', { has: p.locator('.nev', { hasText: new RegExp(`^${nev}$`) }) }).click()
   await p.waitForTimeout(900)
@@ -48,7 +40,6 @@ const gomb = (szoveg) => m.locator('.fogl-valaszto button').filter({ hasText: sz
 const kinalt = async () => (await m.locator('.fogl-extra .nev').allInnerTexts()).map((x) => x.split('\n')[0].trim())
 const fsSor = m.locator('.fogl-fs')
 const osszegzes = async () => sima(await m.locator('.fogl-osszeg').innerText())
-const POPUP = p.locator('dialog[aria-label="Online foglalási kérés"]')
 
 async function adatok(nev, tel, rsz) {
   await p.fill('#fo-nev', nev)
@@ -115,19 +106,30 @@ ok('összegzés: Full Service kárpittal, elvitel másnap', [true, true],
   [(await osszegzes()).includes('Premium + Full Service (kárpit)'), /elvitel: .+ 8:00–\d{1,2}:\d{2}/.test(await osszegzes())])
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
 ok('a köszönő oldal is mondja az elvitelt', true, (await m.locator('.fogl-siker p').innerText()).includes('Elviheted:'))
-ok('felugrott a kérés', 1, await POPUP.count())
-const adat = sima(await POPUP.locator('.keres-adatok').innerText())
-ok('a kérésben: Full Service (kárpit), másnapi elvitel', [true, true],
-  [adat.includes('Premium + Full Service (kárpit)'), /viszi .+ 0?8:00 után/.test(adat)])
-ok('az ítélet: befér', 'true', await POPUP.locator('.keres-itelet').getAttribute('data-befer'))
-await POPUP.getByRole('button', { name: 'Elfogadom' }).click(); await p.waitForTimeout(1500)
-await m.getByRole('button', { name: 'Megnézem a napi nézetben' }).click(); await p.waitForTimeout(2500)
-const kartya = p.locator('.napi-lista .kartya').filter({ hasText: 'FSV-651' }).first()
-ok('a napi nézetben visszaigazolva, Full Service-szel', ['CONFIRMED', true],
-  [await kartya.getAttribute('data-allapot'), (await kartya.innerText()).includes('Full Service')])
+const FS = `select b.full_service fs, b.seat_material::text ules, b.status::text allapot,
+    to_char(b.pick_up_at at time zone 'Europe/Budapest', 'HH24:MI') viszi, ((b.pick_up_at at time zone 'Europe/Budapest')::date - b.service_date) nap
+  from bookings b join vehicles v on v.id = b.vehicle_id where upper(v.plate_raw) = $1`
+ok('a kérésben: Full Service kárpittal, másnap 8:00 után viszi', [{ fs: true, ules: 'KARPIT', allapot: 'REQUESTED', viszi: '08:00', nap: 1 }],
+  await sql(FS, ['FSV-651']))
+{
+  const a = await admin({ full_service: true, seat_material: 'KARPIT', next_day_pick_up: true, drop_off_time: '09:00',
+    plate_raw: 'fsv-651', customer_name: 'Full Ferenc', customer_phone: '+36 30 999 6501', customer_email: null })
+  ok('felugrott a kérés', 1, await a.popup.count())
+  const adat = sima(await a.popup.locator('.keres-adatok').innerText())
+  ok('a kérés ablakában: Full Service (kárpit), másnapi elvitel', [true, true],
+    [adat.includes('Premium + Full Service (kárpit)'), /viszi .+ 0?8:00 után/.test(adat)])
+  ok('az ítélet: befér', 'true', await a.popup.locator('.keres-itelet').getAttribute('data-befer'))
+  await a.popup.getByRole('button', { name: 'Elfogadom' }).click(); await a.p.waitForTimeout(1500)
+  await menu(a.p, 'Időpontok')
+  await napra(a.p, a.k.nap)
+  const kartya = a.p.locator('.napi-lista .kartya').filter({ hasText: 'FSV-651' }).first()
+  ok('a napi nézetben visszaigazolva, Full Service-szel', ['CONFIRMED', true],
+    [await kartya.getAttribute('data-allapot'), (await kartya.innerText()).includes('Full Service')])
+  await a.ctx.close()
+}
 
 console.log('\n=== 4) Bőr, aznapi elvitel ===\n')
-await menu(p, 'Időpontfoglalás')
+await m.getByRole('button', { name: 'Új foglalás' }).click(); await p.waitForTimeout(800)
 await gomb('Személyautó').click()
 await csomag('Premium')
 await fsSor.locator('input').check(); await p.waitForTimeout(800)
@@ -139,12 +141,23 @@ ok('nincs másnapi elvitel sor', 0, await m.locator('.fogl-elvitel').count())
 await m.locator('.fogl-idok button').first().click(); await p.waitForTimeout(400)
 await adatok('Bőr Borbála', '+36 30 999 6502', 'bor-652')
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
-const adat2 = sima(await POPUP.locator('.keres-adatok').innerText())
-ok('a kérésben: bőr, aznap zárásig viszi', [true, true, false],
-  [adat2.includes('Full Service (bőr)'), adat2.includes('viszi 17:00'), adat2.includes('után')])
-await POPUP.getByRole('button', { name: 'Elfogadom' }).click(); await p.waitForTimeout(1500)
+ok('a kérésben: bőr, aznap zárásig viszi', [{ fs: true, ules: 'BOR', allapot: 'REQUESTED', viszi: '17:00', nap: 0 }],
+  await sql(FS, ['BOR-652']))
+ok('nincs JS vagy konzol hiba', [], hibak)
+await ctx.close()
+{
+  const a = await admin({ full_service: true, seat_material: 'BOR', next_day_pick_up: false, drop_off_time: '09:00', pick_up_time: '17:00',
+    plate_raw: 'bor-652', customer_name: 'Bőr Borbála', customer_phone: '+36 30 999 6502', customer_email: null })
+  const adat2 = sima(await a.popup.locator('.keres-adatok').innerText())
+  ok('a kérés ablakában: bőr, aznap zárásig viszi', [true, true, false],
+    [adat2.includes('Full Service (bőr)'), adat2.includes('viszi 17:00'), adat2.includes('után')])
+  await a.popup.getByRole('button', { name: 'Elfogadom' }).click(); await a.p.waitForTimeout(1500)
+  await a.ctx.close()
+}
 
 console.log('\n=== 5) Szolgáltatások: Csomag része ===\n')
+{
+const { ctx, p, sql } = await admin()
 await menu(p, 'Szolgáltatások')
 const sor = p.locator('.extrasor').filter({ hasText: 'Külső műanyagápolás' }).first()
 ok('alapból egyik csomagnak sem része', 0, await sor.locator('.resze').count())
@@ -157,22 +170,15 @@ await p.waitForTimeout(1500)
 ok('mentve, a sorban is látszik', 'Start, Elit része', sima(await sor.locator('.resze').innerText()))
 const gumi = p.locator('.extrasor').filter({ hasText: 'Gumiápolás' }).first()
 ok('a gumiápolás a Premium és az Elit része', 'Premium, Elit része', sima(await gumi.locator('.resze').innerText()))
-await menu(p, 'Időpontfoglalás')
-await gomb('Személyautó').click()
-await csomag('Start')
-ok('Startnál már nem kínálja a külső műanyagápolást', false, (await kinalt()).includes('Külső műanyagápolás'))
-await csomag('Premium')
-ok('Premiumnál igen', true, (await kinalt()).includes('Külső műanyagápolás'))
-await gomb('Csak belül').click(); await p.waitForTimeout(800)
-await csomag('Elit')
-ok('Elitnél csak belül: külső tétel, újra kérhető', true, (await kinalt()).includes('Külső műanyagápolás'))
-ok('nincs JS vagy konzol hiba', [], hibak)
+ok('a publikus oldal adataiban is a Start és az Elit része', [['ELIT', 'START']],
+  (await sql(`select array(select p.code from packages p where p.id::text in (select jsonb_array_elements_text(e->'included_in_packages')) order by p.code) k
+    from jsonb_array_elements(publikus_oldal()->'extras') e where e->>'name' = 'Külső műanyagápolás'`)).map((r) => r.k))
 await ctx.close()
+}
 
 console.log('\n=== 6) Telefonon ===\n')
 {
-  const t = await oldal('tulaj@mosathat.hu', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
-  await menu(t.p, 'Időpontfoglalás')
+  const t = await oldal({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   await t.m.locator('.fogl-valaszto button').filter({ hasText: 'Személyautó' }).click()
   await t.m.locator('.fogl-csomag', { has: t.p.locator('.nev', { hasText: /^Premium$/ }) }).click(); await t.p.waitForTimeout(800)
   await t.m.locator('.fogl-fs input').check(); await t.p.waitForTimeout(800)

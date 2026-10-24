@@ -48,7 +48,7 @@ const [{ id: ceg }] = await q(`select add_customer('{"name":"Fuvar Kft","phone":
 const [{ id: auto }] = await q(`select add_vehicle($1::jsonb) as id`,
   [JSON.stringify({ customer_id: ceg, plate_raw: 'FUV-001', category: 'SZEMELYAUTO' })])
 const [{ id: pkg }] = await q(`select id from packages where code='PREMIUM'`)
-const ma = new Date().toISOString().slice(0, 10)
+const ma = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest' }).format(new Date())
 
 console.log('=== 1) a díj mentése ===\n')
 await q(`select save_contract($1::jsonb) as id`, [JSON.stringify({
@@ -94,7 +94,7 @@ const le = await foglal('LEADOS', '13:00')
 }
 
 console.log('\n=== 4) lejárt szerződésnél nincs díj ===\n')
-await q(`update contracts set valid_until = current_date - 1 where customer_id = $1`, [ceg])
+await q(`update contracts set valid_until = public.budapest_ma() - 1 where customer_id = $1`, [ceg])
 {
   const [a] = await q(`select pickup_fee_huf from v_day_bookings where id=$1`, [hv])
   ok('lejárt szerződés: nincs fuvardíj', null, a.pickup_fee_huf)

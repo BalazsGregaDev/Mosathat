@@ -13,7 +13,7 @@ const csomag = Object.fromEntries((await q(`select code, id from packages`)).map
 await belep(ALK)
 const foglal = async (rsz) => (await egy(`select create_booking($1::jsonb) as id`, [JSON.stringify({
   category: 'SZEMELYAUTO', scope: 'TELJES', booking_type: 'LEADOS',
-  service_date: (await egy(`select current_date::text d`)).d, drop_off_time: '09:00',
+  service_date: (await egy(`select public.budapest_ma()::text d`)).d, drop_off_time: '09:00',
   package_id: csomag.PREMIUM, extras: [], customer_name: 'Kérdő Kati',
   customer_phone: '+3630' + String(Math.floor(Math.random() * 1e7)).padStart(7, '0'), plate_raw: rsz })])).id
 

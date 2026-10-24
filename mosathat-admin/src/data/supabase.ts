@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type {
   AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
   SheetColumn, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput,
+  BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput,
   BookingStatus, BookingTask, CalcInput, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
@@ -58,7 +59,6 @@ function fail(op: string, error: { message: string } | null): never {
 }
 
 export class SupabaseSource implements DataSource {
-  readonly label = 'Supabase'
   readonly isDemo = false
   private sb: SupabaseClient
   private readonly url: string
@@ -231,12 +231,6 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('start_perc')
     if (error) fail('Start munkaideje', error)
     return data == null ? null : Number(data)
-  }
-
-  async onlineBooking(input: OnlineBookingInput): Promise<string> {
-    const { data, error } = await this.sb.rpc('online_foglalas', { p: input })
-    if (error) fail('Foglalási kérés', error)
-    return data as string
   }
 
   async listOnlineKeresek(): Promise<OnlineKeres[]> {
@@ -503,7 +497,7 @@ export class SupabaseSource implements DataSource {
     return (data ?? []) as SearchHit[]
   }
 
-  async quoteBooking(input: Partial<NewBookingInput> & CalcInput): Promise<Quote> {
+  async quoteBooking(input: Partial<NewBookingInput> & CalcInput & { booking_id?: string | null }): Promise<Quote> {
     const { data, error } = await this.sb.rpc('quote_booking', { p: input })
     if (error) fail('Árszámítás', error)
     return toQuote(data as Record<string, unknown>)
@@ -750,6 +744,35 @@ export class SupabaseSource implements DataSource {
 
   async deleteSheetRow(id: string): Promise<void> {
     const { error } = await this.sb.rpc('sheet_row_delete', { p_id: id })
+    if (error) fail('Sor törlése', error)
+  }
+
+  async berletLapok(): Promise<BerletLapListaElem[]> {
+    const { data, error } = await this.sb.rpc('berlet_lapok')
+    if (error) fail('Bérletek', error)
+    return (data ?? []) as BerletLapListaElem[]
+  }
+
+  async berletLap(passId: string): Promise<BerletLap> {
+    const { data, error } = await this.sb.rpc('berlet_lap', { p_pass: passId })
+    if (error) fail('Bérlet lapja', error)
+    return data as BerletLap
+  }
+
+  async berletFoglalashoz(bookingId: string): Promise<BerletFoglalashoz> {
+    const { data, error } = await this.sb.rpc('berlet_lap_foglalashoz', { p_booking: bookingId })
+    if (error) fail('Bérlet lapja', error)
+    return data as BerletFoglalashoz
+  }
+
+  async saveBerletSor(input: BerletSorInput): Promise<string> {
+    const { data, error } = await this.sb.rpc('berlet_sor_mentes', { p: input })
+    if (error) fail('Bérlet sorának mentése', error)
+    return data as string
+  }
+
+  async deleteBerletSor(id: string): Promise<void> {
+    const { error } = await this.sb.rpc('berlet_sor_torles', { p_id: id })
     if (error) fail('Sor törlése', error)
   }
 

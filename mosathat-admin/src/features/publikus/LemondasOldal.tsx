@@ -41,8 +41,6 @@ export default function LemondasOldal() {
   useEffect(() => {
     document.title = sikeres ? 'Foglalás lemondva' : 'Foglalás lemondása'
     document.body.classList.add('lem-body')
-    document.querySelector('meta[name="viewport"]')
-      ?.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover')
     lekeres()
   }, [lekeres, sikeres])
 

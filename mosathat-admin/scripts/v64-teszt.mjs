@@ -1,6 +1,6 @@
 import { chromium } from 'playwright'
 
-import { hetkoznapra } from './_munkanap.mjs'
+import { adminOldal, foglalasOldal, onlineKeres } from './_publikus.mjs'
 
 const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) })
 let baj = 0
@@ -11,31 +11,15 @@ const ok = (mit, v, k) => {
 }
 const sima = (s) => s.replace(/\s+/g, ' ').trim()
 
-async function oldal(email, beall = { viewport: { width: 1440, height: 900 } }) {
-  const ctx = await b.newContext(beall)
-  const p = await ctx.newPage()
+async function oldal(beall = { viewport: { width: 1440, height: 900 } }) {
   const hibak = []
-  p.on('pageerror', (e) => hibak.push(`pageerror: ${e.message.slice(0, 160)}`))
-  p.on('console', (m) => { if (m.type() === 'error') hibak.push(`console: ${m.text().slice(0, 160)}`) })
-  await hetkoznapra(p)
-  await p.goto('http://localhost:5180/')
-  await p.waitForSelector('input[type="email"]', { timeout: 60000 })
-  await p.fill('input[type="email"]', email)
-  await p.fill('input[type="password"]', 'x')
-  await p.getByRole('button', { name: /Belépés/ }).click()
-  await p.waitForTimeout(2500)
-  const hamburger = p.locator('.hamburger:visible')
-  if (await hamburger.count()) {
-    await hamburger.first().click(); await p.waitForTimeout(400)
-    await p.locator('.fiok button').filter({ hasText: 'Időpontfoglalás' }).first().click()
-  } else {
-    await p.locator('aside.oldalsav button').filter({ hasText: 'Időpontfoglalás' }).first().click()
-  }
-  await p.waitForTimeout(1500)
-  return { ctx, p, m: p.locator('.fogl'), hibak }
+  const { viewport, ...kontextus } = beall
+  const o = await foglalasOldal(b, { viewport, kontextus, hiba: (e) => hibak.push(`pageerror: ${e.message.slice(0, 160)}`) })
+  o.p.on('console', (m) => { if (m.type() === 'error') hibak.push(`console: ${m.text().slice(0, 160)}`) })
+  return { ...o, hibak }
 }
 
-const { ctx, p, m, hibak } = await oldal('tulaj@mosathat.hu')
+const { ctx, p, m, sql, hibak } = await oldal()
 const csomag = async (nev) => {
   await m.locator('.fogl-csomag', { has: p.locator('.nev', { hasText: new RegExp(`^${nev}$`) }) }).click()
   await p.waitForTimeout(900)
@@ -114,7 +98,7 @@ ok('az összegzés jelzi', [true, true, '48 100 Ft'], [
   (await osszegzes()).includes('+ egyeztetendő tétel'),
   await vegosszeg()])
 
-console.log('\n=== 6) Beküldve a kérés ablakában ===\n')
+console.log('\n=== 6) Beküldve: a kérés és a kérés ablaka ===\n')
 await m.locator('.fogl-valaszto button').filter({ hasText: 'Megvárom' }).click(); await p.waitForTimeout(3500)
 await m.locator('.fogl-nap[data-allapot="szabad"]').first().click(); await p.waitForTimeout(600)
 await m.locator('.fogl-idok button').first().click(); await p.waitForTimeout(300)
@@ -123,21 +107,35 @@ await p.fill('#fo-tel', '+36 30 999 6401')
 await p.fill('#fo-rsz', 'ext-641')
 await m.locator('.fogl-feltetel input').check()
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
-const popup = p.locator('dialog[aria-label="Online foglalási kérés"]')
-ok('felugrott a kérés', 1, await popup.count())
-const adatok = sima(await popup.locator('.keres-adatok').innerText())
-ok('az extrák a kérésben', true, adatok.includes('+ Vizes kárpittisztítás, Motortér kozmetika'))
-ok('az ár a darabszámmal együtt, az egyeztetendő külön', ['48 100 Ft', '+ egyeztetendő: Motortér kozmetika'], [
-  sima(await popup.locator('.keres-adatok dd strong').first().innerText()),
-  sima(await popup.locator('.keres-egyeztet').innerText())])
-await popup.getByRole('button', { name: 'Elfogadom' }).click(); await p.waitForTimeout(1500)
-ok('elfogadva', 0, await popup.count())
+ok('beküldve', 1, await m.locator('.fogl-siker').count())
+const TETELEK = `select b.estimated_price_huf ar, array_agg(i.name_snapshot || ' ' || i.quantity::int order by i.sort_order) filter (where i.kind = 'EXTRA') extrak
+  from bookings b join vehicles v on v.id = b.vehicle_id join booking_items i on i.booking_id = b.id where upper(v.plate_raw) = $1 group by b.id`
+ok('a kérésben az extrák darabszámmal, az ár az egyeztetendő nélkül', [{ ar: 48100, extrak: ['Vizes kárpittisztítás 5', 'Motortér kozmetika 1'] }],
+  await sql(TETELEK, ['EXT-641']))
 ok('nincs JS vagy konzol hiba', [], hibak)
 await ctx.close()
+{
+  const a = await adminOldal(b)
+  const ex = async (nev) => (await a.sql(`select id from extras where name = $1`, [nev]))[0].id
+  await onlineKeres(a.sql, { booking_type: 'VAROS', start_time: '09:00', drop_off_time: null, plate_raw: 'ext-641', customer_name: 'Extra Ernő',
+    customer_phone: '+36 30 999 6401', customer_email: null,
+    extras: [{ extra_id: await ex('Vizes kárpittisztítás'), quantity: 5 }, { extra_id: await ex('Motortér kozmetika'), quantity: 1 }] })
+  await a.belep('tulaj@mosathat.hu')
+  const popup = a.p.locator('dialog[aria-label="Online foglalási kérés"]')
+  ok('felugrott a kérés', 1, await popup.count())
+  const adatok = sima(await popup.locator('.keres-adatok').innerText())
+  ok('az extrák a kérésben', true, adatok.includes('+ Vizes kárpittisztítás, Motortér kozmetika'))
+  ok('az ár a darabszámmal együtt, az egyeztetendő külön', ['48 100 Ft', '+ egyeztetendő: Motortér kozmetika'], [
+    sima(await popup.locator('.keres-adatok dd strong').first().innerText()),
+    sima(await popup.locator('.keres-egyeztet').innerText())])
+  await popup.getByRole('button', { name: 'Elfogadom' }).click(); await a.p.waitForTimeout(1500)
+  ok('elfogadva', 0, await popup.count())
+  await a.ctx.close()
+}
 
 console.log('\n=== 7) Telefonon ===\n')
 {
-  const t = await oldal('tulaj@mosathat.hu', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  const t = await oldal({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   await t.m.locator('.fogl-valaszto button').filter({ hasText: 'Személyautó' }).click()
   await t.m.locator('.fogl-csomag', { has: t.p.locator('.nev', { hasText: /^Premium$/ }) }).click(); await t.p.waitForTimeout(900)
   const k = t.m.locator('.fogl-extra').filter({ has: t.p.locator('.nev', { hasText: 'Vizes kárpittisztítás' }) })

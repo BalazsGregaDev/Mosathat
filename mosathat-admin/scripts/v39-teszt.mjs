@@ -37,13 +37,14 @@ ok('az első fül a Szerződéses cégek', true,
   (await p.locator('.fulek button').first().innerText()).includes('Szerződéses cégek'))
 ok('alapból a Szerződéses cégek látszik', true,
   (await p.locator('.fulek button.aktiv').innerText()).includes('Szerződéses cégek'))
-ok('a szerződés kártyája látszik', 1,
-  await p.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).count())
+ok('a szerződés sora látszik a táblázatban', 1,
+  await p.locator('.cegtabla-sor').filter({ hasText: 'Autó Trans' }).count())
 
-console.log('\n=== 2) Igazolólap a szerződés kártyáján ===\n')
-const kartya = p.locator('.panelek-ugyfel .panel').filter({ hasText: 'Autó Trans' }).first()
-ok('csukott kártyán is van Igazolólap gomb', 1, await kartya.locator('.ceg-lap-sor button').count())
-await kartya.locator('.ceg-lap-sor button').click()
+console.log('\n=== 2) Igazolólap a szerződés sorában ===\n')
+const kartya = p.locator('.cegtabla-sor').filter({ hasText: 'Autó Trans' }).first()
+const lapGomb = kartya.getByRole('button', { name: 'Igazolólap' })
+ok('a sorban van Igazolólap gomb', 1, await lapGomb.count())
+await lapGomb.click()
 await p.waitForSelector('.lap-igazolo')
 await p.waitForTimeout(800)
 const lap = p.locator('.lap-igazolo')
@@ -111,10 +112,6 @@ console.log('\n=== 3) Korábbi hónap, korlát nélkül; lezárt csak olvasható
 }
 
 console.log('\n=== 4) Szerződés: Bruttó / Nettó csúszka ===\n')
-if ((await kartya.getAttribute('data-nyitva')) !== 'true') {
-  await kartya.locator('.kartya-nyito').click()
-  await p.waitForTimeout(300)
-}
 await kartya.getByRole('button', { name: 'Szerkesztés' }).click()
 await p.waitForTimeout(800)
 {
@@ -144,11 +141,7 @@ await p.waitForTimeout(800)
   await csuszka.click()
   await urlap.getByRole('button', { name: 'Mentés' }).click()
   await p.waitForTimeout(1500)
-  if ((await kartya.getAttribute('data-nyitva')) !== 'true') {
-    await kartya.locator('.kartya-nyito').click()
-    await p.waitForTimeout(300)
-  }
-  ok('mentve: a kártyán bruttó 12 700 Ft', true,
+  ok('mentve: a sorban bruttó 12 700 Ft', true,
     (await kartya.locator('.szerzodes-arak').innerText()).replace(/\s/g, '').includes('12700Ft'))
 
   await kartya.getByRole('button', { name: 'Szerkesztés' }).click()
@@ -162,7 +155,7 @@ await p.waitForTimeout(800)
   await p.waitForTimeout(300)
 }
 
-await kartya.locator('.ceg-lap-sor button').click()
+await lapGomb.click()
 await p.waitForSelector('.lap-igazolo')
 await p.waitForTimeout(800)
 ok('az igazolólap láblécében a beírt nettó', true,

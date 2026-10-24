@@ -135,7 +135,7 @@ function EloFoglalas({ forras, adat, valasztas }: Betoltve & { valasztas: Valasz
       <h2>{sz('foglalas.cim')}</h2>
       <p className="kv-bevezeto">{sz('foglalas.bevezeto')}</p>
       <FoglalasUrlap data={data} katalogus={adat.katalogus} revision={revision} refresh={refresh}
-                     nyilvanos lemondasOra={adat.lemondasOra} {...valasztas} />
+                     lemondasOra={adat.lemondasOra} {...valasztas} />
     </section>
   )
 }

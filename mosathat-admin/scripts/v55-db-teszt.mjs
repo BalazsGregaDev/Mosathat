@@ -6,7 +6,7 @@ const q = async (sql, p = []) => (await db.query(sql, p)).rows
 const egy = async (sql, p = []) => (await q(sql, p))[0]
 await db.exec(`select set_config('app.uid','${ALK}',false)`)
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
-const nap = async (n) => (await egy(`select (current_date + $1::int)::text d`, [n])).d
+const nap = async (n) => (await egy(`select (public.budapest_ma() + $1::int)::text d`, [n])).d
 const munkanap = async (d) => (await egy(`select munkanap($1::date) m`, [d])).m
 const terhe = async (id, d) => Number((await egy(
   `select foglalas_napi_terhe(b, $2::date) t from bookings b where b.id = $1`, [id, d])).t)
@@ -68,7 +68,7 @@ t.ok('három napja (nem pipáltak): nulla', 0, await terhe(b, await nap(-3)))
 t.ok('tegnap (nem pipáltak): nulla', 0, await terhe(b, await nap(-1)))
 
 console.log('\n=== 5) negyedórás helyek ===\n')
-const sz = (await egy(`select (date_trunc('week', current_date) + interval '9 days')::date::text d`)).d
+const sz = (await egy(`select (date_trunc('week', public.budapest_ma()) + interval '9 days')::date::text d`)).d
 const sav = await q(`select starts::text s, ends::text e, lanes from day_lanes($1::date)`, [sz])
 t.ok('negyedórák a munkaidőben', true, sav.length > 20 && sav.every((x) => x.lanes === 2))
 await q(`select set_absence($1::jsonb)`, [JSON.stringify({ day: sz, kind: 'KORABBAN_TAVOZIK', starts: '14:00' })])

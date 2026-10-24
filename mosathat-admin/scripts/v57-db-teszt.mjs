@@ -7,7 +7,7 @@ const egy = async (sql, p = []) => (await q(sql, p))[0]
 await db.exec(`select set_config('app.uid','${ALK}',false)`)
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
 const kozel = (a, b) => Math.abs(a - b) < 0.5
-const het = (n) => egy(`select (date_trunc('week', current_date) + ($1::int || ' days')::interval)::date::text d`, [7 + n])
+const het = (n) => egy(`select (date_trunc('week', public.budapest_ma()) + ($1::int || ' days')::interval)::date::text d`, [7 + n])
 const [h, k, sz] = [(await het(0)).d, (await het(1)).d, (await het(2)).d]
 const terhe = async (id, d) => Number((await egy(`select foglalas_napi_terhe(b, $2::date) t from bookings b where b.id = $1`, [id, d])).t)
 const eler = async (id, d) => Number((await egy(`select elerheto_perc(b, $2::date) e from bookings b where b.id = $1`, [id, d])).e)

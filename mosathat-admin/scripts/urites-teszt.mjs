@@ -99,7 +99,7 @@ const [{ id: pkg }] = await q(`select id from packages where code='PREMIUM'`)
 const [{ create_booking: uj }] = await q(`select create_booking($1::jsonb)`, [JSON.stringify({
   customer_name: 'Első Éles Ügyfél', customer_phone: '+36301234567', plate_raw: 'ABC-001',
   category: 'SZEMELYAUTO', scope: 'TELJES', booking_type: 'LEADOS',
-  service_date: new Date().toISOString().slice(0, 10), drop_off_time: '08:00',
+  service_date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Budapest' }).format(new Date()), drop_off_time: '08:00',
   package_id: pkg, extras: [],
 })])
 console.log('   új foglalás felvehető:', !!uj)
@@ -107,7 +107,7 @@ console.log('   ügyfél:', (await q(`select count(*)::int n from customers`))[0
             '| jármű:', (await q(`select count(*)::int n from vehicles`))[0].n,
             '| munkalépés:', (await q(`select count(*)::int n from booking_tasks`))[0].n)
 const [hetkoznap] = await q(
-  `select d::date as nap from generate_series(current_date, current_date + 7, '1 day') d
+  `select d::date as nap from generate_series(public.budapest_ma(), public.budapest_ma() + 7, '1 day') d
     where extract(isodow from d) = 3 limit 1`)
 const [kap] = await q(`select load_pct from day_capacity($1::date)`, [hetkoznap.nap])
 console.log('   kapacitás számol (szerdára):', kap.load_pct !== null, '→', kap.load_pct + '%')

@@ -280,6 +280,7 @@ export default function BookingForm({
                     const ar = csomagAr(p.id)
                     const kivalasztott = f.packageId === p.id
                     const szerzAr = calc?.contract_prices[p.id]
+                    const berletbol = calc?.berlet_csomagok.includes(p.id) === true
                     return (
                       <button key={p.id} type="button" className="csomag" aria-label={p.name}
                               aria-pressed={kivalasztott}
@@ -291,12 +292,14 @@ export default function BookingForm({
                         </span>
                         <span className="arblokk">
                           <div className="ar">
-                            {szerzAr != null ? ft(szerzAr)
+                            {berletbol ? 'Bérletből'
+                              : szerzAr != null ? ft(szerzAr)
                               : ar?.requires_quote || ar?.price_huf == null ? 'Érdeklődjön'
                               : ft(ar.price_huf)}
                           </div>
                           <div className="ido">
-                            {szerzAr != null ? 'szerződéses ár' : idotartam(ar?.duration_minutes ?? null)}
+                            {berletbol ? idotartam(ar?.duration_minutes ?? null)
+                              : szerzAr != null ? 'szerződéses ár' : idotartam(ar?.duration_minutes ?? null)}
                           </div>
                         </span>
                       </button>
@@ -612,7 +615,10 @@ export default function BookingForm({
                       ? idotartam(calc.work_minutes * Math.max(1, flottaDarab)) + ' munka'
                       : 'idő ismeretlen',
                     calc.rest_minutes ? idotartam(calc.rest_minutes) + ' száradás' : null,
-                    calc.contract_price ? 'szerződéses ár' : null,
+                    calc.contract_price && !calc.berlet ? 'szerződéses ár' : null,
+                    calc.berlet
+                      ? `a csomag bérletből, utána ${calc.berlet.maradt} alkalom marad`
+                      : null,
                     (() => {
                       const fuvar = calc.lines.find((l) => l.kind === 'FUVAR')
                       return fuvar ? `benne ${ft(fuvar.price_huf)} fuvar` : null

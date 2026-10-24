@@ -7,8 +7,8 @@ const egy = async (sql, p = []) => (await q(sql, p))[0]
 const hiba = async (sql, p = []) => { try { await q(sql, p); return null } catch (e) { return e.message } }
 await db.exec(`select set_config('app.uid','${FEJL}',false)`)
 const csomag = Object.fromEntries((await q(`select code, id from packages`)).map((r) => [r.code, r.id]))
-const szerda = (await egy(`select (date_trunc('week', current_date) + interval '9 days')::date::text d`)).d
-const ma = (await egy(`select current_date::text d`)).d
+const szerda = (await egy(`select (date_trunc('week', public.budapest_ma()) + interval '9 days')::date::text d`)).d
+const ma = (await egy(`select public.budapest_ma()::text d`)).d
 
 const alap = {
   category: 'SZEMELYAUTO', scope: 'TELJES', package_id: csomag.PREMIUM, full_service: false, extras: [],
@@ -41,9 +41,9 @@ t.ok('rendszám nélkül', true, /rendszám/.test(await hiba(`select online_fogl
 t.ok('rossz e-mail', true, /e-mail/.test(await hiba(`select online_foglalas($1::jsonb)`, [JSON.stringify({ ...alap, customer_email: 'nem-email' })])))
 t.ok('mára nem', true, /holnapra/.test(await hiba(`select online_foglalas($1::jsonb)`, [JSON.stringify({ ...alap, service_date: ma })])))
 t.ok('8 hétnél messzebb nem', true, /8 hét/.test(await hiba(`select online_foglalas($1::jsonb)`,
-  [JSON.stringify({ ...alap, service_date: (await egy(`select (current_date + 70)::text d`)).d })])))
+  [JSON.stringify({ ...alap, service_date: (await egy(`select (public.budapest_ma() + 70)::text d`)).d })])))
 t.ok('hozom-viszem online nem', true, /Megvárja/.test(await hiba(`select online_foglalas($1::jsonb)`, [JSON.stringify({ ...alap, booking_type: 'HOZOMVISZEM' })])))
-const vasarnap = (await egy(`select (date_trunc('week', current_date) + interval '13 days')::date::text d`)).d
+const vasarnap = (await egy(`select (date_trunc('week', public.budapest_ma()) + interval '13 days')::date::text d`)).d
 t.ok('zárt napra nem', true, /zárva/.test(await hiba(`select online_foglalas($1::jsonb)`, [JSON.stringify({ ...alap, service_date: vasarnap })])))
 
 console.log('\n=== visszaigazolás ===\n')

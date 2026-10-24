@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from 'react'
 
-import { useApp } from './state/AppContext'
+import { AppProvider, useApp } from './state/AppContext'
 import LoginScreen from './features/shell/LoginScreen'
 import AppShell from './features/shell/AppShell'
 
@@ -24,7 +24,15 @@ class HibaHatar extends Component<{ children: ReactNode }, { hiba: Error | null 
   }
 }
 
-export default function App() {
+function Belepve() {
   const { user } = useApp()
   return <HibaHatar>{user ? <AppShell /> : <LoginScreen />}</HibaHatar>
+}
+
+export default function App() {
+  return (
+    <AppProvider>
+      <Belepve />
+    </AppProvider>
+  )
 }
