@@ -22,7 +22,7 @@ async function menu(p, nev) {
   await p.waitForTimeout(1500)
 }
 
-console.log('=== 1) Új bérlet: jármű nélküli ügyfél is kiválasztható, új ügyfél helyben ===\n')
+console.log('=== 1) Új bérlet: az öt mező keres, új ügyfél mentéskor ===\n')
 {
   const { ctx, p, sql, belep } = await adminOldal(b, { hiba: jsHiba })
   await belep('tulaj@mosathat.hu')
@@ -32,10 +32,17 @@ console.log('=== 1) Új bérlet: jármű nélküli ügyfél is kiválasztható, 
   await p.getByRole('button', { name: '+ Új bérlet' }).click(); await p.waitForTimeout(600)
   const lap = p.locator('dialog[aria-label="Új bérlet"]')
   const gomb = lap.getByRole('button', { name: 'Bérlet létrehozása' })
-  ok('ügyfél nélkül a gomb tiltva, és alatta a magyarázat', [true, true],
-    [await gomb.isDisabled(), (await lap.locator('.berlet-miert').innerText()).includes('válaszd ki az ügyfelet')])
-  await lap.getByRole('textbox', { name: 'Ügyfél keresése' }).fill('Videoinfo-1'); await p.waitForTimeout(900)
-  ok('a jármű nélküli ügyfél is megjelenik', 1, await lap.locator('.talalatsor').filter({ hasText: 'Videoinfo-1 Kft.' }).count())
+  ok('alapból az öt ügyfélmező látszik, a Név mezőben a kurzor', [true, 'bu-nev'],
+    [(await Promise.all(['#bu-nev', '#bu-tel', '#bu-email', '#bu-ceg', '#bu-rendszam'].map((x) => lap.locator(x).isVisible()))).every(Boolean),
+      await p.evaluate(() => document.activeElement?.id)])
+  ok('üresen a gomb tiltva, és alatta a magyarázat', [true, true],
+    [await gomb.isDisabled(), (await lap.locator('.berlet-miert').innerText()).includes('legalább egy adatot')])
+  await lap.locator('#bu-tel').fill('222 33'); await p.waitForTimeout(900)
+  ok('a telefonszám mező is keres', 1, await lap.locator('.talalatsor').filter({ hasText: 'Videoinfo-1 Kft.' }).count())
+  await lap.locator('#bu-tel').fill('')
+  await lap.locator('#bu-nev').fill('Videoinfo-1'); await p.waitForTimeout(900)
+  ok('a név mezőben a jármű nélküli ügyfél is megjelenik', 1, await lap.locator('.talalatsor').filter({ hasText: 'Videoinfo-1 Kft.' }).count())
+  await kep(lap.locator('.lap'), '1-uj-berlet-kereses')
   await lap.locator('.talalatsor').filter({ hasText: 'Videoinfo-1 Kft.' }).click(); await p.waitForTimeout(400)
   ok('kiválasztva, a gomb már él', [true, false],
     [(await lap.locator('.talalat').innerText()).includes('Videoinfo-1 Kft.'), await gomb.isDisabled()])
@@ -56,25 +63,21 @@ console.log('=== 1) Új bérlet: jármű nélküli ügyfél is kiválasztható, 
   await gomb.click(); await p.waitForTimeout(1500)
   ok('a bérlet létrejött', 1, await p.locator('.panel').filter({ hasText: 'Videoinfo-1 Kft.' }).count())
 
+  const elotte = (await sql(`select count(*)::int n from customers`))[0].n
   await p.getByRole('button', { name: '+ Új bérlet' }).click(); await p.waitForTimeout(600)
-  await lap.getByRole('textbox', { name: 'Ügyfél keresése' }).fill('Bérletes Bálint'); await p.waitForTimeout(900)
-  await lap.getByRole('button', { name: 'Új ügyfél felvétele' }).click()
-  ok('a mezők: név (a keresett szöveggel), telefon, e-mail, cég, rendszám', ['Bérletes Bálint', '', '', '', ''],
-    await Promise.all(['#bu-nev', '#bu-tel', '#bu-email', '#bu-ceg', '#bu-rsz'].map((x) => lap.locator(x).inputValue())))
-  await lap.locator('#bu-nev').fill('')
-  const ment = lap.getByRole('button', { name: 'Ügyfél mentése' })
-  ok('üres adatokkal nem menthető', true, await ment.isDisabled())
-  await lap.locator('#bu-rsz').fill('ujb-001')
-  ok('egy kitöltött mezővel (rendszám) már menthető', false, await ment.isDisabled())
+  await lap.locator('#bu-email').fill('kovacs'); await p.waitForTimeout(900)
+  ok('az e-mail mező is keres', true, (await lap.locator('.talalatsor').count()) > 0)
+  await lap.locator('#bu-email').fill('')
+  await lap.locator('#bu-rendszam').fill('ujb-001'); await p.waitForTimeout(900)
+  ok('a rendszám nagybetűs lesz, és nincs találat', ['UJB-001', 0], [await lap.locator('#bu-rendszam').inputValue(), await lap.locator('.talalatsor').count()])
+  ok('egy kitöltött mezővel a bérlet már menthető', false, await gomb.isDisabled())
   await kep(lap.locator('.lap'), '1-uj-ugyfel')
-  await ment.click(); await p.waitForTimeout(1200)
-  ok('az új ügyfél fel is került, ki is van választva, a bérlet menthető', [true, false],
-    [(await lap.locator('.talalat').innerText()).includes('UJB-001'), await gomb.isDisabled()])
-  ok('az adatbázisban: Névtelen ügyfél az autóval', [{ name: 'Névtelen', phone: '—' }],
-    await sql(`select c.name, c.phone from customers c join vehicles v on v.customer_id = c.id where v.plate_raw = 'UJB-001'`))
-  await lap.getByRole('button', { name: 'Mégse' }).click(); await p.waitForTimeout(400)
-  const k = p.locator('.kerdes-gombok .btn-veszelyes, .kerdes-gombok .btn-veszelyes-teli')
-  if (await k.count()) { await k.first().click(); await p.waitForTimeout(400) }
+  await gomb.click(); await p.waitForTimeout(1500)
+  ok('a bérlet létrejött, az ablak bezárult', 0, await lap.count())
+  ok('egy új ügyfél került fel', elotte + 1, (await sql(`select count(*)::int n from customers`))[0].n)
+  ok('az adatbázisban: Névtelen ügyfél az autóval, és övé a bérlet', [{ name: 'Névtelen', phone: '—', berlet: 1 }],
+    await sql(`select c.name, c.phone, (select count(*)::int from passes x where x.customer_id = c.id) berlet
+      from customers c join vehicles v on v.customer_id = c.id where v.plate_raw = 'UJB-001'`))
 
   console.log('\n=== 2) A bérlet kártyáján a foglalási link ===\n')
   const kartya = p.locator('.panel').filter({ hasText: 'Kovács Péter' }).first()

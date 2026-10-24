@@ -133,6 +133,11 @@ t.ok('foglalt rendszám: hiba a gazda nevével', true,
 t.ok('a régi mód (Ügyfelek oldal) továbbra is kéri a nevet és a telefont', true,
   /név nem maradhat üresen/.test(await hiba(() => q(`select add_customer($1::jsonb)`, [JSON.stringify({ phone: '+36 1 999 0000' })])) ?? ''))
 
+const keres = async (x) => (await q(`select name from list_customers($1)`, [x])).map((r) => r.name)
+t.ok('ügyfélkeresés e-mail címre is', ['Névtelen'], await keres('csak@email'))
+t.ok('ékezet nélkül és részletre is', true, (await keres('email.hu')).includes('Névtelen'))
+t.ok('két betűre az e-mail még nem keres', false, (await keres('cs')).includes('Névtelen'))
+
 console.log('\n=== 8) A levelek szövege ===\n')
 {
   const { visszaigazolasLevel, keszLevel } = await import(join(GYOKER, 'supabase', 'functions', '_shared', 'sablon.ts'))

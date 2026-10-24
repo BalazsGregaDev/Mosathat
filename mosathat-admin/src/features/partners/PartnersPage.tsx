@@ -249,23 +249,16 @@ function vanAdat(u: UjUgyfelAdat): boolean {
   return [u.nev, u.tel, u.email, u.ceg, u.rendszam].some((x) => x.trim() !== '')
 }
 
-function kezdoUgyfel(q: string): UjUgyfelAdat {
-  const t = q.trim()
-  const ures = { nev: '', tel: '', email: '', ceg: '', rendszam: '' }
-  if (/@/.test(t)) return { ...ures, email: t }
-  if (/^[+\d\s()/-]{6,}$/.test(t)) return { ...ures, tel: t }
-  return { ...ures, nev: t }
-}
+const URES_UGYFEL: UjUgyfelAdat = { nev: '', tel: '', email: '', ceg: '', rendszam: '' }
 
 function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void }) {
   const { data, user } = useApp()
   const szerkesztheto = user?.canEditCustomers === true
   const katalogus = useCatalog()
-  const [q, setQ] = useState('')
-  const [talalatok, setTalalatok] = useState<CustomerSummary[] | null>(null)
+  const [adat, setAdat] = useState<UjUgyfelAdat>(URES_UGYFEL)
+  const [mezo, setMezo] = useState<keyof UjUgyfelAdat | null>(null)
+  const [talalatok, setTalalatok] = useState<CustomerSummary[]>([])
   const [ugyfel, setUgyfel] = useState<CustomerSummary | null>(null)
-  const [ujUgyfel, setUjUgyfel] = useState<UjUgyfelAdat | null>(null)
-  const [ujMegy, setUjMegy] = useState(false)
   const [nev, setNev] = useState('')
   const [ar, setAr] = useState('')
   const [mod, setMod] = useState<ValidityKind>('EV')
@@ -276,73 +269,78 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   const [ment, setMent] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
   const mentRef = useRef(false)
-  const kereso = useRef<HTMLInputElement>(null)
+  const elsoMezo = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { if (!ugyfel) kereso.current?.focus() }, [ugyfel])
+  useEffect(() => { if (!ugyfel) elsoMezo.current?.focus() }, [ugyfel])
 
+  const keresett = mezo ? adat[mezo].trim() : ''
   useEffect(() => {
-    if (q.trim().length < 1) { setTalalatok(null); return }
+    if (!mezo || keresett.length < 2) { setTalalatok([]); return }
     let el = true
     const t = window.setTimeout(async () => {
       try {
-        const r = await data.listCustomers(q.trim())
+        const r = await data.listCustomers(keresett)
         if (el) setTalalatok(r.slice(0, 6))
       } catch {
         if (el) setTalalatok([])
       }
     }, 220)
     return () => { el = false; window.clearTimeout(t) }
-  }, [q, data])
+  }, [mezo, keresett, data])
+
+  function ir(k: keyof UjUgyfelAdat, v: string) {
+    setAdat((a) => ({ ...a, [k]: k === 'rendszam' ? v.toUpperCase() : v }))
+    setMezo(k)
+  }
 
   function valaszt(c: CustomerSummary) {
     setUgyfel(c)
-    setTalalatok(null)
-    setQ('')
-    setUjUgyfel(null)
+    setTalalatok([])
+    setMezo(null)
   }
 
-  async function ujFelvetel() {
-    if (!ujUgyfel || ujMegy) return
-    setUjMegy(true)
-    setHiba(null)
-    try {
-      const u = {
-        nev: ujUgyfel.nev.trim(), tel: ujUgyfel.tel.trim(), email: ujUgyfel.email.trim(),
-        ceg: ujUgyfel.ceg.trim(), rendszam: ujUgyfel.rendszam.trim().toUpperCase(),
-      }
-      const id = await data.addCustomer({
-        barmelyik: true, name: u.nev, phone: u.tel, email: u.email, company_name: u.ceg, plate_raw: u.rendszam,
-      })
-      const keresett = u.nev || u.ceg || u.tel || u.rendszam || u.email
-      const [c] = (await data.listCustomers(keresett)).filter((x) => x.id === id)
-      valaszt(c ?? {
-        id, name: u.nev || u.ceg || 'Névtelen', phone: u.tel || '—', email: u.email || null, company_name: u.ceg || null,
-        type: u.ceg ? 'CEG' : 'MAGAN', billing_kind: 'NORMAL', notes: null, internal_notes: null, jarmuvek: u.rendszam ? 1 : 0,
-        latogatas: 0, osszesen: 0, utolso: null, atlag: null, atlag_napok: null, kedvenc_csomag: null,
-        rendszamok: u.rendszam ? [u.rendszam] : [],
-      })
-    } catch (e) {
-      setHiba(hibaSzoveg(e))
-    } finally {
-      setUjMegy(false)
-    }
+  function masUgyfel() {
+    setUgyfel(null)
+    setAdat(URES_UGYFEL)
   }
+
+  async function ugyfelMentese(): Promise<string> {
+    const u = {
+      nev: adat.nev.trim(), tel: adat.tel.trim(), email: adat.email.trim(),
+      ceg: adat.ceg.trim(), rendszam: adat.rendszam.trim().toUpperCase(),
+    }
+    const id = await data.addCustomer({
+      barmelyik: true, name: u.nev, phone: u.tel, email: u.email, company_name: u.ceg, plate_raw: u.rendszam,
+    })
+    setUgyfel({
+      id, name: u.nev || u.ceg || 'Névtelen', phone: u.tel || '—', email: u.email || null, company_name: u.ceg || null,
+      type: u.ceg ? 'CEG' : 'MAGAN', billing_kind: 'NORMAL', notes: null, internal_notes: null, jarmuvek: u.rendszam ? 1 : 0,
+      latogatas: 0, osszesen: 0, utolso: null, atlag: null, atlag_napok: null, kedvenc_csomag: null,
+      rendszamok: u.rendszam ? [u.rendszam] : [],
+    })
+    return id
+  }
+
+
+
 
   function modValt(uj: ValidityKind) {
     setMod(uj)
     setErtek(uj === 'EV' ? '1' : uj === 'NAP' ? '30' : '')
   }
 
-  const piszkos = Boolean(ugyfel || q.trim() || nev.trim() || ar.trim())
+  const piszkos = Boolean(ugyfel || vanAdat(adat) || nev.trim() || ar.trim())
+  const vanUgyfel = Boolean(ugyfel) || (szerkesztheto && vanAdat(adat))
   const ervenyes = mod === 'DATUM' ? /^\d{4}-\d{2}-\d{2}$/.test(ertek) : Number(ertek) > 0
 
   async function mentes() {
-    if (!ugyfel || mentRef.current) return
+    if (!vanUgyfel || mentRef.current) return
     mentRef.current = true
     setMent(true); setHiba(null)
     try {
+      const ugyfelId = ugyfel?.id ?? await ugyfelMentese()
       await data.createPass({
-        customer_id: ugyfel.id,
+        customer_id: ugyfelId,
         name: nev.trim() || 'Bérlet',
         price_huf: Number(ar) || 0,
         validity_kind: mod,
@@ -362,6 +360,35 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
 
   const osszesAlkalom = tetelek.reduce((a, t) => a + (Number(t.db) || 0), 0)
 
+  function ugyfelMezo(k: keyof UjUgyfelAdat, cimke: string, hivatkozas?: React.RefObject<HTMLInputElement>) {
+    return (
+      <div className="mezo kereso">
+        <label htmlFor={`bu-${k}`}>{cimke}</label>
+        <input id={`bu-${k}`} ref={hivatkozas} autoComplete="off"
+               className={`beviteli${k === 'rendszam' ? ' beviteli-rendszam' : ''}`}
+               type={k === 'tel' ? 'tel' : k === 'email' ? 'email' : 'text'}
+               inputMode={k === 'tel' ? 'tel' : undefined}
+               value={adat[k]}
+               onChange={(e) => ir(k, e.target.value)}
+               onKeyDown={(e) => { if (e.key === 'Escape' && talalatok.length > 0) { e.stopPropagation(); setTalalatok([]) } }} />
+        {mezo === k && talalatok.length > 0 && (
+          <div className="talalatlista">
+            {talalatok.map((c) => (
+              <button key={c.id} type="button" className="talalatsor" onClick={() => valaszt(c)}>
+                <span className="rendszam">{c.rendszamok[0] ?? '—'}</span>
+                <span className="nev">
+                  {c.company_name || c.name}
+                  {c.company_name && c.name !== c.company_name && <span className="halk"> · {c.name}</span>}
+                </span>
+                <span className="auto halk">{c.phone !== '—' ? c.phone : c.email}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <Ablak cimke="Új bérlet"
            onEsc={() => { if (!ment) onBezar() }}
@@ -380,80 +407,26 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--t3)' }}>
                   <strong>{ugyfel.company_name || ugyfel.name}</strong>
                   <span className="halk">
-                    {[ugyfel.company_name ? ugyfel.name : null, ugyfel.phone, ugyfel.rendszamok[0]].filter(Boolean).join(' · ')}
+                    {[ugyfel.company_name ? ugyfel.name : null, ugyfel.phone !== '—' ? ugyfel.phone : null, ugyfel.rendszamok[0]].filter(Boolean).join(' · ')}
                   </span>
-                  <button className="btn btn-kicsi" style={{ marginLeft: 'auto' }}
-                          onClick={() => setUgyfel(null)}>Más ügyfél</button>
-                </div>
-              </div>
-            ) : ujUgyfel ? (
-              <div className="berlet-uj-ugyfel">
-                <div className="sor-2">
-                  <div className="mezo">
-                    <label htmlFor="bu-nev">Név</label>
-                    <input id="bu-nev" className="beviteli" value={ujUgyfel.nev} autoComplete="off"
-                           onChange={(e) => setUjUgyfel({ ...ujUgyfel, nev: e.target.value })} />
-                  </div>
-                  <div className="mezo">
-                    <label htmlFor="bu-tel">Telefonszám</label>
-                    <input id="bu-tel" className="beviteli" type="tel" inputMode="tel" value={ujUgyfel.tel}
-                           autoComplete="off" onChange={(e) => setUjUgyfel({ ...ujUgyfel, tel: e.target.value })} />
-                  </div>
-                </div>
-                <div className="sor-2">
-                  <div className="mezo">
-                    <label htmlFor="bu-email">E-mail</label>
-                    <input id="bu-email" className="beviteli" type="email" value={ujUgyfel.email} autoComplete="off"
-                           onChange={(e) => setUjUgyfel({ ...ujUgyfel, email: e.target.value })} />
-                  </div>
-                  <div className="mezo">
-                    <label htmlFor="bu-ceg">Cég</label>
-                    <input id="bu-ceg" className="beviteli" value={ujUgyfel.ceg} autoComplete="off"
-                           onChange={(e) => setUjUgyfel({ ...ujUgyfel, ceg: e.target.value })} />
-                  </div>
-                </div>
-                <div className="mezo">
-                  <label htmlFor="bu-rsz">Rendszám</label>
-                  <input id="bu-rsz" className="beviteli beviteli-rendszam" value={ujUgyfel.rendszam} autoComplete="off"
-                         onChange={(e) => setUjUgyfel({ ...ujUgyfel, rendszam: e.target.value.toUpperCase() })} />
-                </div>
-                <small className="halk">Elég egy mezőt kitölteni, a többi később az Ügyfelek oldalon pótolható.</small>
-                <div className="gombok">
-                  <button className="btn btn-kicsi" onClick={() => setUjUgyfel(null)} disabled={ujMegy}>Vissza a kereséshez</button>
-                  <button className="btn btn-kicsi btn-fo" onClick={() => void ujFelvetel()}
-                          disabled={ujMegy || !vanAdat(ujUgyfel)}>
-                    {ujMegy ? 'Mentés…' : 'Ügyfél mentése'}
-                  </button>
+                  <button className="btn btn-kicsi" style={{ marginLeft: 'auto' }} onClick={masUgyfel}>Más ügyfél</button>
                 </div>
               </div>
             ) : (
-              <div className="kereso">
-                <input ref={kereso} className="beviteli" value={q} onChange={(e) => setQ(e.target.value)}
-                       placeholder="Név, cég, telefonszám vagy rendszám" aria-label="Ügyfél keresése" />
-                {talalatok && talalatok.length > 0 && (
-                  <div className="talalatlista">
-                    {talalatok.map((c) => (
-                      <button key={c.id} type="button" className="talalatsor" onClick={() => valaszt(c)}>
-                        <span className="rendszam">{c.rendszamok[0] ?? '—'}</span>
-                        <span className="nev">
-                          {c.company_name || c.name}
-                          {c.company_name && c.name !== c.company_name && <span className="halk"> · {c.name}</span>}
-                        </span>
-                        <span className="auto halk">{c.phone}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {talalatok && talalatok.length === 0 && q.trim() !== '' && (
-                  <div className="berlet-nincs-talalat">
-                    <span className="halk">Nincs ilyen ügyfél.</span>
-                    {szerkesztheto && (
-                      <button className="btn btn-kicsi btn-fo" onClick={() => setUjUgyfel(kezdoUgyfel(q))}>
-                        Új ügyfél felvétele
-                      </button>
-                    )}
-                  </div>
-                )}
+              <div className="berlet-uj-ugyfel">
+                <div className="sor-2">
+                  {ugyfelMezo('nev', 'Név', elsoMezo)}
+                  {ugyfelMezo('tel', 'Telefonszám')}
+                </div>
+                <div className="sor-2">
+                  {ugyfelMezo('email', 'E-mail')}
+                  {ugyfelMezo('ceg', 'Cég')}
+                </div>
+                {ugyfelMezo('rendszam', 'Rendszám')}
+                <small className="halk">
+                  Bármelyik mezőbe írva keres a meglévő ügyfelek között. Ha nincs a listában,
+                  mentéskor új ügyfélként kerül fel, ehhez elég egy mezőt kitölteni.
+                </small>
               </div>
             )}
             <p className="halk" style={{ fontSize: 'var(--m-xs)' }}>
@@ -540,13 +513,15 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
             <span className="ertek">{ft(Number(ar) || 0)}</span>
             <span className="alatta">{osszesAlkalom} alkalom</span>
           </div>
-          {!ugyfel && (
-            <span className="halk berlet-miert">Előbb válaszd ki az ügyfelet a listából, vagy vedd fel újként.</span>
+          {!vanUgyfel && (
+            <span className="halk berlet-miert">
+              {szerkesztheto ? 'Adj meg legalább egy adatot az ügyfélről, vagy válaszd ki a listából.' : 'Válaszd ki az ügyfelet a listából.'}
+            </span>
           )}
           <div className="gombok">
             <button className="btn" onClick={onBezar} disabled={ment}>Mégse</button>
             <button className="btn btn-fo" onClick={() => void mentes()}
-                    disabled={!ugyfel || osszesAlkalom === 0 || !ervenyes || ment}>
+                    disabled={!vanUgyfel || osszesAlkalom === 0 || !ervenyes || ment}>
               {ment ? 'Mentés…' : 'Bérlet létrehozása'}
             </button>
           </div>
