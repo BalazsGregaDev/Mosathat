@@ -4,9 +4,10 @@ import '../ceglink/ceglink.css'
 import { useApp } from '../../state/AppContext'
 import { useKerdes } from '../common/Kerdes'
 import { hibaSzoveg, napRovidCim } from '../../lib/format'
-import { berletLinkCim, berletLinkLevel, vagolapra } from '../../lib/cegLink'
+import { berletLinkCim, berletLinkLevel, linkCimElotag, vagolapra } from '../../lib/cegLink'
 import type { BerletLinkSor } from '../../lib/types'
 import QrAblak from '../ceglink/QrAblak'
+import LinkCimMezo from '../ceglink/LinkCimMezo'
 
 export default function BerletLink({ customerId, nev, sor, onUj }: {
   customerId: string
@@ -37,16 +38,16 @@ export default function BerletLink({ customerId, nev, sor, onUj }: {
       : { szoveg: 'Nem sikerült a vágólapra másolni', hiba: true })
   }
 
-  async function general() {
+  async function general(cim?: string) {
     if (megy) return
     if (sor && !(await kerdez({
-      cim: `Új link: ${nev}`,
+      cim: cim ? `Link átírása: ${nev}` : `Új link: ${nev}`,
       szoveg: 'A mostani link azonnal megszűnik, azzal már nem lehet foglalni. Az új link és az ügyfélnek szóló levél a vágólapra kerül.',
-      igen: 'Új link', nem: 'Mégsem', veszelyes: true,
+      igen: cim ? 'Átírás' : 'Új link', nem: 'Mégsem', veszelyes: true,
     }))) return
     setMegy(true)
     try {
-      const token = await data.berletLinkUj(customerId)
+      const token = cim ? await data.berletLinkAtir(customerId, cim) : await data.berletLinkUj(customerId)
       onUj({ customer_id: customerId, token, created_at: new Date().toISOString() })
       await masol(token, true)
     } catch (e) {
@@ -70,6 +71,8 @@ export default function BerletLink({ customerId, nev, sor, onUj }: {
       ) : (
         <span className="halk">Még nincs link. Ezen a saját oldalon az ügyfél a bérletére tud időpontot foglalni.</span>
       )}
+      <LinkCimMezo id={`bl-${customerId}`} elotag={linkCimElotag('berlet')} ertek={sor?.token ?? null}
+                   megy={megy} cimke={`A link egyedi címe: ${nev}`} onMent={(cim) => general(cim)} />
       <div className="ceglink-gombok">
         <button type="button" className={`btn btn-kicsi${link ? '' : ' btn-fo'}`} disabled={megy}
                 onClick={() => void general()}>

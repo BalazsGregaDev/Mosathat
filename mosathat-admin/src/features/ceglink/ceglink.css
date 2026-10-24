@@ -23,6 +23,35 @@
 .ceglink-gombok { display: flex; align-items: center; gap: var(--t2); flex-wrap: wrap; }
 .ceglink-gombok small { margin-right: auto; }
 
+.linkcim > * + * { margin-top: var(--t1); }
+.linkcim-cimke {
+  display: block;
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--szoveg-halk); font-weight: var(--vastag-eros);
+}
+.linkcim-sor {
+  display: flex; align-items: stretch; min-width: 0;
+  border: 1px solid var(--keret-eros); border-radius: var(--r-sm);
+  background: var(--lap);
+  font-family: var(--betu-szam); font-size: var(--m-xs);
+  transition: border-color var(--atmenet), box-shadow var(--atmenet);
+}
+.linkcim-sor:focus-within { border-color: var(--zold); box-shadow: 0 0 0 3px var(--zold-halvany); }
+.linkcim-elotag {
+  display: block; align-self: center;
+  padding: 0 2px 0 8px;
+  color: var(--szoveg-halk);
+  white-space: nowrap; flex: 0 1 auto; min-width: 6ch;
+  overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left;
+}
+.linkcim-bevitel {
+  flex: 1 0 18ch; min-width: 18ch;
+  border: none; background: transparent; outline: none;
+  font: inherit; color: var(--szoveg);
+  padding: 6px 8px 6px 0;
+}
+.linkcim-bevitel::placeholder { color: var(--szoveg-halvany); }
+
 .ceglink-uzenet textarea.beviteli { min-height: 56px; font-size: var(--m-sm); padding: 7px 10px; }
 
 .ceglink-jelzes {

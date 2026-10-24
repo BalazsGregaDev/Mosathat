@@ -5,8 +5,18 @@ export function cegLinkCim(token: string, alap: string = window.location.origin)
 }
 
 export function cegLinkToken(utvonal: string): string | null {
-  const m = /^\/ceg\/([a-z0-9]{20,64})\/?$/.exec(utvonal)
-  return m ? m[1] : null
+  const m = /^\/ceg\/([A-Za-z0-9-]{3,64})\/?$/.exec(utvonal)
+  return m ? m[1].toLowerCase() : null
+}
+
+export function linkCimElotag(ut: 'ceg' | 'berlet', alap: string = window.location.host): string {
+  return `${alap.replace(/^https?:\/\//, '').replace(/\/+$/, '')}/${ut}/`
+}
+
+export function linkCimNorm(s: string, vegleges = false): string {
+  const t = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+/, '').slice(0, 64)
+  return vegleges ? t.replace(/-+$/, '') : t
 }
 
 const BERLET_LINK_UT = '/berlet/'
@@ -16,8 +26,8 @@ export function berletLinkCim(token: string, alap: string = window.location.orig
 }
 
 export function berletLinkToken(utvonal: string): string | null {
-  const m = /^\/berlet\/([a-z0-9]{20,64})\/?$/.exec(utvonal)
-  return m ? m[1] : null
+  const m = /^\/berlet\/([A-Za-z0-9-]{3,64})\/?$/.exec(utvonal)
+  return m ? m[1].toLowerCase() : null
 }
 
 export function berletLinkLevel(nev: string, link: string): string {
@@ -50,6 +60,19 @@ export function cegLinkCsereLevel(cegNev: string, link: string): string {
     '',
     'Ezúton küldöm az időpontfoglaláshoz használható új linket. A korábbi link kiszivárgott, ezért megszüntettük, '
       + 'az már nem működik. Kérjük, hívjátok fel erre a kollégáitok figyelmét, és adjátok tovább az új linket az erre jogosultaknak:',
+    link,
+    '',
+    'Köszönettel,',
+    'Mosathat autóápolási kft.',
+  ].join('\n')
+}
+
+export function cegLinkAtirasLevel(cegNev: string, link: string): string {
+  return [
+    `Kedves ${cegNev}!`,
+    '',
+    'Megváltozott az időpontfoglaláshoz használható link címe. A korábbi cím már nem működik, '
+      + 'kérjük, ezentúl ezt használjátok, és adjátok tovább az erre jogosultaknak:',
     link,
     '',
     'Köszönettel,',

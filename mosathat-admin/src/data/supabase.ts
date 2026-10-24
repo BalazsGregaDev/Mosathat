@@ -302,6 +302,12 @@ export class SupabaseSource implements DataSource {
     return data as string
   }
 
+  async cegLinkAtir(companyId: string, cim: string): Promise<string> {
+    const { data, error } = await this.sb.rpc('ceg_link_cim', { p_company: companyId, p_cim: cim })
+    if (error) fail('Link címe', error)
+    return data as string
+  }
+
   async cegLinkUzenet(companyId: string, uzenet: string): Promise<void> {
     const { error } = await this.sb.rpc('ceg_link_uzenet', { p_company: companyId, p_uzenet: uzenet })
     if (error) fail('Üzenet mentése', error)
@@ -334,6 +340,12 @@ export class SupabaseSource implements DataSource {
   async berletLinkUj(customerId: string): Promise<string> {
     const { data, error } = await this.sb.rpc('berlet_link_uj', { p_customer: customerId })
     if (error) fail('Új link', error)
+    return data as string
+  }
+
+  async berletLinkAtir(customerId: string, cim: string): Promise<string> {
+    const { data, error } = await this.sb.rpc('berlet_link_cim', { p_customer: customerId, p_cim: cim })
+    if (error) fail('Link címe', error)
     return data as string
   }
 

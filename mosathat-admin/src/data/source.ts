@@ -129,6 +129,7 @@ export interface DataSource {
   publikusJogi(lap: JogiLap, nyelv: Nyelv): Promise<JogiBlokk[] | null>
   cegLinkek(): Promise<CegLink[]>
   cegLinkUj(companyId: string): Promise<string>
+  cegLinkAtir(companyId: string, cim: string): Promise<string>
   cegLinkUzenet(companyId: string, uzenet: string): Promise<void>
   cegLinkAdat(token: string): Promise<CegLinkAdat | null>
   cegAjanlat(token: string, input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
@@ -136,6 +137,7 @@ export interface DataSource {
   cegTeliNapok(token: string, tol: string, ig: string): Promise<string[]>
   berletLinkek(): Promise<BerletLinkSor[]>
   berletLinkUj(customerId: string): Promise<string>
+  berletLinkAtir(customerId: string, cim: string): Promise<string>
   berletLinkAdat(token: string): Promise<BerletLinkAdat | null>
   berletAjanlat(token: string, input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
   berletFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny>

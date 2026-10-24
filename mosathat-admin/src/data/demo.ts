@@ -295,6 +295,11 @@ export class DemoSource implements DataSource {
     return r.k
   }
 
+  async cegLinkAtir(companyId: string, cim: string): Promise<string> {
+    const [r] = await this.rows<{ k: string }>(`select ceg_link_cim($1::uuid, $2) k`, [companyId, cim])
+    return r.k
+  }
+
   async cegLinkUzenet(companyId: string, uzenet: string): Promise<void> {
     await this.rows(`select ceg_link_uzenet($1::uuid, $2)`, [companyId, uzenet])
   }
@@ -321,6 +326,11 @@ export class DemoSource implements DataSource {
 
   async berletLinkUj(customerId: string): Promise<string> {
     const [r] = await this.rows<{ k: string }>(`select berlet_link_uj($1::uuid) k`, [customerId])
+    return r.k
+  }
+
+  async berletLinkAtir(customerId: string, cim: string): Promise<string> {
+    const [r] = await this.rows<{ k: string }>(`select berlet_link_cim($1::uuid, $2) k`, [customerId, cim])
     return r.k
   }
 

@@ -5,8 +5,9 @@ import { useApp } from '../../state/AppContext'
 import { useMentetlen } from '../../state/useMentetlen'
 import { useKerdes } from '../common/Kerdes'
 import { hibaSzoveg, napRovidCim } from '../../lib/format'
-import { cegLinkCim, cegLinkCsereLevel, cegLinkLevel, vagolapra } from '../../lib/cegLink'
+import { cegLinkAtirasLevel, cegLinkCim, cegLinkCsereLevel, cegLinkLevel, linkCimElotag, vagolapra } from '../../lib/cegLink'
 import QrAblak from './QrAblak'
+import LinkCimMezo from './LinkCimMezo'
 import type { CegLink } from '../../lib/types'
 
 function MasolasIkon() {
@@ -63,31 +64,31 @@ export function useCegLinkek(engedett: boolean, frissites: number): CegLinkVezer
     idozito.current = window.setTimeout(() => setJelzes(null), 4000)
   }
 
-  async function masol(c: CegLink, token: string, csere: boolean) {
-    const szoveg = (csere ? cegLinkCsereLevel : cegLinkLevel)(c.name, cegLinkCim(token))
-    const ok = await vagolapra(szoveg)
+  async function masol(c: CegLink, token: string, mod: 'sima' | 'csere' | 'atiras') {
+    const level = mod === 'csere' ? cegLinkCsereLevel : mod === 'atiras' ? cegLinkAtirasLevel : cegLinkLevel
+    const ok = await vagolapra(level(c.name, cegLinkCim(token)))
     jelez(ok
-      ? { cegId: c.company_id, hol: 'link', szoveg: csere ? 'Új link kész, a levél a vágólapon' : 'A levél a vágólapon' }
+      ? { cegId: c.company_id, hol: 'link', szoveg: mod === 'sima' ? 'A levél a vágólapon' : mod === 'atiras' ? 'Cím átírva, a levél a vágólapon' : 'Új link kész, a levél a vágólapon' }
       : { cegId: c.company_id, hol: 'link', szoveg: 'Nem sikerült a vágólapra másolni', hiba: true })
   }
 
-  async function general(c: CegLink) {
+  async function general(c: CegLink, cim?: string) {
     if (megy) return
     const csere = Boolean(c.token)
     if (csere && !(await kerdez({
-      cim: `Új link: ${c.name}`,
+      cim: cim ? `Link átírása: ${c.name}` : `Új link: ${c.name}`,
       szoveg: 'A mostani link azonnal megszűnik, aki azt használja, már nem tud vele foglalni. '
         + 'Az új link és a cégnek szóló levél a vágólapra kerül.',
-      igen: 'Új link',
+      igen: cim ? 'Átírás' : 'Új link',
       nem: 'Mégsem',
       veszelyes: true,
     }))) return
     setMegy(c.company_id)
     try {
-      const token = await data.cegLinkUj(c.company_id)
+      const token = cim ? await data.cegLinkAtir(c.company_id, cim) : await data.cegLinkUj(c.company_id)
       setLista((l) => (l ?? []).map((x) => x.company_id === c.company_id
         ? { ...x, token, created_at: new Date().toISOString() } : x))
-      await masol(c, token, csere)
+      await masol(c, token, !csere ? 'sima' : cim ? 'atiras' : 'csere')
     } catch (e) {
       jelez({ cegId: c.company_id, hol: 'link', szoveg: hibaSzoveg(e), hiba: true })
     } finally {
@@ -135,13 +136,16 @@ export function useCegLinkek(engedett: boolean, frissites: number): CegLinkVezer
             <a href={link} target="_blank" rel="noopener" className="ceglink-cim">{link}</a>
             <button type="button" className="btn btn-kicsi ceglink-masol"
                     aria-label={`A levél másolása: ${c.name}`} title="A cégnek szóló levél másolása a linkkel"
-                    disabled={megy === c.company_id} onClick={() => void masol(c, c.token!, false)}>
+                    disabled={megy === c.company_id} onClick={() => void masol(c, c.token!, 'sima')}>
               <MasolasIkon />
             </button>
           </div>
         ) : (
           <span className="halk">Még nincs link</span>
         )}
+        <LinkCimMezo id={`cl-${c.company_id}`} elotag={linkCimElotag('ceg')} ertek={c.token}
+                     megy={megy === c.company_id} cimke={`A link egyedi címe: ${c.name}`}
+                     onMent={(cim) => general(c, cim)} />
         <div className="ceglink-gombok">
           <button type="button" className={`btn btn-kicsi${link ? '' : ' btn-fo'}`}
                   disabled={megy === c.company_id} onClick={() => void general(c)}>
