@@ -119,7 +119,21 @@ t.ok('a régi lemondó link táblája és függvényei törölve', [null, 0],
     (select count(*)::int from pg_proc where proname in ('lemondas_allapot', 'lemondas_vegrehajt', 'lemondo_link_mentes', 'lemondo_token_hash')) n`)))
 t.ok('az e-mail küldés sora továbbra is működik', null, await hiba(() => q(`select ertesitesek_atvetele(5)`)))
 
-console.log('\n=== 7) A levelek szövege ===\n')
+console.log('\n=== 7) Új ügyfél egyetlen adattal (Új bérletnél) ===\n')
+await ki(TULAJ)
+const uj1 = (await egy(`select add_customer($1::jsonb) id`, [JSON.stringify({ barmelyik: true, email: 'csak@email.hu' })])).id
+t.ok('csak e-mail: Névtelen, telefon nélkül', ['Névtelen', '—', 'csak@email.hu'],
+  Object.values(await egy(`select name, phone, email from customers where id = $1`, [uj1])))
+const uj2 = (await egy(`select add_customer($1::jsonb) id`, [JSON.stringify({ barmelyik: true, company_name: 'Csak Cég Kft.' })])).id
+t.ok('csak cég: a név a cég neve, céges ügyfél', ['Csak Cég Kft.', 'CEG'],
+  Object.values(await egy(`select name, type::text from customers where id = $1`, [uj2])))
+t.ok('semmi adat: hiba', true, /Legalább egy adatot/.test(await hiba(() => q(`select add_customer('{"barmelyik": true}'::jsonb)`)) ?? ''))
+t.ok('foglalt rendszám: hiba a gazda nevével', true,
+  /már Kovács Péter ügyfélhez tartozik/.test(await hiba(() => q(`select add_customer($1::jsonb)`, [JSON.stringify({ barmelyik: true, plate_raw: 'ABC-123' })])) ?? ''))
+t.ok('a régi mód (Ügyfelek oldal) továbbra is kéri a nevet és a telefont', true,
+  /név nem maradhat üresen/.test(await hiba(() => q(`select add_customer($1::jsonb)`, [JSON.stringify({ phone: '+36 1 999 0000' })])) ?? ''))
+
+console.log('\n=== 8) A levelek szövege ===\n')
 {
   const { visszaigazolasLevel, keszLevel } = await import(join(GYOKER, 'supabase', 'functions', '_shared', 'sablon.ts'))
   const UZLET = { nev: 'Mosathat', telefon: '+36 1 506 0420', cim: '1138 Budapest, Váci út 140.' }

@@ -237,6 +237,26 @@ export default function PartnersPage({ fokuszCeg }: {
   )
 }
 
+interface UjUgyfelAdat {
+  nev: string
+  tel: string
+  email: string
+  ceg: string
+  rendszam: string
+}
+
+function vanAdat(u: UjUgyfelAdat): boolean {
+  return [u.nev, u.tel, u.email, u.ceg, u.rendszam].some((x) => x.trim() !== '')
+}
+
+function kezdoUgyfel(q: string): UjUgyfelAdat {
+  const t = q.trim()
+  const ures = { nev: '', tel: '', email: '', ceg: '', rendszam: '' }
+  if (/@/.test(t)) return { ...ures, email: t }
+  if (/^[+\d\s()/-]{6,}$/.test(t)) return { ...ures, tel: t }
+  return { ...ures, nev: t }
+}
+
 function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void }) {
   const { data, user } = useApp()
   const szerkesztheto = user?.canEditCustomers === true
@@ -244,7 +264,7 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   const [q, setQ] = useState('')
   const [talalatok, setTalalatok] = useState<CustomerSummary[] | null>(null)
   const [ugyfel, setUgyfel] = useState<CustomerSummary | null>(null)
-  const [ujUgyfel, setUjUgyfel] = useState<{ nev: string; tel: string } | null>(null)
+  const [ujUgyfel, setUjUgyfel] = useState<UjUgyfelAdat | null>(null)
   const [ujMegy, setUjMegy] = useState(false)
   const [nev, setNev] = useState('')
   const [ar, setAr] = useState('')
@@ -286,12 +306,20 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
     setUjMegy(true)
     setHiba(null)
     try {
-      const id = await data.addCustomer({ name: ujUgyfel.nev.trim(), phone: ujUgyfel.tel.trim() })
-      const [c] = (await data.listCustomers(ujUgyfel.tel.trim())).filter((x) => x.id === id)
+      const u = {
+        nev: ujUgyfel.nev.trim(), tel: ujUgyfel.tel.trim(), email: ujUgyfel.email.trim(),
+        ceg: ujUgyfel.ceg.trim(), rendszam: ujUgyfel.rendszam.trim().toUpperCase(),
+      }
+      const id = await data.addCustomer({
+        barmelyik: true, name: u.nev, phone: u.tel, email: u.email, company_name: u.ceg, plate_raw: u.rendszam,
+      })
+      const kereso = u.nev || u.ceg || u.tel || u.rendszam || u.email
+      const [c] = (await data.listCustomers(kereso)).filter((x) => x.id === id)
       valaszt(c ?? {
-        id, name: ujUgyfel.nev.trim(), phone: ujUgyfel.tel.trim(), email: null, company_name: null,
-        type: 'MAGAN', billing_kind: 'NORMAL', notes: null, internal_notes: null, jarmuvek: 0,
-        latogatas: 0, osszesen: 0, utolso: null, atlag: null, atlag_napok: null, kedvenc_csomag: null, rendszamok: [],
+        id, name: u.nev || u.ceg || 'Névtelen', phone: u.tel || '—', email: u.email || null, company_name: u.ceg || null,
+        type: u.ceg ? 'CEG' : 'MAGAN', billing_kind: 'NORMAL', notes: null, internal_notes: null, jarmuvek: u.rendszam ? 1 : 0,
+        latogatas: 0, osszesen: 0, utolso: null, atlag: null, atlag_napok: null, kedvenc_csomag: null,
+        rendszamok: u.rendszam ? [u.rendszam] : [],
       })
     } catch (e) {
       setHiba(hibaSzoveg(e))
@@ -363,20 +391,38 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
                 <div className="sor-2">
                   <div className="mezo">
                     <label htmlFor="bu-nev">Név</label>
-                    <input id="bu-nev" className="beviteli" value={ujUgyfel.nev}
+                    <input id="bu-nev" className="beviteli" value={ujUgyfel.nev} autoComplete="off"
                            onChange={(e) => setUjUgyfel({ ...ujUgyfel, nev: e.target.value })} />
                   </div>
                   <div className="mezo">
                     <label htmlFor="bu-tel">Telefonszám</label>
                     <input id="bu-tel" className="beviteli" type="tel" inputMode="tel" value={ujUgyfel.tel}
-                           onChange={(e) => setUjUgyfel({ ...ujUgyfel, tel: e.target.value })} />
+                           autoComplete="off" onChange={(e) => setUjUgyfel({ ...ujUgyfel, tel: e.target.value })} />
                   </div>
                 </div>
+                <div className="sor-2">
+                  <div className="mezo">
+                    <label htmlFor="bu-email">E-mail</label>
+                    <input id="bu-email" className="beviteli" type="email" value={ujUgyfel.email} autoComplete="off"
+                           onChange={(e) => setUjUgyfel({ ...ujUgyfel, email: e.target.value })} />
+                  </div>
+                  <div className="mezo">
+                    <label htmlFor="bu-ceg">Cég</label>
+                    <input id="bu-ceg" className="beviteli" value={ujUgyfel.ceg} autoComplete="off"
+                           onChange={(e) => setUjUgyfel({ ...ujUgyfel, ceg: e.target.value })} />
+                  </div>
+                </div>
+                <div className="mezo">
+                  <label htmlFor="bu-rsz">Rendszám</label>
+                  <input id="bu-rsz" className="beviteli beviteli-rendszam" value={ujUgyfel.rendszam} autoComplete="off"
+                         onChange={(e) => setUjUgyfel({ ...ujUgyfel, rendszam: e.target.value.toUpperCase() })} />
+                </div>
+                <small className="halk">Elég egy mezőt kitölteni, a többi később az Ügyfelek oldalon pótolható.</small>
                 <div className="gombok">
                   <button className="btn btn-kicsi" onClick={() => setUjUgyfel(null)} disabled={ujMegy}>Vissza a kereséshez</button>
                   <button className="btn btn-kicsi btn-fo" onClick={() => void ujFelvetel()}
-                          disabled={ujMegy || !ujUgyfel.nev.trim() || !ujUgyfel.tel.trim()}>
-                    {ujMegy ? 'Felvétel…' : 'Ügyfél felvétele'}
+                          disabled={ujMegy || !vanAdat(ujUgyfel)}>
+                    {ujMegy ? 'Mentés…' : 'Ügyfél mentése'}
                   </button>
                 </div>
               </div>
@@ -402,8 +448,8 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
                   <div className="berlet-nincs-talalat">
                     <span className="halk">Nincs ilyen ügyfél.</span>
                     {szerkesztheto && (
-                      <button className="btn btn-kicsi" onClick={() => setUjUgyfel({ nev: q.trim(), tel: '' })}>
-                        + Új ügyfél: {q.trim()}
+                      <button className="btn btn-kicsi btn-fo" onClick={() => setUjUgyfel(kezdoUgyfel(q))}>
+                        Új ügyfél felvétele
                       </button>
                     )}
                   </div>

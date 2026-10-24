@@ -58,11 +58,20 @@ console.log('=== 1) Új bérlet: jármű nélküli ügyfél is kiválasztható, 
 
   await p.getByRole('button', { name: '+ Új bérlet' }).click(); await p.waitForTimeout(600)
   await lap.getByRole('textbox', { name: 'Ügyfél keresése' }).fill('Bérletes Bálint'); await p.waitForTimeout(900)
-  await lap.getByRole('button', { name: '+ Új ügyfél: Bérletes Bálint' }).click()
-  await lap.locator('#bu-tel').fill('+36 70 123 9876')
-  await lap.getByRole('button', { name: 'Ügyfél felvétele' }).click(); await p.waitForTimeout(1200)
-  ok('az új ügyfél fel is került, és ki is van választva', [true, false],
-    [(await lap.locator('.talalat').innerText()).includes('Bérletes Bálint'), await gomb.isDisabled()])
+  await lap.getByRole('button', { name: 'Új ügyfél felvétele' }).click()
+  ok('a mezők: név (a keresett szöveggel), telefon, e-mail, cég, rendszám', ['Bérletes Bálint', '', '', '', ''],
+    await Promise.all(['#bu-nev', '#bu-tel', '#bu-email', '#bu-ceg', '#bu-rsz'].map((x) => lap.locator(x).inputValue())))
+  await lap.locator('#bu-nev').fill('')
+  const ment = lap.getByRole('button', { name: 'Ügyfél mentése' })
+  ok('üres adatokkal nem menthető', true, await ment.isDisabled())
+  await lap.locator('#bu-rsz').fill('ujb-001')
+  ok('egy kitöltött mezővel (rendszám) már menthető', false, await ment.isDisabled())
+  await kep(lap.locator('.lap'), '1-uj-ugyfel')
+  await ment.click(); await p.waitForTimeout(1200)
+  ok('az új ügyfél fel is került, ki is van választva, a bérlet menthető', [true, false],
+    [(await lap.locator('.talalat').innerText()).includes('UJB-001'), await gomb.isDisabled()])
+  ok('az adatbázisban: Névtelen ügyfél az autóval', [{ name: 'Névtelen', phone: '—' }],
+    await sql(`select c.name, c.phone from customers c join vehicles v on v.customer_id = c.id where v.plate_raw = 'UJB-001'`))
   await lap.getByRole('button', { name: 'Mégse' }).click(); await p.waitForTimeout(400)
   const k = p.locator('.kerdes-gombok .btn-veszelyes, .kerdes-gombok .btn-veszelyes-teli')
   if (await k.count()) { await k.first().click(); await p.waitForTimeout(400) }
