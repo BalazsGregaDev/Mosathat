@@ -9,6 +9,29 @@ export function cegLinkToken(utvonal: string): string | null {
   return m ? m[1] : null
 }
 
+const BERLET_LINK_UT = '/berlet/'
+
+export function berletLinkCim(token: string, alap: string = window.location.origin): string {
+  return `${alap.replace(/\/+$/, '')}${BERLET_LINK_UT}${token}`
+}
+
+export function berletLinkToken(utvonal: string): string | null {
+  const m = /^\/berlet\/([a-z0-9]{20,64})\/?$/.exec(utvonal)
+  return m ? m[1] : null
+}
+
+export function berletLinkLevel(nev: string, link: string): string {
+  return [
+    `Kedves ${nev}!`,
+    '',
+    'Ezen a linken tudsz időpontot foglalni a bérletedre. A bérletből járó csomagnál nem kell fizetned, és az oldalon azt is látod, hány alkalmad maradt:',
+    link,
+    '',
+    'Köszönettel,',
+    'Mosathat autóápolási kft.',
+  ].join('\n')
+}
+
 export function cegLinkLevel(cegNev: string, link: string): string {
   return [
     `Kedves ${cegNev}!`,

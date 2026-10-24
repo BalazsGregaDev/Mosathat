@@ -7,7 +7,7 @@ const F = join(GYOKER, 'supabase', 'functions', '_shared')
 const { visszaigazolasLevel, keszLevel } = await import(join(F, 'sablon.ts'))
 const { sorFeldolgozas } = await import(join(F, 'sor.ts'))
 const { resendKuldes } = await import(join(F, 'resend.ts'))
-const { ujToken, TOKEN_MINTA, foglalasLink } = await import(join(F, 'token.ts'))
+const { foglalasLink } = await import(join(F, 'token.ts'))
 
 const t = tesztelo()
 const kimenet = process.argv[2] ?? null
@@ -98,7 +98,6 @@ if (kimenet) {
 console.log('\n=== 3) Linkek ===\n')
 t.ok('a foglalás oldala a beállított cím mellett', LINK,
   foglalasLink('https://mosathat.vercel.app/lemondas', '0123456789abcdef0123456789abcdef'))
-t.ok('a régi lemondó kulcs is működik még', true, TOKEN_MINTA.test(ujToken()))
 
 console.log('\n=== 4) Küldési sor ===\n')
 const naplo = []

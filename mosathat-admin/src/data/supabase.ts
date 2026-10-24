@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type {
   AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
   SheetColumn, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput,
-  BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput,
+  BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput, BerletLinkAdat, BerletLinkSor,
   BookingStatus, BookingTask, CalcInput, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
@@ -321,6 +321,36 @@ export class SupabaseSource implements DataSource {
 
   async cegFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny> {
     const { data, error } = await this.sb.rpc('ceg_foglalas', { p_token: token, p: input })
+    if (error) fail('Foglalási kérés', error)
+    return data as FoglalasEredmeny
+  }
+
+  async berletLinkek(): Promise<BerletLinkSor[]> {
+    const { data, error } = await this.sb.rpc('berlet_linkek')
+    if (error) fail('Bérletes linkek', error)
+    return (data as BerletLinkSor[] | null) ?? []
+  }
+
+  async berletLinkUj(customerId: string): Promise<string> {
+    const { data, error } = await this.sb.rpc('berlet_link_uj', { p_customer: customerId })
+    if (error) fail('Új link', error)
+    return data as string
+  }
+
+  async berletLinkAdat(token: string): Promise<BerletLinkAdat | null> {
+    const { data, error } = await this.sb.rpc('berlet_link_adat', { p_token: token })
+    if (error) fail('Foglalási link', error)
+    return (data as BerletLinkAdat | null) ?? null
+  }
+
+  async berletAjanlat(token: string, input: Partial<NewBookingInput> & CalcInput): Promise<Quote> {
+    const { data, error } = await this.sb.rpc('berlet_ajanlat', { p_token: token, p: input })
+    if (error) fail('Árszámítás', error)
+    return toQuote(data as Record<string, unknown>)
+  }
+
+  async berletFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny> {
+    const { data, error } = await this.sb.rpc('berlet_foglalas', { p_token: token, p: input })
     if (error) fail('Foglalási kérés', error)
     return data as FoglalasEredmeny
   }

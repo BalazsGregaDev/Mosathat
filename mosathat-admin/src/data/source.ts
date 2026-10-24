@@ -7,7 +7,7 @@ import type {
   CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow, FinishPreview, KeszOpciok, ModositasCsoport, VacationRow, VacationInput, DayLane, OnlineBookingInput,
   OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
-  PublikusNapAdat, BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput,
+  PublikusNapAdat, BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput, BerletLinkAdat, BerletLinkSor,
 } from '../lib/types'
 import { URES_GYIK, type GyikAdmin, type GyikMod, type GyikPublikus, type GyikSor } from '../lib/gyik'
 import type { NyitvaNap, Velemeny, VelemenySor, PublikusAdatokNyers, PublikusMentes, PublikusTartalomNyers } from '../lib/publikusTartalom'
@@ -134,6 +134,11 @@ export interface DataSource {
   cegAjanlat(token: string, input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
   cegFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny>
   cegTeliNapok(token: string, tol: string, ig: string): Promise<string[]>
+  berletLinkek(): Promise<BerletLinkSor[]>
+  berletLinkUj(customerId: string): Promise<string>
+  berletLinkAdat(token: string): Promise<BerletLinkAdat | null>
+  berletAjanlat(token: string, input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
+  berletFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny>
   foglalasom(token: string): Promise<FoglalasomAdat>
   foglalasomModositas(token: string, uzenet: string): Promise<FoglalasomAdat>
   foglalasomLemondas(token: string): Promise<FoglalasomAdat>

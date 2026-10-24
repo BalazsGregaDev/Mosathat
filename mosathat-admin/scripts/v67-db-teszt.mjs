@@ -21,11 +21,6 @@ const kuld = async (x = {}) => (await egy(`select online_foglalas($1::jsonb) as 
 const dont = async (id, elfogad) => (await egy(`select online_keres_dontes($1, $2) e`, [id, elfogad])).e
 const ertesitesek = async (id) => q(`select kind, to_address, status, attempts from notifications where booking_id = $1`, [id])
 const atvesz = async () => (await q(`select ertesitesek_atvetele(10) j`)).map((r) => r.j)
-const allapot = async (token) => (await egy(`select lemondas_allapot($1) j`, [token])).j
-const lemond = async (token) => (await egy(`select lemondas_vegrehajt($1) j`, [token])).j
-const statusz = async (id) => (await egy(`select status::text s from bookings where id = $1`, [id])).s
-const ora = async (n) => q(`update shop_settings set online_lemondas_ora = $1`, [n])
-const tokenGen = (n) => `teszt-token-${n}-`.padEnd(43, 'x')
 
 console.log('=== 1) Mikor kerül sorba visszaigazoló e-mail ===\n')
 const elso = await kuld()
@@ -84,77 +79,15 @@ await q(`select set_booking_status($1, 'CANCELLED_BY_SHOP', null, true)`, [kozbe
 t.ok('ha küldés előtt lemondták, nem küldi ki', 0, (await atvesz()).length)
 t.ok('és KIHAGYVA lesz', 'SKIPPED', (await ertesitesek(kozbenLemondott))[0].status)
 
-console.log('\n=== 3) Lemondó link ===\n')
-const TOKEN = tokenGen(1)
-await q(`select lemondo_link_mentes($1, $2)`, [elso, TOKEN])
-const tarolt = await egy(`select token_hash from cancel_tokens where booking_id = $1`, [elso])
-t.ok('a kulcs nem nyíltan van tárolva', true, tarolt.token_hash !== TOKEN && tarolt.token_hash.length === 64)
-t.ok('rövid kulcsot nem fogad el', true,
-  await q(`select lemondo_link_mentes($1, 'rovid')`, [elso]).then(() => false, () => true))
-t.ok('ismeretlen kulcs', { allapot: 'ISMERETLEN' }, await allapot(tokenGen(99)))
-t.ok('ismeretlen kulccsal nem mond le semmit', 'ISMERETLEN', (await lemond(tokenGen(99))).allapot)
-
-const info = await allapot(TOKEN)
-t.ok('a link még lemondható', 'LEMONDHATO', info.allapot)
-t.ok('a határidő 24 órával a hozás előtt van', true,
-  new Date(info.kezdes).getTime() - new Date(info.hatarido).getTime() === 24 * 3600 * 1000)
-
-await ora(24 * 7)
-t.ok('ha a határidő elmúlt: LEJÁRT', 'LEJART', (await allapot(TOKEN)).allapot)
-const kesoi = await lemond(TOKEN)
-t.ok('lejárt linkkel nem mondható le', ['LEJART', false], [kesoi.allapot, kesoi.most_mondta_le])
-t.ok('a foglalás marad visszaigazolt', 'CONFIRMED', await statusz(elso))
-await ora(24)
-
-const kesz2 = await lemond(TOKEN)
-t.ok('lemondás: sikeres', ['LEMONDVA', true], [kesz2.allapot, kesz2.most_mondta_le])
-t.ok('az adatbázisban is lemondott', 'CANCELLED_BY_CUSTOMER', await statusz(elso))
-t.ok('a lemondás ideje rögzül', true, kesz2.lemondva !== null)
-t.ok('a belső jegyzetbe bekerül, hogy online mondta le', true,
-  /online lemondta/.test((await egy(`select internal_notes n from bookings where id = $1`, [elso])).n ?? ''))
-t.ok('a naplóba is bekerül', 1, Number((await egy(
-  `select count(*) c from audit_log where entity_id = $1 and after->>'status' = 'CANCELLED_BY_CUSTOMER'`, [elso])).c))
-const ujra = await lemond(TOKEN)
-t.ok('másodszor már csak visszajelez', ['LEMONDVA', false], [ujra.allapot, ujra.most_mondta_le])
-t.ok('a sikeres oldal adatai a lemondás után is lekérhetők', ['LEMONDVA', 'LEV-670'],
-  [(await allapot(TOKEN)).allapot, (await allapot(TOKEN)).foglalas.plate_raw])
-t.ok('lemondáskor nem kerül sorba újabb e-mail', 1, (await ertesitesek(elso)).length)
-
-const masik = await kuld({ plate_raw: 'LEV-675', customer_phone: '+36 30 555 0675', customer_name: 'Megérkezett Márk' })
-await dont(masik, true)
-await q(`select lemondo_link_mentes($1, $2)`, [masik, tokenGen(2)])
-await q(`select set_booking_status($1, 'ARRIVED', null, true)`, [masik])
-t.ok('megérkezett autót nem lehet lemondani', ['NEM_LEMONDHATO', 'ARRIVED'],
-  [(await allapot(tokenGen(2))).allapot, (await allapot(tokenGen(2))).statusz])
-t.ok('a kísérlet nem változtat rajta', 'ARRIVED', (await lemond(tokenGen(2)), await statusz(masik)))
-
-const muhelyLemondta = await kuld({ plate_raw: 'LEV-676', customer_phone: '+36 30 555 0676', customer_name: 'Műhely Mira' })
-await dont(muhelyLemondta, true)
-await q(`select lemondo_link_mentes($1, $2)`, [muhelyLemondta, tokenGen(3)])
-await q(`select set_booking_status($1, 'CANCELLED_BY_SHOP', null, true)`, [muhelyLemondta])
-t.ok('a műhely által lemondott foglalás', ['NEM_LEMONDHATO', 'CANCELLED_BY_SHOP'],
-  [(await allapot(tokenGen(3))).allapot, (await allapot(tokenGen(3))).statusz])
-
-const varos = await kuld({ plate_raw: 'LEV-677', customer_phone: '+36 30 555 0677', customer_name: 'Váró Vera',
-  booking_type: 'VAROS', start_time: '09:00', drop_off_time: null })
-await dont(varos, true)
-await q(`select lemondo_link_mentes($1, $2)`, [varos, tokenGen(4)])
-const v = await allapot(tokenGen(4))
-const helyiKezdes = await egy(
-  `select to_char($1::timestamptz at time zone 'Europe/Budapest', 'YYYY-MM-DD HH24:MI') k`, [v.kezdes])
-t.ok('megvárós foglalásnál a kezdéshez képest számol', `${nap} 09:00`, helyiKezdes.k)
-
 console.log('\n=== 4) Jogosultság ===\n')
-for (const fn of ['lemondas_allapot(text)', 'lemondas_vegrehajt(text)', 'lemondo_link_mentes(uuid,text)',
-  'ertesitesek_atvetele(integer)', 'ertesites_eredmeny(uuid,boolean,text,text)']) {
+for (const fn of ['ertesitesek_atvetele(integer)', 'ertesites_eredmeny(uuid,boolean,text,text)']) {
   const r = await egy(`select has_function_privilege('anon', $1, 'execute') a,
                               has_function_privilege('authenticated', $1, 'execute') b,
                               has_function_privilege('service_role', $1, 'execute') c`, [`public.${fn}`])
   t.ok(`${fn.split('(')[0]}: csak a szerver hívhatja`, [false, false, true], [r.a, r.b, r.c])
 }
-const tabla = await egy(`select has_table_privilege('anon', 'public.cancel_tokens', 'select') a,
-                                has_table_privilege('authenticated', 'public.cancel_tokens', 'select') b`)
-t.ok('a lemondó kulcsok táblája kívülről nem olvasható', [false, false], [tabla.a, tabla.b])
+t.ok('a régi lemondó link része törölve', [null, 0], Object.values(await egy(`select to_regclass('public.cancel_tokens')::text t,
+  (select count(*)::int from pg_proc where proname in ('lemondas_allapot', 'lemondas_vegrehajt', 'lemondo_link_mentes', 'lemondo_token_hash')) n`)))
 
 console.log('\n=== 5) Beállítás ===\n')
 const beall = async (x) => {

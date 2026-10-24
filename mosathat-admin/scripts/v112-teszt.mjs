@@ -13,7 +13,7 @@ const TELEFON = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouc
 
 console.log('=== 1) Nagyítás: a publikus oldalakon engedélyezett, az adminban tiltott ===\n')
 const tiltott = (p) => p.evaluate(() => /user-scalable\s*=\s*no|maximum-scale\s*=\s*1(?![.\d])/.test(document.querySelector('meta[name="viewport"]')?.content ?? ''))
-for (const ut of ['/publikus', '/gyik', '/adatvedelem', `/foglalas/${'0'.repeat(32)}`, '/ceg/abc', `/lemondas?t=${'a'.repeat(43)}`, '/']) {
+for (const ut of ['/publikus', '/gyik', '/adatvedelem', `/foglalas/${'0'.repeat(32)}`, '/ceg/abc', '/']) {
   const ctx = await b.newContext(TELEFON)
   const p = await ctx.newPage()
   await p.goto(CIM + ut)

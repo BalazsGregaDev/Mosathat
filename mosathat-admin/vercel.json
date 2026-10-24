@@ -9,6 +9,10 @@
       "destination": "/publikus.html"
     },
     {
+      "source": "/berlet/:kod*",
+      "destination": "/publikus.html"
+    },
+    {
       "source": "/foglalas/:kod*",
       "destination": "/publikus.html"
     },
@@ -40,7 +44,16 @@
       ]
     },
     {
-      "source": "/lemondas(.*)",
+      "source": "/(publikus|gyik|impresszum|adatvedelem)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/ceg/(.*)",
       "headers": [
         {
           "key": "Referrer-Policy",
@@ -57,16 +70,7 @@
       ]
     },
     {
-      "source": "/(publikus|gyik|impresszum|adatvedelem)",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
-    },
-    {
-      "source": "/ceg/(.*)",
+      "source": "/berlet/(.*)",
       "headers": [
         {
           "key": "Referrer-Policy",

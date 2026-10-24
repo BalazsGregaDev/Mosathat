@@ -27,8 +27,8 @@ console.log('=== 1) Jogosultság ===\n')
 const anonFv = (await q(`select p.proname from pg_proc p
   where p.pronamespace = 'public'::regnamespace and has_function_privilege('anon', p.oid, 'EXECUTE')
   order by 1`)).map((r) => r.proname)
-t.ok('anon: a nyilvános öt + a céges link három függvénye',
-  ['ceg_ajanlat', 'ceg_foglalas', 'ceg_link_adat', 'ceg_teli_napok', 'foglalasom', 'foglalasom_lemondas', 'foglalasom_modositas', 'publikus_ajanlat', 'publikus_foglalas', 'publikus_jogi', 'publikus_nap', 'publikus_oldal'],
+t.ok('anon: a nyilvános, a céges és a bérletes link függvényei',
+  ['berlet_ajanlat', 'berlet_foglalas', 'berlet_link_adat', 'ceg_ajanlat', 'ceg_foglalas', 'ceg_link_adat', 'ceg_teli_napok', 'foglalasom', 'foglalasom_lemondas', 'foglalasom_modositas', 'publikus_ajanlat', 'publikus_foglalas', 'publikus_jogi', 'publikus_nap', 'publikus_oldal'],
   anonFv)
 t.ok('a link tábla kívülről nem olvasható', [false, false],
   [(await egy(`select has_table_privilege('anon', 'public.company_booking_links', 'select') a`)).a,

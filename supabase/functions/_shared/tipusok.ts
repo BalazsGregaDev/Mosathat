@@ -13,6 +13,7 @@ export interface Foglalas {
   full_service: boolean
   full_service_nev: string | null
   estimated_price_huf: number | null
+  berlet?: boolean
   notes: string | null
   customer_name: string
   plate_raw: string
@@ -56,6 +57,7 @@ export interface FoglalasKep {
   marka: string | null
   modell: string | null
   ar?: number | null
+  berlet?: boolean
 }
 
 export interface ModositasiKerelem {
@@ -77,6 +79,7 @@ export interface FoglalasomAdat {
     felar_indok: string | null
     kimaradt: string | null
     kimaradt_huf: number | null
+    berlet?: boolean
   } | null
   kesz_ig?: string | null
   atveve?: string | null

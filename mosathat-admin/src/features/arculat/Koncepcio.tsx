@@ -633,7 +633,12 @@ function EgyebKartya({ e }: { e: Extra }) {
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((p) => forditott(p, nyelv))
   return (
-    <details className="kv-egyeb-kartya">
+    <details className="kv-egyeb-kartya" onToggle={(ev) => {
+      const sajat = ev.currentTarget
+      if (!sajat.open) return
+      sajat.closest('.kv-egyeb')?.querySelectorAll<HTMLDetailsElement>('details.kv-egyeb-kartya[open]')
+        .forEach((d) => { if (d !== sajat) d.open = false })
+    }}>
       <summary>
         <span>{forditott(e, nyelv)}</span>
         <span className="kv-egyeb-jel" aria-hidden="true" />

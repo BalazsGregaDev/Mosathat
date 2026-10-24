@@ -13,20 +13,19 @@ import './styles/arpanel.css'
 import './styles/igazolo.css'
 import './styles/foglalas.css'
 import './styles/keres.css'
-import './styles/lemondas.css'
 
 import { nagyitasTiltas } from './lib/nagyitas'
 import { billentyuzetHelyreallitas } from './lib/kepernyo'
-import { cegLinkToken } from './lib/cegLink'
+import { berletLinkToken, cegLinkToken } from './lib/cegLink'
 
 const App = lazy(() => import('./App'))
-const LemondasOldal = lazy(() => import('./features/publikus/LemondasOldal'))
 const PublikusOldal = lazy(() => import('./features/publikus/PublikusOldal'))
 const CegFoglalasOldal = lazy(() => import('./features/publikus/CegFoglalasOldal'))
+const BerletFoglalasOldal = lazy(() => import('./features/publikus/BerletFoglalasOldal'))
 const FoglalasomOldal = lazy(() => import('./features/publikus/FoglalasomOldal'))
 
-const lemondas = /^\/lemondas(\/|$)/.test(window.location.pathname)
 const ceges = /^\/ceg(\/|$)/.test(window.location.pathname)
+const berletes = /^\/berlet(\/|$)/.test(window.location.pathname)
 const foglalasom = /^\/foglalas(\/|$)/.test(window.location.pathname)
 const foglalasomToken = /^\/foglalas\/([a-f0-9]{32})\/?$/.exec(window.location.pathname)?.[1] ?? null
 const PUBLIKUS_LAPOK: Record<string, 'fooldal' | 'gyik' | 'impresszum' | 'adatvedelem'> = {
@@ -37,7 +36,7 @@ const PUBLIKUS_LAPOK: Record<string, 'fooldal' | 'gyik' | 'impresszum' | 'adatve
 }
 const publikus = PUBLIKUS_LAPOK[window.location.pathname.replace(/\/+$/, '') || '/'] ?? null
 
-if (lemondas || publikus || ceges || foglalasom) {
+if (publikus || ceges || berletes || foglalasom) {
   document.querySelector('meta[name="viewport"]')
     ?.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content')
 } else {
@@ -47,13 +46,13 @@ if (lemondas || publikus || ceges || foglalasom) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {lemondas ? (
-      <Suspense fallback={null}>
-        <LemondasOldal />
-      </Suspense>
-    ) : foglalasom ? (
+    {foglalasom ? (
       <Suspense fallback={null}>
         <FoglalasomOldal token={foglalasomToken} />
+      </Suspense>
+    ) : berletes ? (
+      <Suspense fallback={null}>
+        <BerletFoglalasOldal token={berletLinkToken(window.location.pathname)} />
       </Suspense>
     ) : ceges ? (
       <Suspense fallback={null}>

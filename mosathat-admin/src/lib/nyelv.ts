@@ -108,6 +108,8 @@ export const FELIRAT = {
     megerositveCim: 'Az időpontodat rögzítettük, várunk!',
     megerositveSzoveg: 'Nem kell visszaigazolásra várnod. Ha bármi változik, hívj minket.',
     megerositveEmail: 'Nem kell visszaigazolásra várnod, a visszaigazolást a foglalásod oldalának linkjével e-mailben is elküldjük.',
+    berletbol: 'Bérletből',
+    berletbolOsszeg: 'a csomag a bérletedből megy',
   },
   en: {
     bennevan: 'included',
@@ -136,6 +138,8 @@ export const FELIRAT = {
     megerositveCim: 'Your booking is confirmed, see you soon!',
     megerositveSzoveg: 'No need to wait for a confirmation. If anything changes, give us a call.',
     megerositveEmail: 'No need to wait for a confirmation; we’ll also send it by e-mail, with a link to your booking page.',
+    berletbol: 'From your pass',
+    berletbolOsszeg: 'the package is covered by your pass',
   },
 } as const
 

@@ -36,6 +36,8 @@ export interface FoglalasKornyezet {
   cegUzenet?: string | null
   ceges?: boolean
   hozomviszem?: boolean
+  berletCsomagok?: string[]
+  elotoltNev?: string
 }
 
 const KATEGORIAK: VehicleCategory[] = ['SZEMELYAUTO', 'SUV', 'KISBUSZ']
@@ -99,6 +101,7 @@ const ALLAPOT_KULCS: Record<NapAllapot, SzovegKulcs> = {
 export function FoglalasUrlap({
   data, katalogus, revision, refresh, lemondasOra,
   kat: katKulso, onKat, csomagId: csomagKulso, onCsomag, bemutato, cegUzenet, ceges = false, hozomviszem = false,
+  berletCsomagok, elotoltNev,
 }: FoglalasKornyezet) {
   const lepes = ceges ? CEGES_LEPESEK : LEPESEK
   const sz = useSz()
@@ -127,7 +130,8 @@ export function FoglalasUrlap({
   const [nap, setNap] = useState<string | null>(null)
   const [ido, setIdo] = useState<Lehetoseg | null>(null)
   const [hatarido, setHatarido] = useState<number | null>(null)
-  const [adatok, setAdatok] = useState<Adatok>(URES_ADATOK)
+  const kezdoAdatok: Adatok = { ...URES_ADATOK, nev: elotoltNev ?? '' }
+  const [adatok, setAdatok] = useState<Adatok>(kezdoAdatok)
   const [elfogad, setElfogad] = useState(false)
   const [weboldal, setWeboldal] = useState('')
   const [oldal, setOldal] = useState(0)
@@ -330,7 +334,7 @@ export function FoglalasUrlap({
   }
 
   function ujra() {
-    setKesz(null); setNap(null); setIdo(null); setAdatok(URES_ADATOK); setElfogad(false); setHiba(null)
+    setKesz(null); setNap(null); setIdo(null); setAdatok(kezdoAdatok); setElfogad(false); setHiba(null)
   }
 
   const set = <K extends keyof Adatok>(k: K, v: string) => setAdatok((x) => ({ ...x, [k]: v }))
@@ -389,7 +393,11 @@ export function FoglalasUrlap({
               <button key={p.id} type="button" className="fogl-csomag" aria-pressed={csomagId === p.id}
                       disabled={!lehet} onClick={() => setCsomagId(p.id)}>
                 <span className="nev">{forditott(p, nyelv)}</span>
-                {!ceges && <span className="ar">{lehet ? f.tol(a!.price_huf!) : sz('foglalas.arajanlat')}</span>}
+                {!ceges && (
+                  <span className="ar" data-berlet={berletCsomagok?.includes(p.id) || undefined}>
+                    {berletCsomagok?.includes(p.id) ? fe.berletbol : lehet ? f.tol(a!.price_huf!) : sz('foglalas.arajanlat')}
+                  </span>
+                )}
                 {a?.duration_minutes ? <span className="ido">{f.kb(f.idotartam(a.duration_minutes))}</span> : null}
                 {csomagLeiras(katalogus, p, nyelv) && <span className="leiras">{csomagLeiras(katalogus, p, nyelv)}</span>}
               </button>
@@ -705,6 +713,7 @@ export function FoglalasUrlap({
           </div>
           <div className="osszeg">
             {!ceges && <span className="ar">{ajanlat ? f.ft(ajanlat.price_huf) : '—'}</span>}
+            {!ceges && ajanlat?.berlet && <span className="halk fogl-berlet">{fe.berletbolOsszeg}</span>}
             <span className="halk">{perc ? f.kb(f.idotartam(perc)) : ''}</span>
             {egyeztetendo.length > 0 && <span className="halk">{sz('foglalas.egyeztetendo_tetel')}</span>}
           </div>

@@ -120,7 +120,7 @@ const SAVOK: Sav[] = [
       'ugyfel.lepes.keres', 'ugyfel.lepes.visszaigazolva', 'ugyfel.lepes.kesz', 'ugyfel.lepes.atveve',
       'ugyfel.adatok', 'ugyfel.modositva', 'ugyfel.modositva_magyarazat', 'ugyfel.sor.nap', 'ugyfel.sor.kezdes', 'ugyfel.sor.hozas',
       'ugyfel.sor.erte', 'ugyfel.sor.kesz', 'ugyfel.sor.elvitel', 'ugyfel.sor.vissza', 'ugyfel.sor.zarasig', 'ugyfel.sor.auto',
-      'ugyfel.sor.szolgaltatas', 'ugyfel.sor.extrak', 'ugyfel.sor.ar',
+      'ugyfel.sor.szolgaltatas', 'ugyfel.sor.extrak', 'ugyfel.sor.ar', 'ugyfel.berletbol',
       'ugyfel.modositas.cim', 'ugyfel.modositas.szoveg', 'ugyfel.modositas.minta', 'ugyfel.modositas.gomb', 'ugyfel.modositas.kuldes',
       'ugyfel.modositas.uzenetek', 'ugyfel.modositas.elkuldve', 'ugyfel.modositas.elintezve',
       'ugyfel.lemondas.cim', 'ugyfel.lemondas.szoveg', 'ugyfel.lemondas.gomb', 'ugyfel.lemondas.kerdes', 'ugyfel.lemondas.igen',

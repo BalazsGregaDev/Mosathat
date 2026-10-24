@@ -27,5 +27,3 @@ enable_confirmations = false
 [functions.ertesites]
 verify_jwt = false
 
-[functions.lemondas]
-verify_jwt = false

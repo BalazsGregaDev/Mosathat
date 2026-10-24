@@ -148,7 +148,10 @@ export function visszaigazolasLevel(
     [en ? 'Service' : 'Szolgáltatás', f.szolgaltatas(fog)],
   ]
   if (fog.extras_summary) sorok.push([en ? 'Extras' : 'Extrák', fog.extras_summary])
-  if (!o.ceges && fog.estimated_price_huf != null) sorok.push([en ? 'Estimated price' : 'Becsült ár', f.ft(fog.estimated_price_huf)])
+  if (!o.ceges && fog.estimated_price_huf != null) {
+    sorok.push([en ? 'Estimated price' : 'Becsült ár', f.ft(fog.estimated_price_huf)
+      + (fog.berlet ? (en ? ' (the package is covered by your pass)' : ' (a csomag a bérletedből megy)') : '')])
+  }
   if (fog.notes) sorok.push([en ? 'Your note' : 'Megjegyzésed', fog.notes])
 
   const oldalSzoveg = en
@@ -190,7 +193,10 @@ export function keszLevel(
 
   const sorok: [string, string][] = [[en ? 'Car' : 'Autó', auto]]
   if (o.kesz_ig) sorok.push([en ? 'Collect by' : 'Átvehető legkésőbb', idopont(f, o.kesz_ig)])
-  if (o.ar?.vegleges != null) sorok.push([en ? 'Total' : 'Végösszeg', f.ft(o.ar.vegleges)])
+  if (o.ar?.vegleges != null) {
+    sorok.push([en ? 'Total' : 'Végösszeg', f.ft(o.ar.vegleges)
+      + (o.ar.berlet ? (en ? ' (the package is covered by your pass)' : ' (a csomag a bérletedből ment)') : '')])
+  }
   if (o.ar?.felar_indok) sorok.push([en ? 'Why it costs more' : 'A felár oka', o.ar.felar_indok])
   if (o.ar?.kimaradt) sorok.push([en ? 'Left out' : 'Kimaradt', o.ar.kimaradt])
 

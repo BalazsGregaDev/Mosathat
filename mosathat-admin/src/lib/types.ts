@@ -918,6 +918,22 @@ export interface FoglalasEredmeny {
   megerositve: boolean
 }
 
+export interface BerletLinkAdat {
+  nev: string
+  berletek: {
+    nev: string
+    ervenyes: string
+    tetelek: { csomag: string; csomag_en: string; kategoria: VehicleCategory | null; maradt: number }[]
+  }[]
+  csomagok: string[]
+}
+
+export interface BerletLinkSor {
+  customer_id: string
+  token: string
+  created_at: string
+}
+
 export interface CegLinkAdat {
   ceg: string
   uzenet: string | null

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const OLVASO_RPC = new Set([
-  'absence_list', 'booking_finish_preview', 'csomag_szerkeszto', 'publikus_oldal', 'velemenyek_lista', 'gyik_lista', 'publikus_nap', 'publikus_ajanlat', 'publikus_jogi', 'ceg_linkek', 'ceg_link_adat', 'ceg_ajanlat', 'ceg_teli_napok', 'foglalasom', 'modositasi_kerelmek', 'jogi_valtozatok', 'jogi_valtozat_fajl', 'booking_form_data', 'can_edit_customers', 'ceg_jeloltek',
+  'absence_list', 'booking_finish_preview', 'csomag_szerkeszto', 'publikus_oldal', 'velemenyek_lista', 'gyik_lista', 'publikus_nap', 'publikus_ajanlat', 'publikus_jogi', 'ceg_linkek', 'ceg_link_adat', 'ceg_ajanlat', 'ceg_teli_napok', 'berlet_linkek', 'berlet_link_adat', 'berlet_ajanlat', 'foglalasom', 'modositasi_kerelmek', 'jogi_valtozatok', 'jogi_valtozat_fajl', 'booking_form_data', 'can_edit_customers', 'ceg_jeloltek',
   'dashboard_summary', 'day_absences', 'day_bookings', 'day_capacity', 'day_lanes', 'latest_start',
   'list_companies', 'list_customers', 'list_role_permissions', 'list_staff', 'list_vehicles',
   'quote_booking', 'range_order', 'search_companies', 'search_customers', 'sheet_cegek', 'sheet_detail',

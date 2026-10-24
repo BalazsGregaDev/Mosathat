@@ -89,7 +89,9 @@ function kepSorok(k: FoglalasKep, sz: Sz, f: Formatum, nyelv: Nyelv): Sor[] {
       ertek: k.extrak.map((e) => `${nyelv === 'en' ? e.nev_en : e.nev}${Number(e.db) > 1 ? ` × ${Number(e.db)}` : ''}`).join(', '),
     })
   }
-  if (k.ar != null) s.push({ kulcs: 'ar', cimke: sz('ugyfel.sor.ar'), ertek: f.ft(k.ar) })
+  if (k.ar != null) {
+    s.push({ kulcs: 'ar', cimke: sz('ugyfel.sor.ar'), ertek: k.berlet ? `${f.ft(k.ar)} · ${sz('ugyfel.berletbol')}` : f.ft(k.ar) })
+  }
   return s
 }
 
@@ -183,6 +185,7 @@ function KeszDoboz({ adat }: { adat: FoglalasomAdat }) {
           {ar.becsult != null && ar.becsult !== ar.vegleges && <s>{f.ft(ar.becsult)}</s>}
         </div>
       )}
+      {ar?.berlet && <p className="ugy-indok">{sz('ugyfel.berletbol')}</p>}
       {ar?.felar_indok && <p className="ugy-indok">{sz('ugyfel.felar', { mit: ar.felar_indok })}</p>}
       {ar?.kimaradt && <p className="ugy-indok">{sz('ugyfel.kimaradt', { mit: ar.kimaradt })}</p>}
       <p className="ugy-kesz-hol">

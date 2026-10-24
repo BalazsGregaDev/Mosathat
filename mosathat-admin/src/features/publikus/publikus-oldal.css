@@ -182,3 +182,17 @@ html.publikus body { touch-action: auto; overscroll-behavior: auto; background: 
   .pub-ceg .kv-ceg-foglalas .fogl { gap: 33px; }
   .pub-ceg .kv-ceg-foglalas .fogl > section + section:not(.fogl-osszeg)::before { top: -17px; left: 4%; right: 4%; }
 }
+
+.pub-ceg .kv-berlet-allas {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 14px;
+  font-size: 15px; width: min(100%, 420px);
+}
+.pub-ceg .kv-berlet-allas .kv-berlet-nev { font-weight: 600; color: var(--fg); }
+.pub-ceg .kv-berlet-allas .kv-berlet-sor {
+  display: flex; justify-content: space-between; gap: 16px;
+  padding: 6px 0; border-bottom: 1px solid var(--vonal);
+}
+.pub-ceg .kv-berlet-allas .kv-berlet-sor strong { color: var(--zold); font-weight: 600; white-space: nowrap; }
+.pub-ceg .kv-berlet-allas small { color: var(--halk); font-size: 13px; }
+.fogl-csomag .ar[data-berlet] { color: var(--zold); font-weight: 600; }
+.fogl-osszeg .osszeg .fogl-berlet { font-size: 13px; }

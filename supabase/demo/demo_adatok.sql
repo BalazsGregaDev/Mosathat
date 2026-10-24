@@ -338,6 +338,14 @@ begin
     $q$ using v_ugyfel, v_start;
   end if;
 
+  if to_regclass('public.customer_booking_links') is not null then
+    execute $q$
+      insert into public.customer_booking_links (customer_id, token)
+      values ($1, 'berletdemo2026kovacspeter')
+      on conflict (customer_id) do nothing
+    $q$ using v_ugyfel;
+  end if;
+
   select id into v_ceg from public.customers where name = 'Autó Trans Kft.' limit 1;
 
   perform public.save_contract(jsonb_build_object(

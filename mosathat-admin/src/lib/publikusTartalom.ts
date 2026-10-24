@@ -506,6 +506,7 @@ export const SZOVEGEK = [
   { kulcs: 'ugyfel.sor.szolgaltatas', csoport: 'ugyfel', cimke: 'Sor: szolgáltatás', alap: 'Szolgáltatás', en: 'Service' },
   { kulcs: 'ugyfel.sor.extrak', csoport: 'ugyfel', cimke: 'Sor: extrák', alap: 'Extrák', en: 'Extras' },
   { kulcs: 'ugyfel.sor.ar', csoport: 'ugyfel', cimke: 'Sor: becsült ár', alap: 'Becsült ár', en: 'Estimated price' },
+  { kulcs: 'ugyfel.berletbol', csoport: 'ugyfel', cimke: 'Bérletesnél az ár mellett', alap: 'a csomag a bérletedből megy', en: 'the package is covered by your pass' },
   { kulcs: 'ugyfel.sor.vegosszeg', csoport: 'ugyfel', cimke: 'Végösszeg felirata', alap: 'Végösszeg', en: 'Total' },
   { kulcs: 'ugyfel.modositas.cim', csoport: 'ugyfel', cimke: 'Módosítás: cím', alap: 'Valamin változtatnál?', en: 'Need to change something?' },
   { kulcs: 'ugyfel.modositas.szoveg', csoport: 'ugyfel', cimke: 'Módosítás: magyarázat', sor: true, alap: 'Ha csak apróság, például egy órával korábban hoznád az autót, írd meg itt, és nem kell telefonálnod. Ha sürgős, hívj minket: {telefon}.', en: 'If it’s only something small, for example you’d bring the car an hour earlier, write it here and there’s no need to call. If it’s urgent, call us: {telefon}.' },

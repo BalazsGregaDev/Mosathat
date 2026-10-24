@@ -11,7 +11,7 @@ import demoAdatok from '../../../supabase/demo/demo_adatok.sql?raw'
 import type {
   AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
   SheetColumn, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput,
-  BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput,
+  BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput, BerletLinkAdat, BerletLinkSor,
   BookingStatus, BookingTask, CalcInput, DashboardSummary, DayBooking, DayCapacity,
   DayOverride, BookingExtraRow, BookingFormData, BookingScope, CustomerSummary, VehicleSummary,
   ContractInput, ContractRow, Extra, LatestStart,
@@ -311,6 +311,31 @@ export class DemoSource implements DataSource {
 
   async cegFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny> {
     const [r] = await this.rows<{ x: FoglalasEredmeny }>(`select ceg_foglalas($1, $2::jsonb) x`, [token, JSON.stringify(input)])
+    return r.x
+  }
+
+  async berletLinkek(): Promise<BerletLinkSor[]> {
+    const [r] = await this.rows<{ x: BerletLinkSor[] }>(`select berlet_linkek() x`)
+    return r?.x ?? []
+  }
+
+  async berletLinkUj(customerId: string): Promise<string> {
+    const [r] = await this.rows<{ k: string }>(`select berlet_link_uj($1::uuid) k`, [customerId])
+    return r.k
+  }
+
+  async berletLinkAdat(token: string): Promise<BerletLinkAdat | null> {
+    const [r] = await this.rows<{ x: BerletLinkAdat | null }>(`select berlet_link_adat($1) x`, [token])
+    return r?.x ?? null
+  }
+
+  async berletAjanlat(token: string, input: Partial<NewBookingInput> & CalcInput): Promise<Quote> {
+    const [r] = await this.rows<{ x: Record<string, unknown> }>(`select berlet_ajanlat($1, $2::jsonb) x`, [token, JSON.stringify(input)])
+    return toQuote(r?.x)
+  }
+
+  async berletFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny> {
+    const [r] = await this.rows<{ x: FoglalasEredmeny }>(`select berlet_foglalas($1, $2::jsonb) x`, [token, JSON.stringify(input)])
     return r.x
   }
 
