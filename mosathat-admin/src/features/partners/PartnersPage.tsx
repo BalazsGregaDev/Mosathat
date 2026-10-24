@@ -313,8 +313,8 @@ function PassForm({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
       const id = await data.addCustomer({
         barmelyik: true, name: u.nev, phone: u.tel, email: u.email, company_name: u.ceg, plate_raw: u.rendszam,
       })
-      const kereso = u.nev || u.ceg || u.tel || u.rendszam || u.email
-      const [c] = (await data.listCustomers(kereso)).filter((x) => x.id === id)
+      const keresett = u.nev || u.ceg || u.tel || u.rendszam || u.email
+      const [c] = (await data.listCustomers(keresett)).filter((x) => x.id === id)
       valaszt(c ?? {
         id, name: u.nev || u.ceg || 'Névtelen', phone: u.tel || '—', email: u.email || null, company_name: u.ceg || null,
         type: u.ceg ? 'CEG' : 'MAGAN', billing_kind: 'NORMAL', notes: null, internal_notes: null, jarmuvek: u.rendszam ? 1 : 0,

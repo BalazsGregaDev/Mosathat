@@ -2,10 +2,8 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
 
-import { adatbazis, TULAJ } from './_db.mjs'
 import { adminOldal, foglalasOldal, onlineKeres, valtozas } from './_publikus.mjs'
 
-const CIM = process.env.CIM ?? 'http://localhost:5181'
 const KEPEK = process.env.KEPEK ?? null
 if (KEPEK) await mkdir(KEPEK, { recursive: true })
 
@@ -16,16 +14,8 @@ const ok = (mit, v, k) => {
   if (!jo) baj++
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
-const sima = (s) => s.replace(/\s+/g, ' ').trim()
 const kep = async (p, nev) => { if (KEPEK) await p.screenshot({ path: join(KEPEK, nev), fullPage: true }) }
 
-const db = await adatbazis({ demo: true })
-const egy = async (s, p = []) => (await db.query(s, p)).rows[0]
-await db.query(`select set_config('app.uid', $1, false)`, [TULAJ])
-const PREMIUM = (await egy(`select id from packages where code = 'PREMIUM'`)).id
-const nap = (await egy(
-  `select d::date::text d from generate_series(public.budapest_ma() + 4, public.budapest_ma() + 50, interval '1 day') d
-    where munkanap(d::date) order by d limit 1`)).d
 console.log('\n=== Admin: beállítás és online kérés ===\n')
 const adminHibak = []
 const { ctx: admin, p, sql, belep } = await adminOldal(b, { hiba: (e) => adminHibak.push(e.message.slice(0, 160)) })
@@ -83,6 +73,5 @@ ok('az admin oldalon nincs JS hiba', [], adminHibak)
 
 await admin.close()
 await b.close()
-await db.close()
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)
 process.exit(baj === 0 ? 0 : 1)

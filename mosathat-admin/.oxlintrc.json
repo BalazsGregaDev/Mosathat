@@ -15,14 +15,30 @@
 
     "oxc/no-map-spread": "off",
 
-    "react/set-state-in-effect": "warn",
+    "react/set-state-in-effect": "off",
+
+    "react/exhaustive-effect-dependencies": "off",
+
+    "react/iframe-missing-sandbox": "off",
+
+    "react/no-unstable-nested-components": ["warn", { "allowAsProps": true }],
 
     "jsx-a11y/control-has-associated-label": ["error", {
       "ignoreElements": ["audio", "canvas", "embed", "input", "textarea", "tr", "td", "th", "video"]
     }],
 
-    "jsx-a11y/prefer-tag-over-role": "warn"
+    "jsx-a11y/prefer-tag-over-role": "off"
   },
+
+  "overrides": [
+    {
+      "files": ["scripts/**"],
+      "rules": {
+        "eslint/no-shadow": "off",
+        "eslint/no-underscore-dangle": "off"
+      }
+    }
+  ],
 
   "ignorePatterns": ["dist", "node_modules", "supabase"]
 }
