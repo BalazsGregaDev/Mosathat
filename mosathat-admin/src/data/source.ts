@@ -14,7 +14,7 @@ import type { NyitvaNap, Velemeny, VelemenySor, PublikusAdatokNyers, PublikusMen
 import type { Kamera } from '../lib/ceg'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
-import type { FoglalasomAdat } from '../../../supabase/functions/_shared/tipusok.ts'
+import type { FoglalasKereses, FoglalasomAdat, FoglalasTalalat } from '../../../supabase/functions/_shared/tipusok.ts'
 
 export interface Catalog {
   packages: Package[]
@@ -142,6 +142,7 @@ export interface DataSource {
   berletAjanlat(token: string, input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
   berletFoglalas(token: string, input: OnlineBookingInput): Promise<FoglalasEredmeny>
   foglalasom(token: string): Promise<FoglalasomAdat>
+  foglalasKereses(adat: FoglalasKereses): Promise<FoglalasTalalat[]>
   foglalasomModositas(token: string, uzenet: string): Promise<FoglalasomAdat>
   foglalasomLemondas(token: string): Promise<FoglalasomAdat>
   jogiValtozatok(): Promise<JogiValtozat[]>

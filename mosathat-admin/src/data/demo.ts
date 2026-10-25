@@ -26,7 +26,7 @@ import type { GyikAdmin, GyikMod, GyikSor } from '../lib/gyik'
 import { adatUrl, kepKicsinyit } from '../lib/kep'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
-import type { FoglalasomAdat } from '../../../supabase/functions/_shared/tipusok.ts'
+import type { FoglalasKereses, FoglalasomAdat, FoglalasTalalat } from '../../../supabase/functions/_shared/tipusok.ts'
 import { idoRovidit, num, numOrNull, publikusbol, publikusNapbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { DEMO_BELEPOK, DEMO_STAFF_ID } from './demoBelepok'
 
@@ -351,6 +351,11 @@ export class DemoSource implements DataSource {
 
   async cegTeliNapok(token: string, tol: string, ig: string): Promise<string[]> {
     const [r] = await this.rows<{ x: string[] | null }>(`select ceg_teli_napok($1, $2::date, $3::date) x`, [token, tol, ig])
+    return r?.x ?? []
+  }
+
+  async foglalasKereses(adat: FoglalasKereses): Promise<FoglalasTalalat[]> {
+    const [r] = await this.rows<{ x: FoglalasTalalat[] }>(`select foglalas_kereses($1::jsonb) x`, [JSON.stringify(adat)])
     return r?.x ?? []
   }
 

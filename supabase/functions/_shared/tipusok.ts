@@ -39,6 +39,21 @@ export type OldalAllapot =
   | 'KERES' | 'VISSZAIGAZOLVA' | 'KESZ' | 'ATVEVE' | 'NEM_FERT_BE'
   | 'LEMONDVA' | 'ELUTASITVA' | 'NEM_JOTT' | 'LEJART' | 'ISMERETLEN'
 
+export interface FoglalasTalalat {
+  token: string
+  nap: string
+  rendszam: string | null
+  csomag: string | null
+  csomag_en: string | null
+  allapot: OldalAllapot
+}
+
+export interface FoglalasKereses {
+  rendszam: string
+  telefon: string
+  email: string
+}
+
 export interface FoglalasKep {
   nap: string
   tipus: 'VAROS' | 'LEADOS' | 'HOZOMVISZEM'

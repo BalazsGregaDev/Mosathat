@@ -108,6 +108,7 @@ console.log('\n=== 3) A bérletes foglalási oldal ===\n')
   ok('összeg: 0 Ft, a csomag a bérletedből megy', ['0 Ft', 'a csomag a bérletedből megy'],
     [sima(await m.locator('.fogl-osszeg .osszeg .ar').innerText()), sima(await m.locator('.fogl-osszeg .fogl-berlet').innerText())])
   await p.fill('#fo-tel', '+36 30 111 2233')
+  await p.fill('#fo-email', 'teszt@pelda.hu')
   await p.fill('#fo-rsz', 'abc-123')
   await m.locator('.fogl-feltetel input').check()
   await kep(m.locator('.fogl-osszeg'), '3-berlet-oldal-osszeg')

@@ -292,7 +292,9 @@ export function FoglalasUrlap({
   }, [hataridoKell, ido, perc, nap, napAdat])
   const hat = hatarido !== null && hataridok.includes(hatarido) ? hatarido : hataridok[hataridok.length - 1] ?? null
 
-  const adatokRendben = Boolean(adatok.nev.trim() && adatok.telefon.trim() && adatok.rendszam.trim())
+  const [emailLatta, setEmailLatta] = useState(false)
+  const emailRendben = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adatok.email.trim())
+  const adatokRendben = Boolean(adatok.nev.trim() && adatok.telefon.trim() && emailRendben && adatok.rendszam.trim())
   const fsRendben = !fsBe || (ules !== null && elvitel !== null)
   const hataridoRendben = !hataridoKell || hat !== null
   const kuldheto = Boolean(csomagId && tip && nap && ido && adatokRendben && fsRendben && hataridoRendben
@@ -650,9 +652,12 @@ export function FoglalasUrlap({
             <div className="mezo"><label htmlFor="fo-tel">{sz('foglalas.mezo.telefon')} *</label>
               <input id="fo-tel" className="beviteli" type="tel" value={adatok.telefon} autoComplete="tel"
                      placeholder="+36 30 123 4567" onChange={(e) => set('telefon', e.target.value)} /></div>
-            <div className="mezo"><label htmlFor="fo-email">{sz('foglalas.mezo.email')}</label>
+            <div className="mezo"><label htmlFor="fo-email">{sz('foglalas.mezo.email')} *</label>
               <input id="fo-email" className="beviteli" type="email" value={adatok.email} autoComplete="email"
-                     placeholder={sz('foglalas.minta.email')} onChange={(e) => set('email', e.target.value)} /></div>
+                     placeholder={sz('foglalas.minta.email')} onChange={(e) => set('email', e.target.value)}
+                     onBlur={() => setEmailLatta(true)}
+                     aria-invalid={emailLatta && adatok.email.trim() !== '' && !emailRendben} />
+              {emailLatta && adatok.email.trim() !== '' && !emailRendben && <small className="fogl-mezo-hiba">{fe.emailHibas}</small>}</div>
             <div className="mezo"><label htmlFor="fo-rsz">{sz('foglalas.mezo.rendszam')} *</label>
               <input id="fo-rsz" className="beviteli" value={adatok.rendszam}
                      onChange={(e) => set('rendszam', e.target.value.toUpperCase())} /></div>

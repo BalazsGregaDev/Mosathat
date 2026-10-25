@@ -104,6 +104,7 @@ await m.locator('.fogl-nap[data-allapot="szabad"]').first().click(); await p.wai
 await m.locator('.fogl-idok button').first().click(); await p.waitForTimeout(300)
 await p.fill('#fo-nev', 'Extra Ernő')
 await p.fill('#fo-tel', '+36 30 999 6401')
+await p.fill('#fo-email', 'teszt@pelda.hu')
 await p.fill('#fo-rsz', 'ext-641')
 await m.locator('.fogl-feltetel input').check()
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
@@ -118,7 +119,7 @@ await ctx.close()
   const a = await adminOldal(b)
   const ex = async (nev) => (await a.sql(`select id from extras where name = $1`, [nev]))[0].id
   await onlineKeres(a.sql, { booking_type: 'VAROS', start_time: '09:00', drop_off_time: null, plate_raw: 'ext-641', customer_name: 'Extra Ernő',
-    customer_phone: '+36 30 999 6401', customer_email: null,
+    customer_phone: '+36 30 999 6401', customer_email: 'teszt@pelda.hu',
     extras: [{ extra_id: await ex('Vizes kárpittisztítás'), quantity: 5 }, { extra_id: await ex('Motortér kozmetika'), quantity: 1 }] })
   await a.belep('tulaj@mosathat.hu')
   const popup = a.p.locator('dialog[aria-label="Online foglalási kérés"]')

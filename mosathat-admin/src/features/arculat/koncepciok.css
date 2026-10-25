@@ -677,8 +677,53 @@
 .kv-foglalas-elo .fogl { max-width: 900px; margin: 0; padding: 0; }
 .kv-foglalas-elo .fogl h2 { font-family: var(--fej); }
 .kv-foglalas-elo .fogl .btn-fo { color: var(--tele-fg); }
+.kv-foglalas-elo .btn-fo:hover:not(:disabled) { background: color-mix(in srgb, var(--zold) 82%, var(--fg)); border-color: color-mix(in srgb, var(--zold) 82%, var(--fg)); }
 .kv-foglalas-elo .fogl .beviteli { background: var(--bg); color: var(--fg); }
 .kv-foglalas-elo .fogl a { color: var(--zold); }
+
+.kv-kereso { max-width: 900px; margin: 0 0 22px; }
+.kv-kereso-csukva {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+  padding: 12px 16px; border: 1px dashed var(--vonal);
+  font-size: 14px; color: var(--halk);
+}
+.kv .kv-kereso-nyito {
+  padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--zold);
+  border-bottom: 1px solid currentColor; cursor: pointer;
+}
+.kv .kv-kereso-nyito:hover { color: var(--fg); }
+form.kv-kereso { gap: 14px; }
+.kv-kereso-fej { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.kv-kereso-fej h3 { font-family: var(--fej); font-size: 18px; margin: 0; }
+.kv .kv-kereso-bezar {
+  width: 32px; height: 32px; flex-shrink: 0; border: 0; background: none; color: var(--halk);
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.kv .kv-kereso-bezar:hover { color: var(--fg); }
+.kv-kereso-leiras { font-size: 14px; color: var(--halk); max-width: 62ch; margin: 0; }
+.kv-kereso-mezok { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.kv-kereso .beviteli { background: var(--bg); color: var(--fg); }
+.kv-kereso .btn-fo { color: var(--tele-fg); }
+.kv-kereso-lab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.kv-kereso-tipp { font-size: 13px; color: var(--halk); }
+.kv-kereso-nincs { font-size: 14px; margin: 0; }
+.kv-kereso a { color: var(--zold); }
+.kv-kereso-talalat > p { font-size: 14px; margin: 0 0 8px; }
+.kv-kereso-talalat ul { display: flex; flex-direction: column; border-top: 1px solid var(--vonal); }
+.kv .kv-kereso-talalat a {
+  display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: baseline; gap: 4px 16px;
+  padding: 12px 4px; border-bottom: 1px solid var(--vonal); color: var(--fg); text-decoration: none; font-size: 14px;
+}
+.kv .kv-kereso-talalat a:hover { background: color-mix(in srgb, var(--zold) 6%, var(--bg)); }
+.kv-kereso-talalat a > span:nth-child(2) { color: var(--halk); }
+.kv-kereso-allapot { font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--zold); text-align: right; }
+.kv-kereso-allapot:is([data-allapot='LEMONDVA'], [data-allapot='ELUTASITVA'], [data-allapot='NEM_JOTT'], [data-allapot='NEM_FERT_BE']) { color: var(--halk); }
+@container kv (max-width: 700px) {
+  .kv-kereso-mezok { grid-template-columns: minmax(0, 1fr); }
+  .kv .kv-kereso-talalat a { grid-template-columns: minmax(0, 1fr) auto; }
+  .kv-kereso-talalat a > span:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .kv-kereso-allapot { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+}
 
 .kv-jogi { max-width: 780px; padding: 40px var(--px) 56px; }
 .kv-jogi h1 { font-family: var(--fej); font-size: 40px; font-weight: 400; line-height: 1.1; margin-bottom: 8px; }

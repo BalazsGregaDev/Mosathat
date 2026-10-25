@@ -94,15 +94,21 @@ export function AdatvedelemEn() {
 
       <Adatkezeles
         cim="2.1 Online booking"
-        adatok="name, phone number, e-mail address (optional), licence plate, make and model of the car (optional), notes (optional), the chosen service, the requested time"
+        adatok="name, phone number, e-mail address, licence plate, make and model of the car (optional), notes (optional), the chosen service, the requested time"
         cel="receiving the booking request, agreeing and confirming the appointment, and providing the service"
         jogalap={SZERZODES}
         megorzes={<>for completed bookings {ELEVULES}; if the request did not become a booking (we declined it, you cancelled it, or it expired), for 1 year from closing the request</>}
       >
         <p>
-          We cannot accept a request without a name, phone number and licence plate, because we need these to
-          arrange the appointment and to identify the car. Giving your e-mail address is voluntary: if you give
-          it, we send the confirmation and the link to your booking page there; if not, we contact you by phone.
+          We cannot accept a request without a name, phone number, e-mail address and licence plate, because we
+          need these to arrange the appointment and to identify the car, and we send the confirmation and the link
+          to your booking page to your e-mail address.
+        </p>
+        <p>
+          If you look up your booking on our home page by licence plate, phone number or e-mail address, to protect
+          against guessing we store a code derived from the details you enter and from your device’s IP address,
+          together with the time and result of the search, for no longer than one day, after which it is deleted
+          automatically.
         </p>
         <p>
           If the phone number you give is already in our records, we link the request to the existing customer

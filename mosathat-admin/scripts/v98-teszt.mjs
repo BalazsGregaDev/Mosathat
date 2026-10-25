@@ -126,6 +126,7 @@ ok('az egyedi üzenet a Megjegyzés fölött (a demó új lapon a kiinduló adat
   })])
 await c.fill('#fo-nev', 'Sofőr Sándor')
 await c.fill('#fo-tel', '+36 30 777 8899')
+await c.fill('#fo-email', 'teszt@pelda.hu')
 await c.fill('#fo-rsz', 'CGL-101')
 await c.locator('.fogl-feltetel input').check()
 await uzenet.scrollIntoViewIfNeeded()

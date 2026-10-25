@@ -75,7 +75,7 @@ const P = (await egy(`select id from packages where code = 'START'`)).id
 const alap = {
   category: 'SZEMELYAUTO', scope: 'TELJES', package_id: P, full_service: false, extras: [],
   booking_type: 'LEADOS', service_date: nap, drop_off_time: '09:00',
-  customer_name: 'Sok Kérés', customer_phone: '+36 30 444 5566', plate_raw: 'SOK-001',
+  customer_name: 'Sok Kérés', customer_email: 'teszt@pelda.hu', customer_phone: '+36 30 444 5566', plate_raw: 'SOK-001',
 }
 for (let i = 0; i < 3; i++) await hiba(() => q(`select publikus_foglalas($1)`, [JSON.stringify(alap)]))
 const uz = await hiba(() => q(`select publikus_foglalas($1)`, [JSON.stringify(alap)]))

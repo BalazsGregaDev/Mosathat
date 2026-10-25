@@ -41,7 +41,7 @@ t.ok('Elitre nincs ajánlat', true, /nem szerepel a cég szerződésében/.test(
 const kuld = (x = {}) => anonkent(async () => (await egy(`select ceg_foglalas($1, $2)->>'id' id`, [LINK, JSON.stringify({
   category: 'SZEMELYAUTO', scope: 'TELJES', package_id: START, full_service: false, extras: [],
   booking_type: 'LEADOS', service_date: nap, drop_off_time: '09:00',
-  customer_name: 'Céges Csaba', customer_phone: '+36 30 555 0001', plate_raw: 'CEG-001', ...x })])).id)
+  customer_name: 'Céges Csaba', customer_email: 'teszt@pelda.hu', customer_phone: '+36 30 555 0001', plate_raw: 'CEG-001', ...x })])).id)
 t.ok('Elitre nem lehet kérni', true, /nem szerepel a cég szerződésében/.test(await hiba(() => kuld({ package_id: ELIT })) ?? ''))
 
 console.log('\n=== 2) Terjedelem, Full Service és extrák nélkül ===\n')

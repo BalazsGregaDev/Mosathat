@@ -15,6 +15,7 @@ import { GyikOldal } from '../arculat/Gyik'
 import { gorgetIde } from '../arculat/gorgetes'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
 import { FoglalasUrlap, type FoglalasForras } from './FoglalasModul'
+import FoglalasKereso from './FoglalasKereso'
 import JogiOldal, { type JogiLap } from './JogiOldal'
 import { TartalomProvider, useNyelv, useSz, useUzlet } from './tartalom'
 
@@ -134,6 +135,7 @@ function EloFoglalas({ forras, adat, valasztas }: Betoltve & { valasztas: Valasz
     <section className="kv-foglalas kv-foglalas-elo">
       <h2>{sz('foglalas.cim')}</h2>
       <p className="kv-bevezeto">{sz('foglalas.bevezeto')}</p>
+      <FoglalasKereso forras={forras} kezdetben={window.location.hash === '#foglalasom'} />
       <FoglalasUrlap data={data} katalogus={adat.katalogus} revision={revision} refresh={refresh}
                      lemondasOra={adat.lemondasOra} {...valasztas} />
     </section>
@@ -174,7 +176,7 @@ export default function PublikusOldal({ lap }: { lap: PublikusLap }) {
   useEffect(() => {
     if (!betoltott || lap !== 'fooldal') return
     const cel = window.location.hash.slice(1)
-    const osztaly: Record<string, string> = { rolunk: '.kv-rolunk h2', galeria: '.kv-galeria', csomagok: '.kv-csomagok', foglalas: '.kv-foglalas', hely: '.kv-hely', gyik: '.kv-gyik', kapcsolat: '.kv-lab' }
+    const osztaly: Record<string, string> = { rolunk: '.kv-rolunk h2', galeria: '.kv-galeria', csomagok: '.kv-csomagok', foglalas: '.kv-foglalas', foglalasom: '.kv-kereso', hely: '.kv-hely', gyik: '.kv-gyik', kapcsolat: '.kv-lab' }
     if (osztaly[cel]) window.setTimeout(() => gorgetIde(document.querySelector(osztaly[cel]), false), 50)
   }, [betoltott, lap])
 

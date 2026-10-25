@@ -190,7 +190,7 @@ console.log('\n=== 6) Flotta: idő írható, a sorrend megmarad, a Szerkesztés 
 console.log('\n=== 7) Online kérés munkalapja: Elutasít, utána Mégis jön ===\n')
 {
   const { ctx, p, sql, belep: be } = await adminOldal(b)
-  const k = await onlineKeres(sql, { customer_name: 'Kérő Kata', customer_phone: '+36 30 999 1122', customer_email: null, plate_raw: 'KRS-001' })
+  const k = await onlineKeres(sql, { customer_name: 'Kérő Kata', customer_phone: '+36 30 999 1122', customer_email: 'kata@pelda.hu', plate_raw: 'KRS-001' })
   await be('demo@mosathat.hu')
   await p.locator('dialog[aria-label="Online foglalási kérés"] .keres-lab button').filter({ hasText: 'Később' }).click()
   await p.waitForTimeout(400)

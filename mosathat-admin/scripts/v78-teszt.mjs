@@ -67,6 +67,7 @@ await m.locator('.fogl-nap[data-allapot="szabad"]').first().click(); await o.p.w
 await m.locator('.fogl-idok button').first().click(); await o.p.waitForTimeout(800)
 await o.p.fill('#fo-nev', 'Robot Róbert')
 await o.p.fill('#fo-tel', '+36 30 111 0000')
+await o.p.fill('#fo-email', 'robot@pelda.hu')
 await o.p.fill('#fo-rsz', 'BOT-001')
 await o.p.locator('#fo-weboldal').fill('http://spam.example', { force: true })
 await m.locator('.fogl-feltetel input').check()
@@ -102,7 +103,7 @@ console.log('\n=== 5) Adatvédelmi tájékoztató ===\n')
 const a = await oldal('/adatvedelem')
 const at = sima(await a.p.locator('.kv-jogi').innerText())
 ok('GDPR 13. cikk elemei', [true, true, true, true, true, true, true, true],
-  [/1\. Az adatkezelő/, /Jogalap/, /Megőrzés/, /Adatfeldolgozó/, /Európai Gazdasági Térségen kívülre/, /A jogaid/, /Jogorvoslat/, /önkéntes/].map((r) => r.test(at)))
+  [/1\. Az adatkezelő/, /Jogalap/, /Megőrzés/, /Adatfeldolgozó/, /Európai Gazdasági Térségen kívülre/, /A jogaid/, /Jogorvoslat/, /nem tudjuk fogadni/].map((r) => r.test(at)))
 ok('NAIH aktuális elérhetőségei', [true, true, true], [/1055 Budapest, Falk Miksa utca 9-11\./.test(at), /1363 Budapest, Pf\. 9\./.test(at), /ugyfelszolgalat@naih\.hu/.test(at)])
 ok('az adatfeldolgozók között a Resend jogi neve', true, /Plus Five Five, Inc\./.test(at))
 ok('jogalapok: szerződés, jogi kötelezettség, jogos érdek, hozzájárulás', [true, true, true, true],

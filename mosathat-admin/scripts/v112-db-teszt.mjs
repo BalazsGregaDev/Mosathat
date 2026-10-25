@@ -54,7 +54,7 @@ const premium = (await egy(`select id from packages where code = 'PREMIUM'`)).id
 const nap = (await egy(`select d::date::text d from generate_series(public.budapest_ma() + 3, public.budapest_ma() + 30, interval '1 day') d
   where munkanap(d::date) and extract(isodow from d) < 6 order by d limit 1`)).d
 const keres = (n) => JSON.stringify({ category: 'SZEMELYAUTO', scope: 'TELJES', package_id: premium, booking_type: 'LEADOS', service_date: nap,
-  drop_off_time: '09:00', customer_name: 'Jog Teszt', customer_phone: `+36 30 111 22${n}`, plate_raw: `JOG-0${n}` })
+  drop_off_time: '09:00', customer_name: 'Jog Teszt', customer_email: 'teszt@pelda.hu', customer_phone: `+36 30 111 22${n}`, plate_raw: `JOG-0${n}` })
 const szerepben = async (szerep, f) => { await q(`set role ${szerep}`); try { return await hiba(f) } finally { await q('reset role') } }
 await q(`select set_config('app.uid', '', false)`)
 t.ok('névtelenül a publikus foglalás működik (belül az online kérés függvényét hívja)', null,

@@ -30,7 +30,7 @@ const [limitNap, teliNap, uresNap] = (await q(`select d::date::text d from gener
 await q(`update contracts set napi_limit = 1 where company_id = $1 and active`, [ceg])
 await q(`select ceg_foglalas($1, $2)`, [LINK, JSON.stringify({
   package_id: (await q(`select id from packages where code = 'START'`))[0].id, booking_type: 'LEADOS', service_date: limitNap,
-  drop_off_time: '09:00', customer_name: 'Céges Elso', customer_phone: '+36 30 700 0001', plate_raw: 'LIM-001' })])
+  drop_off_time: '09:00', customer_name: 'Céges Elso', customer_email: 'teszt@pelda.hu', customer_phone: '+36 30 700 0001', plate_raw: 'LIM-001' })])
 await terhel(q, teliNap, 75)
 
 const hibak = []
@@ -80,6 +80,7 @@ const hat = c.locator('.fogl-hataridok button')
 if (await hat.count()) { await hat.first().click(); await c.waitForTimeout(500) }
 await c.fill('#fo-nev', 'Céges Második')
 await c.fill('#fo-tel', '+36 30 700 0002')
+await c.fill('#fo-email', 'teszt@pelda.hu')
 await c.fill('#fo-rsz', 'AUT-002')
 await c.locator('.fogl-feltetel input').check()
 await c.locator('.fogl-osszeg .kuld button').click()

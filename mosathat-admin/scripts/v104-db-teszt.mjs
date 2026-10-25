@@ -164,7 +164,7 @@ t.ok('az eredeti időpont után 10 nappal lejárt', 'LEJART', (await oldal(tok3)
 console.log('\n=== 10) Céges foglalás: ár nélkül ===\n')
 const ceg = await anonkent(async () => (await egy(`select ceg_foglalas($1, $2) x`, ['autotransdemo2026link', JSON.stringify({
   package_id: START, booking_type: 'LEADOS', service_date: napok[4], drop_off_time: '09:00',
-  customer_name: 'Céges Cecil', customer_phone: '+36 30 800 9999', plate_raw: 'CGO-001', nyelv: 'en' })])).x)
+  customer_name: 'Céges Cecil', customer_email: 'teszt@pelda.hu', customer_phone: '+36 30 800 9999', plate_raw: 'CGO-001', nyelv: 'en' })])).x)
 await ki(TULAJ)
 t.ok('céges link: angolul foglalt', 'en', (await egy(`select nyelv from bookings where id = $1`, [ceg.id])).nyelv)
 const oc = await oldal(await tokenje(ceg.id))

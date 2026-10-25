@@ -420,11 +420,15 @@ begin
     'drop_off_time',  '08:00',
     'customer_name',  'Céges Demó Dénes',
     'customer_phone', '+36 30 999 0001',
+    'customer_email', 'denes@autotrans.hu',
     'plate_raw',      'CEG-001',
     'brand',          'Skoda',
     'model',          'Octavia',
     'notes',          'DEMO — céges foglalási linkről érkezett'))->>'id')::uuid;
   perform public.online_keres_dontes(v_id, true);
+  if to_regclass('public.notifications') is not null then
+    delete from public.notifications where booking_id = v_id;
+  end if;
 end $$;
 
 do $$

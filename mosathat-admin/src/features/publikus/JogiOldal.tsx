@@ -98,15 +98,20 @@ function Adatvedelem() {
 
       <Adatkezeles
         cim="2.1 Online időpontfoglalás"
-        adatok="név, telefonszám, e-mail cím (nem kötelező), rendszám, az autó márkája és modellje (nem kötelező), megjegyzés (nem kötelező), a választott szolgáltatás, a kért időpont"
+        adatok="név, telefonszám, e-mail cím, rendszám, az autó márkája és modellje (nem kötelező), megjegyzés (nem kötelező), a választott szolgáltatás, a kért időpont"
         cel="a foglalási kérés fogadása, az időpont egyeztetése és visszaigazolása, a szolgáltatás elvégzése"
         jogalap={SZERZODES}
         megorzes={<>teljesített foglalásnál {ELEVULES}; ha a kérésből nem lett foglalás (elutasítottuk, lemondtad vagy lejárt), a kérés lezárásától számított 1 évig</>}
       >
         <p>
-          A név, a telefonszám és a rendszám megadása nélkül a kérést nem tudjuk fogadni, mert ezek kellenek
-          az egyeztetéshez és az autó azonosításához. Az e-mail cím megadása önkéntes: ha megadod, ide küldjük a
-          visszaigazolást és a foglalásod oldalának linkjét, ha nem, telefonon keresünk.
+          A név, a telefonszám, az e-mail cím és a rendszám megadása nélkül a kérést nem tudjuk fogadni, mert ezek
+          kellenek az egyeztetéshez és az autó azonosításához, az e-mail címre pedig a visszaigazolást és a
+          foglalásod oldalának linkjét küldjük.
+        </p>
+        <p>
+          Ha a foglalásodat a főoldalon a rendszám, a telefonszám vagy az e-mail cím alapján keresed meg, a
+          próbálgatás elleni védelem miatt a megadott adatokból és az eszközöd IP-címéből képzett kódot, valamint a
+          keresés idejét és eredményét legfeljebb egy napig tároljuk, utána automatikusan töröljük.
         </p>
         <p>
           Ha a megadott telefonszám már szerepel a nyilvántartásunkban, a kérést a meglévő ügyféladatokhoz

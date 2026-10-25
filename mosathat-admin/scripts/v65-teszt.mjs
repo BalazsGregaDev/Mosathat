@@ -44,6 +44,7 @@ const osszegzes = async () => sima(await m.locator('.fogl-osszeg').innerText())
 async function adatok(nev, tel, rsz) {
   await p.fill('#fo-nev', nev)
   await p.fill('#fo-tel', tel)
+  await p.fill('#fo-email', 'teszt@pelda.hu')
   await p.fill('#fo-rsz', rsz)
   await m.locator('.fogl-feltetel input').check()
 }
@@ -113,7 +114,7 @@ ok('a kérésben: Full Service kárpittal, másnap 8:00 után viszi', [{ fs: tru
   await sql(FS, ['FSV-651']))
 {
   const a = await admin({ full_service: true, seat_material: 'KARPIT', next_day_pick_up: true, drop_off_time: '09:00',
-    plate_raw: 'fsv-651', customer_name: 'Full Ferenc', customer_phone: '+36 30 999 6501', customer_email: null })
+    plate_raw: 'fsv-651', customer_name: 'Full Ferenc', customer_phone: '+36 30 999 6501', customer_email: 'teszt@pelda.hu' })
   ok('felugrott a kérés', 1, await a.popup.count())
   const adat = sima(await a.popup.locator('.keres-adatok').innerText())
   ok('a kérés ablakában: Full Service (kárpit), másnapi elvitel', [true, true],
@@ -147,7 +148,7 @@ ok('nincs JS vagy konzol hiba', [], hibak)
 await ctx.close()
 {
   const a = await admin({ full_service: true, seat_material: 'BOR', next_day_pick_up: false, drop_off_time: '09:00', pick_up_time: '17:00',
-    plate_raw: 'bor-652', customer_name: 'Bőr Borbála', customer_phone: '+36 30 999 6502', customer_email: null })
+    plate_raw: 'bor-652', customer_name: 'Bőr Borbála', customer_phone: '+36 30 999 6502', customer_email: 'teszt@pelda.hu' })
   const adat2 = sima(await a.popup.locator('.keres-adatok').innerText())
   ok('a kérés ablakában: bőr, aznap zárásig viszi', [true, true, false],
     [adat2.includes('Full Service (bőr)'), adat2.includes('viszi 17:00'), adat2.includes('után')])

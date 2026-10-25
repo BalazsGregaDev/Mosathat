@@ -51,6 +51,7 @@ ok('a végleges ár figyelmeztetése az érkezési sorban, a gomb alatt nincs', 
 console.log('\n=== 2) Beküldve ===\n')
 await p.fill('#fo-nev', 'Határidő Hanna')
 await p.fill('#fo-tel', '+36 30 999 6601')
+await p.fill('#fo-email', 'teszt@pelda.hu')
 await p.fill('#fo-rsz', 'hat-661')
 await m.locator('.fogl-feltetel input').check()
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
@@ -62,7 +63,7 @@ ok('a kérésben a választott határidő', [{ hozza: hozasIdo.padStart(5, '0'),
 {
   const a = await adminOldal(b)
   await onlineKeres(a.sql, { drop_off_time: hozasIdo.padStart(5, '0'), pick_up_time: varOra, plate_raw: 'hat-661',
-    customer_name: 'Határidő Hanna', customer_phone: '+36 30 999 6601', customer_email: null })
+    customer_name: 'Határidő Hanna', customer_phone: '+36 30 999 6601', customer_email: 'teszt@pelda.hu' })
   await a.belep('tulaj@mosathat.hu')
   const popup = a.p.locator('dialog[aria-label="Online foglalási kérés"]')
   const mikor = sima(await popup.locator('.keres-adatok').innerText())

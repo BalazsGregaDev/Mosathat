@@ -18,7 +18,7 @@ import type { GyikAdmin, GyikMod, GyikSor } from '../lib/gyik'
 import { kepKicsinyit } from '../lib/kep'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
-import type { FoglalasomAdat } from '../../../supabase/functions/_shared/tipusok.ts'
+import type { FoglalasKereses, FoglalasomAdat, FoglalasTalalat } from '../../../supabase/functions/_shared/tipusok.ts'
 import { idoRovidit, num, numOrNull, publikusbol, publikusNapbol, toExtra, toOnlineKeres, toQuote } from './source'
 import { EloFrissites } from './elo'
 import { tokenFetch } from './tokenFetch'
@@ -371,6 +371,12 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('ceg_teli_napok', { p_token: token, p_tol: tol, p_ig: ig })
     if (error) fail('Szabad napok', error)
     return (data as string[] | null) ?? []
+  }
+
+  async foglalasKereses(adat: FoglalasKereses): Promise<FoglalasTalalat[]> {
+    const { data, error } = await this.sb.rpc('foglalas_kereses', { p: adat })
+    if (error) fail('Keresés', error)
+    return (data as FoglalasTalalat[] | null) ?? []
   }
 
   async foglalasom(token: string): Promise<FoglalasomAdat> {

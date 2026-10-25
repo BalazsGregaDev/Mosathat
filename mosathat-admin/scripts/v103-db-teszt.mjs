@@ -26,7 +26,7 @@ const kuld = (nap, x = {}) => {
   szam++
   return anonkent(async () => (await egy(`select ceg_foglalas($1, $2) x`, [LINK, JSON.stringify({
     package_id: START, booking_type: 'LEADOS', service_date: nap, drop_off_time: '09:00',
-    customer_name: `Céges ${szam}`, customer_phone: `+36 30 700 ${String(1000 + szam)}`, plate_raw: `LIM-${100 + szam}`, ...x })])).x)
+    customer_name: `Céges ${szam}`, customer_email: 'teszt@pelda.hu', customer_phone: `+36 30 700 ${String(1000 + szam)}`, plate_raw: `LIM-${100 + szam}`, ...x })])).x)
 }
 const allapot = async (id) => { await ki(TULAJ); return (await egy(`select status::text s from bookings where id = $1`, [id])).s }
 const teli = async (tol, ig) => anonkent(async () => (await egy(`select ceg_teli_napok($1, $2::date, $3::date) x`, [LINK, tol, ig])).x)

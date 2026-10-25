@@ -8,7 +8,7 @@ import type { FoglalasKep, FoglalasomAdat, OldalAllapot } from '../../../../supa
 import type { DataSource } from '../../data/source'
 import { UZLET } from '../../lib/arculat'
 import { hibaSzoveg } from '../../lib/format'
-import { hibaFordit, nyelviUt, type Formatum, type Nyelv } from '../../lib/nyelv'
+import { FELIRAT, hibaFordit, nyelviUt, type Formatum, type Nyelv } from '../../lib/nyelv'
 import { GOOGLE_KERESES, katKulcs, terjedelemKulcs, type SzovegKulcs } from '../../lib/publikusTartalom'
 import { KoncepcioKeret, terkepCimek } from '../arculat/Koncepcio'
 import { egerElhagy, egerKovet } from '../arculat/csillanas'
@@ -320,12 +320,15 @@ function Ertekeles({ link }: { link: string }) {
   )
 }
 
-function Tovabb() {
+function Tovabb({ kereso }: { kereso: boolean }) {
   const sz = useSz()
   const nyelv = useNyelv()
   return (
     <div className="ugy-tovabb">
       <a className="ugy-gomb ugy-gomb-masod" href={nyelviUt('/publikus', nyelv)}>{sz('ugyfel.fooldal')}</a>
+      {kereso && (
+        <a className="ugy-gomb ugy-gomb-masod" href={`${nyelviUt('/publikus', nyelv)}#foglalasom`}>{FELIRAT[nyelv].kerNyito}</a>
+      )}
       <a className="kv-gomb kv-gomb-lakk" href={`${nyelviUt('/publikus', nyelv)}#foglalas`}
          data-csillan onPointerMove={egerKovet} onPointerLeave={egerElhagy}>
         {sz('ugyfel.uj')}
@@ -361,7 +364,7 @@ export function FoglalasomTartalom({ adat, muvelet, google }: {
         <div className="ugy-hasab">
           {adat.allapot === 'KESZ' && <KeszDoboz adat={adat} />}
           {adat.allapot === 'ATVEVE' && google && <Ertekeles link={google} />}
-          {vege && <Tovabb />}
+          {vege && <Tovabb kereso={adat.allapot === 'ISMERETLEN' || adat.allapot === 'LEJART'} />}
           {elo && adat.most && adat.eredeti && <Adatok most={adat.most} eredeti={adat.eredeti} />}
           {elo && (adat.modosithato || (adat.kerelmek ?? []).length > 0) && <Modositas adat={adat} muvelet={muvelet} />}
           {elo && adat.lemondhato && <Lemondas adat={adat} muvelet={muvelet} />}

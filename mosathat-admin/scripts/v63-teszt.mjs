@@ -47,7 +47,7 @@ async function kuldes(p, rsz, nev, tel, ido = '09:00') {
   const sql = (q, par = []) => p.evaluate(([q2, p2]) => window.mosathatDemoSql(q2, p2), [q, par])
   if (!kerNap) kerNap = await szabadNap(sql)
   await onlineKeres(sql, { booking_type: 'VAROS', start_time: ido, drop_off_time: null, service_date: kerNap,
-    plate_raw: rsz, customer_name: nev, customer_phone: tel, customer_email: null })
+    plate_raw: rsz, customer_name: nev, customer_phone: tel, customer_email: 'teszt@pelda.hu' })
   await valtozas(p)
   await p.waitForTimeout(1500)
 }

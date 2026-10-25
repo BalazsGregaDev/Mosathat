@@ -211,7 +211,7 @@ const kovStart = (await egy(`select i.id from pass_items i join passes p on p.id
   join customers c on c.id = p.customer_id where c.name = 'Kovács Péter' and i.package_id = $1`, [START])).id
 const online = await szerepben('anon', () => egy(`select publikus_foglalas($1::jsonb) id`, [JSON.stringify({
   category: 'SZEMELYAUTO', scope: 'TELJES', package_id: START, booking_type: 'LEADOS', service_date: napok[7],
-  drop_off_time: '09:00', customer_name: 'Kovács Péter', customer_phone: '+36 30 111 2233', plate_raw: 'ABC-123' })]))
+  drop_off_time: '09:00', customer_name: 'Kovács Péter', customer_email: 'teszt@pelda.hu', customer_phone: '+36 30 111 2233', plate_raw: 'ABC-123' })]))
 t.ok('a kérés a bérletre kerül (lefoglalja az alkalmat)', kovStart, (await foglalas(online.id)).pass_item_id)
 await ki(TULAJ)
 await szerepben('authenticated', () => q(`select online_keres_dontes($1::uuid, false)`, [online.id]))

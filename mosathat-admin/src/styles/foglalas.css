@@ -126,6 +126,7 @@
 .fogl-figyel { margin: 0; padding: var(--t2) var(--t3); border-radius: var(--r); background: #fdf5e4; color: #7a4e0d; }
 .fogl-urlap { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--t3); }
 .fogl-urlap .szeles { grid-column: 1 / -1; }
+.fogl-mezo-hiba { display: block; margin-top: 4px; font-size: var(--m-xs); color: var(--piros-sotet, #b42318); }
 .fogl-urlap textarea.beviteli { font-size: var(--m-md); }
 .fogl-urlap .fogl-ceg-uzenet {
   display: block; margin: 0;

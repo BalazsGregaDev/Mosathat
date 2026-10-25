@@ -26,7 +26,7 @@ await terhel(q, nap, 50)
 
 const kuld = (x = {}) => anonkent(async () => (await egy(`select ceg_foglalas($1, $2)->>'id' id`, [LINK, JSON.stringify({
   package_id: START, booking_type: 'HOZOMVISZEM', service_date: nap, drop_off_time: '08:00', pick_up_time: '16:00',
-  customer_name: 'Hozom Hugó', customer_phone: '+36 30 555 0101', plate_raw: 'HV-001', ...x })])).id)
+  customer_name: 'Hozom Hugó', customer_email: 'teszt@pelda.hu', customer_phone: '+36 30 555 0101', plate_raw: 'HV-001', ...x })])).id)
 
 console.log('=== 1) Hozom-viszem a szerződés szerint ===\n')
 t.ok('a link adataiban: van hozom-viszem', true, (await anonkent(async () => (await egy(`select ceg_link_adat($1) x`, [LINK])).x)).hozomviszem)
