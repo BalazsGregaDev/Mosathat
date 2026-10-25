@@ -362,6 +362,11 @@ export function FoglalasUrlap({
               ? (siker.email ? fe.megerositveEmail : fe.megerositveSzoveg)
               : siker.email ? sz('foglalas.siker_email') : sz('foglalas.siker_telefon')}
           </p>
+          <p className="fogl-siker-tipp">
+            {fe.kerSikerElotte}
+            <a href={`${nyelviUt('/publikus', nyelv)}#foglalasom`}>{fe.kerNyito}</a>
+            {fe.kerSikerUtana}
+          </p>
           <div className="fogl-gombok">
             <button type="button" className="btn" onClick={ujra}>{sz('foglalas.uj')}</button>
           </div>

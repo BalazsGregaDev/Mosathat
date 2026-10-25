@@ -1,5 +1,5 @@
 import {
-  createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode,
+  createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode, type RefObject,
 } from 'react'
 
 import type { Catalog } from '../../data/source'
@@ -12,6 +12,7 @@ import { katKulcs, type SzovegKulcs, type Uzlet } from '../../lib/publikusTartal
 import { JOGI_CIM, JOGI_CIM_EN } from '../../lib/ceg'
 import { FELIRAT, nyelviUt, type Nyelv } from '../../lib/nyelv'
 import { forditott, Gazdag, telefonLink, useFormatum, useNyelv, useSz, useUzlet } from '../publikus/tartalom'
+import { useKereso } from '../publikus/keresoKontextus'
 import Galeria from './Galeria'
 import Velemenyek from './Velemenyek'
 import GyikSzakasz, { GyikOldal } from './Gyik'
@@ -579,6 +580,20 @@ function Borito() {
   )
 }
 
+function HeroGombok() {
+  const { nyilvanos } = useKv()
+  const sz = useSz()
+  const fe = FELIRAT[useNyelv()]
+  const kereso = useKereso()
+  if (!nyilvanos || !kereso) return null
+  return (
+    <div className="kv-hero-gombok">
+      <Gomb lakk>{sz('galeria.foglalas')}</Gomb>
+      <button type="button" className="kv-gomb-masod" aria-haspopup="dialog" onClick={kereso.nyit}>{fe.kerNyito}</button>
+    </div>
+  )
+}
+
 function MagazinHero() {
   const sz = useSz()
   return (
@@ -586,6 +601,7 @@ function MagazinHero() {
       <section className="kv-hero">
         <span className="kv-kicker">{sz('hero.felcim')}</span>
         <h1><Gazdag s={sz('hero.cim')} /></h1>
+        <HeroGombok />
         <div className="kv-hasabok">
           <div className="kv-hero-foglalas"><Gomb lakk>{sz('galeria.foglalas')}</Gomb></div>
           <p className="kv-lede"><Gazdag s={sz('hero.bevezeto')} /></p>
@@ -652,9 +668,31 @@ function EgyebKartya({ e }: { e: Extra }) {
   )
 }
 
+function useKeskeny(ref: RefObject<HTMLElement | null>, hatar: number): boolean {
+  const [keskeny, setKeskeny] = useState(false)
+  useLayoutEffect(() => {
+    const keret = ref.current?.closest<HTMLElement>('.kv-keret')
+    if (!keret) return
+    const meres = () => {
+      const cs = getComputedStyle(keret)
+      const szeles = keret.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      setKeskeny(szeles <= hatar)
+    }
+    meres()
+    const figyelo = new ResizeObserver(meres)
+    figyelo.observe(keret)
+    return () => figyelo.disconnect()
+  }, [ref, hatar])
+  return keskeny
+}
+
 function EgyebSzolgaltatasok() {
   const { k } = useKv()
   const sz = useSz()
+  const hely = useRef<HTMLElement>(null)
+  const keskeny = useKeskeny(hely, 700)
+  const [nyitva, setNyitva] = useState(false)
+  const tartalomId = useId()
   const aktiv = k.extras.filter((e) => e.active).sort((a, b) => a.sort_order - b.sort_order)
   if (aktiv.length === 0) return null
   const oszlopok: [ServiceArea, Extra[]][] = [
@@ -662,9 +700,20 @@ function EgyebSzolgaltatasok() {
     ['BELSO', aktiv.filter((e) => e.area === 'BELSO')],
   ]
   return (
-    <section className="kv-egyeb" aria-labelledby="kv-egyeb-cim">
-      <h3 id="kv-egyeb-cim">{sz('csomagok.egyeb.cim')}</h3>
-      <div className="kv-egyeb-oszlopok">
+    <section className="kv-egyeb" aria-labelledby="kv-egyeb-cim" ref={hely}
+             data-csukhato={keskeny || undefined} data-nyitva={keskeny && nyitva ? '' : undefined}>
+      {keskeny ? (
+        <h3 id="kv-egyeb-cim">
+          <button type="button" className="kv-egyeb-nyito" aria-expanded={nyitva} aria-controls={tartalomId}
+                  onClick={() => setNyitva((n) => !n)}>
+            <span>{sz('csomagok.egyeb.cim')}</span>
+            <span className="kv-egyeb-jel" aria-hidden="true" />
+          </button>
+        </h3>
+      ) : (
+        <h3 id="kv-egyeb-cim">{sz('csomagok.egyeb.cim')}</h3>
+      )}
+      <div className="kv-egyeb-oszlopok" id={tartalomId} hidden={keskeny && !nyitva}>
         {oszlopok.filter(([, l]) => l.length > 0).map(([ter, l]) => (
           <div key={ter} className="kv-egyeb-oszlop" data-terulet={ter}>
             <h4>{sz(ter === 'BELSO' ? 'csomagok.egyeb.belso' : 'csomagok.egyeb.kulso')}</h4>

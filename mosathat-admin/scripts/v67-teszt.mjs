@@ -54,7 +54,7 @@ await p.locator('.fej-mentes button').filter({ hasText: 'Mentés' }).click(); aw
   await m.locator('.fogl-feltetel input').check()
   await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await pub.p.waitForTimeout(2500)
   ok('a köszönő oldal ígéri az e-mailt a foglalás oldalával', true,
-    (await m.locator('.fogl-siker p').innerText()).includes('e-mailt küldünk róla, benne a foglalásod oldalának linkjével'))
+    (await m.locator('.fogl-siker p:not(.fogl-siker-tipp)').innerText()).includes('e-mailt küldünk róla, benne a foglalásod oldalának linkjével'))
   ok('a kérésben az e-mail cím', [{ email: 'emma@pelda.hu' }],
     await pub.sql(`select ugyfel_email email from v_online_kerelmek k join vehicles v on v.id = k.vehicle_id where upper(v.plate_raw) = 'EML-671'`))
   await pub.ctx.close()

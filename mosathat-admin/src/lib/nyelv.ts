@@ -122,6 +122,8 @@ export const FELIRAT = {
     kerNincs: 'Ezekkel az adatokkal nem találtunk aktív foglalást. Nézd meg, hogy pontosan úgy írtad-e be őket, mint a foglaláskor, vagy hívj minket:',
     kerTobb: 'Több foglalást is találtunk. Melyiket nyissuk meg?',
     kerBezar: 'Bezárás',
+    kerSikerElotte: 'Ha később nem találnád a visszaigazolást, a főoldalon a ',
+    kerSikerUtana: ' gombbal is előhívhatod a foglalásod: elég megadni kettőt a rendszám, a telefonszám és az e-mail cím közül.',
     kerAllapot: {
       KERES: 'visszaigazolásra vár', VISSZAIGAZOLVA: 'visszaigazolva', KESZ: 'elkészült', ATVEVE: 'átvéve',
       NEM_FERT_BE: 'nem fért be', LEMONDVA: 'lemondva', ELUTASITVA: 'nem tudtuk vállalni', NEM_JOTT: 'nem jött el',
@@ -169,6 +171,8 @@ export const FELIRAT = {
     kerNincs: 'We could not find an active booking with these details. Please check that you entered them exactly as when booking, or call us:',
     kerTobb: 'We found more than one booking. Which one should we open?',
     kerBezar: 'Close',
+    kerSikerElotte: 'If you can’t find the confirmation later, use ',
+    kerSikerUtana: ' on our home page: just enter two of your licence plate, phone number and e-mail address.',
     kerAllapot: {
       KERES: 'awaiting confirmation', VISSZAIGAZOLVA: 'confirmed', KESZ: 'ready', ATVEVE: 'collected',
       NEM_FERT_BE: 'could not be fitted in', LEMONDVA: 'cancelled', ELUTASITVA: 'declined', NEM_JOTT: 'no-show',

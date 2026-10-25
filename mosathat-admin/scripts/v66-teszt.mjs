@@ -55,7 +55,7 @@ await p.fill('#fo-email', 'teszt@pelda.hu')
 await p.fill('#fo-rsz', 'hat-661')
 await m.locator('.fogl-feltetel input').check()
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
-ok('a köszönő oldal mondja a határidőt', true, (await m.locator('.fogl-siker p').innerText()).includes(`határidő: ${valasztott}`))
+ok('a köszönő oldal mondja a határidőt', true, (await m.locator('.fogl-siker p:not(.fogl-siker-tipp)').innerText()).includes(`határidő: ${valasztott}`))
 const varOra = valasztott.padStart(5, '0')
 ok('a kérésben a választott határidő', [{ hozza: hozasIdo.padStart(5, '0'), viszi: varOra }],
   await sql(`select to_char(b.drop_off_at at time zone 'Europe/Budapest', 'HH24:MI') hozza, to_char(b.pick_up_at at time zone 'Europe/Budapest', 'HH24:MI') viszi

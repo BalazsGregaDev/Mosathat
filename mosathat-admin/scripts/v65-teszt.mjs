@@ -106,7 +106,7 @@ await adatok('Full Ferenc', '+36 30 999 6501', 'fsv-651')
 ok('összegzés: Full Service kárpittal, elvitel másnap', [true, true],
   [(await osszegzes()).includes('Premium + Full Service (kárpit)'), /elvitel: .+ 8:00–\d{1,2}:\d{2}/.test(await osszegzes())])
 await m.getByRole('button', { name: 'Foglalási kérés küldése' }).click(); await p.waitForTimeout(2500)
-ok('a köszönő oldal is mondja az elvitelt', true, (await m.locator('.fogl-siker p').innerText()).includes('Elviheted:'))
+ok('a köszönő oldal is mondja az elvitelt', true, (await m.locator('.fogl-siker p:not(.fogl-siker-tipp)').innerText()).includes('Elviheted:'))
 const FS = `select b.full_service fs, b.seat_material::text ules, b.status::text allapot,
     to_char(b.pick_up_at at time zone 'Europe/Budapest', 'HH24:MI') viszi, ((b.pick_up_at at time zone 'Europe/Budapest')::date - b.service_date) nap
   from bookings b join vehicles v on v.id = b.vehicle_id where upper(v.plate_raw) = $1`

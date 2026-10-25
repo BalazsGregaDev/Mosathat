@@ -1,4 +1,6 @@
-import { adatbazis, tesztelo, TULAJ } from './_db.mjs'
+import { join } from 'node:path'
+
+import { adatbazis, tesztelo, GYOKER, TULAJ } from './_db.mjs'
 
 const t = tesztelo()
 const db = await adatbazis({ demo: true })
@@ -98,5 +100,23 @@ t.ok('a belső függvények kívülről nem hívhatók', [false, false],
   [(await egy(`select has_function_privilege('anon', 'public.online_email_ellenor(jsonb)', 'EXECUTE') a`)).a,
    (await egy(`select has_function_privilege('anon', 'public.berlet_foglalas_alap(text, jsonb)', 'EXECUTE') a`)).a])
 t.ok('túl hosszú adat: hiba', true, /túl hosszú/.test(await hiba(() => keres({ rendszam: 'A'.repeat(20), telefon: '1' })) ?? ''))
+
+console.log('\n=== 7) A visszaigazoló levél ajánlja a keresőt ===\n')
+{
+  const { visszaigazolasLevel } = await import(join(GYOKER, 'supabase', 'functions', '_shared', 'sablon.ts'))
+  const UZLET = { nev: 'Mosathat', telefon: '+36 1 506 0420', cim: '1138 Budapest, Váci út 140.' }
+  await ki(TULAJ)
+  const fog = (await egy(`select foglalas_osszegzes($1) x`, [tg.id])).x
+  const allapot = { allapot: 'LEMONDHATO', statusz: 'CONFIRMED', kezdes: '2030-01-01T08:00:00Z', hatarido: '2029-12-31T08:00:00Z',
+    lemondas_ora: 24, lemondva: null, foglalas: fog }
+  const hu = visszaigazolasLevel('t@pelda.hu', allapot, 'https://mosathat.hu/foglalas/abc', UZLET, { most: new Date('2029-12-01T08:00:00Z') })
+  t.ok('szövegben: a mondat és a link', [true, true],
+    [hu.szoveg.includes('Ha később nem találnád ezt a levelet, a weboldalunkon a Foglalásom megkeresése gombbal is előhívhatod'),
+      hu.szoveg.includes('Foglalásom megkeresése: https://mosathat.hu/publikus#foglalasom')])
+  t.ok('a HTML-ben is, linkkel', true, hu.html.includes('href="https://mosathat.hu/publikus#foglalasom"'))
+  const en = visszaigazolasLevel('t@pelda.hu', allapot, 'https://mosathat.hu/foglalas/abc', UZLET, { most: new Date('2029-12-01T08:00:00Z'), nyelv: 'en' })
+  t.ok('angolul az angol oldalra mutat', [true, true],
+    [en.szoveg.includes('Find my booking: https://mosathat.hu/publikus?lang=en#foglalasom'), en.szoveg.includes('If you can’t find this e-mail later')])
+}
 
 t.vege()

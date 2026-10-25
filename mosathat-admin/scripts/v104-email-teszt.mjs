@@ -42,7 +42,8 @@ t.ok('extrák és ár', [true, true], [level.html.includes('Motormosás, Ózonos
 t.ok('a beírt szöveg nem futtatható kód', [false, true],
   [level.html.includes('<script>'), level.html.includes('&lt;script&gt;')])
 t.ok('egyetlen gomb, a foglalás oldalára', [1, true],
-  [(level.html.match(/<a href="https:\/\/mosathat/g) ?? []).length, level.html.includes(`href="${LINK}"`)])
+  [(level.html.match(/<a href="https:\/\/mosathat[^"]*" style="display:inline-block/g) ?? []).length, level.html.includes(`href="${LINK}"`)])
+t.ok('alatta szöveges link a foglaláskeresőre', true, /<a href="https:\/\/mosathat[^"]*\/publikus#foglalasom"/.test(level.html))
 t.ok('nincs külön lemondó gomb', false, level.html.includes('Foglalás lemondása'))
 t.ok('a gomb felirata', true, level.html.includes('>Foglalásom megnyitása</a>'))
 t.ok('a módosítás lehetősége és a lemondási határidő', [true, true],

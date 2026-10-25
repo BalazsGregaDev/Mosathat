@@ -34,6 +34,7 @@ interface Keret {
   gomb: string
   link: string
   uzlet: Uzlet
+  utoirat?: { szoveg: string; gomb: string; link: string }
 }
 
 function felepit(cimzett: string, k: Keret): Level {
@@ -82,7 +83,10 @@ function felepit(cimzett: string, k: Keret): Level {
                   <td style="padding:12px 0 4px">
                     <a href="${esc(k.link)}" style="display:inline-block;padding:13px 22px;background:${ZOLD};border-radius:8px;color:#ffffff;font-weight:600;font-size:15px;text-decoration:none">${esc(k.gomb)}</a>
                   </td>
-                </tr>
+                </tr>${k.utoirat ? `
+                <tr>
+                  <td style="padding:16px 0 0;font-size:13px;line-height:1.5;color:${HALK}">${esc(k.utoirat.szoveg)}<br><a href="${esc(k.utoirat.link)}" style="color:${ZOLD};font-weight:600">${esc(k.utoirat.gomb)}</a></td>
+                </tr>` : ''}
               </table>
             </td>
           </tr>
@@ -109,6 +113,7 @@ function felepit(cimzett: string, k: Keret): Level {
     '',
     k.doboz,
     `${k.gomb}: ${k.link}`,
+    ...(k.utoirat ? ['', k.utoirat.szoveg, `${k.utoirat.gomb}: ${k.utoirat.link}`] : []),
     '',
     k.uzlet.nev,
     ...(k.uzlet.cim ? [k.uzlet.cim] : []),
@@ -174,7 +179,24 @@ export function visszaigazolasLevel(
     gomb: en ? 'Open my booking' : 'Foglalásom megnyitása',
     link,
     uzlet,
+    utoirat: kereso(link, en),
   })
+}
+
+function kereso(link: string, en: boolean): Keret['utoirat'] {
+  let alap: string
+  try {
+    alap = new URL(link).origin
+  } catch {
+    return undefined
+  }
+  return {
+    szoveg: en
+      ? 'If you can’t find this e-mail later, you can also bring up your booking on our website with Find my booking: just enter two of your licence plate, phone number and e-mail address.'
+      : 'Ha később nem találnád ezt a levelet, a weboldalunkon a Foglalásom megkeresése gombbal is előhívhatod a foglalásod: elég megadni kettőt a rendszám, a telefonszám és az e-mail cím közül.',
+    gomb: en ? 'Find my booking' : 'Foglalásom megkeresése',
+    link: `${alap}/publikus${en ? '?lang=en' : ''}#foglalasom`,
+  }
 }
 
 export function keszLevel(
