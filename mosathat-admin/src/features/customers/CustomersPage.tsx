@@ -660,7 +660,7 @@ function CegKartya({ c, szerkesztheto, onCegNev, onAthelyez }: {
                     )}
                   </div>
                   <div className="ceg-auto-sofor">
-                    {a.customer_name}
+                    {a.customer_name === 'Névtelen' ? <span className="halvany">nincs megadva sofőr</span> : a.customer_name}
                     {a.customer_phone && a.customer_phone !== '—' && (
                       <> · <a href={`tel:${a.customer_phone}`} className="hivas">{a.customer_phone}</a></>
                     )}
