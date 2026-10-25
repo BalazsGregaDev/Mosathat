@@ -42,10 +42,28 @@ console.log('=== 1) Telefonon: az Egyéb szolgáltatások egészében lenyithat�
   await ctx.close()
 }
 
+console.log('\n=== 1b) Telefonon a nyitó részben is ott a kereső gomb ===\n')
+{
+  const { ctx, p } = await foglalasOldal(b, { ...TELEFON, hiba: jsHiba })
+  await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(300)
+  const hely = p.locator('.kv-hero .kv-hero-foglalas')
+  const g = await hely.locator('> *').evaluateAll((l) => l.map((e) => { const r = e.getBoundingClientRect(); return { t: r.top, b: r.bottom, l: r.left, w: r.width, s: e.textContent.trim() } }))
+  ok('két gomb: Időpontfoglalás, alatta Foglalásom megkeresése', ['Időpontfoglalás', 'Foglalásom megkeresése'], g.map((x) => x.s))
+  ok('egymás alatt, egyforma szélesen, középen', [true, true, true],
+    [g[1].t >= g[0].b, Math.abs(g[0].w - g[1].w) < 1, Math.abs(g[0].l + g[0].w / 2 - 195) < 2])
+  await kep(p.locator('.kv-hero'), '1b-hero-telefon')
+  await hely.getByRole('button', { name: 'Foglalásom megkeresése' }).click()
+  await p.locator('dialog.kv-kereso-fedo[open]').waitFor()
+  ok('a felugró kereső nyílik', 1, await p.locator('dialog.kv-kereso-fedo[open]').count())
+  ok('asztali gombsor telefonon rejtve', false, await p.locator('.kv-hero-gombok').isVisible())
+  await ctx.close()
+}
+
 console.log('\n=== 2) Asztalon minden marad ===\n')
 {
   const { ctx, p } = await foglalasOldal(b, { hiba: jsHiba })
   const egyeb = p.locator('.kv-egyeb')
+  ok('asztalon a telefonos gombsor rejtve', false, await p.locator('.kv-hero-foglalas').isVisible())
   ok('nincs nyitó gomb, a lista látszik', [0, true],
     [await egyeb.getByRole('button', { name: 'Egyéb szolgáltatások' }).count(), await egyeb.locator('.kv-egyeb-oszlopok').isVisible()])
   await ctx.close()

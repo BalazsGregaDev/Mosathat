@@ -244,12 +244,12 @@
   grid-column: 2 !important; grid-row: 1 / span 2; align-self: end;
   display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding-top: 78px;
 }
-.kv[data-k='03'] .kv-hero-gombok > * {
+.kv[data-k='03'] :is(.kv-hero-gombok, .kv-hero-foglalas) > * {
   display: flex; align-items: center; justify-content: center; min-width: 236px; min-height: 46px; box-sizing: border-box; margin: 0;
   padding: 12px 22px; border-radius: 2px; font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .16em;
   text-transform: uppercase; text-decoration: none; text-align: center; cursor: pointer;
 }
-.kv[data-k='03'] .kv-hero-gombok > a.kv-gomb-lakk { margin-top: 0; }
+.kv[data-k='03'] :is(.kv-hero-gombok, .kv-hero-foglalas) > a.kv-gomb-lakk { margin-top: 0; }
 .kv[data-k='03'] .kv-gomb-masod { background: transparent; color: var(--fg); border: 1.5px solid var(--vonal-eros); transition: background .2s ease, border-color .2s ease; }
 .kv[data-k='03'] .kv-gomb-masod:hover { background: color-mix(in srgb, var(--fg) 6%, transparent); border-color: var(--fg); }
 .kv[data-k='03'] .kv-gomb-masod:focus-visible { outline: 2px solid var(--zold); outline-offset: 3px; }
@@ -292,7 +292,8 @@
   .kv[data-k='03'] .kv-hero { padding: 26px 16px 31.2px; }
   .kv[data-k='03'] h1 { font-size: 34px; }
   .kv[data-k='03'] .kv-hasabok { grid-template-columns: 1fr; gap: 14.4px; }
-  .kv[data-k='03'] .kv-hero-foglalas { display: flex; justify-content: center; padding: 6px 0 8px; }
+  .kv[data-k='03'] .kv-hero-foglalas { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0 8px; }
+  .kv[data-k='03'] .kv-hero-foglalas > * { width: min(300px, 100%); }
   .kv[data-k='03'] .kv-hero:has(> .kv-hero-gombok) { display: block; }
   .kv[data-k='03'] .kv-hero-gombok { display: none; }
   .kv[data-k='03'] .kv-hero-foglalas a.kv-gomb-lakk { margin-top: 0; }

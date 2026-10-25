@@ -580,16 +580,23 @@ function Borito() {
   )
 }
 
+function KeresoGomb() {
+  const { nyilvanos } = useKv()
+  const fe = FELIRAT[useNyelv()]
+  const kereso = useKereso()
+  if (!nyilvanos || !kereso) return null
+  return <button type="button" className="kv-gomb-masod" aria-haspopup="dialog" onClick={kereso.nyit}>{fe.kerNyito}</button>
+}
+
 function HeroGombok() {
   const { nyilvanos } = useKv()
   const sz = useSz()
-  const fe = FELIRAT[useNyelv()]
   const kereso = useKereso()
   if (!nyilvanos || !kereso) return null
   return (
     <div className="kv-hero-gombok">
       <Gomb lakk>{sz('galeria.foglalas')}</Gomb>
-      <button type="button" className="kv-gomb-masod" aria-haspopup="dialog" onClick={kereso.nyit}>{fe.kerNyito}</button>
+      <KeresoGomb />
     </div>
   )
 }
@@ -603,7 +610,7 @@ function MagazinHero() {
         <h1><Gazdag s={sz('hero.cim')} /></h1>
         <HeroGombok />
         <div className="kv-hasabok">
-          <div className="kv-hero-foglalas"><Gomb lakk>{sz('galeria.foglalas')}</Gomb></div>
+          <div className="kv-hero-foglalas"><Gomb lakk>{sz('galeria.foglalas')}</Gomb><KeresoGomb /></div>
           <p className="kv-lede"><Gazdag s={sz('hero.bevezeto')} /></p>
           <p className="kv-halk"><Gazdag s={sz('hero.mellek')} /></p>
         </div>
