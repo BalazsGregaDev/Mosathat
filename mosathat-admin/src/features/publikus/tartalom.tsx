@@ -21,7 +21,9 @@ interface TartalomErtek {
   gyik: GyikPublikus
 }
 
-function ertekbol(t: PublikusTartalomNyers, lemondasOra?: number, nyelv: Nyelv = 'hu'): TartalomErtek {
+export type Jelolo = (kulcs: SzovegKulcs, szoveg: string) => string
+
+function ertekbol(t: PublikusTartalomNyers, lemondasOra?: number, nyelv: Nyelv = 'hu', jelolo?: Jelolo): TartalomErtek {
   const u = uzletbol(t, nyelv)
   const valtozok = uzletValtozok(u, lemondasOra)
   const sajatok = nyelv === 'en' ? t.szovegek_en ?? {} : t.szovegek
@@ -29,7 +31,8 @@ function ertekbol(t: PublikusTartalomNyers, lemondasOra?: number, nyelv: Nyelv =
   const sz: Sz = (kulcs, extra) => {
     const sajat = sajatok[kulcs]
     const sablon = sajat && sajat.trim() ? sajat : alap[kulcs]
-    return kitolt(sablon, extra ? { ...valtozok, ...extra } : valtozok)
+    const kesz = kitolt(sablon, extra ? { ...valtozok, ...extra } : valtozok)
+    return jelolo ? jelolo(kulcs, kesz) : kesz
   }
   return {
     sz, u, ceg: cegbol(t, u), jogi: jogibol(t, u, nyelv), nyelv, f: formatum(nyelv),
@@ -39,13 +42,14 @@ function ertekbol(t: PublikusTartalomNyers, lemondasOra?: number, nyelv: Nyelv =
 
 const Ctx = createContext<TartalomErtek>(ertekbol(URES_TARTALOM))
 
-export function TartalomProvider({ t, lemondasOra, nyelv = 'hu', children }: {
+export function TartalomProvider({ t, lemondasOra, nyelv = 'hu', jelolo, children }: {
   t: PublikusTartalomNyers
   lemondasOra?: number
   nyelv?: Nyelv
+  jelolo?: Jelolo
   children: ReactNode
 }) {
-  const ertek = useMemo(() => ertekbol(t, lemondasOra, nyelv), [t, lemondasOra, nyelv])
+  const ertek = useMemo(() => ertekbol(t, lemondasOra, nyelv, jelolo), [t, lemondasOra, nyelv, jelolo])
   return <Ctx.Provider value={ertek}>{children}</Ctx.Provider>
 }
 

@@ -612,29 +612,25 @@ export class DemoSource implements DataSource {
   }
 
   async updateExtra(id: string, patch: Partial<Extra>): Promise<void> {
-    await this.pg.query(
-      `update extras set
-         name         = case when $2::jsonb ? 'name'         then $2->>'name' else name end,
-         description  = case when $2::jsonb ? 'description'  then $2->>'description' else description end,
-         price_huf    = case when $2::jsonb ? 'price_huf'    then ($2->>'price_huf')::integer else price_huf end,
-         work_minutes = case when $2::jsonb ? 'work_minutes' then ($2->>'work_minutes')::integer else work_minutes end,
-         rest_minutes = case when $2::jsonb ? 'rest_minutes' then coalesce(($2->>'rest_minutes')::integer, 0) else rest_minutes end,
-         active       = case when $2::jsonb ? 'active'       then ($2->>'active')::boolean else active end,
-         included_in_packages = case when $2::jsonb ? 'included_in_packages'
-           then array(select jsonb_array_elements_text($2->'included_in_packages'))::uuid[]
-           else included_in_packages end,
-         included_in_full_service = case when $2::jsonb ? 'included_in_full_service'
-           then ($2->>'included_in_full_service')::boolean else included_in_full_service end,
-         updated_at   = now()
-       where id = $1::uuid`,
-      [id, JSON.stringify(patch)],
-    )
+    await this.rows(`select extra_mentes($1::uuid, $2::jsonb)`, [id, JSON.stringify(patch)])
   }
 
-  async createExtra(input: { name: string; price_huf: number | null; work_minutes: number | null }): Promise<string> {
+  async createExtra(input: { name: string; area?: ServiceArea; price_huf: number | null; work_minutes: number | null }): Promise<string> {
     const [r] = await this.rows<{ id: string }>(`select create_extra($1::jsonb) as id`,
       [JSON.stringify(input)])
     return r.id
+  }
+
+  async deleteExtra(id: string): Promise<void> {
+    await this.rows(`select extra_torles($1::uuid)`, [id])
+  }
+
+  async sortExtras(ids: string[]): Promise<void> {
+    await this.rows(`select extrak_sorrend($1::uuid[])`, [ids])
+  }
+
+  async listAllExtras(): Promise<Extra[]> {
+    return (await this.rows<Extra>(`select * from extras order by sort_order, name`)).map(toExtra)
   }
 
   async updatePackagePrice(

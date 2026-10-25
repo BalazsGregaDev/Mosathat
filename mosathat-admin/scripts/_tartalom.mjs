@@ -9,9 +9,9 @@ await p.waitForSelector('input[type="email"]', { timeout: 60000 })
 await p.fill('input[type="email"]', 'tulaj@mosathat.hu'); await p.fill('input[type="password"]', 'x')
 await p.getByRole('button', { name: /Belépés/ }).click(); await p.waitForTimeout(2500)
 await p.locator('aside.oldalsav button').filter({ hasText: /^Tartalom$/ }).click()
-await p.locator('.pub-sav').first().waitFor({ timeout: 20000 }); await p.waitForTimeout(2500)
+await p.locator('.tsz-blokk').first().waitFor({ timeout: 20000 }); await p.waitForTimeout(2500)
 for (const id of ['menu', 'hero', 'fogl-1', 'fogl-2', 'fogl-6', 'fogl-osszeg', 'fogl-siker', 'lab']) {
-  const s = p.locator(`.pub-sav[data-sav="${id}"]`)
+  const s = p.locator(`.tsz-blokk[data-sav="${id}"]`)
   await s.scrollIntoViewIfNeeded(); await p.waitForTimeout(400)
   await s.screenshot({ path: `${K}/tart-${id}.png` })
 }

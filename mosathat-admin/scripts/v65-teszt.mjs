@@ -160,6 +160,7 @@ console.log('\n=== 5) Szolgáltatások: Csomag része ===\n')
 {
 const { ctx, p, sql } = await admin()
 await menu(p, 'Szolgáltatások')
+await p.locator('details.szolg-szakasz[data-szakasz="egyeb"] > summary').click()
 const sor = p.locator('.extrasor').filter({ hasText: 'Külső műanyagápolás' }).first()
 ok('alapból egyik csomagnak sem része', 0, await sor.locator('.resze').count())
 await sor.locator('button.nev').click(); await p.waitForTimeout(400)

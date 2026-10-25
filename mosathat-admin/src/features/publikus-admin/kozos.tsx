@@ -56,21 +56,25 @@ export function Mezo({ cimke, sugo, children }: { cimke: string; sugo?: ReactNod
   )
 }
 
-export function Elonezet({ szel, keret = false, children }: { szel: number; keret?: boolean; children: ReactNode }) {
+export function Elonezet({ szel, keret = false, mobilon = false, children }: { szel: number; keret?: boolean; mobilon?: boolean; children: ReactNode }) {
   const hely = useRef<HTMLDivElement>(null)
-  const [arany, setArany] = useState(1)
+  const [meret, setMeret] = useState({ arany: 1, szel })
   useLayoutEffect(() => {
     const h = hely.current
     if (!h) return
-    const szamol = () => setArany(Math.min(1, h.clientWidth / szel))
+    const szamol = () => {
+      const kicsi = mobilon && window.matchMedia('(max-width: 760px)').matches
+      const ki = kicsi ? { arany: 1, szel: h.clientWidth } : { arany: Math.min(1, h.clientWidth / szel), szel }
+      setMeret((m) => (m.arany === ki.arany && m.szel === ki.szel ? m : ki))
+    }
     szamol()
     const figyelo = new ResizeObserver(szamol)
     figyelo.observe(h)
     return () => figyelo.disconnect()
-  }, [szel])
+  }, [szel, mobilon])
   return (
     <div className="pub-elonezet-hely" ref={hely}>
-      <div className={keret ? 'pub-elonezet-lap kv-keret' : 'pub-elonezet-lap'} style={{ width: szel, zoom: arany }}>{children}</div>
+      <div className={keret ? 'pub-elonezet-lap kv-keret' : 'pub-elonezet-lap'} style={{ width: meret.szel, zoom: meret.arany }}>{children}</div>
     </div>
   )
 }

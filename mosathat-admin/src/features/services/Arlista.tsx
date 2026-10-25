@@ -5,6 +5,7 @@ import {
 } from '../../lib/types'
 import type { Catalog } from '../../data'
 import Sugo from '../common/Sugo'
+import Szakasz from './Szakasz'
 
 function Tobblet({ k, packageId }: { k: Catalog; packageId: string }) {
   const sorok = k.packageExtras.filter((x) => x.package_id === packageId)
@@ -30,7 +31,7 @@ export function CimMellett({ k, p }: { k: Catalog; p: Package }) {
   )
 }
 
-export function CsomagArak({ k, tomor }: { k: Catalog; tomor?: boolean }) {
+export function CsomagArak({ k, tomor, szakaszos }: { k: Catalog; tomor?: boolean; szakaszos?: boolean }) {
   const ar = (p: Package, c: VehicleCategory, s: BookingScope) =>
     k.packagePricing.find((x) => x.package_id === p.id && x.category === c && x.scope === s)
 
@@ -39,54 +40,59 @@ export function CsomagArak({ k, tomor }: { k: Catalog; tomor?: boolean }) {
 
   return (
     <>
-      {k.packages.filter((p) => p.active).map((p) => (
-        <div className="panel panelek-szeles" key={p.id} style={{ marginBottom: 'var(--t4)' }}>
-          <h3 className="csomag-cim">
-            {p.name}
-            <CimMellett k={k} p={p} />
-          </h3>
-          <div className="panel-torzs">
-            <div className="tablagorgo">
-              <table className={`arlista${tomor ? ' tomor' : ''}`}>
-                <thead>
-                  <tr>
-                    <th>Méret</th>
-                    {TERJEDELMEK.map((s) => <th key={s}>{SCOPE_LABEL[s]}</th>)}
-                    <th>Full Service</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {KATEGORIAK.map((c) => {
-                    const fs = fsAr(p, c)
-                    return (
-                      <tr key={c}>
-                        <th scope="row">{CATEGORY_SHORT[c]}</th>
-                        {TERJEDELMEK.map((s) => {
-                          const a = ar(p, c, s)
-                          return (
-                            <td key={s}>
-                              <div className="ar">
-                                {a?.requires_quote ? 'egyedi' : ft(a?.price_huf ?? null)}
-                              </div>
-                              <div className="ido">{idotartam(a?.duration_minutes ?? null)}</div>
-                            </td>
-                          )
-                        })}
-                        <td>
-                          <div className="ar">{ft(fs?.price_huf ?? null)}</div>
-                          {fs?.price_huf != null && fs.included_seats > 0 && (
-                            <div className="ido">{fs.included_seats} ülésig</div>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+      {k.packages.filter((p) => p.active).map((p) => {
+        const tabla = (
+              <div className="tablagorgo">
+                <table className={`arlista${tomor ? ' tomor' : ''}`}>
+                  <thead>
+                    <tr>
+                      <th>Méret</th>
+                      {TERJEDELMEK.map((s) => <th key={s}>{SCOPE_LABEL[s]}</th>)}
+                      <th>Full Service</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {KATEGORIAK.map((c) => {
+                      const fs = fsAr(p, c)
+                      return (
+                        <tr key={c}>
+                          <th scope="row">{CATEGORY_SHORT[c]}</th>
+                          {TERJEDELMEK.map((s) => {
+                            const a = ar(p, c, s)
+                            return (
+                              <td key={s}>
+                                <div className="ar">
+                                  {a?.requires_quote ? 'egyedi' : ft(a?.price_huf ?? null)}
+                                </div>
+                                <div className="ido">{idotartam(a?.duration_minutes ?? null)}</div>
+                              </td>
+                            )
+                          })}
+                          <td>
+                            <div className="ar">{ft(fs?.price_huf ?? null)}</div>
+                            {fs?.price_huf != null && fs.included_seats > 0 && (
+                              <div className="ido">{fs.included_seats} ülésig</div>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+        )
+        return szakaszos ? (
+          <Szakasz key={p.id} nev={p.id} cim={p.name} mellett={<CimMellett k={k} p={p} />}>{tabla}</Szakasz>
+        ) : (
+          <div className="panel panelek-szeles" key={p.id} style={{ marginBottom: 'var(--t4)' }}>
+            <h3 className="csomag-cim">
+              {p.name}
+              <CimMellett k={k} p={p} />
+            </h3>
+            <div className="panel-torzs">{tabla}</div>
           </div>
-        </div>
-      ))}
+        )
+      })}
       <p className="halk" style={{ fontSize: 'var(--m-xs)' }}>
         Ahol „—" áll, ott még nincs rögzítve az adat. Ilyenkor a foglalás
         felvehető, de az idő és az ár csak részleges.

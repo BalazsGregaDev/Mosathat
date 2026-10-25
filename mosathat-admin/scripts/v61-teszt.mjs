@@ -43,7 +43,7 @@ const lathatoHiba = (p) => p.locator('.hibauzenet:visible').count()
 
 console.log('=== 1) Füstteszt: minden menüpont, minden szerepkör, asztal és telefon ===\n')
 const TELJES = ['Áttekintés', 'Időpontok', 'Igazolólap', 'Szolgáltatások', 'Cégek és bérletesek', 'Ügyfelek', 'Felhasználók',
-  'Beállítások', 'Profilom', 'Elérhetőség', 'Tartalom', 'Csomagok', 'Vélemények', 'GYIK', 'Cégadatok', 'Jogi szövegek', 'Arculat']
+  'Beállítások', 'Profilom', 'Elérhetőség', 'Tartalom', 'Csomagok tartalma', 'Vélemények', 'GYIK', 'Cégadatok', 'Jogi szövegek', 'Arculat']
 const SZEREPEK = [
   ['demo@mosathat.hu', TELJES],
   ['tulaj@mosathat.hu', TELJES],
@@ -56,7 +56,7 @@ for (const [email, menupontok] of SZEREPEK) {
     const mobil = nev === 'telefon'
     if (!mobil) {
       ok(`${email.split('@')[0]}: a menüpontok`, menupontok,
-        await p.locator('aside.oldalsav .menu button:not([disabled])').evaluateAll((l) => l.map((e) => e.textContent.trim())))
+        await p.locator('aside.oldalsav .menu button:not([disabled]):not(.almenu)').evaluateAll((l) => l.map((e) => e.textContent.trim())))
     }
     const kilogo = []
     const hibas = []

@@ -56,6 +56,10 @@
 .menu button:hover { background: var(--sotet-2); color: var(--sotet-szoveg); }
 .menu button[aria-current='page'] { background: var(--sotet-2); color: #fff; }
 .menu button[aria-current='page'] .pont { background: var(--zold-vilagos); }
+.menu button.almenu { flex-basis: 30px; padding-left: calc(var(--t3) + 18px); font-size: var(--m-xs); font-weight: 400; }
+.menu button.almenu::before { content: ''; width: 8px; height: 1px; background: var(--sotet-keret); flex: none; margin-left: -14px; }
+.menu button.almenu[aria-current='true'] { color: #fff; background: color-mix(in srgb, var(--sotet-2) 60%, transparent); }
+.menu button.almenu[aria-current='true']::before { background: var(--zold-vilagos); }
 .menu button:disabled { opacity: .4; cursor: default; }
 .menu button:disabled:hover { background: transparent; color: var(--sotet-halk); }
 

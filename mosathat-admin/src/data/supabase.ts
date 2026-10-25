@@ -689,14 +689,30 @@ export class SupabaseSource implements DataSource {
   }
 
   async updateExtra(id: string, patch: Partial<Extra>): Promise<void> {
-    const { error } = await this.sb.from('extras').update(patch).eq('id', id)
+    const { error } = await this.sb.rpc('extra_mentes', { p_id: id, p: patch })
     if (error) fail('Szolgáltatás mentése', error)
   }
 
-  async createExtra(input: { name: string; price_huf: number | null; work_minutes: number | null }): Promise<string> {
+  async createExtra(input: { name: string; area?: ServiceArea; price_huf: number | null; work_minutes: number | null }): Promise<string> {
     const { data, error } = await this.sb.rpc('create_extra', { p: input })
     if (error) fail('Új szolgáltatás', error)
     return data as string
+  }
+
+  async deleteExtra(id: string): Promise<void> {
+    const { error } = await this.sb.rpc('extra_torles', { p_id: id })
+    if (error) fail('Szolgáltatás törlése', error)
+  }
+
+  async sortExtras(ids: string[]): Promise<void> {
+    const { error } = await this.sb.rpc('extrak_sorrend', { p_ids: ids })
+    if (error) fail('Sorrend mentése', error)
+  }
+
+  async listAllExtras(): Promise<Extra[]> {
+    const { data, error } = await this.sb.from('extras').select('*').order('sort_order').order('name')
+    if (error) fail('Szolgáltatások', error)
+    return ((data ?? []) as Extra[]).map(toExtra)
   }
 
   async updatePackagePrice(

@@ -4,7 +4,7 @@ import { useApp } from '../../state/AppContext'
 import { hibaSzoveg } from '../../lib/format'
 import type { Nyelv } from '../../lib/nyelv'
 import type {
-  CsomagSzerkesztoAdat, ServiceArea, SzerkesztoCella, SzerkesztoCsomag, SzerkesztoExtra, SzerkesztoSor,
+  CsomagSzerkesztoAdat, ServiceArea, SzerkesztoCella, SzerkesztoCsomag, SzerkesztoSor,
 } from '../../lib/types'
 import Csuszka from '../common/Csuszka'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
@@ -27,16 +27,9 @@ interface Csomag extends Omit<SzerkesztoCsomag, 'name_en' | 'description_en' | '
   description_en: string
 }
 
-interface Extra extends Omit<SzerkesztoExtra, 'name_en' | 'description_en' | 'description'> {
-  description: string
-  name_en: string
-  description_en: string
-}
-
 interface Vazlat {
   csomagok: Csomag[]
   sorok: Sor[]
-  extrak: Extra[]
 }
 
 const TERULETEK: { kulcs: ServiceArea; cim: string }[] = [
@@ -60,9 +53,6 @@ function vazlatbol(a: CsomagSzerkesztoAdat): Vazlat {
       kulcs: s.id ?? ujKulcs(),
       name_en: ures(s.name_en),
       cellak: Object.fromEntries(Object.entries(s.cellak).map(([id, c]) => [id, { ...c, name_en: ures(c.name_en) }])),
-    })),
-    extrak: (a.extrak ?? []).map((e) => ({
-      ...e, description: ures(e.description), name_en: ures(e.name_en), description_en: ures(e.description_en),
     })),
   }
 }
@@ -96,13 +86,6 @@ function mentendo(v: Vazlat): CsomagSzerkesztoAdat {
           active: c.active,
         }])),
     })),
-    extrak: v.extrak.map((e) => ({
-      id: e.id,
-      name: e.name.trim(),
-      description: vagyNull(e.description),
-      name_en: vagyNull(e.name_en),
-      description_en: vagyNull(e.description_en),
-    })),
   }
 }
 
@@ -115,7 +98,6 @@ export default function CsomagSzerkeszto() {
   const [uzenet, setUzenet] = useState<string | null>(null)
   const [tablaNyelv, setTablaNyelv] = useState<Nyelv>('hu')
   const [csomagNyelv, setCsomagNyelv] = useState<Nyelv>('hu')
-  const [extraNyelv, setExtraNyelv] = useState<Nyelv>('hu')
 
   useEffect(() => {
     let el = true
@@ -134,7 +116,6 @@ export default function CsomagSzerkeszto() {
     if (!v) return null
     if (v.csomagok.some((c) => !c.name.trim())) return 'Minden csomagnak kell név.'
     if (v.sorok.some((s) => !s.name.trim())) return 'Minden sornak kell név.'
-    if (v.extrak.some((e) => !e.name.trim())) return 'Minden extrának kell név.'
     return null
   }, [v])
 
@@ -144,7 +125,6 @@ export default function CsomagSzerkeszto() {
   const csomagok = v.csomagok
   const tablaEn = tablaNyelv === 'en'
   const csomagEn = csomagNyelv === 'en'
-  const extraEn = extraNyelv === 'en'
 
   function sorValt(kulcs: string, f: (s: Sor) => Sor) {
     setUzenet(null)
@@ -206,24 +186,6 @@ export default function CsomagSzerkeszto() {
   function csomagValt(id: string, mezo: 'name' | 'description' | 'name_en' | 'description_en', ertek: string) {
     setUzenet(null)
     setV((x) => x && { ...x, csomagok: x.csomagok.map((c) => (c.id === id ? { ...c, [mezo]: ertek } : c)) })
-  }
-
-  function extraValt(id: string, mezo: 'name' | 'description' | 'name_en' | 'description_en', ertek: string) {
-    setUzenet(null)
-    setV((x) => x && { ...x, extrak: x.extrak.map((e) => (e.id === id ? { ...e, [mezo]: ertek } : e)) })
-  }
-
-  function extraMozgat(id: string, irany: -1 | 1) {
-    setUzenet(null)
-    setV((x) => {
-      if (!x) return x
-      const i = x.extrak.findIndex((e) => e.id === id)
-      const j = i + irany
-      if (j < 0 || j >= x.extrak.length) return x
-      const ex = x.extrak.slice()
-      ;[ex[i], ex[j]] = [ex[j], ex[i]]
-      return { ...x, extrak: ex }
-    })
   }
 
   const sorNeve = (s: Sor, en: boolean) => (en ? s.name_en.trim() || s.name : s.name)
@@ -543,49 +505,6 @@ export default function CsomagSzerkeszto() {
             foglalásnál „árajánlat alapján” jelenik meg.
           </p>
         )}
-      </div>
-
-      <div className="panel panelek-szeles" data-nyelv={extraNyelv}>
-        <h3>
-          Extrák neve és leírása
-          <NyelvKapcsolo nyelv={extraNyelv} onValt={setExtraNyelv} cimke="Extrák neve és leírása" />
-        </h3>
-        <div className="panel-torzs szerk-extrak">
-          {v.extrak.map((e, i) => (
-            <div className="szerk-extra" key={e.id} data-extra={e.id}>
-              <span className="szerk-extra-sorszam" aria-hidden="true">{i + 1}.</span>
-              {extraEn ? (
-                <>
-                  <input className="beviteli" lang="en" value={e.name_en} placeholder={e.name}
-                         aria-label={`${e.name} angolul`} data-hianyzik={!e.name_en.trim() || undefined}
-                         onChange={(x) => extraValt(e.id, 'name_en', x.target.value)} />
-                  <input className="beviteli szerk-extra-leiras" lang="en" value={e.description_en}
-                         placeholder={e.description || 'Rövid leírás angolul (nem kötelező)'}
-                         aria-label={`${e.name} leírása angolul`}
-                         onChange={(x) => extraValt(e.id, 'description_en', x.target.value)} />
-                </>
-              ) : (
-                <>
-                  <input className="beviteli" value={e.name} aria-label="Extra neve" data-ures={!e.name.trim() || undefined}
-                         onChange={(x) => extraValt(e.id, 'name', x.target.value)} />
-                  <input className="beviteli szerk-extra-leiras" value={e.description} placeholder="Rövid leírás (nem kötelező)"
-                         aria-label={`${e.name} leírása`}
-                         onChange={(x) => extraValt(e.id, 'description', x.target.value)} />
-                </>
-              )}
-              <span className="szerk-sor-gombok">
-                <button type="button" className="btn btn-kicsi" aria-label={`${e.name || 'Extra'}: feljebb`}
-                        disabled={i === 0} onClick={() => extraMozgat(e.id, -1)}>Fel</button>
-                <button type="button" className="btn btn-kicsi" aria-label={`${e.name || 'Extra'}: lejjebb`}
-                        disabled={i === v.extrak.length - 1} onClick={() => extraMozgat(e.id, 1)}>Le</button>
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="halk szerk-tipp szerk-extrak-tipp">
-          A foglalás 4. lépésében ebben a sorrendben látszanak. Az árat, az időt és azt, hogy melyik csomagban van benne,
-          a Szolgáltatások menüben állíthatod.{extraEn ? ' Ha az angol név üres, a magyar jelenik meg.' : ''}
-        </p>
       </div>
 
       <div className="szerk-lab" data-valtozott={valtozott || undefined}>

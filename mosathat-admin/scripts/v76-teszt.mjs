@@ -11,7 +11,7 @@ const ok = (mit, v, k) => {
   if (!jo) baj++
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
-const sima = (s) => s.replace(/\s+/g, ' ').trim()
+const sima = (s) => s.replace(new RegExp('\u2063[\uFE00-\uFE0F]{3}|\u2064', 'g'), '').replace(/\s+/g, ' ').trim()
 const szovegek = async (l) => (await l.evaluateAll((e) => e.map((x) => x.textContent))).map(sima)
 
 const ctx = await b.newContext({ viewport: { width: 1600, height: 1000 } })
@@ -29,7 +29,7 @@ const ful = (nev) => p.locator('.oldal-fej .fulek button').filter({ hasText: nev
 const mentes = p.getByRole('button', { name: 'Mentés', exact: true })
 
 await menu('Szolgáltatások'); await p.waitForTimeout(1200)
-await ful('Csomagok szerkesztése'); await p.waitForTimeout(1500)
+await ful('Csomagok tartalma'); await p.waitForTimeout(1500)
 const t = p.locator('.szerk-tabla')
 const cella = (sor, i) => t.locator(`tbody tr[data-sor="${sor}"]`).locator('td').nth(i)
 
@@ -63,8 +63,9 @@ await menu('Szolgáltatások'); await p.waitForTimeout(1200)
 await ful('Mi van bennük?'); await p.waitForTimeout(800)
 ok('Mi van bennük?: Gold oszlop', ['Munkalépés', 'Start', 'Premium', 'Elit', 'Gold'], await szovegek(p.locator('.tartalom-tabla thead th')))
 await ful('Csomagok és árak'); await p.waitForTimeout(800)
-const gold = p.locator('.panel').filter({ has: p.locator('h3.csomag-cim', { hasText: /^Gold/ }) })
-ok('Csomagok és árak: Gold panel, az automatikus leírással', true, /Elit \+ .*Kerámia gyorsbevonat/.test(sima(await gold.locator('h3').innerText())))
+const gold = p.locator('details.szolg-szakasz').filter({ has: p.locator('.szolg-szakasz-cim', { hasText: /^Gold$/ }) })
+ok('Csomagok és árak: Gold szakasz, az automatikus leírással', true, /Elit \+ .*Kerámia gyorsbevonat/.test(sima(await gold.locator('summary').textContent())))
+await gold.locator('summary').click()
 const arMezo = gold.getByLabel('Gold · Sedan · Teljes ára')
 ok('az ára még üres', '', await arMezo.inputValue())
 await arMezo.fill('24900'); await arMezo.blur(); await p.waitForTimeout(1200)
@@ -72,7 +73,7 @@ const idoMezo = gold.getByLabel('Gold · Sedan · Teljes időtartama')
 if (await idoMezo.count()) { await idoMezo.fill('150'); await idoMezo.blur(); await p.waitForTimeout(1200) }
 
 await menu('Tartalom'); await p.waitForTimeout(2500)
-const fogl = p.locator('.pub-sav[data-sav="fogl-2"] .fogl-csomagok')
+const fogl = p.locator('.tsz-blokk[data-sav="fogl-2"] .fogl-csomagok')
 ok('a foglalás csomaglépése (Tartalom előnézet): négy csomag', 4, await fogl.locator('.fogl-csomag').count())
 ok('a Gold a beállított árral', true, /Gold.*24 900 Ft-tól/.test(sima(await fogl.innerText())))
 if (KEPEK) await p.screenshot({ path: join(KEPEK, 'v76-foglalas.png') })
@@ -87,7 +88,7 @@ ok('Arculat: négy oszlop a táblázatban', 4, await p.locator('.kv-tabla thead 
 
 console.log('\n=== 3) Oszlop törlése ===\n')
 await menu('Szolgáltatások'); await p.waitForTimeout(1200)
-await ful('Csomagok szerkesztése'); await p.waitForTimeout(1500)
+await ful('Csomagok tartalma'); await p.waitForTimeout(1500)
 await p.locator('.szerk-csomag').nth(3).getByRole('button', { name: 'Törlés' }).click()
 ok('a vázlatból eltűnt', 4, await t.locator('thead th').count())
 await mentes.click(); await p.waitForTimeout(2500)
@@ -95,7 +96,7 @@ ok('mentéskor törölve', true, /1 csomag törölve/.test(sima(await p.locator(
 ok('a régi csomagoknál „Kivezetés” áll (van foglalásuk)', ['Kivezetés', 'Kivezetés', 'Kivezetés'],
   await szovegek(p.locator('.szerk-csomag .btn-veszelyes')))
 await menu('Tartalom'); await p.waitForTimeout(2500)
-ok('a foglalásból is eltűnt', 3, await p.locator('.pub-sav[data-sav="fogl-2"] .fogl-csomagok .fogl-csomag').count())
+ok('a foglalásból is eltűnt', 3, await p.locator('.tsz-blokk[data-sav="fogl-2"] .fogl-csomagok .fogl-csomag').count())
 ok('nincs JS hiba', [], hibak)
 
 await b.close()

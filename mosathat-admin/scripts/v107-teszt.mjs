@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
+import { lapra, varTartalom } from './_tszerk.mjs'
 
 const KEPEK = process.env.KEPEK ?? null
 if (KEPEK) await mkdir(KEPEK, { recursive: true })
@@ -129,21 +130,22 @@ ok('törölve', 0, (await sql(`select count(*)::int n from gyik where kerdes lik
 console.log('\n=== 5) Tartalom: a GYIK feliratai előnézettel, a mentett kérdésekkel ===\n')
 await sql(`update gyik set valasz = valasz || '<p>rossz<img src="x" onerror="alert(1)"><a href="javascript:alert(1)">katt</a></p>' where kerdes = 'Mostok motorteret is?'`)
 await a.locator('aside.oldalsav button').filter({ hasText: 'Tartalom' }).first().click()
-await a.waitForTimeout(2000)
-for (const [id, mit] of [['gyik', '.kv-gyik'], ['gyik-oldal', '.kv-gyik-oldal']]) {
-  const s = a.locator(`.pub-sav[data-sav="${id}"]`)
-  await s.scrollIntoViewIfNeeded()
-  await a.waitForTimeout(500)
-  ok(`${id}: előnézet`, 1, await s.locator(mit).count())
-  await kep(s, `08-tartalom-${id}`)
-}
-const elo = a.locator('.pub-sav[data-sav="gyik"]')
+await varTartalom(a)
+const elo = a.locator('.tsz-blokk[data-sav="gyik"]')
+await elo.scrollIntoViewIfNeeded()
+await a.waitForTimeout(500)
+ok('gyik: előnézet a Főoldalon', 1, await elo.locator('.kv-gyik').count())
+await kep(elo, '08-tartalom-gyik')
 ok('a főoldali előnézetben legfeljebb 3, az első a csillagos új kérdés', [3, 'Mostok motorteret is?'],
   [await elo.locator('.kv-gyik-elem').count(), (await elo.locator('.kv-gyik-kerdes').first().innerText()).trim()])
 const vh = await elo.locator('.kv-gyik-valasz').first().innerHTML()
 ok('a válaszban a formázás, a link új lapon, a kép lusta betöltéssel', [true, true, true],
   [/<strong>extraként<\/strong>/.test(vh), /<a[^>]*href="https:\/\/mosathat\.hu\/publikus"[^>]*target="_blank"/.test(vh), /<img[^>]+loading="lazy"/.test(vh)])
 ok('a veszélyes részek kiszűrve', [false, false, true], [/onerror/.test(vh), /javascript:/.test(vh), vh.includes('katt')])
+await lapra(a, 'GYIK oldal')
+const eloOldal = a.locator('.tsz-blokk[data-sav="gyik-oldal"]')
+ok('gyik-oldal: előnézet a GYIK oldalon', 1, await eloOldal.locator('.kv-gyik-oldal').count())
+await kep(eloOldal, '08-tartalom-gyik-oldal')
 
 console.log('\n=== 6) Publikus főoldal: a lábléc fölött, kiválasztott kérdések ===\n')
 const p = await lap(1440, 900)

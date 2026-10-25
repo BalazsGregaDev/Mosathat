@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
+import { beir, bezar, blokk, ertek, kartya, kartyaMezo, kulcsok, nyit, rejtettKulcsok, varTartalom } from './_tszerk.mjs'
 
 const KEPEK = process.env.KEPEK ?? null
 if (KEPEK) await mkdir(KEPEK, { recursive: true })
@@ -12,7 +13,7 @@ const ok = (mit, v, k) => {
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
 const CIM = 'http://localhost:5180'
-const sima = (s) => (s ?? '').replace(/\s+/g, ' ').trim()
+const sima = (s) => (s ?? '').replace(new RegExp('\u2063[\uFE00-\uFE0F]{3}|\u2064', 'g'), '').replace(/\s+/g, ' ').trim()
 const kep = async (p, nev, opts = {}) => { if (KEPEK) await p.screenshot({ path: join(KEPEK, nev), ...opts }) }
 
 async function publikus(viewport) {
@@ -134,46 +135,45 @@ await q.setViewportSize({ width: 1400, height: 1000 })
 
 console.log('\n=== 4) Tartalom: magyarázat a kapcsos zárójeles adatok alatt ===\n')
 await q.locator('aside.oldalsav .menu button').filter({ hasText: /^Tartalom$/ }).click()
-await q.locator('.pub-szoveg').first().waitFor({ timeout: 20000 })
-const magy = (k) => q.locator(`.pub-szoveg[data-kulcs="${k}"] .pub-valtozo-magyarazat li`).allTextContents().then((l) => l.map(sima))
-ok('a menü Hol vagyunk pontja kikerült, a szövegek megvannak', [true, 0], [(await q.locator('.pub-szoveg').count()) > 100, await q.locator('.pub-szoveg[data-kulcs="menu.hely"]').count()])
-ok('a menü-előnézetben is ugyanaz az öt pont', ['Rólunk', 'Galéria', 'Csomagok', 'Foglalás', 'Kapcsolat'], (await q.locator('.pub-sav[data-sav="menu"] .kv-nav nav a').allTextContents()).map(sima))
+await varTartalom(q)
+const magy = async (k) => { await nyit(q, k); return (await q.locator('.tsz-kartya .pub-valtozo-magyarazat li').allTextContents()).map(sima) }
+ok('a menü Hol vagyunk pontja kikerült, a szövegek megvannak', [true, false],
+  [(await kulcsok(q)).length + (await rejtettKulcsok(q)).length > 100, [...await kulcsok(q), ...await rejtettKulcsok(q)].includes('menu.hely')])
+ok('a menü-előnézetben is ugyanaz az öt pont', ['Rólunk', 'Galéria', 'Csomagok', 'Foglalás', 'Kapcsolat'], (await blokk(q, 'menu').locator('.kv-nav nav a').allTextContents()).map(sima))
 const elvitel = await magy('foglalas.siker_elvitel')
 ok('Köszönő üzenet: elvitel  →  {mikor} = …', [1, true], [elvitel.length, /^\{mikor\} = az elvitel napja és időablaka, például: .+, 8:00 és 17:00 között$/.test(elvitel[0])])
+await kep(q, '06-magyarazat-elvitel.png')
 ok('közös adat a mostani értékével', ['{kerulet} = kerület, most: Budapest XIII.'], await magy('hero.felcim'))
 ok('több adat egy mezőben, a szöveg sorrendjében', ['{nyitas} = nyitás, most: 9:00', '{zaras} = zárás, most: 17:00', '{leadas} = legkorábbi leadás, most: 7:15', '{bejarat} = bejárat, most: Dagály utca felől'],
   await magy('hero.mellek'))
-ok('kapcsos zárójel nélküli mezőnél nincs magyarázat', 0, await q.locator('.pub-szoveg[data-kulcs="csomagok.cim"] .pub-valtozo-magyarazat').count())
-const fs = q.locator('.pub-szoveg[data-kulcs="foglalas.fs_csomaggal"] input')
-await fs.fill('a csomag mellé')
+await nyit(q, 'csomagok.cim')
+ok('kapcsos zárójel nélküli mezőnél nincs magyarázat', 0, await q.locator('.tsz-kartya .pub-valtozo-magyarazat').count())
+await beir(q, 'foglalas.fs_csomaggal', 'a csomag mellé')
 ok('ha kiveszed, jelzi, hogy használható', ['Használható: {csomag} = a kiválasztott csomag neve, például: Premium'], await magy('foglalas.fs_csomaggal'))
-await fs.fill('{csomag} és {ar} együtt')
+await kartyaMezo(q).fill('{csomag} és {ar} együtt')
+await q.waitForTimeout(300)
 const ism = await magy('foglalas.fs_csomaggal')
 ok('ismeretlen adatnál figyelmeztet', ['{csomag} = a kiválasztott csomag neve, például: Premium', '{ar} = nincs ilyen adat, a publikus oldalon kapcsos zárójellel együtt, változatlanul jelenne meg.'], ism)
-await q.locator('.pub-szoveg[data-kulcs="foglalas.siker_elvitel"]').scrollIntoViewIfNeeded()
-await q.waitForTimeout(300)
-await kep(q, '06-magyarazat-elvitel.png')
-await q.locator('.pub-szoveg[data-kulcs="foglalas.fs_csomaggal"]').scrollIntoViewIfNeeded()
-await q.waitForTimeout(300)
 await kep(q, '07-magyarazat-ismeretlen.png')
+await bezar(q)
 
 console.log('\n=== 5) A magyarázatban a közös adat is kattintható ===\n')
-const erkezes = q.locator('.pub-szoveg[data-kulcs="foglalas.erkezes"]')
-await erkezes.scrollIntoViewIfNeeded()
+await nyit(q, 'foglalas.erkezes')
+const erkezes = kartya(q)
 ok('{telefon} gomb a 6–7. lépés tájékoztatójánál', '{telefon}', sima(await erkezes.locator('[data-valtozo-link="telefon"]').textContent()))
 await erkezes.locator('[data-valtozo-link="telefon"]').click()
 await q.waitForFunction(() => document.activeElement?.dataset?.mezo === 'telefon', null, { timeout: 10000 })
 ok('az Elérhetőség Telefonszám mezője fókuszban', 'page', await q.locator('aside.oldalsav .menu button').filter({ hasText: /^Elérhetőség$/ }).getAttribute('aria-current'))
 await q.locator('.ugras-vissza:visible').click()
-await q.locator('.pub-szoveg').first().waitFor({ timeout: 20000 })
-await q.waitForTimeout(1300)
+await varTartalom(q)
+await q.waitForTimeout(1000)
 const vissza = await q.evaluate(() => {
-  const e = document.querySelector('.pub-szoveg[data-kulcs="foglalas.erkezes"]').getBoundingClientRect()
-  return { lathato: e.top >= 0 && e.bottom <= innerHeight, fokusz: document.activeElement?.dataset?.valtozoLink ?? null }
+  const e = document.querySelector('.tsz-kartya').getBoundingClientRect()
+  return { kulcs: document.querySelector('.tsz-kartya').dataset.kulcs, lathato: e.top >= 0 && e.bottom <= innerHeight, fokusz: document.activeElement?.dataset?.valtozoLink ?? null }
 })
-ok('vissza: ugyanannál a mezőnél, a {telefon} gombon a fókusz', { lathato: true, fokusz: 'telefon' }, vissza)
-ok('a nem mentett módosítás megmaradt', '{csomag} és {ar} együtt', await q.locator('.pub-szoveg[data-kulcs="foglalas.fs_csomaggal"] input').inputValue())
+ok('vissza: ugyanannál a szövegnél nyitva a szerkesztő, a {telefon} gombon a fókusz', { kulcs: 'foglalas.erkezes', lathato: true, fokusz: 'telefon' }, vissza)
 await kep(q, '08-vissza-a-mezohoz.png')
+ok('a nem mentett módosítás megmaradt', '{csomag} és {ar} együtt', await ertek(q, 'foglalas.fs_csomaggal'))
 ok('nincs futásidejű hiba', [], hibak)
 await ctx.close()
 

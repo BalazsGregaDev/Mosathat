@@ -1112,5 +1112,5 @@ export interface SzerkesztoExtra {
 export interface CsomagSzerkesztoAdat {
   csomagok: SzerkesztoCsomag[]
   sorok: SzerkesztoSor[]
-  extrak: SzerkesztoExtra[]
+  extrak?: SzerkesztoExtra[]
 }

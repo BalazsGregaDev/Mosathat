@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
+import { beir, bezar, blokk, ertek, nyit, varTartalom } from './_tszerk.mjs'
 import { adatbazis, TULAJ } from './_db.mjs'
 
 const KEPEK = process.env.KEPEK ?? null
@@ -14,7 +15,7 @@ const ok = (mit, v, k) => {
 }
 const DEMO = 'http://localhost:5180'
 const SB = 'http://localhost:5181'
-const sima = (s) => (s ?? '').replace(/\s+/g, ' ').trim()
+const sima = (s) => (s ?? '').replace(new RegExp('\u2063[\uFE00-\uFE0F]{3}|\u2064', 'g'), '').replace(/\s+/g, ' ').trim()
 const kep = async (p, nev, opts = {}) => { if (KEPEK) { await p.waitForTimeout(250); await p.screenshot({ path: join(KEPEK, nev), ...opts }) } }
 const kepElem = async (l, nev) => { if (KEPEK) { await l.page().waitForTimeout(250); await l.screenshot({ path: join(KEPEK, nev) }) } }
 
@@ -183,7 +184,7 @@ console.log('\n=== 5) Telefonon ===\n')
   await ctx.close()
 }
 
-console.log('\n=== 6) Admin, Tartalom: minden sáv címe mellett csúszka ===\n')
+console.log('\n=== 6) Admin, Tartalom: HU-EN csúszka az előnézet fölött ===\n')
 const ad = await b.newContext({ viewport: { width: 1500, height: 1000 } })
 const q = await ad.newPage()
 const adHibak = []
@@ -195,44 +196,39 @@ await q.getByRole('button', { name: /Belépés/ }).click()
 const menu = (n) => q.locator('aside.oldalsav .menu button').filter({ hasText: new RegExp(`^${n}$`) })
 await menu('Tartalom').waitFor({ timeout: 30000 })
 await menu('Tartalom').click()
-await q.locator('.pub-szoveg').first().waitFor({ timeout: 20000 })
+await varTartalom(q)
 {
-  const savSzam = await q.locator('.pub-sav').count()
-  ok('minden sáv fejlécében HU-EN csúszka', [true, savSzam], [savSzam > 0, await q.locator('.pub-sav > h3 .nyelv-kapcsolo').count()])
-  const hero = q.locator('.pub-sav[data-sav="hero"]')
-  await hero.locator('.nyelv-kapcsolo').click()
-  await q.waitForTimeout(800)
-  ok('a hero sáv angolra vált: mezők, előnézet', ['en', 'Hand car detailing — {kerulet}', 'Your car isn’t just a thing. It’s with you for years.', 6],
-    [await hero.getAttribute('data-nyelv'), await hero.locator('.pub-szoveg[data-kulcs="hero.felcim"] input').inputValue(),
-     sima(await hero.locator('.kv-hero h1').innerText()), await hero.locator('.pub-szoveg[data-nyelv="en"]').count()])
-  ok('a többi sáv magyar marad', ['hu', 'Csomagok'], [await q.locator('.pub-sav[data-sav="csomagok"]').getAttribute('data-nyelv'),
-    await q.locator('.pub-sav[data-sav="csomagok"] .pub-szoveg[data-kulcs="csomagok.cim"] input').inputValue()])
+  const kapcs = q.locator('.tsz-eszkozok .nyelv-kapcsolo')
+  ok('egy HU-EN csúszka az előnézet fölött, az egész oldalra', 1, await kapcs.count())
+  await kapcs.click()
+  await q.waitForTimeout(1200)
+  const hero = blokk(q, 'hero')
+  ok('angolra vált: szöveg, előnézet, EN jelölés a szerkesztőben', ['Hand car detailing — {kerulet}', 'Your car isn’t just a thing. It’s with you for years.', 1],
+    [await ertek(q, 'hero.felcim'), sima(await hero.locator('.kv-hero h1').innerText()), await q.locator('.tsz-kartya .pub-nyelv-jel').count()])
   ok('a változó magyarázata angol értékkel', ['{kerulet} = kerület, most: Budapest, District XIII'],
-    (await hero.locator('.pub-szoveg[data-kulcs="hero.felcim"] .pub-valtozo-magyarazat li').allTextContents()).map(sima))
-  await hero.locator('.pub-szoveg[data-kulcs="hero.cim"] textarea').fill('Cars deserve care.\n*Every* time.')
-  await q.waitForTimeout(600)
-  ok('az angol előnézet azonnal frissül, a magyar mező változatlan', ['Cars deserve care. Every time.', true],
-    [sima(await hero.locator('.kv-hero h1').innerText()), await q.evaluate(() => true)])
-  await hero.locator('.nyelv-kapcsolo').click()
-  await q.waitForTimeout(500)
+    (await q.locator('.tsz-kartya .pub-valtozo-magyarazat li').allTextContents()).map(sima))
+  ok('a többi blokk is angol', 'Packages', sima(await blokk(q, 'csomagok').locator('h2').first().innerText()))
+  await beir(q, 'hero.cim', 'Cars deserve care.\n*Every* time.')
+  await bezar(q)
+  ok('az angol előnézet azonnal frissül', 'Cars deserve care. Every time.', sima(await hero.locator('.kv-hero h1').innerText()))
+  await kapcs.click()
+  await q.waitForTimeout(800)
   ok('visszaváltva a magyar szöveg ott van, az angol módosítás megmaradt', ['Az autó nem tárgy.\n*Évekig* veled van.', 'Nem mentett változás'],
-    [await hero.locator('.pub-szoveg[data-kulcs="hero.cim"] textarea').inputValue(), sima(await q.locator('.pub-valtozott').textContent())])
-  await hero.locator('.nyelv-kapcsolo').click()
-  await q.waitForTimeout(500)
-  await hero.locator('h3').evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
+    [await ertek(q, 'hero.cim'), sima(await q.locator('.pub-valtozott').textContent())])
+  await bezar(q)
+  await kapcs.click()
+  await q.waitForTimeout(800)
+  await hero.evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
   await q.waitForTimeout(300)
   await kep(q, '07-admin-tartalom-hero-en.png')
-  const f6 = q.locator('.pub-sav[data-sav="fogl-6"]')
-  await f6.locator('.nyelv-kapcsolo').click()
-  await q.waitForTimeout(1500)
+  const f6 = blokk(q, 'fogl-6')
+  await q.waitForTimeout(800)
   ok('a naptár-előnézet is angolul', true, (await f6.locator('.fogl-napfej').allTextContents()).join(' ') === 'Mon Tue Wed Thu Fri Sat')
-  await f6.locator('h3').evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
+  await f6.evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
   await q.waitForTimeout(300)
   await kep(q, '08-admin-tartalom-naptar-en.png')
-  const hely = q.locator('.pub-sav[data-sav="hely"]')
-  await hely.locator('.nyelv-kapcsolo').click()
-  await q.waitForTimeout(500)
-  await hely.locator('.pub-szoveg[data-kulcs="hely.bevezeto"] [data-valtozo-link="bejarat"]').click()
+  await nyit(q, 'hely.bevezeto')
+  await q.locator('.tsz-kartya [data-valtozo-link="bejarat"]').click()
   await q.waitForFunction(() => document.activeElement?.dataset?.mezo === 'bejarat_en', null, { timeout: 10000 })
   ok('angol {bejarat} az Elérhetőség angol mezőjére visz', ['en', 'bejarat_en', 'from Dagály utca'],
     [await q.locator('.pub-oldal .panel[data-nyelv]').getAttribute('data-nyelv'), await q.evaluate(() => document.activeElement.dataset.mezo),
@@ -242,9 +238,9 @@ await q.locator('.pub-szoveg').first().waitFor({ timeout: 20000 })
 
 console.log('\n=== 7) Admin, Csomagok: táblázat, csomagnevek, extrák angolul ===\n')
 {
-  await menu('Csomagok').click()
+  await menu('Csomagok tartalma').click()
   await q.locator('.szerk-tabla').waitFor({ timeout: 20000 })
-  ok('három szekció, mindhárom fejlécében csúszka', 3, await q.locator('.csomag-szerk .panel > h3 .nyelv-kapcsolo').count())
+  ok('két szekció, mindkettő fejlécében csúszka', 2, await q.locator('.csomag-szerk .panel > h3 .nyelv-kapcsolo').count())
   const tabla = q.locator('.csomag-szerk .panel').first()
   await tabla.locator('h3 .nyelv-kapcsolo').click()
   await q.waitForTimeout(400)
@@ -260,11 +256,7 @@ console.log('\n=== 7) Admin, Csomagok: táblázat, csomagnevek, extrák angolul 
   ok('csomagnevek angolul, automatikus angol leírással', ['Elite', true],
     [await nevek.locator('.szerk-csomag').nth(2).locator('input').inputValue(),
      (await nevek.locator('.szerk-csomag').nth(2).locator('textarea').getAttribute('placeholder')).startsWith('Üresen hagyva: Everything in Premium, plus:')])
-  const extrak = q.locator('.csomag-szerk .panel').nth(2)
-  ok('extrák magyarul', ['Felni és gumi mélytisztítás és ápolás', 14], [await extrak.locator('.szerk-extra input').first().inputValue(), await extrak.locator('.szerk-extra').count()])
-  await extrak.locator('h3 .nyelv-kapcsolo').click()
-  await q.waitForTimeout(300)
-  ok('extrák angolul', 'Wheel and tyre deep clean and dressing', await extrak.locator('.szerk-extra input').first().inputValue())
+  ok('az extrák itt már nincsenek, a Szolgáltatások menüben vannak', 0, await q.locator('.szerk-extra').count())
   await nevek.locator('h3').evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
   await q.waitForTimeout(300)
   await kep(q, '11-admin-csomagnevek-extrak-en.png')
@@ -329,10 +321,11 @@ console.log('\n=== 8) Mentés és megjelenés a publikus oldalon (adatbázissal)
   }
 
   await m2('Tartalom').click()
-  await p.locator('.pub-szoveg').first().waitFor({ timeout: 20000 })
-  const hero = p.locator('.pub-sav[data-sav="hero"]')
-  await hero.locator('.nyelv-kapcsolo').click()
-  await hero.locator('.pub-szoveg[data-kulcs="hero.cim"] textarea').fill('Cars deserve care.\n*Every* time.')
+  await varTartalom(p)
+  await p.locator('.tsz-eszkozok .nyelv-kapcsolo').click()
+  await p.waitForTimeout(800)
+  await beir(p, 'hero.cim', 'Cars deserve care.\n*Every* time.')
+  await bezar(p)
   ok('Tartalom: angol nagy cím mentve', 'Mentve, a publikus oldalon már látszik', await ment())
   ok('az adatbázisban külön angol sorként, a magyar érintetlen', [['hero.cim', 'en', 'Cars deserve care.\n*Every* time.']],
     (await db.query(`select kulcs, nyelv, ertek from publikus_szovegek order by nyelv`)).rows.map((r) => [r.kulcs, r.nyelv, r.ertek]))
@@ -356,18 +349,16 @@ console.log('\n=== 8) Mentés és megjelenés a publikus oldalon (adatbázissal)
   ok('Cégadatok: angol kamera adatok mentve', 'Mentve, a publikus oldalon már látszik', await ment())
   await kepElem(p.locator('.pub-kamerak'), '12-admin-kamera-en.png')
 
-  await m2('Csomagok').click()
+  await m2('Csomagok tartalma').click()
   await p.locator('.szerk-tabla').waitFor({ timeout: 20000 })
   const panelek = p.locator('.csomag-szerk .panel')
   await panelek.nth(0).locator('h3 .nyelv-kapcsolo').click()
   await p.locator('.szerk-tabla tbody tr[data-sor="Bogároldó"] th input').fill('Bug and tar removal')
   await panelek.nth(1).locator('h3 .nyelv-kapcsolo').click()
   await panelek.nth(1).locator('.szerk-csomag').nth(2).locator('input').fill('Elite Plus')
-  await panelek.nth(2).locator('h3 .nyelv-kapcsolo').click()
-  await panelek.nth(2).locator('.szerk-extra').first().locator('input').first().fill('Wheel and tyre detailing')
   await p.locator('.szerk-lab .btn-fo').click()
   await p.waitForFunction(() => /^Mentve\./.test(document.querySelector('.szerk-allapot')?.textContent ?? ''), null, { timeout: 15000 })
-  ok('Csomagok: angol nevek mentve', [['Elit', 'Elite Plus'], ['Bogároldó', 'Bug and tar removal'], ['Felni és gumi mélytisztítás és ápolás', 'Wheel and tyre detailing']], [
+  ok('Csomagok: angol nevek mentve, az extrák angol neve érintetlen', [['Elit', 'Elite Plus'], ['Bogároldó', 'Bug and tar removal'], ['Felni és gumi mélytisztítás és ápolás', 'Wheel and tyre deep clean and dressing']], [
     Object.values((await db.query(`select name, name_en from packages where code = 'ELIT'`)).rows[0]),
     Object.values((await db.query(`select name, name_en from package_slots where name = 'Bogároldó'`)).rows[0]),
     Object.values((await db.query(`select name, name_en from extras order by sort_order limit 1`)).rows[0]),
@@ -386,9 +377,9 @@ console.log('\n=== 8) Mentés és megjelenés a publikus oldalon (adatbázissal)
   ])
   await pub.p.locator('.kv-foglalas-elo .fogl-csomag').nth(2).click()
   await pub.p.waitForTimeout(400)
-  ok('foglalásban is: Elite Plus és az új extra név', ['Elite Plus', true], [
+  ok('foglalásban is: Elite Plus és az extra angol neve', ['Elite Plus', true], [
     sima(await pub.p.locator('.fogl-csomag').nth(2).locator('.nev').textContent()),
-    (await pub.p.locator('.fogl-extra .nev').allInnerTexts()).some((x) => x.startsWith('Wheel and tyre detailing')),
+    (await pub.p.locator('.fogl-extra .nev').allInnerTexts()).some((x) => x.startsWith('Wheel and tyre deep clean')),
   ])
   await kapcsolo(pub.p).click()
   await pub.p.waitForTimeout(500)

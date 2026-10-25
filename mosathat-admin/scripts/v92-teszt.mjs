@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
+import { beir, bezar, blokk, kulcsok, rejtettKulcsok, varTartalom } from './_tszerk.mjs'
 
 const KEPEK = process.env.KEPEK ?? null
 if (KEPEK) await mkdir(KEPEK, { recursive: true })
@@ -12,7 +13,7 @@ const ok = (mit, v, k) => {
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
 const DEMO = 'http://localhost:5180'
-const sima = (s) => (s ?? '').replace(/\s+/g, ' ').trim()
+const sima = (s) => (s ?? '').replace(new RegExp('\u2063[\uFE00-\uFE0F]{3}|\u2064', 'g'), '').replace(/\s+/g, ' ').trim()
 const kep = async (p, nev, opts = {}) => { if (KEPEK) { await p.waitForTimeout(300); await p.screenshot({ path: join(KEPEK, nev), ...opts }) } }
 const ASZTALI = { viewport: { width: 1440, height: 900 } }
 const TELEFON = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
@@ -320,16 +321,16 @@ console.log('\n=== 6) Admin: Galéria sáv ===\n')
   const menu = p.locator('aside.oldalsav .menu button').filter({ hasText: /^Tartalom$/ })
   await menu.waitFor({ timeout: 30000 })
   await menu.click()
-  const gal = p.locator('.pub-sav[data-sav="galeria"]')
-  await gal.waitFor({ timeout: 20000 })
-  ok('Galéria sáv: 8 mező, köztük a gomb felirata és a két érintős gomb neve',
-    ['galeria.cim', 'galeria.bevezeto', 'galeria.foglalas', 'galeria.meret', 'galeria.reset', 'galeria.szivacs', 'galeria.vege', 'galeria.kep_alt'],
-    await gal.locator('.pub-szoveg').evaluateAll((l) => l.map((e) => e.dataset.kulcs)))
-  await gal.locator('.pub-szoveg[data-kulcs="galeria.foglalas"] input').fill('Foglalj most')
-  await p.waitForTimeout(400)
+  await varTartalom(p)
+  const gal = blokk(p, 'galeria')
+  ok('Galéria: 8 szöveg, köztük a gomb felirata és a két érintős gomb neve (a nem láthatók a listában)',
+    ['galeria.bevezeto', 'galeria.cim', 'galeria.foglalas', 'galeria.kep_alt', 'galeria.meret', 'galeria.reset', 'galeria.szivacs', 'galeria.vege'],
+    [...new Set([...await kulcsok(p, 'galeria'), ...await rejtettKulcsok(p)])].filter((k) => k.startsWith('galeria.')).sort())
+  await beir(p, 'galeria.foglalas', 'Foglalj most')
+  await bezar(p)
   ok('az előnézetben azonnal frissül a gomb, és látszik az ötödik kép is', ['Foglalj most', true],
     [sima(await gal.locator('.kv-galeria .kv-gomb-lakk').textContent()), await gal.locator('.kv-galeria-bal').evaluate((e) => getComputedStyle(e).display !== 'none')])
-  await gal.locator('h3').evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
+  await gal.evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
   await kep(p, '09-admin-galeria.png')
   ok('nincs futásidejű hiba', [], hibak)
   await ctx.close()

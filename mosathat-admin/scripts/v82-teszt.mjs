@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
 import { adatbazis, ALK, TULAJ } from './_db.mjs'
+import { beir, bezar, blokk, ertek, kartya, nyit, kulcsok, lapra, rejtettKulcsok, tiszta, varTartalom } from './_tszerk.mjs'
 
 const CIM = process.env.CIM ?? 'http://localhost:5181'
 const KEPEK = process.env.KEPEK ?? null
@@ -12,7 +13,7 @@ const ok = (mit, v, k) => {
   if (!jo) baj++
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
-const sima = (s) => (s ?? '').replace(/\s+/g, ' ').trim()
+const sima = (s) => (s ?? '').replace(new RegExp('\u2063[\uFE00-\uFE0F]{3}|\u2064', 'g'), '').replace(/\s+/g, ' ').trim()
 
 const db = await adatbazis({ demo: true })
 const TABLAK = ['packages', 'package_pricing', 'full_service_pricing', 'extras', 'surcharges', 'v_package_matrix', 'v_package_extra']
@@ -85,44 +86,49 @@ const ment = async (p) => {
   await p.locator('.pub-mentve, .pub-hiba').first().waitFor({ timeout: 10000 })
   return sima(await p.locator('.pub-mentve, .pub-hiba').first().textContent())
 }
-const szoveg = (p, kulcs) => p.locator(`.pub-szoveg[data-kulcs="${kulcs}"]`)
 
 console.log('=== 1) Menü: Publikus csoport tulajdonosnak ===\n')
 const a = await kornyezet()
 const p = a.p
 await belep(p)
-const menu = await p.locator('aside.oldalsav .menu').evaluate((m) => [...m.children].map((e) =>
+const menu = await p.locator('aside.oldalsav .menu').evaluate((m) => [...m.children].filter((e) => !e.classList.contains('almenu')).map((e) =>
   e.classList.contains('menu-cim') ? `# ${e.textContent.trim()}` : e.textContent.trim()))
 const pubIdx = menu.indexOf('# Publikus')
 ok('a Publikus címke alatt: Elérhetőség, Tartalom, Csomagok, Vélemények, GYIK, Cégadatok, Jogi szövegek, Arculat',
-  ['Elérhetőség', 'Tartalom', 'Csomagok', 'Vélemények', 'GYIK', 'Cégadatok', 'Jogi szövegek', 'Arculat'], menu.slice(pubIdx + 1, pubIdx + 9))
+  ['Elérhetőség', 'Tartalom', 'Csomagok tartalma', 'Vélemények', 'GYIK', 'Cégadatok', 'Jogi szövegek', 'Arculat'], menu.slice(pubIdx + 1, pubIdx + 9))
 ok('az Arculat már nem a fő menüben van, a Később alatt nincs Tartalom', [false, ['Készlet', 'Galéria']],
   [menu.slice(0, pubIdx).includes('Arculat'), menu.slice(menu.indexOf('# Később') + 1)])
 if (KEPEK) await p.locator('aside.oldalsav').screenshot({ path: join(KEPEK, 'v82-menu.png') })
 
-console.log('\n=== 2) Szolgáltatások: a Csomagok szerkesztése gomb átvisz ===\n')
+console.log('\n=== 2) Szolgáltatások: a Csomagok tartalma gomb átvisz ===\n')
 await menuPont(p, 'Szolgáltatások').click()
-await p.getByRole('button', { name: 'Csomagok szerkesztése' }).click()
+await p.locator('.oldal-fej .fulek button').filter({ hasText: 'Csomagok tartalma' }).click()
 await p.locator('.csomag-szerk').waitFor({ timeout: 15000 })
-ok('a Publikus › Csomagok menüpont nyílik meg, benne a szerkesztővel', ['page', 'Csomagok', 1],
-  [await menuPont(p, 'Csomagok').getAttribute('aria-current'), sima(await p.locator('.pub-fej h2').textContent()),
+ok('a Publikus › Csomagok tartalma menüpont nyílik meg, benne a szerkesztővel', ['page', 'Csomagok tartalma', 1],
+  [await menuPont(p, 'Csomagok tartalma').getAttribute('aria-current'), sima(await p.locator('.pub-fej h2').textContent()),
    await p.locator('.szerk-tabla').count()])
 if (KEPEK) await p.screenshot({ path: join(KEPEK, 'v82-csomagok.png') })
 
 console.log('\n=== 3) Tartalom ===\n')
 await menuPont(p, 'Tartalom').click()
-await p.locator('.pub-szoveg').first().waitFor({ timeout: 15000 })
-const kulcsok = await p.locator('.pub-szoveg').evaluateAll((l) => l.map((e) => e.dataset.kulcs))
+await varTartalom(p)
 const mindenKulcs = await p.evaluate(async () => (await import('/src/lib/publikusTartalom.ts')).SZOVEGEK.map((s) => s.kulcs))
-ok('minden szöveg pontosan egyszer, sávokba rendezve', [mindenKulcs.length, mindenKulcs.length, []],
-  [kulcsok.length, new Set(kulcsok).size, mindenKulcs.filter((k) => !kulcsok.includes(k))])
+const lapokon = []
+for (const lap of ['Foglalás oldal', 'GYIK oldal', 'Főoldal']) {
+  await lapra(p, lap)
+  const lat = await kulcsok(p)
+  const rej = await rejtettKulcsok(p)
+  lapokon.push(...rej, ...lat.filter((k) => !lapokon.includes(k)))
+  ok(`${lap}: a nem látható szövegek listájában csak olyan van, ami az előnézetben nem látszik`, [], rej.filter((k) => lat.includes(k)))
+}
+ok('minden szöveg megtalálható valamelyik oldal előnézetében vagy a nem látható szövegek között', [], mindenKulcs.filter((k) => !lapokon.includes(k)))
 ok('nincs már „Így jelenik meg” sor', 0, await p.getByText('Így jelenik meg').count())
-const sav = (id) => p.locator(`.pub-sav[data-sav="${id}"]`)
-ok('a sávok sorrendje követi az oldalt, a foglalás lépésenként',
+const sav = (id) => blokk(p, id)
+ok('a Főoldal blokkjainak sorrendje követi az oldalt, a foglalás lépésenként',
   ['menu', 'hero', 'rolunk', 'galeria', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs', 'fogl-6', 'fogl-8', 'fogl-osszeg', 'fogl-siker',
-   'velemenyek', 'hely', 'gyik', 'gyik-oldal', 'ugyfel-alap', 'ugyfel-kesz', 'ugyfel-atveve', 'ugyfel-egyeb', 'lab'],
-  await p.locator('.pub-sav').evaluateAll((l) => l.map((e) => e.dataset.sav)))
-await p.waitForTimeout(2500)
+   'velemenyek', 'hely', 'gyik', 'lab'],
+  await p.locator('.tsz-blokk').evaluateAll((l) => l.map((e) => e.dataset.sav)))
+await p.waitForTimeout(1000)
 const lathato = async (id) => sav(id).locator('.fogl > *').evaluateAll((l) => l.filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.dataset.lepes))
 ok('a lépés-előnézetek csak a saját lépésüket mutatják', [['auto'], ['csomag'], ['nap'], ['adatok'], ['osszeg'], ['siker']],
   [await lathato('fogl-1'), await lathato('fogl-2'), await lathato('fogl-6'), await lathato('fogl-8'), await lathato('fogl-osszeg'), await lathato('fogl-siker')])
@@ -131,37 +137,32 @@ for (const a of ['szabad', 'keves', 'tele', 'zarva']) allapotok.push((await sav(
 ok('a naptár-előnézetben minden állapot látszik, és ki van választva egy nap és egy időpont', [true, true, true, true, 1, 1],
   [...allapotok, await sav('fogl-6').locator('.fogl-nap[aria-pressed="true"]').count(),
    await sav('fogl-6').locator('.fogl-idok button[aria-pressed="true"]').count()])
-ok('alapból az eredeti szövegek állnak benne', 'Az autó nem tárgy.\n*Évekig* veled van.', await szoveg(p, 'hero.cim').locator('textarea').inputValue())
-await szoveg(p, 'hero.cim').locator('textarea').fill('Teszt nyitó cím.\n*Kiemelt* második sor')
-await szoveg(p, 'hero.felcim').locator('input').fill('Hívj: {telefon}')
-await szoveg(p, 'foglalas.auto').locator('input').fill('Mivel érkezel?')
-await szoveg(p, 'foglalas.kuldes').locator('input').fill('Kérés elküldése')
+ok('alapból az eredeti szövegek állnak benne', 'Az autó nem tárgy.\n*Évekig* veled van.', await ertek(p, 'hero.cim'))
+await beir(p, 'hero.cim', 'Teszt nyitó cím.\n*Kiemelt* második sor')
+await beir(p, 'hero.felcim', 'Hívj: {telefon}')
+await beir(p, 'foglalas.auto', 'Mivel érkezel?')
+await beir(p, 'foglalas.kuldes', 'Kérés elküldése')
+await bezar(p)
 await p.waitForTimeout(600)
 ok('az előnézet élőben követi a gépelést: kiemelés, behelyettesített telefonszám, foglalás lépései', ['Kiemelt', true, true, 'Kérés elküldése'],
-  [sima(await sav('hero').locator('.kv-hero h1 em').textContent()),
-   /Hívj: \+36 1 506 0420/i.test(sima(await sav('hero').locator('.kv-hero .kv-kicker').textContent())),
-   /Mivel érkezel\?/.test(await sav('fogl-1').locator('[data-lepes="auto"] h2').textContent()),
-   sima(await sav('fogl-osszeg').locator('.fogl-osszeg .btn-fo').textContent())])
-ok('jelzi a nem mentett változást és a módosított mezőket', [true, 4],
-  [await p.locator('.pub-valtozott').isVisible(), await p.locator('.pub-szoveg[data-valtozott]').count()])
+  [sima(tiszta(await sav('hero').locator('.kv-hero h1 em').textContent())),
+   /Hívj: \+36 1 506 0420/i.test(sima(tiszta(await sav('hero').locator('.kv-hero .kv-kicker').textContent()))),
+   /Mivel érkezel\?/.test(tiszta(await sav('fogl-1').locator('[data-lepes="auto"] h2').textContent())),
+   sima(tiszta(await sav('fogl-osszeg').locator('.fogl-osszeg .btn-fo').textContent()))])
+ok('jelzi a nem mentett változást, a módosított szövegeket és a számukat', [true, true, '4 szöveg eltér az eredetitől'],
+  [await p.locator('.pub-valtozott').isVisible(), (await p.locator('.tsz-valtozott').count()) >= 4, sima(await p.locator('.tsz-szamlalo').textContent())])
 if (KEPEK) {
   await p.locator('.tartalom').evaluate((e) => e.scrollTo(0, 0))
   await p.screenshot({ path: join(KEPEK, 'v82-tartalom-teteje.png') })
   for (const id of ['hero', 'fogl-2', 'fogl-6', 'fogl-osszeg']) {
-    await sav(id).locator('h3').evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
+    await sav(id).evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
     await p.waitForTimeout(300)
     await p.screenshot({ path: join(KEPEK, `v82-tartalom-${id}.png`) })
   }
 }
 ok('mentés', 'Mentve, a publikus oldalon már látszik', await ment(p))
-ok('mentés után a módosított mezők jelölve maradnak, változás nincs', [4, 0],
-  [await p.locator('.pub-szoveg .cimke-pill').count(), await p.locator('.pub-szoveg[data-valtozott]').count()])
-await p.locator('.pub-keres input').fill('ülés')
-const talalat = await p.locator('.pub-szoveg').evaluateAll((l) => l.map((e) => ({
-  k: e.dataset.kulcs, sz: (e.querySelector('label').textContent + ' ' + e.querySelector('.beviteli').value).toLowerCase() })))
-ok('keresés: csak az ülésre vonatkozó szövegek látszanak', [true, true, true],
-  [talalat.length > 3 && talalat.length < 20, talalat.some((x) => x.k === 'foglalas.ules'), talalat.every((x) => x.sz.includes('ülés'))])
-await p.locator('.pub-keres input').fill('')
+ok('mentés után nincs nem mentett változás, a módosítások száma megmarad', [0, '4 szöveg eltér az eredetitől'],
+  [await p.locator('.tsz-valtozott').count(), sima(await p.locator('.tsz-szamlalo').textContent())])
 
 console.log('\n=== 4) Elérhetőség ===\n')
 await menuPont(p, 'Elérhetőség').click()
@@ -232,8 +233,10 @@ await n.ctx.close()
 
 console.log('\n=== 7) Eredeti szöveg visszaállítása ===\n')
 await menuPont(p, 'Tartalom').click()
-await szoveg(p, 'hero.cim').locator('textarea').waitFor({ timeout: 15000 })
-await szoveg(p, 'hero.cim').getByRole('button', { name: 'Eredeti szöveg' }).click()
+await varTartalom(p)
+await nyit(p, 'hero.cim')
+await kartya(p).getByRole('button', { name: 'Eredeti szöveg' }).click()
+await bezar(p)
 ok('mentés', 'Mentve, a publikus oldalon már látszik', await ment(p))
 ok('az adatbázisban már nincs saját szöveg a címhez', false,
   'hero.cim' in (await rpc('publikus_oldal', {}, '')).szovegek)
@@ -243,7 +246,7 @@ console.log('\n=== 8) Alkalmazott: nincs Publikus menü ===\n')
 szerep.role = 'STAFF'; szerep.id = ALK
 const s = await kornyezet()
 await belep(s.p)
-const smenu = await s.p.locator('aside.oldalsav .menu').evaluate((m) => [...m.children].map((e) => e.textContent.trim()))
+const smenu = await s.p.locator('aside.oldalsav .menu').evaluate((m) => [...m.children].filter((e) => !e.classList.contains('almenu')).map((e) => e.textContent.trim()))
 ok('a Publikus csoport és pontjai nem látszanak', [false, false, false], [smenu.includes('Publikus'), smenu.includes('Tartalom'), smenu.includes('Arculat')])
 await s.ctx.close()
 
@@ -253,7 +256,7 @@ const t = await kornyezet({ width: 390, height: 844 })
 await belep(t.p, true)
 await t.p.locator('.mobil-fejlec .hamburger').click()
 await t.p.locator('aside.fiok .menu button').filter({ hasText: /^Tartalom$/ }).click()
-await t.p.locator('.pub-szoveg').first().waitFor({ timeout: 15000 })
+await varTartalom(t.p)
 ok('a Tartalom oldal telefonon sem lóg ki', true, await t.p.evaluate(() => document.querySelector('.tartalom').scrollWidth <= document.querySelector('.tartalom').clientWidth + 1))
 if (KEPEK) await t.p.screenshot({ path: join(KEPEK, 'v82-tartalom-telefon.png') })
 await t.ctx.close()

@@ -11,7 +11,7 @@ const ok = (mit, v, k) => {
   if (!jo) baj++
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
-const sima = (s) => s.replace(/\s+/g, ' ').trim()
+const sima = (s) => s.replace(new RegExp('\u2063[\uFE00-\uFE0F]{3}|\u2064', 'g'), '').replace(/\s+/g, ' ').trim()
 const szovegek = async (l) => (await l.evaluateAll((e) => e.map((x) => x.textContent))).map(sima)
 
 async function belep(email, viewport = { width: 1600, height: 1000 }) {
@@ -33,8 +33,8 @@ const ful = (p, nev) => p.locator('.oldal-fej .fulek button').filter({ hasText: 
 console.log('=== 1) A szerkesztő ===\n')
 const { ctx, p, hibak } = await belep('tulaj@mosathat.hu')
 await menu(p, 'Szolgáltatások'); await p.waitForTimeout(1200)
-ok('van „Csomagok szerkesztése” gomb', 1, await p.locator('.oldal-fej .fulek button').filter({ hasText: 'Csomagok szerkesztése' }).count())
-await ful(p, 'Csomagok szerkesztése'); await p.waitForTimeout(1500)
+ok('van „Csomagok tartalma” gomb', 1, await p.locator('.oldal-fej .fulek button').filter({ hasText: 'Csomagok tartalma' }).count())
+await ful(p, 'Csomagok tartalma'); await p.waitForTimeout(1500)
 const t = p.locator('.szerk-tabla')
 ok('oszlopok: a három csomag', ['Munkalépés', 'Start', 'Premium', 'Elit'], await szovegek(t.locator('thead th')))
 ok('14 sor', 14, await t.locator('tbody tr[data-sor]').count())
@@ -87,9 +87,9 @@ ok('Illatosítás eltűnt', 0, await mt.locator('th:text-is("Illatosítás")').c
 ok('új sor Startban és Premiumban', ['✓', '✓', '—'], await msor('Csomagtartó porszívózás'))
 await ful(p, 'Csomagok és árak'); await p.waitForTimeout(600)
 ok('Csomagok és árak: név és leírás', true,
-  (await szovegek(p.locator('h3.csomag-cim'))).some((x) => x.startsWith('Prémium') && x.includes('Részletesebb kézi tisztítás')))
+  (await szovegek(p.locator('details.szolg-szakasz > summary'))).some((x) => x.startsWith('Prémium') && x.includes('Részletesebb kézi tisztítás')))
 ok('az Elit továbbra is automatikus szöveget kap, benne az új tartalommal', true,
-  (await szovegek(p.locator('h3.csomag-cim'))).some((x) => x.startsWith('Elit') && /Falc mély/.test(x)))
+  (await szovegek(p.locator('details.szolg-szakasz > summary'))).some((x) => x.startsWith('Elit') && /Falc mély/.test(x)))
 
 await menu(p, 'Időpontok'); await p.waitForTimeout(1500)
 await p.locator('.fejlec .btn-fo').filter({ hasText: 'Új időpont' }).click(); await p.waitForTimeout(1200)
@@ -110,7 +110,7 @@ await p.keyboard.press('Escape'); await p.waitForTimeout(400)
 void premium
 
 await menu(p, 'Tartalom'); await p.waitForTimeout(2500)
-const fogl = sima(await p.locator('.pub-sav[data-sav="fogl-2"] .fogl-csomagok').innerText())
+const fogl = sima(await p.locator('.tsz-blokk[data-sav="fogl-2"] .fogl-csomagok').innerText())
 ok('a foglalás csomaglépése (Tartalom előnézet): új név és leírás', [true, true], [/Prémium/.test(fogl), /Részletesebb kézi tisztítás/.test(fogl)])
 ok('Elit: automatikus leírás az új tartalommal', true, /Prémium mindene, plusz:.*Falc mély/.test(fogl))
 
@@ -122,7 +122,7 @@ await ctx.close()
 console.log('\n=== 4) Alkalmazott ===\n')
 const a = await belep('alkalmazott@mosathat.hu')
 await menu(a.p, 'Szolgáltatások'); await a.p.waitForTimeout(1200)
-ok('nem látja a szerkesztőt', 0, await a.p.getByText('Csomagok szerkesztése').count())
+ok('nem látja a szerkesztőt', 0, await a.p.getByText('Csomagok tartalma').count())
 await a.ctx.close()
 
 console.log('\n=== 5) Tablet ===\n')
@@ -132,7 +132,7 @@ await menu(tb.p, 'Szolgáltatások').catch(async () => {
   await tb.p.locator('.fiok button').filter({ hasText: 'Szolgáltatások' }).first().click()
 })
 await tb.p.waitForTimeout(1200)
-await ful(tb.p, 'Csomagok szerkesztése'); await tb.p.waitForTimeout(1500)
+await ful(tb.p, 'Csomagok tartalma'); await tb.p.waitForTimeout(1500)
 const tg = await tb.p.locator('.szerk-tabla').evaluate((e) => e.closest('.tablagorgo').scrollWidth - e.closest('.tablagorgo').clientWidth)
 ok('tableten a táblázat görgethető vagy elfér, az oldal nem lóg ki', true,
   await tb.p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))

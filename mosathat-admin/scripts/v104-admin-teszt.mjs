@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
+import { lapra, varTartalom } from './_tszerk.mjs'
 import { hetkoznapra } from './_munkanap.mjs'
 
 const KEPEK = process.env.KEPEK ?? null
@@ -116,7 +117,9 @@ ok('elmentve', 'https://g.page/r/pelda/review', (await sql(`select google_erteke
 
 console.log('\n=== 5) Tartalom: a foglalás oldalának szövegei előnézettel ===\n')
 await menu('Tartalom')
-const savKesz = p.locator('.pub-sav').filter({ hasText: 'Foglalás oldala: elkészült az autó' }).first()
+await varTartalom(p)
+await lapra(p, 'Foglalás oldal')
+const savKesz = p.locator('.tsz-blokk').filter({ hasText: 'Foglalás oldala: elkészült az autó' }).first()
 await savKesz.scrollIntoViewIfNeeded()
 await p.waitForTimeout(800)
 ok('az előnézetben az elkészült doboz', 1, await savKesz.locator('.ugy-kesz').count())

@@ -14,7 +14,7 @@ const ok = (mit, v, k) => {
 }
 const DEMO = 'http://localhost:5180'
 const SB = 'http://localhost:5181'
-const sima = (s) => (s ?? '').replace(/\s+/g, ' ').trim()
+const sima = (s) => (s ?? '').replace(new RegExp('\u2063[\uFE00-\uFE0F]{3}|\u2064', 'g'), '').replace(/\s+/g, ' ').trim()
 const kep = async (p, nev, opts = {}) => { if (KEPEK) { await p.waitForTimeout(300); await p.screenshot({ path: join(KEPEK, nev), ...opts }) } }
 const kepElem = async (l, nev) => { if (KEPEK) { await l.page().waitForTimeout(300); await l.screenshot({ path: join(KEPEK, nev) }) } }
 const ASZTALI = { viewport: { width: 1440, height: 900 } }
@@ -194,7 +194,7 @@ console.log('\n=== 4) Telefon, „Kérsz még valamit?”: csak név és ár, ki
   await t.ctx.close()
 }
 
-console.log('\n=== 5) Admin, Csomagok: az extrák sorrendje állítható ===\n')
+console.log('\n=== 5) Admin, Szolgáltatások: az egyéb szolgáltatások sorrendje állítható ===\n')
 {
   const ctx = await b.newContext({ viewport: { width: 1500, height: 1000 } })
   const q = await ctx.newPage()
@@ -205,33 +205,30 @@ console.log('\n=== 5) Admin, Csomagok: az extrák sorrendje állítható ===\n')
   await q.fill('input[type="email"]', 'tulaj@mosathat.hu'); await q.fill('input[type="password"]', 'x')
   await q.getByRole('button', { name: /Belépés/ }).click()
   const menu = (n) => q.locator('aside.oldalsav .menu button').filter({ hasText: new RegExp(`^${n}$`) })
-  await menu('Csomagok').waitFor({ timeout: 30000 })
-  await menu('Csomagok').click()
-  await q.locator('.szerk-tabla').waitFor({ timeout: 20000 })
-  const panel = q.locator('.csomag-szerk .panel').nth(2)
-  const nevek = () => panel.locator('.szerk-extra').evaluateAll((l) => l.map((e) => e.querySelector('input').value))
+  await menu('Szolgáltatások').waitFor({ timeout: 30000 })
+  await menu('Szolgáltatások').click()
+  const egyeb = q.locator('details.szolg-szakasz[data-szakasz="egyeb"]')
+  await egyeb.locator('.egyeb-sor').first().waitFor({ state: 'attached', timeout: 20000 })
+  await egyeb.locator('summary').click()
+  const csoport = egyeb.locator('.egyeb-csoport[data-hely="KULSO"]')
+  const nevek = () => csoport.locator('.egyeb-sor .nev-szoveg').evaluateAll((l) => l.map((e) => e.firstChild.textContent.trim()))
   const elotte = await nevek()
-  ok('minden extrának sorszáma és Fel/Le gombja van; az első Fel és az utolsó Le tiltva', [true, true, true, true], [
-    (await panel.locator('.szerk-extra-sorszam').allTextContents()).every((x, i) => x === `${i + 1}.`),
-    (await panel.locator('.szerk-extra').count()) === (await panel.getByRole('button', { name: /feljebb$/ }).count()),
-    await panel.getByRole('button', { name: /feljebb$/ }).first().isDisabled(),
-    await panel.getByRole('button', { name: /lejjebb$/ }).last().isDisabled()])
-  await panel.getByRole('button', { name: `${elotte[0]}: lejjebb` }).click()
-  await panel.getByRole('button', { name: `${elotte[3]}: feljebb` }).click()
+  ok('minden sorban Fel/Le gomb; az első Fel és az utolsó Le tiltva', [true, true, true], [
+    (await csoport.locator('.egyeb-sor').count()) === (await csoport.getByRole('button', { name: /feljebb$/ }).count()),
+    await csoport.getByRole('button', { name: /feljebb$/ }).first().isDisabled(),
+    await csoport.getByRole('button', { name: /lejjebb$/ }).last().isDisabled()])
+  await csoport.getByRole('button', { name: `${elotte[0]}: lejjebb` }).click(); await q.waitForTimeout(900)
+  await csoport.getByRole('button', { name: `${elotte[3]}: feljebb` }).click(); await q.waitForTimeout(900)
   const uj = [elotte[1], elotte[0], elotte[3], elotte[2], ...elotte.slice(4)]
-  ok('a sorrend azonnal változik, és mentetlen változásként jelenik meg', [uj, 'Mentetlen változások'], [await nevek(), sima(await q.locator('.szerk-allapot').textContent())])
-  await panel.locator('h3').evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 120) })
+  ok('a sorrend azonnal változik és mentődik', uj, await nevek())
   await kep(q, '06-admin-extrak-sorrend.png')
-  await q.locator('.szerk-lab').getByRole('button', { name: 'Mentés' }).click()
-  await q.locator('.szerk-allapot').filter({ hasText: 'Mentve' }).waitFor({ timeout: 15000 })
-  ok('mentés után betöltve is az új sorrend', uj, await nevek())
   await menu('Tartalom').click()
-  const fm = q.locator('.pub-sav[data-sav="fogl-4"] .fogl').first()
+  const fm = q.locator('.tsz-blokk[data-sav="fogl-4"] .fogl').first()
   await fm.locator('.fogl-extra').first().waitFor({ timeout: 20000 })
   await q.waitForTimeout(1200)
   const kinalt = (await fm.locator('.fogl-extra .nev').allInnerTexts()).map((x) => x.split('\n')[0].trim())
   ok('a foglalásban (Tartalom előnézet) is ebben a sorrendben jönnek, a csomagban benne lévők kimaradnak', [true, uj.filter((n) => kinalt.includes(n))],
-    [kinalt.length > 3, kinalt])
+    [kinalt.length > 3, kinalt.filter((n) => uj.includes(n))])
   ok('nincs futásidejű hiba', [], hibak)
   await ctx.close()
 }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Fragment, lazy, Suspense, useEffect, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import {
@@ -27,11 +27,17 @@ import JelszoModal from '../common/JelszoModal'
 import KeresFigyelo from '../keresek/KeresFigyelo'
 import ModositasFigyelo from '../modositas/ModositasFigyelo'
 import { billentyuElore, celraUgrik, type Honnan, type Ugras } from './ugras'
+import type { TartalomLap } from '../publikus-admin/TartalomOldal'
 import type { Nyelv } from '../../lib/nyelv'
 
 const ArculatPage = lazy(() => import('../arculat/ArculatPage'))
 const ElerhetosegOldal = lazy(() => import('../publikus-admin/ElerhetosegOldal'))
 const TartalomOldal = lazy(() => import('../publikus-admin/TartalomOldal'))
+const TARTALOM_ALPONTOK: { id: TartalomLap; cimke: string }[] = [
+  { id: 'fooldal', cimke: 'Főoldal' },
+  { id: 'foglalas', cimke: 'Foglalás oldal' },
+  { id: 'gyik', cimke: 'GYIK oldal' },
+]
 const CsomagokOldal = lazy(() => import('../publikus-admin/CsomagokOldal'))
 const CegadatokOldal = lazy(() => import('../publikus-admin/CegadatokOldal'))
 const JogiSzovegekOldal = lazy(() => import('../publikus-admin/JogiSzovegekOldal'))
@@ -60,7 +66,7 @@ const MENU: MenuPont[] = [
 const MENU_PUB: MenuPont[] = [
   { id: 'pub-elerhetoseg', cimke: 'Elérhetőség' },
   { id: 'pub-tartalom', cimke: 'Tartalom' },
-  { id: 'pub-csomagok', cimke: 'Csomagok' },
+  { id: 'pub-csomagok', cimke: 'Csomagok tartalma' },
   { id: 'pub-velemenyek', cimke: 'Vélemények' },
   { id: 'pub-gyik', cimke: 'GYIK' },
   { id: 'pub-cegadatok', cimke: 'Cégadatok' },
@@ -81,7 +87,10 @@ export default function AppShell() {
   const pubMenu = teljesJogu ? MENU_PUB : []
 
   const [oldal, setOldal] = useState<Oldal>(teljesJogu ? 'attekintes' : 'nap')
-  const oldalCim = [...menu, ...pubMenu].find((m) => m.id === oldal)?.cimke
+  const [tartalomLap, setTartalomLap] = useState<TartalomLap>('fooldal')
+  const oldalCim = oldal === 'pub-tartalom'
+    ? `Tartalom: ${TARTALOM_ALPONTOK.find((a) => a.id === tartalomLap)?.cimke}`
+    : [...menu, ...pubMenu].find((m) => m.id === oldal)?.cimke
   const [szerzodesCeg, setSzerzodesCeg] = useState<string | null>(null)
   const [nap, setNap] = useState(maStr())
   const [nezet, setNezet] = useState<'nap' | 'het' | 'honap'>('nap')
@@ -138,19 +147,27 @@ export default function AppShell() {
     setReszletId(id)
   }
 
+  const menuValt = (id: Oldal, lap?: TartalomLap) => {
+    ugrasLeall.current()
+    setOldal(id); setFiok(false); setSzerzodesCeg(null)
+    setBeallFul(undefined); setVissza(null); setVisszaterve(null); setUgrasNyelv('hu')
+    if (id === 'pub-tartalom') setTartalomLap(lap ?? 'fooldal')
+  }
+
   const menuGomb = (m: MenuPont) => (
-    <button
-      key={m.id}
-      aria-current={m.id === oldal ? 'page' : undefined}
-      onClick={() => {
-        ugrasLeall.current()
-        setOldal(m.id); setFiok(false); setSzerzodesCeg(null)
-        setBeallFul(undefined); setVissza(null); setVisszaterve(null); setUgrasNyelv('hu')
-      }}
-    >
-      <span className="pont" />
-      {m.cimke}
-    </button>
+    <Fragment key={m.id}>
+      <button aria-current={m.id === oldal ? 'page' : undefined} onClick={() => menuValt(m.id)}>
+        <span className="pont" />
+        {m.cimke}
+      </button>
+      {m.id === 'pub-tartalom' && oldal === 'pub-tartalom' && TARTALOM_ALPONTOK.map((a) => (
+        <button key={a.id} className="almenu"
+                aria-current={tartalomLap === a.id ? 'true' : undefined}
+                onClick={() => menuValt('pub-tartalom', a.id)}>
+          {a.cimke}
+        </button>
+      ))}
+    </Fragment>
   )
 
   const menuTartalom = (
@@ -365,7 +382,7 @@ export default function AppShell() {
                                   onBeallitasok={() => { setBeallFul(undefined); setOldal('beallitasok') }} />
               )}
               {oldal === 'pub-tartalom' && (
-                <TartalomOldal onUgras={ugrik} visszaterve={visszaterve} />
+                <TartalomOldal onUgras={ugrik} visszaterve={visszaterve} lap={tartalomLap} onLap={setTartalomLap} />
               )}
               {oldal === 'pub-csomagok' && <CsomagokOldal />}
               {oldal === 'pub-cegadatok' && <CegadatokOldal onJogi={() => setOldal('pub-jogi')} />}

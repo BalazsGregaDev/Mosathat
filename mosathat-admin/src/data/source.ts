@@ -199,7 +199,10 @@ export interface DataSource {
   setFinalPrice(bookingId: string, price: number, reason?: string): Promise<void>
 
   updateExtra(id: string, patch: Partial<Extra>): Promise<void>
-  createExtra(input: { name: string; price_huf: number | null; work_minutes: number | null }): Promise<string>
+  createExtra(input: { name: string; area?: ServiceArea; price_huf: number | null; work_minutes: number | null }): Promise<string>
+  deleteExtra(id: string): Promise<void>
+  sortExtras(ids: string[]): Promise<void>
+  listAllExtras(): Promise<Extra[]>
   updatePackagePrice(
     packageId: string, category: VehicleCategory, scope: BookingScope,
     patch: { price_huf?: number | null; duration_minutes?: number | null },

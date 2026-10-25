@@ -101,13 +101,15 @@ d.on('pageerror', (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); 
 await belep(d)
 await menu(d, 'Szolgáltatások')
 {
-  const sor = d.locator('.szolg-jobb .extrasor').first()
+  const egyeb = d.locator('details.szolg-szakasz[data-szakasz="egyeb"]')
+  await egyeb.locator('summary').click()
+  const sor = egyeb.locator('.extrasor').first()
   const [ar, perc] = await sor.locator('.szammezo input').evaluateAll((l) =>
     l.map((e) => Math.round(e.getBoundingClientRect().top)))
   ok('az ár és a perc egy sorban', true, Math.abs(ar - perc) <= 2)
 
   ok('nincs „Gumiápolás (Külön kerve)"', false,
-    (await d.locator('.szolg-jobb').innerText()).includes('Külön'))
+    (await egyeb.innerText()).includes('Külön'))
 
   await d.getByRole('button', { name: '+ Új szolgáltatás' }).first().click()
   await d.waitForTimeout(300)
@@ -117,7 +119,7 @@ await menu(d, 'Szolgáltatások')
   await d.getByRole('button', { name: 'Felvétel' }).click()
   await d.waitForTimeout(1500)
   ok('az új szolgáltatás a listában', true,
-    (await d.locator('.szolg-jobb .extralista').innerText()).includes('Fényszóró polírozás'))
+    (await egyeb.innerText()).includes('Fényszóró polírozás'))
 
   await menu(d, 'Időpontok')
   await d.locator('.fejlec .btn-fo').filter({ hasText: 'Új időpont' }).click()

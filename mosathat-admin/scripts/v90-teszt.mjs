@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
+import { beir, bezar, blokk, kulcsok, rejtettKulcsok, varTartalom } from './_tszerk.mjs'
 import { adatbazis, TULAJ } from './_db.mjs'
 
 const KEPEK = process.env.KEPEK ?? null
@@ -14,7 +15,7 @@ const ok = (mit, v, k) => {
 }
 const DEMO = 'http://localhost:5180'
 const SB = 'http://localhost:5181'
-const sima = (s) => (s ?? '').replace(/\s+/g, ' ').trim()
+const sima = (s) => (s ?? '').replace(new RegExp('\u2063[\uFE00-\uFE0F]{3}|\u2064', 'g'), '').replace(/\s+/g, ' ').trim()
 const kep = async (p, nev, opts = {}) => { if (KEPEK) { await p.waitForTimeout(300); await p.screenshot({ path: join(KEPEK, nev), ...opts }) } }
 const kepElem = async (l, nev) => { if (KEPEK) { await l.page().waitForTimeout(300); await l.screenshot({ path: join(KEPEK, nev) }) } }
 
@@ -302,25 +303,27 @@ console.log('\n=== 9) Admin: Rólunk és Galéria sáv, az alcím a Csomagoknál
   const menu = (n) => q.locator('aside.oldalsav .menu button').filter({ hasText: new RegExp(`^${n}$`) })
   await menu('Tartalom').waitFor({ timeout: 30000 })
   await menu('Tartalom').click()
-  await q.locator('.pub-sav[data-sav="rolunk"]').waitFor({ timeout: 20000 })
-  ok('a Nyitó rész után jön a Rólunk és a Galéria sáv, utána a Csomagok', ['hero', 'rolunk', 'galeria', 'csomagok'],
-    (await q.locator('.pub-sav').evaluateAll((l) => l.map((e) => e.dataset.sav))).slice(1, 5))
-  const rol = q.locator('.pub-sav[data-sav="rolunk"]')
-  ok('Rólunk sáv: 3 mező és élő előnézet', [3, 'Rólunk'], [await rol.locator('.pub-szoveg').count(), sima(await rol.locator('.kv-rolunk h2').textContent())])
-  await rol.locator('.pub-szoveg[data-kulcs="rolunk.cim"] input').fill('Rólunk röviden')
+  await varTartalom(q)
+  ok('a Nyitó rész után jön a Rólunk és a Galéria blokk, utána a Csomagok', ['hero', 'rolunk', 'galeria', 'csomagok'],
+    (await q.locator('.tsz-blokk').evaluateAll((l) => l.map((e) => e.dataset.sav))).slice(1, 5))
+  const rol = blokk(q, 'rolunk')
+  const szerkesztheto = async (elotag) => [...new Set([...await kulcsok(q), ...await rejtettKulcsok(q)])].filter((k) => k.startsWith(elotag)).length
+  ok('Rólunk: 3 szöveg és élő előnézet', [3, 'Rólunk'], [await szerkesztheto('rolunk.'), sima(await rol.locator('.kv-rolunk h2').textContent())])
+  await beir(q, 'rolunk.cim', 'Rólunk röviden')
+  await bezar(q)
   await q.waitForTimeout(400)
   ok('az előnézet azonnal frissül', 'Rólunk röviden', sima(await rol.locator('.kv-rolunk h2').textContent()))
-  const gal = q.locator('.pub-sav[data-sav="galeria"]')
-  ok('Galéria sáv: 8 mező és kipróbálható előnézet', [8, 4], [await gal.locator('.pub-szoveg').count(), await gal.locator('.kv-galeria-racs .kv-moso').count()])
-  const cs = q.locator('.pub-sav[data-sav="csomagok"]')
-  await cs.locator('.pub-szoveg[data-kulcs="csomagok.ervenyes"] input').fill('Áraink ettől érvényesek: 2026.03.01.')
+  const gal = blokk(q, 'galeria')
+  ok('Galéria: 8 szöveg és kipróbálható előnézet', [8, 4], [await szerkesztheto('galeria.'), await gal.locator('.kv-galeria-racs .kv-moso').count()])
+  const cs = blokk(q, 'csomagok')
+  await beir(q, 'csomagok.ervenyes', 'Áraink ettől érvényesek: 2026.03.01.')
+  await bezar(q)
   await q.waitForTimeout(300)
   ok('a Csomagok sávban az új alcím, az előnézetben is', 'Áraink ettől érvényesek: 2026.03.01.', sima(await cs.locator('.kv-ervenyes').textContent()))
-  await rol.locator('h3 .nyelv-kapcsolo').click()
-  await q.waitForTimeout(400)
-  await rol.locator('.pub-szoveg[data-kulcs="rolunk.cim"] input').fill('About Mosathat')
-  await q.waitForTimeout(300)
-  await rol.locator('h3').evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
+  await q.locator('.tsz-eszkozok .nyelv-kapcsolo').click()
+  await q.waitForTimeout(800)
+  await beir(q, 'rolunk.cim', 'About Mosathat')
+  await rol.evaluate((h) => { const t = document.querySelector('.tartalom'); t.scrollTo(0, t.scrollTop + h.getBoundingClientRect().top - 150) })
   await kep(q, '09-admin-rolunk-en.png')
   await q.locator('.pub-fej').getByRole('button', { name: 'Mentés' }).click()
   await q.locator('.pub-mentve, .pub-hiba').first().waitFor({ timeout: 10000 })
