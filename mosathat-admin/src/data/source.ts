@@ -4,7 +4,7 @@ import type {
   Extra, FullServicePrice,
   LatestStart, NewBookingInput, PackageMatrixRow, PackageExtraRow, NewPassInput, NewStaffInput, OpeningDay, Package, PackagePrice, PassBalanceRow,
   Quote, CompanyHit, CompanyCandidate, AbsenceInput, AbsenceRow, DayAbsence,
-  CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
+  CegAtnevezes, CegCel, CegTagok, CompanySummary, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput, SheetColumn, RolePermission, SearchHit, ServiceArea, ShopSettings, StaffRole, StaffRow, StandingCar, Surcharge, VehicleCategory,
   WeekDay, WorkWindow, FinishPreview, KeszOpciok, ModositasCsoport, VacationRow, VacationInput, DayLane, OnlineBookingInput,
   OnlineKeres, CegLink, CegLinkAdat, FoglalasEredmeny, DontesEredmeny, KuldesEredmeny, ArculatValasztas, CsomagSzerkesztoAdat, CsomagMentesEredmeny,
   PublikusNapAdat, BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput, BerletLinkAdat, BerletLinkSor,
@@ -215,6 +215,9 @@ export interface DataSource {
   listCustomers(q?: string): Promise<CustomerSummary[]>
   listVehicles(q?: string): Promise<VehicleSummary[]>
   listCompanies(q?: string): Promise<CompanySummary[]>
+  cegTagjai(hol: { ugyfel?: string; ceg?: string }): Promise<CegTagok | null>
+  cegAtnevez(ceg: string, nev: string, ugyfelek: string[]): Promise<CegAtnevezes>
+  cegCel(ceg: string, nev: string): Promise<CegCel | null>
 
   listSheetCompanies(month: string): Promise<SheetCompany[]>
   getSheet(companyId: string, month: string): Promise<SheetDetail>

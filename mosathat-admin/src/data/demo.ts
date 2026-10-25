@@ -9,7 +9,7 @@ const MIGRACIOK = import.meta.glob('../../../supabase/migrations/*.sql', {
 import demoAdatok from '../../../supabase/demo/demo_adatok.sql?raw'
 
 import type {
-  AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
+  AbsenceInput, AbsenceRow, DayAbsence, CegAtnevezes, CegCel, CegTagok, CompanySummary,
   SheetColumn, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput,
   BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput, BerletLinkAdat, BerletLinkSor,
   BookingStatus, BookingTask, CalcInput, DashboardSummary, DayBooking, DayCapacity,
@@ -700,6 +700,21 @@ export class DemoSource implements DataSource {
   async listCompanies(q = ''): Promise<CompanySummary[]> {
     const r = await this.rows<{ c: CompanySummary }>(`select list_companies($1, 200) as c`, [q])
     return r.map((x) => x.c)
+  }
+
+  async cegTagjai(hol: { ugyfel?: string; ceg?: string }): Promise<CegTagok | null> {
+    const [r] = await this.rows<{ x: CegTagok | null }>(`select ceg_tagjai($1::uuid, $2::uuid) as x`, [hol.ugyfel ?? null, hol.ceg ?? null])
+    return r?.x ?? null
+  }
+
+  async cegCel(ceg: string, nev: string): Promise<CegCel | null> {
+    const [r] = await this.rows<{ x: CegCel | null }>(`select ceg_cel($1::uuid, $2) as x`, [ceg, nev])
+    return r?.x ?? null
+  }
+
+  async cegAtnevez(ceg: string, nev: string, ugyfelek: string[]): Promise<CegAtnevezes> {
+    const [r] = await this.rows<{ x: CegAtnevezes }>(`select ceg_atnevez($1::uuid, $2, $3::uuid[]) as x`, [ceg, nev, ugyfelek])
+    return r.x
   }
 
   async listSheetCompanies(month: string): Promise<SheetCompany[]> {

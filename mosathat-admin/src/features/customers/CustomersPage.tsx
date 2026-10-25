@@ -11,6 +11,9 @@ import { urlapMegnyilt } from '../../lib/kepernyo'
 import KartyaFej from '../common/KartyaFej'
 import Ablak from '../common/Ablak'
 import IgazoloLap from '../igazolo/IgazoloLap'
+import { useCegNev } from './CegAtnevezes'
+
+type CegNevMentes = ReturnType<typeof useCegNev>['ment']
 
 type Nezet = 'jarmu' | 'ugyfel' | 'ceg'
 
@@ -71,6 +74,7 @@ export default function CustomersPage() {
   }
 
   const ujra = () => void betolt(q)
+  const cegNev = useCegNev(ujra)
 
   return (
     <div className="oldal">
@@ -118,7 +122,7 @@ export default function CustomersPage() {
       {!tolt && nezet === 'jarmu' && (
         <div className="panelek panelek-ugyfel">
           {jarmuvek.map((v) => (
-            <JarmuKartya key={v.id} v={v} onValtozas={ujra} szerkesztheto={szerkesztheto} />
+            <JarmuKartya key={v.id} v={v} onValtozas={ujra} szerkesztheto={szerkesztheto} onCegNev={cegNev.ment} />
           ))}
           {jarmuvek.length === 0 && (
             <div className="panel"><div className="ures">Nincs találat.</div></div>
@@ -129,7 +133,7 @@ export default function CustomersPage() {
       {!tolt && nezet === 'ugyfel' && (
         <div className="panelek panelek-ugyfel">
           {ugyfelek.map((c) => (
-            <UgyfelKartya key={c.id} c={c} onValtozas={ujra} szerkesztheto={szerkesztheto} />
+            <UgyfelKartya key={c.id} c={c} onValtozas={ujra} szerkesztheto={szerkesztheto} onCegNev={cegNev.ment} />
           ))}
           {ugyfelek.length === 0 && (
             <div className="panel"><div className="ures">Nincs találat.</div></div>
@@ -139,12 +143,16 @@ export default function CustomersPage() {
 
       {!tolt && nezet === 'ceg' && (
         <div className="panelek panelek-ugyfel">
-          {cegek.map((c) => <CegKartya key={c.id} c={c} />)}
+          {cegek.map((c) => (
+            <CegKartya key={c.id} c={c} szerkesztheto={szerkesztheto} onCegNev={cegNev.ment} onAthelyez={cegNev.athelyez} />
+          ))}
           {cegek.length === 0 && (
             <div className="panel"><div className="ures">Nincs találat.</div></div>
           )}
         </div>
       )}
+
+      {cegNev.elem}
 
       {ujUgyfel && (
         <UjUgyfel
@@ -347,8 +355,8 @@ function UjUgyfel({ onBezar, onKesz }: { onBezar: () => void; onKesz: () => void
   )
 }
 
-function JarmuKartya({ v, onValtozas, szerkesztheto }: {
-  v: VehicleSummary; onValtozas: () => void; szerkesztheto: boolean
+function JarmuKartya({ v, onValtozas, szerkesztheto, onCegNev }: {
+  v: VehicleSummary; onValtozas: () => void; szerkesztheto: boolean; onCegNev: CegNevMentes
 }) {
   const { data } = useApp()
   const [nyitva, setNyitva] = useState(false)
@@ -379,7 +387,7 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
                        onMent={(x) => ugyfel({ phone: x })} />
         {v.company_name && (
           <Szerkesztheto zarolt={!szerkesztheto} cimke="Cégnév" ertek={v.company_name}
-                         onMent={(x) => ugyfel({ company_name: x })}
+                         onMent={(x) => onCegNev({ ugyfel: v.customer_id }, v.company_name, x, (y) => ugyfel({ company_name: y }))}
                          utotag={v.szerzodes && (
                            <span className="cimke-pill szerzodes-pill">
                              szerződés{v.contract_kind ? ` · ${KIND_LABEL[v.contract_kind]}` : ''}
@@ -404,7 +412,7 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
 
             {!v.company_name && (
               <Szerkesztheto zarolt={!szerkesztheto} cimke="Cégnév" ertek="" ures="nincs"
-                             onMent={(x) => ugyfel({ company_name: x })} />
+                             onMent={(x) => onCegNev({ ugyfel: v.customer_id }, v.company_name, x, (y) => ugyfel({ company_name: y }))} />
             )}
 
             <div className="adatsor">
@@ -447,10 +455,11 @@ function JarmuKartya({ v, onValtozas, szerkesztheto }: {
   )
 }
 
-function UgyfelKartya({ c, onValtozas, szerkesztheto }: {
+function UgyfelKartya({ c, onValtozas, szerkesztheto, onCegNev }: {
   c: CustomerSummary
   onValtozas: () => void
   szerkesztheto: boolean
+  onCegNev: CegNevMentes
 }) {
   const { data } = useApp()
   const [reszletek, setReszletek] = useState(false)
@@ -492,7 +501,7 @@ function UgyfelKartya({ c, onValtozas, szerkesztheto }: {
             <Szerkesztheto zarolt={!szerkesztheto} cimke="Típus" ertek={c.type} valaszthato={TIPUSOK}
                            onMent={(x) => ment({ type: x })} />
             <Szerkesztheto zarolt={!szerkesztheto} cimke="Cégnév" ertek={c.company_name} ures="nincs"
-                           onMent={(x) => ment({ company_name: x })} />
+                           onMent={(x) => onCegNev({ ugyfel: c.id }, c.company_name, x, (y) => ment({ company_name: y }))} />
             <Szerkesztheto zarolt={!szerkesztheto} cimke="Megjegyzés" ertek={c.notes} sor={2} ures="nincs"
                            onMent={(x) => ment({ notes: x })} />
             <Szerkesztheto zarolt={!szerkesztheto} cimke="Belső jegyzet" ertek={c.internal_notes} sor={2} ures="nincs"
@@ -571,7 +580,12 @@ function UgyfelKartya({ c, onValtozas, szerkesztheto }: {
   )
 }
 
-function CegKartya({ c }: { c: CompanySummary }) {
+function CegKartya({ c, szerkesztheto, onCegNev, onAthelyez }: {
+  c: CompanySummary
+  szerkesztheto: boolean
+  onCegNev: CegNevMentes
+  onAthelyez: (ceg: string) => Promise<void>
+}) {
   const [nyitva, setNyitva] = useState(false)
   const [lapNyitva, setLapNyitva] = useState(false)
   return (
@@ -582,6 +596,8 @@ function CegKartya({ c }: { c: CompanySummary }) {
         {c.berletes && <span className="cimke-pill szerzodes-pill">bérlet</span>}
       </KartyaFej>
       <div className="panel-torzs">
+        <Szerkesztheto zarolt={!szerkesztheto} cimke="Cégnév" ertek={c.name}
+                       onMent={(x) => onCegNev({ ceg: c.id }, c.name, x)} />
         <div className="adatsor">
           <span>Autók ({c.jarmuvek})</span>
           <span className="ertek rendszamok">
@@ -653,6 +669,13 @@ function CegKartya({ c }: { c: CompanySummary }) {
               ))}
               {c.autok.length === 0 && <div className="ures">Ennek a cégnek még nincs autója.</div>}
             </div>
+            {szerkesztheto && c.ugyfelek > 0 && (
+              <div className="sor-gombok" style={{ marginTop: 'var(--t3)' }}>
+                <button className="btn btn-kicsi" onClick={() => void onAthelyez(c.id)}>
+                  Autók áthelyezése másik céghez…
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

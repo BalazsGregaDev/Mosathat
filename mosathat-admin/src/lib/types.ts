@@ -665,6 +665,39 @@ export interface CompanySummary {
   lapos: boolean
 }
 
+export interface CegTag {
+  id: string
+  name: string
+  phone: string | null
+  type: string
+  rendszamok: string[]
+}
+
+export interface CegTagok {
+  ceg_id: string
+  nev: string
+  szerzodes: boolean
+  tagok: CegTag[]
+}
+
+export interface CegCel {
+  letezo: boolean
+  sajat?: boolean
+  id?: string
+  nev?: string
+  szerzodes?: boolean
+  ugyfelek?: number
+  jarmuvek?: number
+}
+
+export interface CegAtnevezes {
+  ceg_id: string
+  nev: string
+  osszevonva: boolean
+  atvitt: number
+  regi_torolve: boolean
+}
+
 export interface SheetColumn {
   key: string
   label: string

@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import type {
-  AbsenceInput, AbsenceRow, DayAbsence, CompanySummary,
+  AbsenceInput, AbsenceRow, DayAbsence, CegAtnevezes, CegCel, CegTagok, CompanySummary,
   SheetColumn, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput,
   BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput, BerletLinkAdat, BerletLinkSor,
   BookingStatus, BookingTask, CalcInput, DashboardSummary, DayBooking, DayCapacity,
@@ -780,6 +780,24 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('list_companies', { p_q: q, p_limit: 200 })
     if (error) fail('Cégek', error)
     return (data ?? []) as CompanySummary[]
+  }
+
+  async cegTagjai(hol: { ugyfel?: string; ceg?: string }): Promise<CegTagok | null> {
+    const { data, error } = await this.sb.rpc('ceg_tagjai', { p_ugyfel: hol.ugyfel ?? null, p_ceg: hol.ceg ?? null })
+    if (error) fail('Cég ügyfelei', error)
+    return (data ?? null) as CegTagok | null
+  }
+
+  async cegCel(ceg: string, nev: string): Promise<CegCel | null> {
+    const { data, error } = await this.sb.rpc('ceg_cel', { p_ceg: ceg, p_nev: nev })
+    if (error) fail('Cég keresése', error)
+    return (data ?? null) as CegCel | null
+  }
+
+  async cegAtnevez(ceg: string, nev: string, ugyfelek: string[]): Promise<CegAtnevezes> {
+    const { data, error } = await this.sb.rpc('ceg_atnevez', { p_ceg: ceg, p_nev: nev, p_ugyfelek: ugyfelek })
+    if (error) fail('Cég átnevezése', error)
+    return data as CegAtnevezes
   }
 
   async listSheetCompanies(month: string): Promise<SheetCompany[]> {
