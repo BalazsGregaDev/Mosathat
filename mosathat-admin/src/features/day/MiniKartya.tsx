@@ -53,13 +53,14 @@ export default function MiniKartya({ b, onMegnyit }: {
   const betu = csomagBetu(b)
   const extrak = (b.extras_summary ?? '').split(', ').map((x) => x.trim()).filter(Boolean)
   const csomagSzoveg = [b.package_name, b.full_service ? 'Full Service' : null].filter(Boolean).join(' + ')
+  const megj = (b.notes ?? '').replace(/\s+/g, ' ').trim()
   return (
     <button
       type="button"
       className="minikartya"
       data-a={b.status}
       onClick={(e) => { e.stopPropagation(); onMegnyit(b.id) }}
-      title={[azonosito(b), idoSzoveg(b), csomagSzoveg, extrak.length ? `+ ${extrak.join(', ')}` : null, STATUS_LABEL[b.status]]
+      title={[azonosito(b), idoSzoveg(b), csomagSzoveg, extrak.length ? `+ ${extrak.join(', ')}` : null, megj || null, STATUS_LABEL[b.status]]
         .filter(Boolean).join(' · ')}
     >
       <span className="mini-fej">
@@ -70,11 +71,15 @@ export default function MiniKartya({ b, onMegnyit }: {
         )}
         <span className={rendszamE ? 'azon rendszam' : 'azon nev'}>{azonosito(b)}</span>
         <Kerdojel b={b} />
+        {(extrak.length > 0 || megj) && (
+          <span className="mini-extrak">
+            {extrak.length > 0 && <>+ {extrak.map(extraRovid).join(' · ')}</>}
+            {extrak.length > 0 && megj && ' · '}
+            {megj && <span className="mini-megj">{megj}</span>}
+          </span>
+        )}
       </span>
       <span className="ido">{idoSzoveg(b)}</span>
-      {extrak.length > 0 && (
-        <span className="mini-extrak">+ {extrak.map(extraRovid).join(' · ')}</span>
-      )}
     </button>
   )
 }

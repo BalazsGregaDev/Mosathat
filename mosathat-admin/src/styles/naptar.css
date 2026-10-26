@@ -36,7 +36,7 @@
 .minikartya .mini-fej { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .minikartya .azon {
   display: block;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   font-size: var(--m-sm);
   font-weight: var(--vastag-eros);
@@ -50,9 +50,10 @@
 .csomag-betu[data-betu='P'] { background: #c08a1e; }
 .csomag-betu[data-betu='E'] { background: #6b3fa0; }
 .minikartya .mini-extrak {
-  display: block; margin-top: 1px; font-size: var(--m-xs); color: var(--szoveg-halk);
+  flex: 1 1 0; min-width: 0; margin-left: 4px; font-size: var(--m-xs); color: var(--szoveg-halk);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.minikartya .mini-megj { font-style: italic; }
 .minikartya .azon.rendszam {
   font-family: var(--betu-szam);
   letter-spacing: .04em;

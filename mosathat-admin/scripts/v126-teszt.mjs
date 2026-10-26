@@ -78,7 +78,7 @@ const extra = (await sql(`select id from extras where active order by sort_order
 for (let i = 0; i < 12; i++) {
   await sql(`select create_booking($1::jsonb)`, [JSON.stringify({
     category: 'SZEMELYAUTO', scope: 'TELJES', booking_type: 'LEADOS', drop_off_time: '08:00', service_date: nap,
-    package_id: csomagok[i % csomagok.length].id, extras: i === 0 ? extra : [], customer_name: `Heti ${i}`, customer_phone: `+36 30 126 ${String(1000 + i)}`, plate_raw: `HET-${100 + i}`,
+    package_id: csomagok[i % csomagok.length].id, extras: i === 0 ? extra : [], notes: i === 0 ? 'kutyaszőr a hátsó ülésen' : null, customer_name: `Heti ${i}`, customer_phone: `+36 30 126 ${String(1000 + i)}`, plate_raw: `HET-${100 + i}`,
   })])
 }
 await menu(p, 'Időpontok')
@@ -92,9 +92,22 @@ ok('csomag kezdőbetűk S, P, E', true, ['S', 'P', 'E'].every((x) => betuk.some(
 const szinek = await oszlop.locator('.csomag-betu').evaluateAll((l) => [...new Set(l.map((e) => `${e.dataset.betu}:${getComputedStyle(e).backgroundColor}`))])
 ok('betűnként más szín', true, new Set(szinek.map((x) => x.split(':')[1])).size >= 3)
 const elso = oszlop.locator('.minikartya').filter({ hasText: 'HET-100' })
-ok('az extrák rövidítve', true, /^\+ \S+/.test(sima(await elso.locator('.mini-extrak').innerText())))
+ok('az extrák rövidítve, utánuk a megjegyzés', [true, true],
+  [/^\+ \S+/.test(sima(await elso.locator('.mini-extrak').innerText())), sima(await elso.locator('.mini-extrak').innerText()).includes('kutyaszőr')])
+const sorok = await elso.evaluate((e) => {
+  const t = (s) => Math.round(e.querySelector(s).getBoundingClientRect().top)
+  return { azon: t('.azon'), extra: t('.mini-extrak'), ido: t('.ido') }
+})
+ok('az extra és a megjegyzés a rendszám sorában, nem új sorban', [true, true],
+  [Math.abs(sorok.extra - sorok.azon) <= 4, sorok.ido > sorok.azon + 4 && (await elso.locator('> span').count()) === 2])
 await kep(oszlop, '04-heti-oszlop')
 await kep(p.locator('.hetracs').last(), '05-heti-nezet')
+await p.setViewportSize({ width: 390, height: 844 })
+await p.waitForTimeout(800)
+await elso.scrollIntoViewIfNeeded()
+await kep(p, '05b-heti-telefon')
+await p.setViewportSize({ width: 1440, height: 1000 })
+await p.waitForTimeout(600)
 
 console.log('\n=== 5) Cég módosítása: rákérdez a többi aktív foglalásra ===\n')
 const uj = async (rsz) => (await sql(`select create_booking($1::jsonb) id`, [JSON.stringify({
