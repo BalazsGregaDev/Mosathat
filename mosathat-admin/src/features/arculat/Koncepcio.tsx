@@ -62,8 +62,8 @@ const KEMLEL: Record<Cel, [string, string, number]> = {
 }
 
 const MENU: [SzovegKulcs, Cel][] = [
-  ['menu.rolunk', 'rolunk'], ['menu.galeria', 'galeria'], ['menu.csomagok', 'csomagok'],
-  ['menu.foglalas', 'foglalas'], ['menu.kapcsolat', 'kapcsolat'],
+  ['menu.rolunk', 'rolunk'], ['menu.csomagok', 'csomagok'], ['menu.foglalas', 'foglalas'],
+  ['menu.galeria', 'galeria'], ['menu.kapcsolat', 'kapcsolat'],
 ]
 
 const FELVILLANAS = 3000
@@ -771,7 +771,6 @@ function Magazin() {
       <Nav />
       <MagazinHero />
       <Rolunk />
-      <GaleriaFoglalassal />
       {foglalas ? (
         <div className="kv-ketoszlop">
           <div className="kv-csomag-hely"><MagazinCsomagok egyebNelkul /></div>
@@ -779,6 +778,7 @@ function Magazin() {
           {foglalas}
         </div>
       ) : <MagazinCsomagok />}
+      <GaleriaFoglalassal />
       <Vege foglalasNelkul={Boolean(foglalas)} velemenyekkel />
     </>
   )

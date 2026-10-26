@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { hibaSzoveg } from '../../lib/format'
 import type { DayBooking } from '../../lib/types'
 import { CegValaszto, URES_CEG, useCegEgyeztetes, type CegErtek } from '../common/Ceg'
+import { useCegValtas } from './CegValtas'
 
 export default function CegSor({
   b,
@@ -17,6 +18,7 @@ export default function CegSor({
   const [ertek, setErtek] = useState<CegErtek>(URES_CEG)
   const [hiba, setHiba] = useState<string | null>(null)
   const [cegAblak, cegEgyeztet] = useCegEgyeztetes()
+  const [valtasAblak, valtasKerdez] = useCegValtas()
   const friss = useRef<CegErtek>(URES_CEG)
   const megy = useRef(false)
   const megse = useRef(false)
@@ -57,6 +59,7 @@ export default function CegSor({
       const c = await cegEgyeztet({ id: e.id, nev })
       if (c === null) return
       if (c.id && c.id === b.company_id) { setNyitva(false); return }
+      if (!(await valtasKerdez(b.id, b.company_name ?? '', c.nev))) return
       await onMent(c.id
         ? { company_id: c.id }
         : { company_id: null, company_name: c.nev })
@@ -85,6 +88,7 @@ export default function CegSor({
           {b.contract_kind && <span className="cimke-pill szerzodes-pill">szerződés</span>}
         </span>
         {cegAblak}
+        {valtasAblak}
       </div>
     )
   }
@@ -101,6 +105,7 @@ export default function CegSor({
         {hiba && <div className="szerk-hiba">{hiba}</div>}
       </span>
       {cegAblak}
+      {valtasAblak}
     </div>
   )
 }

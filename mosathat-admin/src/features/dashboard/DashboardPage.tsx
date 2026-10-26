@@ -4,6 +4,7 @@ import { useApp } from '../../state/AppContext'
 import { ft, hetCim, hibaSzoveg, maStr, napCim, napRovidCim, oraSzam } from '../../lib/format'
 import { billentyuzetElore } from '../../lib/billentyuzet'
 import type { DashboardSummary, Gond, MunkalapFokusz, WeekDay } from '../../lib/types'
+import TavolletKartya from '../profil/TavolletKartya'
 
 function terheles(pct: number): 'jo' | 'szoros' | 'tele' {
   if (pct >= 90) return 'tele'
@@ -24,7 +25,8 @@ export default function DashboardPage({ onNapra, onMegnyit, onOldal }: {
   onMegnyit: (id: string, fokusz?: MunkalapFokusz) => void
   onOldal: (oldal: 'szolgaltatasok' | 'partnerek') => void
 }) {
-  const { data } = useApp()
+  const { data, user } = useApp()
+  const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
   const nap = maStr()
   const [ossz, setOssz] = useState<DashboardSummary | null>(null)
   const [het, setHet] = useState<WeekDay[]>([])
@@ -143,6 +145,11 @@ export default function DashboardPage({ onNapra, onMegnyit, onOldal }: {
               </ul>
             </div>
           </section>
+        )}
+
+        {teljesJogu && (
+          <TavolletKartya cim="Szabadságok és munkaidő-változások" osztaly="teljes-sor"
+                          leiras="Mindenkié a mai naptól. Beírni és módosítani a Profilom menüben lehet." />
         )}
       </div>
     </div>

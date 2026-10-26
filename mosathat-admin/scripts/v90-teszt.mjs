@@ -63,8 +63,8 @@ console.log('=== 1) Szakaszok sorrendje, Rólunk szöveg, árak érvényessége 
 const a = await oldal('/publikus')
 {
   const p = a.p
-  ok('sorrend: nyitó rész, borítókép, Rólunk, Galéria, Csomagok + Foglalás, Hol vagyunk, lábléc',
-    ['kv-hero', 'kv-foto', 'kv-rolunk', 'kv-galeria', 'kv-ketoszlop', 'kv-hely', 'kv-lab'],
+  ok('sorrend: nyitó rész, borítókép, Rólunk, Csomagok + Foglalás, Galéria, Hol vagyunk, lábléc',
+    ['kv-hero', 'kv-foto', 'kv-rolunk', 'kv-ketoszlop', 'kv-galeria', 'kv-hely', 'kv-lab'],
     await p.evaluate(() => [...document.querySelector('.pub-keret .kv').children]
       .map((e) => [...e.classList].find((c) => ['kv-hero', 'kv-foto', 'kv-rolunk', 'kv-galeria', 'kv-ketoszlop', 'kv-hely', 'kv-lab'].includes(c)))
       .filter(Boolean)))
@@ -304,8 +304,9 @@ console.log('\n=== 9) Admin: Rólunk és Galéria sáv, az alcím a Csomagoknál
   await menu('Tartalom').waitFor({ timeout: 30000 })
   await menu('Tartalom').click()
   await varTartalom(q)
-  ok('a Nyitó rész után jön a Rólunk és a Galéria blokk, utána a Csomagok', ['hero', 'rolunk', 'galeria', 'csomagok'],
-    (await q.locator('.tsz-blokk').evaluateAll((l) => l.map((e) => e.dataset.sav))).slice(1, 5))
+  ok('a Nyitó rész után jön a Rólunk, utána a Csomagok, a Galéria a foglalás után', [['hero', 'rolunk', 'csomagok'], 'galeria'],
+    [(await q.locator('.tsz-blokk').evaluateAll((l) => l.map((e) => e.dataset.sav))).slice(1, 4),
+     (await q.locator('.tsz-blokk').evaluateAll((l) => l.map((e) => e.dataset.sav)))[15]])
   const rol = blokk(q, 'rolunk')
   const szerkesztheto = async (elotag) => [...new Set([...await kulcsok(q), ...await rejtettKulcsok(q)])].filter((k) => k.startsWith(elotag)).length
   ok('Rólunk: 3 szöveg és élő előnézet', [3, 'Rólunk'], [await szerkesztheto('rolunk.'), sima(await rol.locator('.kv-rolunk h2').textContent())])

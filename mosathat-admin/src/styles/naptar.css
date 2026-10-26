@@ -33,10 +33,24 @@
   border-left-color: var(--v-varjuk);
   background: var(--lap-2);
 }
+.minikartya .mini-fej { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .minikartya .azon {
   display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: var(--m-sm);
   font-weight: var(--vastag-eros);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.csomag-betu {
+  flex: none; display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 3px;
+  border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 1; color: #fff; background: #7b8088;
+}
+.csomag-betu[data-betu='S'] { background: #4f7fa8; }
+.csomag-betu[data-betu='P'] { background: #c08a1e; }
+.csomag-betu[data-betu='E'] { background: #6b3fa0; }
+.minikartya .mini-extrak {
+  display: block; margin-top: 1px; font-size: var(--m-xs); color: var(--szoveg-halk);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .minikartya .azon.rendszam {
@@ -63,15 +77,6 @@
   opacity: .6;
   text-decoration: line-through;
 }
-.tovabb {
-  display: block; width: 100%;
-  background: none; border: 1px dashed var(--keret-eros);
-  border-radius: var(--r-sm);
-  padding: 4px 8px;
-  font-size: var(--m-xs);
-  color: var(--szoveg-halk);
-}
-.tovabb:hover { background: var(--lap-2); color: var(--szoveg); }
 .hetfejsor { margin-bottom: var(--t2); }
 .hetfejsor .oszlopfej {
   border: 1px solid var(--keret);

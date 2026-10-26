@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { hibaSzoveg, maStr, napCim } from '../../lib/format'
-import { VALTOZAS_FAJTAK, valtozasSzoveg } from '../../lib/munkaido'
+import { hibaSzoveg, maStr } from '../../lib/format'
+import { VALTOZAS_FAJTAK } from '../../lib/munkaido'
 import {
   ROLE_LABEL,
-  type AbsenceKind, type AbsenceRow, type StaffRow,
+  type AbsenceKind, type AbsenceRow, type StaffRow, type VacationRow,
 } from '../../lib/types'
-import { useKerdes } from '../common/Kerdes'
 import IdoMezo from '../common/IdoMezo'
 import SzabadsagPanel from './SzabadsagPanel'
 import KinekValaszto from './KinekValaszto'
+import TavolletKartya from './TavolletKartya'
 
 interface Urlap {
   id: string | null
@@ -31,22 +31,13 @@ export default function ProfilPage({ onJelszo }: {
 }) {
   const { data, user, signOut, refresh } = useApp()
   const teljesJogu = user?.role === 'SUPERADMIN' || user?.role === 'TULAJDONOS'
-  const [lista, setLista] = useState<AbsenceRow[] | null>(null)
   const [dolgozok, setDolgozok] = useState<StaffRow[]>([])
   const [f, setF] = useState<Urlap>(URES)
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
-  const [kerdesAblak, kerdez] = useKerdes()
-
-  const betolt = useCallback(async () => {
-    try {
-      setLista(await data.listAbsences())
-    } catch (e) {
-      setHiba(hibaSzoveg(e))
-    }
-  }, [data])
-
-  useEffect(() => { void betolt() }, [betolt])
+  const [rev, setRev] = useState(0)
+  const [szabSzerk, setSzabSzerk] = useState<VacationRow | null>(null)
+  const ujratolt = useCallback(() => setRev((n) => n + 1), [])
 
   useEffect(() => {
     if (!teljesJogu) return
@@ -78,7 +69,7 @@ export default function ProfilPage({ onJelszo }: {
         note: f.note.trim() || null,
       })
       setF(URES())
-      await betolt()
+      ujratolt()
       refresh()
     } catch (e) {
       setHiba(hibaSzoveg(e))
@@ -99,22 +90,6 @@ export default function ProfilPage({ onJelszo }: {
     })
     setHiba(null)
     document.getElementById('munkaido-urlap')?.scrollIntoView({ block: 'nearest' })
-  }
-
-  async function torol(a: AbsenceRow) {
-    if (!(await kerdez({
-      cim: 'Biztosan törlöd?',
-      szoveg: `${napCim(a.day.slice(0, 10))}: ${valtozasSzoveg(a)}`,
-      igen: 'Törlés', nem: 'Mégse', veszelyes: true,
-    }))) return
-    try {
-      await data.deleteAbsence(a.id)
-      if (f.id === a.id) setF(URES())
-      await betolt()
-      refresh()
-    } catch (e) {
-      setHiba(hibaSzoveg(e))
-    }
   }
 
   if (!user) return null
@@ -217,37 +192,21 @@ export default function ProfilPage({ onJelszo }: {
           </div>
         </section>
 
-        <section className="panel">
-          <h3>{teljesJogu ? 'Bejelentett változások — mindenki' : 'Bejelentett változásaim'}</h3>
-          <div className="panel-torzs">
-            {lista === null && <div className="betolt">Betöltés…</div>}
-            {lista?.length === 0 && (
-              <div className="ures">Nincs bejelentett változás a mai naptól.</div>
-            )}
-            <ul className="valtozas-lista">
-              {lista?.map((a) => (
-                <li key={a.id} data-szerk={f.id === a.id || undefined}>
-                  <div className="valtozas-szoveg">
-                    <strong>{napCim(a.day.slice(0, 10))}</strong>
-                    <span>
-                      {!a.sajat && <>{a.staff_name}: </>}
-                      {valtozasSzoveg(a)}
-                      {a.note && <span className="halk"> · {a.note}</span>}
-                    </span>
-                  </div>
-                  <div className="valtozas-gombok">
-                    <button className="btn btn-kicsi" onClick={() => modosit(a)}>Módosítás</button>
-                    <button className="btn btn-kicsi btn-veszelyes" onClick={() => void torol(a)}>Törlés</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
+        <SzabadsagPanel teljesJogu={teljesJogu} dolgozok={dolgozok} szerk={szabSzerk}
+                        onKesz={() => { setSzabSzerk(null); ujratolt() }} />
 
-        <SzabadsagPanel teljesJogu={teljesJogu} dolgozok={dolgozok} />
+        <TavolletKartya
+          cim={teljesJogu ? 'Szabadságok és munkaidő-változások — mindenki' : 'Szabadságaim és munkaidő-változásaim'}
+          rev={rev}
+          szerkesztett={f.id ?? szabSzerk?.id ?? null}
+          onModosit={(t) => {
+            if (t.tipus === 'szabadsag') { setF(URES()); setSzabSzerk(t.v) } else { setSzabSzerk(null); modosit(t.a) }
+          }}
+          onTorolve={(t) => {
+            if (t.tipus === 'szabadsag' && szabSzerk?.id === t.v.id) setSzabSzerk(null)
+            if (t.tipus === 'valtozas' && f.id === t.a.id) setF(URES())
+          }} />
       </div>
-      {kerdesAblak}
     </div>
   )
 }

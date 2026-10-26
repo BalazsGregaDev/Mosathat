@@ -36,9 +36,9 @@ console.log('=== 1) A menü a főoldal minden szakaszát tartalmazza, az oldal s
 const a = await oldal('/publikus')
 {
   const p = a.p
-  ok('Rólunk, Galéria, Csomagok, Foglalás, Kapcsolat', ['Rólunk', 'Galéria', 'Csomagok', 'Foglalás', 'Kapcsolat'], (await p.locator('.kv-nav nav a').allTextContents()).map(sima))
-  const sor = await p.evaluate(() => ['.kv-rolunk', '.kv-galeria', '.kv-csomagok', '.kv-foglalas', '.kv-lab'].map((s) => document.querySelector(s).getBoundingClientRect().top))
-  ok('a menüpontok sorrendje megegyezik a szakaszok sorrendjével az oldalon', true, sor.slice(0, 3).every((y, i) => i === 0 || y > sor[i - 1]) && sor[4] > sor[3])
+  ok('Rólunk, Csomagok, Foglalás, Galéria, Kapcsolat', ['Rólunk', 'Csomagok', 'Foglalás', 'Galéria', 'Kapcsolat'], (await p.locator('.kv-nav nav a').allTextContents()).map(sima))
+  const sor = await p.evaluate(() => ['.kv-rolunk', '.kv-csomagok', '.kv-foglalas', '.kv-galeria', '.kv-lab'].map((s) => document.querySelector(s).getBoundingClientRect().top))
+  ok('a menüpontok sorrendje megegyezik a szakaszok sorrendjével az oldalon', true, sor[0] < sor[1] && sor[0] < sor[2] && sor[3] > Math.max(sor[1], sor[2]) && sor[4] > sor[3])
   for (const [menu, cim] of [['Rólunk', '.kv-rolunk h2'], ['Galéria', '.kv-galeria h2']]) {
     await p.locator('.kv-nav nav a').filter({ hasText: menu }).click()
     await p.waitForTimeout(1300)
@@ -135,7 +135,7 @@ console.log('\n=== 5) Tableten és telefonon ===\n')
   const p = f.p
   await ide(p, '.kv-galeria', 60)
   await p.locator('.kv-menu-gomb').tap(); await p.waitForTimeout(400)
-  ok('a hamburger menüben is mind az öt, a Galéria kiemelve', [['Rólunk', 'Galéria', 'Csomagok', 'Foglalás', 'Kapcsolat'], ['Galéria']],
+  ok('a hamburger menüben is mind az öt, a Galéria kiemelve', [['Rólunk', 'Csomagok', 'Foglalás', 'Galéria', 'Kapcsolat'], ['Galéria']],
     [(await p.locator('.kv-menu-panel nav a').allTextContents()).map(sima), await aktiv(p, '.kv-menu-panel nav')])
   await kep(p, '05-telefon-menu.png')
   await p.locator('.kv-menu-panel nav a').filter({ hasText: 'Rólunk' }).tap(); await p.waitForTimeout(1300)

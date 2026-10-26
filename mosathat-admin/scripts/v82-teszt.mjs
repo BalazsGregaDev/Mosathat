@@ -125,7 +125,7 @@ ok('minden szöveg megtalálható valamelyik oldal előnézetében vagy a nem l�
 ok('nincs már „Így jelenik meg” sor', 0, await p.getByText('Így jelenik meg').count())
 const sav = (id) => blokk(p, id)
 ok('a Főoldal blokkjainak sorrendje követi az oldalt, a foglalás lépésenként',
-  ['menu', 'hero', 'rolunk', 'galeria', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs', 'fogl-6', 'fogl-8', 'fogl-osszeg', 'fogl-siker',
+  ['menu', 'hero', 'rolunk', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs', 'fogl-6', 'fogl-8', 'fogl-osszeg', 'fogl-siker', 'galeria',
    'velemenyek', 'hely', 'gyik', 'lab'],
   await p.locator('.tsz-blokk').evaluateAll((l) => l.map((e) => e.dataset.sav)))
 await p.waitForTimeout(1000)
@@ -161,6 +161,7 @@ if (KEPEK) {
   }
 }
 ok('mentés', 'Mentve, a publikus oldalon már látszik', await ment(p))
+await p.waitForTimeout(1500)
 ok('mentés után nincs nem mentett változás, a módosítások száma megmarad', [0, '4 szöveg eltér az eredetitől'],
   [await p.locator('.tsz-valtozott').count(), sima(await p.locator('.tsz-szamlalo').textContent())])
 

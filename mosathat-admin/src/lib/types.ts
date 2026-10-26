@@ -680,6 +680,15 @@ export interface CegTagok {
   tagok: CegTag[]
 }
 
+export interface FoglalasTars {
+  id: string
+  service_date: string
+  plate_raw: string | null
+  package_name: string | null
+  status: BookingStatus
+  ugyanaz_auto: boolean
+}
+
 export interface CegCel {
   letezo: boolean
   sajat?: boolean

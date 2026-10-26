@@ -14,6 +14,7 @@ import Sugo from '../common/Sugo'
 import IdoMezo from '../common/IdoMezo'
 import Ablak from '../common/Ablak'
 import { CegValaszto, useCegEgyeztetes } from '../common/Ceg'
+import { useCegValtas } from './CegValtas'
 
 const TIPUSOK: { id: BookingType; cimke: string }[] = [
   { id: 'LEADOS', cimke: 'Itt hagyja' },
@@ -42,12 +43,14 @@ export default function BookingForm({
   const katalogus = useCatalog()
   const fejleszto = user?.role === 'SUPERADMIN'
   const {
+    eredetiCeg,
     f, set, calc, menthetE, ment, mentes, hiba, setHiba, tolt, szerkesztes, szerzodeses,
     flottas, flottaDarab,
     talalatok, keres, keresMezo, keresoIras, keresoZar,
     valasztott, talalatValaszt, ezcKeri,
   } = useBookingForm(nap, bookingId)
   const [cegAblak, cegEgyeztet] = useCegEgyeztetes()
+  const [valtasAblak, valtasKerdez] = useCegValtas()
   const [kuld, setKuld] = useState(false)
   const kuldRef = useRef(false)
 
@@ -151,6 +154,8 @@ export default function BookingForm({
         setHiba(hibaSzoveg(e))
         return
       }
+      const valtozott = ceg.id ? ceg.id !== eredetiCeg.id : ceg.nev.trim() !== eredetiCeg.nev.trim() || Boolean(eredetiCeg.id && !ceg.nev.trim())
+      if (bookingId && szerkesztes && valtozott && !(await valtasKerdez(bookingId, eredetiCeg.nev, ceg.nev.trim()))) return
       const id = await ment(ceg)
       if (id) onKesz()
     } finally {
@@ -640,6 +645,7 @@ export default function BookingForm({
       </div>
       {arlistaPanel}
       {cegAblak}
+      {valtasAblak}
     </Ablak>
   )
 }

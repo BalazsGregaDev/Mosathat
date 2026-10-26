@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import type {
-  AbsenceInput, AbsenceRow, DayAbsence, CegAtnevezes, CegCel, CegTagok, CompanySummary,
+  AbsenceInput, AbsenceRow, DayAbsence, CegAtnevezes, CegCel, CegTagok, FoglalasTars, CompanySummary,
   SheetColumn, SheetCompany, SheetDetail, SheetForBooking, SheetRowInput,
   BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput, BerletLinkAdat, BerletLinkSor,
   BookingStatus, BookingTask, CalcInput, DashboardSummary, DayBooking, DayCapacity,
@@ -786,6 +786,18 @@ export class SupabaseSource implements DataSource {
     const { data, error } = await this.sb.rpc('ceg_tagjai', { p_ugyfel: hol.ugyfel ?? null, p_ceg: hol.ceg ?? null })
     if (error) fail('Cég ügyfelei', error)
     return (data ?? null) as CegTagok | null
+  }
+
+  async foglalasTarsai(bookingId: string): Promise<FoglalasTars[]> {
+    const { data, error } = await this.sb.rpc('foglalas_tarsai', { p_booking_id: bookingId })
+    if (error) fail('Érintett foglalások', error)
+    return (data ?? []) as FoglalasTars[]
+  }
+
+  async foglalasLevalaszt(bookingId: string, tovabbi: string[]): Promise<string> {
+    const { data, error } = await this.sb.rpc('foglalas_levalaszt', { p_booking_id: bookingId, p_tovabbi: tovabbi })
+    if (error) fail('Cég módosítása', error)
+    return data as string
   }
 
   async cegCel(ceg: string, nev: string): Promise<CegCel | null> {

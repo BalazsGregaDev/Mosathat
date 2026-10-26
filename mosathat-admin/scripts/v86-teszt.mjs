@@ -35,7 +35,7 @@ const villan = (p, sel) => p.locator(sel).first().evaluate((e) => {
 console.log('=== 1) Publikus menü: Hol vagyunk nélkül ===\n')
 const a = await publikus({ width: 1440, height: 900 })
 const p = a.p
-ok('a menüben Rólunk, Galéria, Csomagok, Foglalás, Kapcsolat (Hol vagyunk nélkül)', ['Rólunk', 'Galéria', 'Csomagok', 'Foglalás', 'Kapcsolat'], (await p.locator('.kv-nav nav a').allTextContents()).map(sima))
+ok('a menüben Rólunk, Csomagok, Foglalás, Galéria, Kapcsolat (Hol vagyunk nélkül)', ['Rólunk', 'Csomagok', 'Foglalás', 'Galéria', 'Kapcsolat'], (await p.locator('.kv-nav nav a').allTextContents()).map(sima))
 ok('a Hol vagyunk szakasz maga megmaradt (térkép, cím)', [1, 'Hol vagyunk'], [await p.locator('.kv-hely .kv-terkep').count(), sima(await p.locator('.kv-hely h2').textContent())])
 
 console.log('\n=== 2) Menüpontra kattintva a szakasz címe felvillan ===\n')
@@ -139,7 +139,7 @@ await varTartalom(q)
 const magy = async (k) => { await nyit(q, k); return (await q.locator('.tsz-kartya .pub-valtozo-magyarazat li').allTextContents()).map(sima) }
 ok('a menü Hol vagyunk pontja kikerült, a szövegek megvannak', [true, false],
   [(await kulcsok(q)).length + (await rejtettKulcsok(q)).length > 100, [...await kulcsok(q), ...await rejtettKulcsok(q)].includes('menu.hely')])
-ok('a menü-előnézetben is ugyanaz az öt pont', ['Rólunk', 'Galéria', 'Csomagok', 'Foglalás', 'Kapcsolat'], (await blokk(q, 'menu').locator('.kv-nav nav a').allTextContents()).map(sima))
+ok('a menü-előnézetben is ugyanaz az öt pont', ['Rólunk', 'Csomagok', 'Foglalás', 'Galéria', 'Kapcsolat'], (await blokk(q, 'menu').locator('.kv-nav nav a').allTextContents()).map(sima))
 const elvitel = await magy('foglalas.siker_elvitel')
 ok('Köszönő üzenet: elvitel  →  {mikor} = …', [1, true], [elvitel.length, /^\{mikor\} = az elvitel napja és időablaka, például: .+, 8:00 és 17:00 között$/.test(elvitel[0])])
 await kep(q, '06-magyarazat-elvitel.png')

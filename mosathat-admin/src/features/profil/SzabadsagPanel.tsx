@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { hibaSzoveg, maStr, napokRovid } from '../../lib/format'
 import type { StaffRow, VacationRow } from '../../lib/types'
-import { useKerdes } from '../common/Kerdes'
 import KinekValaszto from './KinekValaszto'
 
 interface Urlap {
@@ -16,26 +15,30 @@ interface Urlap {
 
 const URES = (): Urlap => ({ id: null, staffId: null, tol: '', ig: '', note: '' })
 
-export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
+const urlapbol = (v: VacationRow): Urlap => ({
+  id: v.id,
+  staffId: v.sajat ? null : v.staff_id,
+  tol: v.from_day.slice(0, 10),
+  ig: v.to_day.slice(0, 10),
+  note: v.note ?? '',
+})
+
+export default function SzabadsagPanel({ teljesJogu, dolgozok, szerk, onKesz }: {
   teljesJogu: boolean
   dolgozok: StaffRow[]
+  szerk: VacationRow | null
+  onKesz: () => void
 }) {
   const { data, user, refresh } = useApp()
-  const [lista, setLista] = useState<VacationRow[] | null>(null)
-  const [f, setF] = useState<Urlap>(URES)
+  const [f, setF] = useState<Urlap>(() => (szerk ? urlapbol(szerk) : URES()))
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
-  const [kerdesAblak, kerdez] = useKerdes()
 
-  const betolt = useCallback(async () => {
-    try {
-      setLista(await data.listVacations())
-    } catch (e) {
-      setHiba(hibaSzoveg(e))
-    }
-  }, [data])
-
-  useEffect(() => { void betolt() }, [betolt])
+  useEffect(() => {
+    setF(szerk ? urlapbol(szerk) : URES())
+    setHiba(null)
+    if (szerk) document.getElementById('szabadsag-urlap')?.scrollIntoView({ block: 'nearest' })
+  }, [szerk])
 
   const set = <K extends keyof Urlap>(k: K, v: Urlap[K]) => setF((x) => ({ ...x, [k]: v }))
 
@@ -52,40 +55,12 @@ export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
         id: f.id, staff_id: f.staffId, from_day: f.tol, to_day: ig, note: f.note.trim() || null,
       })
       setF(URES())
-      await betolt()
+      onKesz()
       refresh()
     } catch (e) {
       setHiba(hibaSzoveg(e))
     } finally {
       setMegy(false)
-    }
-  }
-
-  function modosit(v: VacationRow) {
-    setF({
-      id: v.id,
-      staffId: v.sajat ? null : v.staff_id,
-      tol: v.from_day.slice(0, 10),
-      ig: v.to_day.slice(0, 10),
-      note: v.note ?? '',
-    })
-    setHiba(null)
-    document.getElementById('szabadsag-urlap')?.scrollIntoView({ block: 'nearest' })
-  }
-
-  async function torol(v: VacationRow) {
-    if (!(await kerdez({
-      cim: 'Biztosan törlöd?',
-      szoveg: `${v.sajat ? 'Szabadság' : `${v.staff_name} szabadsága`}: ${napokRovid(v.from_day, v.to_day)}`,
-      igen: 'Törlés', nem: 'Mégse', veszelyes: true,
-    }))) return
-    try {
-      await data.deleteVacation(v.id)
-      if (f.id === v.id) setF(URES())
-      await betolt()
-      refresh()
-    } catch (e) {
-      setHiba(hibaSzoveg(e))
     }
   }
 
@@ -138,7 +113,7 @@ export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
 
         <div className="sor-gombok">
           {f.id && (
-            <button className="btn" onClick={() => { setF(URES()); setHiba(null) }} disabled={megy}>
+            <button className="btn" onClick={() => { setF(URES()); setHiba(null); onKesz() }} disabled={megy}>
               Mégse
             </button>
           )}
@@ -147,30 +122,7 @@ export default function SzabadsagPanel({ teljesJogu, dolgozok }: {
           </button>
         </div>
 
-        <div className="szabadsag-lista-cim">
-          {teljesJogu ? 'Beírt szabadságok — mindenki' : 'Beírt szabadságaim'}
-        </div>
-        {lista === null && <div className="betolt">Betöltés…</div>}
-        {lista?.length === 0 && <div className="ures">Nincs beírt szabadság a mai naptól.</div>}
-        <ul className="valtozas-lista">
-          {lista?.map((v) => (
-            <li key={v.id} data-szerk={f.id === v.id || undefined}>
-              <div className="valtozas-szoveg">
-                <strong>{napokRovid(v.from_day, v.to_day)}</strong>
-                <span>
-                  {!v.sajat && <>{v.staff_name}</>}
-                  {v.note && <span className="halk">{!v.sajat ? ' · ' : ''}{v.note}</span>}
-                </span>
-              </div>
-              <div className="valtozas-gombok">
-                <button className="btn btn-kicsi" onClick={() => modosit(v)}>Módosítás</button>
-                <button className="btn btn-kicsi btn-veszelyes" onClick={() => void torol(v)}>Törlés</button>
-              </div>
-            </li>
-          ))}
-        </ul>
       </div>
-      {kerdesAblak}
     </section>
   )
 }

@@ -38,8 +38,8 @@ export const TARTALOM_LAPOK: { id: TartalomLap; cim: string; leiras: string }[] 
 ]
 
 const LAP_SAVOK: Record<TartalomLap, string[]> = {
-  fooldal: ['menu', 'hero', 'rolunk', 'galeria', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs',
-    'fogl-6', 'fogl-8', 'fogl-osszeg', 'fogl-siker', 'velemenyek', 'hely', 'gyik', 'lab'],
+  fooldal: ['menu', 'hero', 'rolunk', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs',
+    'fogl-6', 'fogl-8', 'fogl-osszeg', 'fogl-siker', 'galeria', 'velemenyek', 'hely', 'gyik', 'lab'],
   foglalas: ['ugyfel-alap', 'ugyfel-kesz', 'ugyfel-atveve', 'ugyfel-egyeb'],
   gyik: ['menu', 'gyik-oldal', 'lab'],
 }
@@ -78,7 +78,7 @@ const SAVOK: Sav[] = [
     kulcsok: ['hero.felcim', 'hero.cim', 'hero.bevezeto', 'hero.mellek', 'hero.borito_helye', 'hero.borito_alt'] },
   { id: 'rolunk', cim: 'Rólunk', leiras: 'A borítókép alatti sötétzöld sáv: cím és két bekezdés. Az első bekezdés nagyobb betűvel jelenik meg.', oldalResz: 'rolunk',
     kulcsok: ['rolunk.cim', 'rolunk.bekezdes1', 'rolunk.bekezdes2'] },
-  { id: 'galeria', cim: 'Galéria', leiras: 'Az előtte–utána képek a Rólunk alatt. Egérrel végighúzva lemosható a kosz, érintőképernyőn a szivacs gomb bekapcsolása után. A Reset gombbal újra koszos lesz. Az előnézetben is kipróbálhatod.', oldalResz: 'galeria',
+  { id: 'galeria', cim: 'Galéria', leiras: 'Az előtte–utána képek a foglalás alatt. Egérrel végighúzva lemosható a kosz, érintőképernyőn a szivacs gomb bekapcsolása után. A Reset gombbal újra koszos lesz. Az előnézetben is kipróbálhatod.', oldalResz: 'galeria',
     kulcsok: ['galeria.cim', 'galeria.bevezeto', 'galeria.foglalas', 'galeria.meret', 'galeria.reset', 'galeria.szivacs', 'galeria.vege', 'galeria.kep_alt'] },
   { id: 'csomagok', cim: 'Csomagok táblázat', leiras: 'A táblázat sorai és cellái a Csomagok menüben szerkeszthetők, itt a feliratai.', oldalResz: 'csomagok',
     kulcsok: ['csomagok.cim', 'csomagok.ervenyes', 'csomagok.alcim.szemelyauto', 'csomagok.alcim.suv', 'csomagok.alcim.kisbusz', 'csomagok.kategoria',

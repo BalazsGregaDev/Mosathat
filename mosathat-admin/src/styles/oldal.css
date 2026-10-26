@@ -496,3 +496,22 @@
   .ceg-atnev-lista .jelolo { grid-template-columns: auto minmax(0, 1fr); }
   .ceg-atnev-autok { grid-column: 2; justify-content: flex-start; }
 }
+
+.tavollet-leiras { font-size: var(--m-xs); margin: 0 0 var(--t2); }
+.tavollet-kartya .valtozas-szoveg > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.tavollet-jel {
+  display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: var(--m-xs);
+  font-weight: var(--vastag-eros, 600); background: var(--lap-2); color: var(--szoveg);
+}
+.tavollet-jel[data-tipus='szabadsag'] { background: color-mix(in srgb, #3b82c4 14%, var(--lap)); color: #1f5a8a; }
+.tavollet-jel[data-tipus='valtozas'] { background: color-mix(in srgb, #d08a1f 16%, var(--lap)); color: #8a5a10; }
+.tavollet-nev { font-weight: var(--vastag-eros, 600); }
+
+.ceg-valtas { width: min(600px, 100%); }
+.ceg-valtas .lap-torzs { display: flex; flex-direction: column; gap: var(--t3); }
+.ceg-valtas .lap-torzs > p { margin: 0; line-height: 1.5; }
+.ceg-valtas-mi { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--t2); font-size: var(--m-lg, 1.1rem); }
+.ceg-valtas-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--t2); max-height: 50vh; overflow-y: auto; }
+.ceg-valtas-lista .jelolo { flex-wrap: wrap; }
+.ceg-valtas-sor { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--t3); flex: 1; min-width: 0; }
+.ceg-valtas-sor .rendszam { font-family: var(--betu-szam); font-weight: var(--vastag-eros); letter-spacing: .04em; }

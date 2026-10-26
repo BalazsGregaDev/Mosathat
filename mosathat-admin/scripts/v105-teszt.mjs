@@ -137,7 +137,7 @@ ok('hat vélemény, ebből öt látszik', ['6', '5 látszik a 6-ból'],
   [String(await a.locator('.pub-velemeny').count()), (await a.locator('.pub-velemeny-szam').innerText()).trim().toLowerCase()])
 ok('a 3 csillagos halványan', 1, await a.locator('.pub-velemeny[data-rejtett]').count())
 await kep(a, '26-admin-velemenyek')
-await a.getByRole('button', { name: '+ Vélemény' }).click()
+await a.getByRole('button', { name: '+ Vélemény' }).last().click()
 const uj = a.locator('.pub-velemeny').last()
 await uj.locator('[data-mezo="nev"]').fill('Teszt Tamara')
 await uj.locator('[data-mezo="szoveg"]').fill('Gyors, alapos, kedves. Csak ajánlani tudom.')

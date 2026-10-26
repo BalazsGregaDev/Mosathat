@@ -66,6 +66,7 @@ export function useBookingForm(kezdoNap: string, bookingId?: string | null) {
   )
 
   const [f, setF] = useState<FormState>({ ...URES_URLAP, date: kezdoNap, packageId: startId })
+  const [eredetiCeg, setEredetiCeg] = useState<CegErtek>(URES_CEG)
   const [talalatok, setTalalatok] = useState<SearchHit[]>([])
   const [valasztott, setValasztott] = useState<SearchHit | null>(null)
   const [keresMezo, setKeresMezo] = useState<KeresesMezo | null>(null)
@@ -100,6 +101,7 @@ export function useBookingForm(kezdoNap: string, bookingId?: string | null) {
         const viszi = b.pick_up_at ?? b.deadline_at
         const vissziNap = helyiNap(viszi)
         setUgyfelId(d.customer.id)
+        setEredetiCeg(d.company ? { id: d.company.id, nev: d.company.name } : { id: null, nev: d.customer.company_name ?? '' })
         setF({
           name: d.customer.name === 'Névtelen' ? '' : d.customer.name,
           phone: d.customer.phone === '—' ? '' : d.customer.phone,
@@ -338,6 +340,7 @@ export function useBookingForm(kezdoNap: string, bookingId?: string | null) {
   }, [data, f, extrakLista, valasztott, bookingId, szerzodeses, flottaDarab])
 
   return {
+    eredetiCeg,
     f, set, calc, menthetE, ment, mentes, hiba, setHiba, tolt, szerkesztes, szerzodeses,
     flottas, flottaDarab,
     talalatok, keres, keresMezo, keresoIras, keresoZar,

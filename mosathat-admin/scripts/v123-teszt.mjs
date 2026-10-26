@@ -48,8 +48,8 @@ ok('Foglalás oldal: az ügyfél foglalási oldalának állapotai', ['ugyfel-ala
 await kep(p, '02-foglalas-oldal')
 await lapra(p, 'Főoldal')
 ok('Főoldal: a publikus főoldal sorrendjében, a foglalás lépésenként',
-  ['menu', 'hero', 'rolunk', 'galeria', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs', 'fogl-6', 'fogl-8',
-   'fogl-osszeg', 'fogl-siker', 'velemenyek', 'hely', 'gyik', 'lab'],
+  ['menu', 'hero', 'rolunk', 'csomagok', 'fogl-fej', 'fogl-1', 'fogl-2', 'fogl-3', 'fogl-4', 'fogl-5', 'fogl-5fs', 'fogl-6', 'fogl-8',
+   'fogl-osszeg', 'fogl-siker', 'galeria', 'velemenyek', 'hely', 'gyik', 'lab'],
   await p.locator('.tsz-blokk').evaluateAll((l) => l.map((e) => e.dataset.sav)))
 
 console.log('\n=== 2) Mezők nélkül: csak az előnézet, kattintásra a szöveg mezője ===\n')

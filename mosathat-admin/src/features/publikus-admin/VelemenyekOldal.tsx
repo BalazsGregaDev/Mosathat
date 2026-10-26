@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import '../arculat/betuk'
 import '../arculat/koncepciok.css'
@@ -22,14 +22,29 @@ export default function VelemenyekOldal() {
   const { data } = useApp()
   const { adat: pub } = usePublikusAdat()
   const [eredeti, setEredeti] = useState<VelemenySor[] | null>(null)
-  const [lista, setLista] = useState<VelemenySor[]>([])
+  const [lista, setListaAllapot] = useState<VelemenySor[]>([])
+  const [kulcsok, setKulcsok] = useState<number[]>([])
+  const [nyitott, setNyitott] = useState<Set<number>>(() => new Set())
+  const kovetkezo = useRef(1)
+  const ujKulcs = () => kovetkezo.current++
+  const setLista = (l: VelemenySor[], k?: number[]) => {
+    setListaAllapot(l)
+    setKulcsok(k ?? l.map(() => ujKulcs()))
+    if (!k) setNyitott(new Set())
+  }
   const [toltHiba, setToltHiba] = useState('')
   const { allapot, fut } = useMentes()
 
   useEffect(() => {
     let el = true
     data.velemenyekLista()
-      .then((l) => { if (el) { setEredeti(tisztit(l)); setLista(tisztit(l)) } })
+      .then((l) => {
+        if (!el) return
+        const t = tisztit(l)
+        setEredeti(t)
+        setListaAllapot(t)
+        setKulcsok(t.map(() => kovetkezo.current++))
+      })
       .catch((e: unknown) => { if (el) setToltHiba(e instanceof Error ? e.message : String(e)) })
     return () => { el = false }
   }, [data])
@@ -47,13 +62,35 @@ export default function VelemenyekOldal() {
   if (!pub || eredeti === null || !elonezet) return <div className="betolt">Betöltés…</div>
   const mod: Mod = pub.arculat === '03' && pub.mod ? pub.mod : 'VILAGOS'
 
-  const valt = (i: number, patch: Partial<VelemenySor>) => setLista(lista.map((v, j) => (j === i ? { ...v, ...patch } : v)))
+  const valt = (i: number, patch: Partial<VelemenySor>) => setLista(lista.map((v, j) => (j === i ? { ...v, ...patch } : v)), kulcsok)
   const mozgat = (i: number, irany: -1 | 1) => {
     const l = [...lista]
+    const k = [...kulcsok]
     const [x] = l.splice(i, 1)
+    const [y] = k.splice(i, 1)
     l.splice(i + irany, 0, x)
-    setLista(l)
+    k.splice(i + irany, 0, y)
+    setLista(l, k)
   }
+  const torol = (i: number) => setLista(lista.filter((_, j) => j !== i), kulcsok.filter((_, j) => j !== i))
+  const hozzaad = (elore: boolean) => {
+    const k = ujKulcs()
+    setLista(elore ? [{ ...UJ }, ...lista] : [...lista, { ...UJ }], elore ? [k, ...kulcsok] : [...kulcsok, k])
+    setNyitott((n) => new Set(n).add(k))
+  }
+  const nyit = (k: number, be: boolean) => setNyitott((n) => {
+    if (n.has(k) === be) return n
+    const uj = new Set(n)
+    if (be) uj.add(k)
+    else uj.delete(k)
+    return uj
+  })
+  const ujGomb = (elore: boolean) => (
+    <button type="button" className="btn btn-kicsi" disabled={lista.length >= 60} data-uj={elore ? 'fent' : 'lent'}
+            onClick={() => hozzaad(elore)}>
+      + Vélemény
+    </button>
+  )
 
   return (
     <div className="oldal pub-oldal">
@@ -98,9 +135,18 @@ export default function VelemenyekOldal() {
             Másold át a szöveget a Google-értékelésből, a nevet úgy, ahogy a Google-on látszik. A 3 vagy kevesebb csillagosakat is
             felveheted, ezek nem jelennek meg, de megmaradnak itt.
           </p>
+          <div className="pub-velemeny-fent">{ujGomb(true)}</div>
           {lista.length === 0 && <p className="halk">Még nincs felvett vélemény.</p>}
           {lista.map((v, i) => (
-            <div key={i} className="pub-velemeny" data-rejtett={!v.aktiv || v.csillag < 4 || undefined}>
+            <details key={kulcsok[i]} className="pub-velemeny" data-rejtett={!v.aktiv || v.csillag < 4 || undefined}
+                     open={nyitott.has(kulcsok[i])} onToggle={(e) => nyit(kulcsok[i], e.currentTarget.open)}>
+              <summary className="pub-velemeny-fej">
+                <span className="pub-velemeny-nev">{v.nev.trim() || 'Új vélemény'}</span>
+                <span className="pub-velemeny-csillag" aria-label={`${v.csillag} csillag`}>
+                  {'★'.repeat(v.csillag)}<span className="halvany">{'★'.repeat(5 - v.csillag)}</span>
+                </span>
+                {(!v.aktiv || v.csillag < 4) && <span className="cimke-pill">nem látszik</span>}
+              </summary>
               <div className="pub-velemeny-sor">
                 <Mezo cimke="Név">
                   <input className="beviteli" value={v.nev} maxLength={80} placeholder="pl. Kovács Anna"
@@ -138,17 +184,12 @@ export default function VelemenyekOldal() {
                 <div className="pub-kamera-gombok">
                   <button type="button" className="btn btn-kicsi btn-csendes" disabled={i === 0} onClick={() => mozgat(i, -1)}>Fel</button>
                   <button type="button" className="btn btn-kicsi btn-csendes" disabled={i === lista.length - 1} onClick={() => mozgat(i, 1)}>Le</button>
-                  <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => setLista(lista.filter((_, j) => j !== i))}>Törlés</button>
+                  <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => torol(i)}>Törlés</button>
                 </div>
               </div>
-            </div>
+            </details>
           ))}
-          <div>
-            <button type="button" className="btn btn-kicsi" disabled={lista.length >= 60}
-                    onClick={() => setLista([...lista, { ...UJ }])}>
-              + Vélemény
-            </button>
-          </div>
+          <div>{ujGomb(false)}</div>
         </div>
       </section>
     </div>

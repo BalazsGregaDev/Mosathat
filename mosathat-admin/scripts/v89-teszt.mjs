@@ -126,8 +126,8 @@ console.log('\n=== 4) A hamburger menü ===\n')
     sorMagassag: Math.round(document.querySelector('.kv-menu-panel nav a').getBoundingClientRect().height),
     nyelvMagassag: document.querySelector('.kv-menu-panel .nyelv-kapcsolo').getBoundingClientRect().height >= 44,
   }))
-  ok('megnyílik: Rólunk, Galéria, Csomagok, Foglalás, Kapcsolat és a nyelvválasztó; a név is látszik, a gomb X lett',
-    { gomb: 'true', cimke: 'Menü bezárása', linkek: ['Rólunk', 'Galéria', 'Csomagok', 'Foglalás', 'Kapcsolat'], nyelv: true, hatter: true, logo: '1', sorMagassag: 52, nyelvMagassag: true }, nyitott)
+  ok('megnyílik: Rólunk, Csomagok, Foglalás, Galéria, Kapcsolat és a nyelvválasztó; a név is látszik, a gomb X lett',
+    { gomb: 'true', cimke: 'Menü bezárása', linkek: ['Rólunk', 'Csomagok', 'Foglalás', 'Galéria', 'Kapcsolat'], nyelv: true, hatter: true, logo: '1', sorMagassag: 52, nyelvMagassag: true }, nyitott)
   await kep(p, '04-telefon-menu-nyitva.png')
 
   await p.locator('.kv-menu-panel nav a').filter({ hasText: 'Foglalás' }).tap()
@@ -144,7 +144,7 @@ console.log('\n=== 4) A hamburger menü ===\n')
     [await p.locator('.kv-menu-hely').isVisible(), await p.evaluate(() => document.documentElement.lang), await p.evaluate(() => location.search),
      await p.locator('.kv-menu-gomb').getAttribute('aria-label')])
   await p.locator('.kv-menu-gomb').tap(); await p.waitForTimeout(300)
-  ok('angolul a menü is angol', ['About us', 'Gallery', 'Packages', 'Booking', 'Contact'], (await p.locator('.kv-menu-panel nav a').allTextContents()).map(sima))
+  ok('angolul a menü is angol', ['About us', 'Packages', 'Booking', 'Gallery', 'Contact'], (await p.locator('.kv-menu-panel nav a').allTextContents()).map(sima))
   await kep(p, '06-telefon-menu-angol.png')
   await p.mouse.click(200, 780); await p.waitForTimeout(300)
   ok('a menün kívülre érintve bezárul', false, await p.locator('.kv-menu-hely').isVisible())

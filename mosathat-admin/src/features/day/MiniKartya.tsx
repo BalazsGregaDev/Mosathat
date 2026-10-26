@@ -35,22 +35,46 @@ export function azonosito(b: DayBooking): string {
   return b.company_name || b.customer_name || 'névtelen'
 }
 
+export function csomagBetu(b: Pick<DayBooking, 'package_name' | 'package_code'>): string | null {
+  const n = (b.package_name ?? b.package_code ?? '').trim()
+  return n ? n.charAt(0).toUpperCase() : null
+}
+
+export function extraRovid(nev: string): string {
+  const elso = nev.trim().split(/\s+/)[0]?.replace(/[,.;:]+$/, '') ?? ''
+  return elso.length > 5 ? `${elso.slice(0, 4)}.` : elso
+}
+
 export default function MiniKartya({ b, onMegnyit }: {
   b: DayBooking
   onMegnyit: (id: string) => void
 }) {
   const rendszamE = vanRendszam(b) && !b.flotta
+  const betu = csomagBetu(b)
+  const extrak = (b.extras_summary ?? '').split(', ').map((x) => x.trim()).filter(Boolean)
+  const csomagSzoveg = [b.package_name, b.full_service ? 'Full Service' : null].filter(Boolean).join(' + ')
   return (
     <button
       type="button"
       className="minikartya"
       data-a={b.status}
       onClick={(e) => { e.stopPropagation(); onMegnyit(b.id) }}
-      title={`${azonosito(b)} · ${idoSzoveg(b)} · ${STATUS_LABEL[b.status]}`}
+      title={[azonosito(b), idoSzoveg(b), csomagSzoveg, extrak.length ? `+ ${extrak.join(', ')}` : null, STATUS_LABEL[b.status]]
+        .filter(Boolean).join(' · ')}
     >
-      <span className={rendszamE ? 'azon rendszam' : 'azon nev'}>{azonosito(b)}</span>
-      <Kerdojel b={b} />
+      <span className="mini-fej">
+        {betu && (
+          <span className="csomag-betu" data-csomag={b.package_code ?? undefined} data-betu={betu}>
+            {betu}{b.full_service ? '+' : ''}
+          </span>
+        )}
+        <span className={rendszamE ? 'azon rendszam' : 'azon nev'}>{azonosito(b)}</span>
+        <Kerdojel b={b} />
+      </span>
       <span className="ido">{idoSzoveg(b)}</span>
+      {extrak.length > 0 && (
+        <span className="mini-extrak">+ {extrak.map(extraRovid).join(' · ')}</span>
+      )}
     </button>
   )
 }

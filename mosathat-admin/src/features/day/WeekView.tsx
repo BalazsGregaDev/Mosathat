@@ -10,7 +10,6 @@ import { hetiSavok, tobbnaposE } from '../../lib/savok'
 import KivetelJel, { kivetelFelirat, kivetelTipus, useKivetelnapok } from './Kivetelnap'
 
 const NAPOK = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
-const MAX = 10
 
 export default function WeekView({ nap, onMegnyit, onNapra }: {
   nap: string
@@ -132,8 +131,6 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
         {[0, 1, 2, 3, 4].map((i) => {
           const d = napPlusz(hetfo, i)
           const lista = napok.get(d) ?? []
-          const latszik = lista.slice(0, MAX)
-          const tobb = lista.length - latszik.length
           const kivetel = kivetelek.get(d)
 
           return (
@@ -147,15 +144,9 @@ export default function WeekView({ nap, onMegnyit, onNapra }: {
               <div className="oszloptorzs">
                 {kivetel && <KivetelJel o={kivetel} />}
 
-                {latszik.map((b) => (
+                {lista.map((b) => (
                   <MiniKartya key={b.id} b={b} onMegnyit={onMegnyit} />
                 ))}
-
-                {tobb > 0 && (
-                  <button className="tovabb" onClick={() => onNapra(d)}>
-                    + {tobb} további
-                  </button>
-                )}
 
                 {lista.length === 0 && !kivetel && <div className="uresnap">—</div>}
               </div>
