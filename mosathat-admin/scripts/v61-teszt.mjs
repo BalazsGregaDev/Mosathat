@@ -144,6 +144,7 @@ console.log('\n=== 6) Flotta: idő írható, a sorrend megmarad, a Szerkesztés 
   const gomb = lap.getByRole('button', { name: '+ Autó hozzáadása' })
   await gomb.click(); await gomb.click(); await gomb.click(); await p.waitForTimeout(500)
   await lap.locator('#vegso').fill('17:00')
+  if (await lap.locator('.foglalas-urlap .valaszto[data-hianyzik]').count()) await lap.locator('.foglalas-urlap .urlap-mikor .valaszto button').filter({ hasText: 'Itt hagyja' }).first().click()
   await lap.getByRole('button', { name: '3 autó rögzítése' }).click(); await p.waitForTimeout(2500)
 
   const sorrend = () => p.evaluate(() => [...document.querySelectorAll('.napi-lista > .sor-elem')]

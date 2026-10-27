@@ -771,3 +771,15 @@
 .lap.munkalap-urlap .ml-ugyfellink a.btn { color: inherit; }
 .kesz-ablak .kerdes-gombok { flex-wrap: wrap; }
 .kesz-ablak .kerdes-gombok .btn { flex: 1 1 auto; }
+
+.foglalas-urlap .mezo[data-hianyzik] .beviteli {
+  border: 2px solid var(--v-baj);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--v-baj) 18%, transparent);
+}
+.foglalas-urlap .valaszto[data-hianyzik] {
+  outline: 2px solid var(--v-baj);
+  outline-offset: 3px;
+  border-radius: var(--r);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--v-baj) 14%, transparent);
+}
+.foglalas-urlap .urlap-tipus-kell { margin: 0; font-size: var(--m-sm); color: var(--v-baj); }

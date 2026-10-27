@@ -165,6 +165,16 @@ export default function BookingForm({
   }
 
   const viszi = f.pickUpDate && f.pickUpDate > f.date
+  const jelol = !szerkesztes
+  const hiany = {
+    rendszam: jelol && flottaDarab === 0 && !f.plate.trim(),
+    telefon: jelol && !f.phone.trim(),
+    ceg: jelol && !f.ceg.nev.trim(),
+    tipus: f.bookingType === null,
+    mettol: jelol && (f.bookingType === 'VAROS' ? !f.startTime : !f.dropOffTime),
+    meddig: jelol && f.bookingType !== 'VAROS' && !f.pickUpTime,
+  }
+  const jel = (b: boolean) => (b ? '' : undefined)
   const megse = () => { if (!mentes && !kuld) onBezar() }
 
   return (
@@ -191,7 +201,7 @@ export default function BookingForm({
                 </div>
 
                 <div className="sor-2">
-                  <div className="mezo kereso">
+                  <div className="mezo kereso" data-hianyzik={jel(hiany.rendszam)}>
                     <label htmlFor="rendszam">Rendszám</label>
                     <input id="rendszam" className="beviteli beviteli-rendszam"
                            value={flottaDarab > 0 ? '' : f.plate}
@@ -224,12 +234,12 @@ export default function BookingForm({
                 </div>
 
                 <div className="sor-2">
-                  <div className="mezo">
+                  <div className="mezo" data-hianyzik={jel(hiany.telefon)}>
                     <label htmlFor="tel">Telefonszám</label>
                     <input id="tel" className="beviteli" type="tel" inputMode="tel" value={f.phone}
                            onChange={(e) => set('phone', e.target.value)} autoComplete="off" />
                   </div>
-                  <div className="mezo">
+                  <div className="mezo" data-hianyzik={jel(hiany.ceg)}>
                     <label htmlFor="ceg">Cég</label>
                     <CegValaszto inputId="ceg" ertek={f.ceg} onValt={(c) => set('ceg', c)} />
                   </div>
@@ -355,7 +365,7 @@ export default function BookingForm({
               {flottaDarab > 0 ? (
               <div className="szakasz urlap-mikor">
                 <div className="fej">Mikor</div>
-                <div className="valaszto">
+                <div className="valaszto" data-hianyzik={jel(hiany.tipus)}>
                   {TIPUSOK.filter((t) => t.id !== 'VAROS').map((t) => (
                     <button key={t.id} type="button"
                             aria-pressed={(f.bookingType === 'VAROS' ? 'LEADOS' : f.bookingType) === t.id}
@@ -370,7 +380,7 @@ export default function BookingForm({
                     <input id="datum" className="beviteli" type="date" value={f.date}
                            onChange={(e) => set('date', e.target.value)} />
                   </div>
-                  <div className="mezo">
+                  <div className="mezo" data-hianyzik={jel(hiany.meddig)}>
                     <label htmlFor="vegso">
                       {f.bookingType === 'HOZOMVISZEM' ? 'Visszaérni' : 'Kész legyen'}
                     </label>
@@ -386,7 +396,7 @@ export default function BookingForm({
               <div className="szakasz urlap-mikor">
                 <div className="fej">Mikor</div>
 
-                <div className="valaszto">
+                <div className="valaszto" data-hianyzik={jel(hiany.tipus)}>
                   {TIPUSOK.map((t) => (
                     <button key={t.id} type="button" aria-pressed={f.bookingType === t.id}
                             onClick={() => set('bookingType', t.id)}>
@@ -395,14 +405,27 @@ export default function BookingForm({
                   ))}
                 </div>
 
-                {f.bookingType === 'VAROS' ? (
+                {f.bookingType === null ? (
+                  <>
+                    <div className="sor-2">
+                      <div className="mezo">
+                        <label htmlFor="datum">Nap</label>
+                        <input id="datum" className="beviteli" type="date" value={f.date}
+                               onChange={(e) => set('date', e.target.value)} />
+                      </div>
+                    </div>
+                    <p className="halk urlap-tipus-kell">
+                      Válaszd ki, hogy itt hagyja, megvárja vagy hozom-viszem. Enélkül a foglalás nem menthető.
+                    </p>
+                  </>
+                ) : f.bookingType === 'VAROS' ? (
                   <div className="sor-2">
                     <div className="mezo">
                       <label htmlFor="datum">Nap</label>
                       <input id="datum" className="beviteli" type="date" value={f.date}
                              onChange={(e) => set('date', e.target.value)} />
                     </div>
-                    <div className="mezo">
+                    <div className="mezo" data-hianyzik={jel(hiany.mettol)}>
                       <label htmlFor="kezdes">Kezdés</label>
                       <IdoMezo id="kezdes" value={f.startTime} cim="Kezdés"
                                onChange={(v) => set('startTime', v)} />
@@ -418,7 +441,7 @@ export default function BookingForm({
                           <input id="datum" className="beviteli" type="date" value={f.date}
                                  onChange={(e) => set('date', e.target.value)} />
                         </div>
-                        <div className="mezo">
+                        <div className="mezo" data-hianyzik={jel(hiany.mettol)}>
                           <label htmlFor="leadas">Óra</label>
                           <IdoMezo id="leadas" value={f.dropOffTime} cim="Hozza — óra"
                                    onChange={(v) => set('dropOffTime', v)} />
@@ -435,7 +458,7 @@ export default function BookingForm({
                                  onChange={(e) => set('pickUpDate',
                                    e.target.value && e.target.value !== f.date ? e.target.value : '')} />
                         </div>
-                        <div className="mezo">
+                        <div className="mezo" data-hianyzik={jel(hiany.meddig)}>
                           <label htmlFor="atvetel">Óra</label>
                           <IdoMezo id="atvetel" value={f.pickUpTime} cim="Viszi — óra" torolheto
                                    placeholder="nincs megbeszélve"
@@ -469,7 +492,7 @@ export default function BookingForm({
                 )}
 
                 {fejleszto && (
-                  <BeferSor datum={f.date} tipus={f.bookingType} kezdes={f.startTime}
+                  <BeferSor datum={f.date} tipus={f.bookingType ?? 'LEADOS'} kezdes={f.startTime}
                             hozza={f.dropOffTime} visziNap={f.pickUpDate} viszi={f.pickUpTime}
                             perc={calc?.work_minutes} kihagy={bookingId ?? null}
                             onIdo={(mezo, v) => set(mezo, v)} />

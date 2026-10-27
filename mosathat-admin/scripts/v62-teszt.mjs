@@ -150,6 +150,7 @@ console.log('\n=== 6) Tablet: időválasztó az űrlap fölött ===\n')
   const t = await oldal({ viewport: { width: 800, height: 1280 }, isMobile: true, hasTouch: true })
   await menu(t.p, 'Időpontok')
   await ujNyit(t.p)
+  await t.p.locator('.urlap-mikor .valaszto button').filter({ hasText: 'Itt hagyja' }).first().click()
   await t.p.locator('#leadas').click(); await t.p.waitForTimeout(400)
   ok('két ablak: űrlap, fölötte az időválasztó', ['Új időpont', 'Hozza — óra'],
     (await ablakok(t.p)).map((a) => a.cimke))

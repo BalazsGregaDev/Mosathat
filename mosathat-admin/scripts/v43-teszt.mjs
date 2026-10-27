@@ -41,6 +41,7 @@ async function ujFoglalas(p, rsz, nev, tel, kerdojeles, datum) {
   await p.locator('.lap-torzs').click({ position: { x: 5, y: 5 } })
   if (kerdojeles) await p.locator('.kerdojel-gomb').click()
   await p.waitForTimeout(400)
+  if (await p.locator('.foglalas-urlap .valaszto[data-hianyzik]').count()) await p.locator('.foglalas-urlap .urlap-mikor .valaszto button').filter({ hasText: 'Itt hagyja' }).first().click()
   await p.getByRole('button', { name: 'Foglalás rögzítése' }).click()
   await p.waitForTimeout(2000)
 }
@@ -127,6 +128,7 @@ await belep(t)
 await menu(t, 'Időpontok')
 {
   await ujNyit(t)
+  await t.locator('.urlap-mikor .valaszto button').filter({ hasText: 'Itt hagyja' }).first().click()
   ok('az óra mező nem gyári időmező, hanem gomb', ['BUTTON', 0],
     [await t.locator('#leadas').evaluate((e) => e.tagName), await t.locator('input[type="time"]').count()])
   await t.locator('#leadas').click()

@@ -20,7 +20,7 @@ interface FormState {
   scope: BookingScope
   fullService: boolean
   extras: Record<string, number>
-  bookingType: BookingType
+  bookingType: BookingType | null
   date: string
   startTime: string
   dropOffTime: string
@@ -44,10 +44,10 @@ const URES_URLAP: FormState = {
   scope: 'TELJES',
   fullService: false,
   extras: {},
-  bookingType: 'LEADOS',
+  bookingType: null,
   date: '',
-  startTime: '09:00',
-  dropOffTime: '08:00',
+  startTime: '',
+  dropOffTime: '',
   pickUpDate: '',
   pickUpTime: '',
   tentative: false,
@@ -228,7 +228,7 @@ export function useBookingForm(kezdoNap: string, bookingId?: string | null) {
       extras: extrakLista,
       surcharge_pct: 0,
       surcharge_fix: 0,
-      booking_type: f.bookingType,
+      booking_type: f.bookingType ?? 'LEADOS',
       service_date: f.date,
       company_id: f.ceg.id,
       company_name: cegNevKesve || null,
@@ -272,15 +272,21 @@ export function useBookingForm(kezdoNap: string, bookingId?: string | null) {
 
   const menthetE = useMemo(
     () => Boolean(f.packageId)
+      && f.bookingType !== null
       && Boolean(f.plate.trim() || f.name.trim() || f.ceg.nev.trim()),
-    [f.packageId, f.plate, f.name, f.ceg.nev],
+    [f.packageId, f.bookingType, f.plate, f.name, f.ceg.nev],
   )
 
   const ment = useCallback(async (ceg: CegErtek = f.ceg): Promise<string | null> => {
+    if (!f.bookingType) {
+      setHiba('Válaszd ki, hogy megvárja, itt hagyja vagy hozom-viszem.')
+      return null
+    }
+    const tipus = f.bookingType
     setMentes(true)
     setHiba(null)
     try {
-      const varos = f.bookingType === 'VAROS'
+      const varos = tipus === 'VAROS'
       const input = {
         package_id: f.packageId,
         category: f.category,
@@ -300,7 +306,7 @@ export function useBookingForm(kezdoNap: string, bookingId?: string | null) {
         brand: f.brand.trim() || null,
         model: f.model.trim() || null,
         seats: null,
-        booking_type: f.bookingType,
+        booking_type: tipus,
         service_date: f.date,
         start_time: varos ? f.startTime || '09:00' : null,
         drop_off_time: varos ? null : f.dropOffTime || '08:00',
@@ -313,7 +319,7 @@ export function useBookingForm(kezdoNap: string, bookingId?: string | null) {
       if (!bookingId && flottaDarab > 0) {
         return await data.createFleetBooking({
           ...input,
-          booking_type: f.bookingType === 'VAROS' ? 'LEADOS' : f.bookingType,
+          booking_type: tipus === 'VAROS' ? 'LEADOS' : tipus,
           plate_raw: '',
           vehicle_id: null,
           start_time: null,
