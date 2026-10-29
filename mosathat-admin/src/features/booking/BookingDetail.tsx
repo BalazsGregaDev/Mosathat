@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
 import { useMentetlen } from '../../state/useMentetlen'
-import { felarasAr, ft, helyiNap, helyiOra, hibaSzoveg, idotartam, napKulonbseg, vegOra } from '../../lib/format'
+import { felarasAr, ft, helyiNap, helyiOra, hibaSzoveg, idotartam, napKulonbseg, uresJel, vegOra } from '../../lib/format'
 import { tobbnaposE } from '../../lib/savok'
 import {
   CATEGORY_LABEL, EGYSEG, KATEGORIAK, NEXT_STATUS, SCOPE_LABEL, TERJEDELMEK, TYPE_LABEL, eloE, lemondottE,
@@ -490,7 +490,7 @@ export default function BookingDetail({
                         cimke="Telefon" ertek={b.customer_phone} tipus="telefon" zarolt={lezart}
                         kezdetbenNyitva={fokusz === 'telefon'}
                         onMent={(v) => mezoMent({ customer_phone: v })}
-                        utotag={b.customer_phone && (
+                        utotag={!uresJel(b.customer_phone) && (
                           <a href={`tel:${b.customer_phone}`} className="hivas"
                              title="Hívás">Hívás</a>
                         )} />

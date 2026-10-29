@@ -240,6 +240,12 @@ export function ota(iso: string, most: number = Date.now()): string {
   return `${Math.floor(perc / (24 * 60))} napja`
 }
 
+const URES_JELEK = new Set(['', '—', '–', '-'])
+
+export function uresJel(v: string | null | undefined): boolean {
+  return URES_JELEK.has((v ?? '').trim())
+}
+
 export function hibaSzoveg(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }

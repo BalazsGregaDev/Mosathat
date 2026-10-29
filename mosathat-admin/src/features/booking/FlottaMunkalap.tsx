@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { ft, helyiOra, hibaSzoveg, napRovidCim } from '../../lib/format'
+import { ft, helyiOra, hibaSzoveg, napRovidCim, uresJel } from '../../lib/format'
 import { aktualisAuto, autoNev, csoportNev, csoportOsszeg, elo, HELYORZO, vanRendszam } from '../../lib/flotta'
 import FlottaLepteto from '../day/FlottaLepteto'
 import {
@@ -133,7 +133,7 @@ export default function FlottaMunkalap({
             <Szerkesztheto cimke="Telefon" ertek={elso.customer_phone} tipus="telefon"
                            zarolt={!szerkesztheto}
                            onMent={(v) => muvelet(() => data.patchBooking(elso.id, { customer_phone: v }), true)}
-                           utotag={elso.customer_phone && (
+                           utotag={!uresJel(elso.customer_phone) && (
                              <a href={`tel:${elso.customer_phone}`} className="hivas">Hívás</a>
                            )} />
 

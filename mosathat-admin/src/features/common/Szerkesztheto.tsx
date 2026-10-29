@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { billentyuzetTakarit } from '../../lib/billentyuzet'
-import { hibaSzoveg } from '../../lib/format'
+import { hibaSzoveg, uresJel } from '../../lib/format'
 
 type Tipus = 'szoveg' | 'telefon' | 'email' | 'szam' | 'ido' | 'datum' | 'rendszam'
 
@@ -36,7 +36,8 @@ export default function Szerkesztheto({
   kezdetbenNyitva?: boolean
 }) {
   const [nyitva, setNyitva] = useState(Boolean(kezdetbenNyitva && !zarolt))
-  const [piszkozat, setPiszkozat] = useState(kezdetbenNyitva ? (ertek ?? '') : '')
+  const kiindulo = uresJel(ertek) ? '' : (ertek ?? '')
+  const [piszkozat, setPiszkozat] = useState(kezdetbenNyitva ? kiindulo : '')
   const kijelol = useRef(Boolean(kezdetbenNyitva))
   const [megy, setMegy] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
@@ -56,7 +57,7 @@ export default function Szerkesztheto({
 
   function nyit() {
     if (zarolt || megy) return
-    setPiszkozat(ertek ?? '')
+    setPiszkozat(kiindulo)
     setHiba(null)
     setNyitva(true)
   }
@@ -64,7 +65,7 @@ export default function Szerkesztheto({
   const ment = useCallback(async (uj: string) => {
     if (megyRef.current) return
     const v = uj.trim()
-    if (v === (ertek ?? '').trim()) { setNyitva(false); return }
+    if (v === (uresJel(ertek) ? '' : (ertek ?? '').trim())) { setNyitva(false); return }
     megyRef.current = true
     setMegy(true)
     try {
@@ -121,7 +122,7 @@ export default function Szerkesztheto({
   }
 
   if (!nyitva) {
-    const uresE = !ertek || ertek.trim() === ''
+    const uresE = uresJel(ertek)
     const mutat = valaszthato
       ? (valaszthato.find((v) => v.ertek === (ertek ?? ''))?.cimke ?? ures)
       : (uresE ? ures : ertek)
@@ -148,6 +149,7 @@ export default function Szerkesztheto({
   const kozos = {
     ref: mezo as never,
     value: piszkozat,
+    placeholder: ures,
     disabled: megy,
     onKeyDown: billentyu,
     onBlur: () => void ment(piszkozat),
