@@ -256,8 +256,13 @@ export function AdatvedelemEn() {
       <p>
         We do not place any cookies ourselves on the public website, and we do not use analytics or advertising
         tracking code. Fonts are loaded from our own hosting, not from an external provider. Cookies may only be placed
-        by Google Maps, and only if you load the map (see point 2.10). The internal interface used by our team uses the
-        browser’s local storage to keep users signed in; this does not affect visitors.
+        by Google Maps, and only if you load the map (see point 2.10).
+      </p>
+      <p>
+        The public website remembers two small settings in your browser’s local storage: the language you chose, and
+        that you have already closed a pop-up announcement, so it does not appear again. These stay on your device,
+        never reach us, contain no personal data, and you can delete them in your browser at any time. The internal
+        interface used by our team also uses the browser’s local storage to keep users signed in.
       </p>
 
       <h2>4. Who can access the data</h2>

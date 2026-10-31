@@ -259,8 +259,13 @@ function Adatvedelem() {
         A nyilvános weboldalon mi magunk nem helyezünk el sütit, és nem használunk látogatottságmérő vagy
         reklámcélú követőkódot. A betűtípusokat a saját tárhelyünkről töltjük be, nem külső szolgáltatótól.
         Sütit csak a Google Térkép helyezhet el, és csak akkor, ha a térképet betöltöd (lásd 2.10 pont).
-        A munkatársaink által használt belső felület a bejelentkezés megőrzéséhez a böngésző helyi tárolóját
-        használja; ez a látogatókat nem érinti.
+      </p>
+      <p>
+        A nyilvános oldal a böngésződ helyi tárolójában két apró beállítást jegyez meg: a választott nyelvet, és
+        azt, hogy egy felugró bejelentést már bezártál, hogy ne jelenjen meg újra. Ezek csak a te eszközödön
+        maradnak, hozzánk nem jutnak el, személyes adatot nem tartalmaznak, és a böngésződben bármikor törölheted
+        őket. A munkatársaink által használt belső felület a bejelentkezés megőrzéséhez szintén a böngésző helyi
+        tárolóját használja.
       </p>
 
       <h2>4. Kik ismerhetik meg az adatokat</h2>
