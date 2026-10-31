@@ -65,6 +65,18 @@ const utNelkul = await q(`
      and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')
    order by 1`)
 t.ok('minden emelt jogú függvénynek rögzített a keresési útvonala (search_path)', [], utNelkul.map((r) => r.nev))
+const minden = await q(`
+  select p.oid::regprocedure::text nev from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.prokind in ('f', 'p')
+     and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')
+   order by 1`)
+t.ok('minden függvénynek rögzített a keresési útvonala (a Supabase Security Advisor szerint is)', [], minden.map((r) => r.nev))
+const triggerKint = await q(`
+  select p.oid::regprocedure::text nev from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.prorettype = 'trigger'::regtype
+     and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))
+   order by 1`)
+t.ok('belső automatikus ellenőrzések (triggerek) kívülről nem hívhatók', [], triggerKint.map((r) => r.nev))
 
 console.log('\n=== 4) Belépés nélkül tényleg nem megy ===\n')
 const hiba = async (s) => { try { await db.query(s); return null } catch (e) { return e.message } }
