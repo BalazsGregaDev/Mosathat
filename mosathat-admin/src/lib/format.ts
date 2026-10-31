@@ -240,6 +240,10 @@ export function ota(iso: string, most: number = Date.now()): string {
   return `${Math.floor(perc / (24 * 60))} napja`
 }
 
+export function oraMs(): number {
+  return performance.now()
+}
+
 const URES_JELEK = new Set(['', '—', '–', '-'])
 
 export function uresJel(v: string | null | undefined): boolean {

@@ -16,6 +16,7 @@ import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, Ses
 import type { PublikusMentes, VelemenySor } from '../lib/publikusTartalom'
 import type { GyikAdmin, GyikMod, GyikSor } from '../lib/gyik'
 import { kepKicsinyit } from '../lib/kep'
+import { egyediBol, felugroBol, URES_EGYEDI, URES_FELUGRO, type BejelentesAdat, type Egyedi, type Felugro } from '../lib/bejelentes'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
 import type { FoglalasKereses, FoglalasomAdat, FoglalasTalalat } from '../../../supabase/functions/_shared/tipusok.ts'
@@ -467,6 +468,32 @@ export class SupabaseSource implements DataSource {
     const kep = await kepKicsinyit(f, 1600, 0.82)
     const ut = `${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.webp`
     const tar = this.sb.storage.from('gyik-kepek')
+    const { error } = await tar.upload(ut, kep, { contentType: 'image/webp', cacheControl: '31536000', upsert: false })
+    if (error) fail('A kép feltöltése', error)
+    return tar.getPublicUrl(ut).data.publicUrl
+  }
+
+  async bejelentesAdat(): Promise<BejelentesAdat> {
+    const { data, error } = await this.sb.rpc('bejelentes_adat')
+    if (error) fail('A bejelentések betöltése', error)
+    const x = data as { felugro?: Felugro; egyedi?: Egyedi } | null
+    return { felugro: felugroBol(x?.felugro) ?? URES_FELUGRO, egyedi: egyediBol(x?.egyedi) ?? URES_EGYEDI }
+  }
+
+  async felugroMentes(f: Felugro): Promise<void> {
+    const { error } = await this.sb.rpc('felugro_mentes', { p: f })
+    if (error) fail('A felugró ablak mentése', error)
+  }
+
+  async egyediMentes(e: Egyedi): Promise<void> {
+    const { error } = await this.sb.rpc('egyedi_mentes', { p: e })
+    if (error) fail('Az egyedi szekció mentése', error)
+  }
+
+  async oldalKepFeltoltes(f: Blob): Promise<string> {
+    const kep = await kepKicsinyit(f, 1600, 0.82)
+    const ut = `${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.webp`
+    const tar = this.sb.storage.from('oldal-kepek')
     const { error } = await tar.upload(ut, kep, { contentType: 'image/webp', cacheControl: '31536000', upsert: false })
     if (error) fail('A kép feltöltése', error)
     return tar.getPublicUrl(ut).data.publicUrl

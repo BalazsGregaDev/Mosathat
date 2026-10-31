@@ -10,6 +10,7 @@ import type {
   PublikusNapAdat, BerletLap, BerletLapListaElem, BerletFoglalashoz, BerletSorInput, BerletLinkAdat, BerletLinkSor,
 } from '../lib/types'
 import { URES_GYIK, type GyikAdmin, type GyikMod, type GyikPublikus, type GyikSor } from '../lib/gyik'
+import { egyediBol, felugroBol, type BejelentesAdat, type Egyedi, type Felugro } from '../lib/bejelentes'
 import type { NyitvaNap, Velemeny, VelemenySor, PublikusAdatokNyers, PublikusMentes, PublikusTartalomNyers } from '../lib/publikusTartalom'
 import type { Kamera } from '../lib/ceg'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
@@ -46,6 +47,8 @@ export interface PublikusNyers {
   kamerak?: Kamera[]
   velemenyek?: Velemeny[]
   gyik?: GyikPublikus
+  felugro?: Partial<Felugro> | null
+  egyedi?: Partial<Egyedi> | null
   extras?: Extra[]
   fullServicePricing?: Catalog['fullServicePricing']
   packages: Catalog['packages']
@@ -75,6 +78,8 @@ export function publikusbol(n: PublikusNyers): PublikusAdat {
       kamerak: n.kamerak ?? [],
       velemenyek: n.velemenyek ?? [],
       gyik: n.gyik ?? URES_GYIK,
+      felugro: felugroBol(n.felugro),
+      egyedi: egyediBol(n.egyedi),
       nyitvatartas: n.nyitvatartas ?? [],
       leadas: n.leadas ?? null,
     },
@@ -123,6 +128,10 @@ export interface DataSource {
   gyikSorrend(ids: string[]): Promise<void>
   gyikBeallitas(mod: GyikMod, max: number): Promise<void>
   gyikKepFeltoltes(f: Blob): Promise<string>
+  bejelentesAdat(): Promise<BejelentesAdat>
+  felugroMentes(f: Felugro): Promise<void>
+  egyediMentes(e: Egyedi): Promise<void>
+  oldalKepFeltoltes(f: Blob): Promise<string>
   publikusNap(nap: string): Promise<PublikusNapAdat>
   publikusAjanlat(input: Partial<NewBookingInput> & CalcInput): Promise<Quote>
   publikusFoglalas(input: OnlineBookingInput): Promise<string>

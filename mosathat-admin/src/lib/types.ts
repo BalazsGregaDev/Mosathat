@@ -943,6 +943,7 @@ export interface OnlineBookingInput {
   model: string | null
   notes: string | null
   weboldal?: string
+  ido?: number
   nyelv?: 'hu' | 'en'
 }
 

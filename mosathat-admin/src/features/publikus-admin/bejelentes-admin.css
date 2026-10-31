@@ -1,0 +1,40 @@
+.bej-racs { display: grid; grid-template-columns: minmax(320px, 400px) minmax(0, 1fr); gap: var(--t4); align-items: start; }
+.bej-elonezet { position: sticky; top: 112px; max-height: calc(100vh - 128px); display: flex; flex-direction: column; }
+.bej-elonezet > .panel-torzs { overflow: auto; min-height: 0; }
+@media (max-width: 1100px) {
+  .bej-racs { grid-template-columns: minmax(0, 1fr); }
+  .bej-elonezet { position: static; max-height: none; }
+}
+
+.bej-kapcsolo { font-weight: 600; }
+.bej-kapcsolo small { font-weight: 400; }
+.bej-valaszto button { padding: 6px 12px; }
+.bej-angol summary { cursor: pointer; font-size: var(--m-sm); color: var(--szoveg-halk); margin-bottom: var(--t2); }
+.bej-angol[open] summary { margin-bottom: var(--t3); }
+
+.bej-elonezet h3 { display: flex; align-items: center; justify-content: space-between; gap: var(--t2); flex-wrap: wrap; }
+.bej-elonezet-eszkoz { display: inline-flex; align-items: center; gap: var(--t3); flex-wrap: wrap; font-weight: 400; }
+
+.bej-kepek { display: flex; flex-wrap: wrap; gap: var(--t2); }
+.bej-kep {
+  margin: 0; width: 128px; display: flex; flex-direction: column; gap: 6px;
+  border: 1px solid var(--keret); border-radius: var(--r); padding: 6px; background: var(--felulet, #fff);
+}
+.bej-kep img { width: 100%; height: 84px; object-fit: cover; border-radius: calc(var(--r) - 2px); display: block; }
+.bej-kep figcaption { display: flex; flex-wrap: wrap; gap: 2px; }
+.bej-kep figcaption .btn { padding: 2px 6px; font-size: var(--m-xs); }
+.bej-kep-uj, .bej-kep-tolt {
+  min-height: 130px; justify-content: center; align-items: center; text-align: center;
+  border-style: dashed; color: var(--szoveg-halk); font: inherit; font-size: var(--m-sm); cursor: pointer;
+}
+.bej-kep-uj:hover { border-color: var(--zold); color: var(--zold); }
+.bej-kep-tolt { cursor: default; }
+
+.bej-kepernyo[data-kepernyo='telefon'] { max-width: 392px; margin: 0 auto; }
+
+.bej-felugro-minta { position: relative; min-height: 560px; }
+.bej-felugro-takaro {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 24px;
+  background: rgba(10, 14, 11, .55);
+}
+.bej-felugro-takaro > .kv { background: transparent; min-height: 0; width: min(520px, 100%); }

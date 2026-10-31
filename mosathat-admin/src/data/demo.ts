@@ -23,6 +23,7 @@ import type {
 import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, SessionUser } from './source'
 import type { PublikusMentes, VelemenySor } from '../lib/publikusTartalom'
 import type { GyikAdmin, GyikMod, GyikSor } from '../lib/gyik'
+import { egyediBol, felugroBol, URES_EGYEDI, URES_FELUGRO, type BejelentesAdat, type Egyedi, type Felugro } from '../lib/bejelentes'
 import { adatUrl, kepKicsinyit } from '../lib/kep'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
@@ -430,6 +431,23 @@ export class DemoSource implements DataSource {
 
   async gyikKepFeltoltes(f: Blob): Promise<string> {
     return adatUrl(await kepKicsinyit(f, 1000, 0.72))
+  }
+
+  async bejelentesAdat(): Promise<BejelentesAdat> {
+    const [r] = await this.rows<{ x: { felugro: Felugro; egyedi: Egyedi } }>(`select bejelentes_adat() x`)
+    return { felugro: felugroBol(r.x.felugro) ?? URES_FELUGRO, egyedi: egyediBol(r.x.egyedi) ?? URES_EGYEDI }
+  }
+
+  async felugroMentes(f: Felugro): Promise<void> {
+    await this.rows(`select felugro_mentes($1::jsonb)`, [JSON.stringify(f)])
+  }
+
+  async egyediMentes(e: Egyedi): Promise<void> {
+    await this.rows(`select egyedi_mentes($1::jsonb)`, [JSON.stringify(e)])
+  }
+
+  async oldalKepFeltoltes(f: Blob): Promise<string> {
+    return adatUrl(await kepKicsinyit(f, 1200, 0.78))
   }
 
   async getPublikus(): Promise<PublikusAdat> {

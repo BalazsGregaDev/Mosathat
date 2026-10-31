@@ -43,11 +43,13 @@ const CegadatokOldal = lazy(() => import('../publikus-admin/CegadatokOldal'))
 const JogiSzovegekOldal = lazy(() => import('../publikus-admin/JogiSzovegekOldal'))
 const VelemenyekOldal = lazy(() => import('../publikus-admin/VelemenyekOldal'))
 const GyikAdminOldal = lazy(() => import('../publikus-admin/GyikOldal'))
+const FelugroOldal = lazy(() => import('../publikus-admin/FelugroOldal'))
+const EgyediOldal = lazy(() => import('../publikus-admin/EgyediOldal'))
 
 type Oldal =
   | 'attekintes' | 'nap' | 'szolgaltatasok' | 'partnerek' | 'ugyfelek'
   | 'beallitasok' | 'felhasznalok' | 'profilom' | 'igazolo' | 'arculat'
-  | 'pub-elerhetoseg' | 'pub-tartalom' | 'pub-csomagok' | 'pub-cegadatok' | 'pub-jogi' | 'pub-velemenyek' | 'pub-gyik'
+  | 'pub-elerhetoseg' | 'pub-tartalom' | 'pub-csomagok' | 'pub-cegadatok' | 'pub-jogi' | 'pub-velemenyek' | 'pub-gyik' | 'pub-felugro' | 'pub-egyedi'
 
 type MenuPont = { id: Oldal; cimke: string; tulaj?: boolean }
 
@@ -66,6 +68,8 @@ const MENU: MenuPont[] = [
 const MENU_PUB: MenuPont[] = [
   { id: 'pub-elerhetoseg', cimke: 'Elérhetőség' },
   { id: 'pub-tartalom', cimke: 'Tartalom' },
+  { id: 'pub-felugro', cimke: 'Felugró ablak' },
+  { id: 'pub-egyedi', cimke: 'Egyedi szekció' },
   { id: 'pub-csomagok', cimke: 'Csomagok tartalma' },
   { id: 'pub-velemenyek', cimke: 'Vélemények' },
   { id: 'pub-gyik', cimke: 'GYIK' },
@@ -389,6 +393,8 @@ export default function AppShell() {
               {oldal === 'pub-jogi' && <JogiSzovegekOldal />}
               {oldal === 'pub-velemenyek' && <VelemenyekOldal />}
               {oldal === 'pub-gyik' && <GyikAdminOldal />}
+              {oldal === 'pub-felugro' && <FelugroOldal />}
+              {oldal === 'pub-egyedi' && <EgyediOldal />}
             </Suspense>
           )}
         </main>

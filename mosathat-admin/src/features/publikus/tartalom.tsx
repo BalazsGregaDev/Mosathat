@@ -6,6 +6,7 @@ import {
 } from '../../lib/publikusTartalom'
 import { formatum, type Formatum, type Nyelv } from '../../lib/nyelv'
 import { URES_GYIK, type GyikPublikus } from '../../lib/gyik'
+import type { Egyedi, Felugro } from '../../lib/bejelentes'
 
 export type Sz = (kulcs: SzovegKulcs, extra?: Valtozok) => string
 
@@ -19,6 +20,8 @@ interface TartalomErtek {
   velemenyek: Velemeny[]
   google: string
   gyik: GyikPublikus
+  felugro: Felugro | null
+  egyedi: Egyedi | null
 }
 
 export type Jelolo = (kulcs: SzovegKulcs, szoveg: string) => string
@@ -37,6 +40,7 @@ function ertekbol(t: PublikusTartalomNyers, lemondasOra?: number, nyelv: Nyelv =
   return {
     sz, u, ceg: cegbol(t, u), jogi: jogibol(t, u, nyelv), nyelv, f: formatum(nyelv),
     velemenyek: t.velemenyek ?? [], gyik: t.gyik ?? URES_GYIK, google: t.adatok.google_ertekeles?.trim() || GOOGLE_KERESES,
+    felugro: t.felugro ?? null, egyedi: t.egyedi ?? null,
   }
 }
 
@@ -62,6 +66,8 @@ export const useFormatum = () => useContext(Ctx).f
 export const useVelemenyek = () => useContext(Ctx).velemenyek
 export const useGoogle = () => useContext(Ctx).google
 export const useGyik = () => useContext(Ctx).gyik
+export const useFelugro = () => useContext(Ctx).felugro
+export const useEgyedi = () => useContext(Ctx).egyedi
 
 export function forditott<T extends { name: string; name_en?: string | null }>(x: T, nyelv: Nyelv): string {
   return nyelv === 'en' ? x.name_en?.trim() || x.name : x.name

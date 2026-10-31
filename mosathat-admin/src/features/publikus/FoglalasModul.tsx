@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { napBeosztasBetolt, type NapBeosztas } from '../../state/napBeosztas'
 import { hataridoLehetosegek, napAllapot, type Lehetoseg, type NapAllapot, type TiltottSav } from '../../lib/befer'
 import { negyedekbol } from '../../lib/beosztas'
-import { hetHetfoje, hibaSzoveg, maStr, napPlusz, percIdo, percOra } from '../../lib/format'
+import { hetHetfoje, hibaSzoveg, maStr, napPlusz, oraMs, percIdo, percOra } from '../../lib/format'
 import { csomagLeiras } from '../../lib/csomagLeiras'
 import {
   ULESEK,
@@ -134,6 +134,8 @@ export function FoglalasUrlap({
   const [adatok, setAdatok] = useState<Adatok>(kezdoAdatok)
   const [elfogad, setElfogad] = useState(false)
   const [weboldal, setWeboldal] = useState('')
+  const megnyitva = useRef(0)
+  useEffect(() => { megnyitva.current = oraMs() }, [])
   const [oldal, setOldal] = useState(0)
   const [kuld, setKuld] = useState(false)
   const [hiba, setHiba] = useState<string | null>(null)
@@ -316,7 +318,7 @@ export function FoglalasUrlap({
         customer_email: adatok.email.trim() || null, plate_raw: adatok.rendszam.trim(),
         brand: adatok.marka.trim() || null, model: adatok.modell.trim() || null,
         notes: adatok.megjegyzes.trim() || null,
-        weboldal, nyelv,
+        weboldal, ido: Math.round(oraMs() - megnyitva.current), nyelv,
       })
       const id = typeof eredmeny === 'string' ? eredmeny : eredmeny.id
       setKesz({

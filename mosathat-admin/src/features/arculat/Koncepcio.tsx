@@ -17,6 +17,7 @@ import Galeria from './Galeria'
 import Velemenyek from './Velemenyek'
 import GyikSzakasz, { GyikOldal } from './Gyik'
 import { egerElhagy, egerKovet, useCsillanas, useVaszonSzin } from './csillanas'
+import { EgyediSzekcio, FelugroAblak } from './Bejelentes'
 import { gorgetIde } from './gorgetes'
 
 interface KvAllapot {
@@ -615,6 +616,7 @@ function MagazinHero() {
           <p className="kv-halk"><Gazdag s={sz('hero.mellek')} /></p>
         </div>
       </section>
+      <EgyediSzekcio />
       <Borito />
     </>
   )
@@ -977,6 +979,7 @@ function KvKornyezet({
     <Kv.Provider value={{ k, t, kat, setKat, tol, nyilvanos, foglalas, kiemelt, onCsomag, nyelvValaszto }}>
       <div className="kv" ref={gyoker} lang={nyelv} data-k={kod} data-mod={mod === 'SOTET' ? 'sotet' : 'vilagos'}>
         {children}
+        {nyilvanos && <FelugroAblak />}
       </div>
     </Kv.Provider>
   )

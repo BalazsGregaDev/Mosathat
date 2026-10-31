@@ -229,8 +229,9 @@ export function AdatvedelemEn() {
       >
         <p>
           To prevent abuse, the public booking page accepts at most three unconfirmed requests from one phone
-          number within 24 hours, and also limits the total number of requests per hour. We do not collect any
-          additional data for this; we only use the phone number given in the request.
+          number within 24 hours, and also limits the total number of requests per hour. For the same reason, for
+          booking and booking-lookup requests we record the IP address in a transformed, unreadable form so that mass
+          requests from one address can be limited; this transformed address is deleted after two days.
         </p>
       </Adatkezeles>
 

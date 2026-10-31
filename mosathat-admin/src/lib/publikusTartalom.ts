@@ -1,3 +1,4 @@
+import type { Egyedi, Felugro } from './bejelentes'
 import type { GyikPublikus } from './gyik'
 import { UZLET } from './arculat'
 import { ADATFELDOLGOZOK, CEG, JOGI_HATALY, TERVEZET, type Kamera } from './ceg'
@@ -56,6 +57,8 @@ export const GOOGLE_KERESES = 'https://www.google.com/search?q=Mosathat+-+Hand+C
 
 export interface PublikusTartalomNyers {
   velemenyek?: Velemeny[]
+  felugro?: Felugro | null
+  egyedi?: Egyedi | null
   gyik?: GyikPublikus
   adatok: PublikusAdatokNyers
   szovegek: Record<string, string>

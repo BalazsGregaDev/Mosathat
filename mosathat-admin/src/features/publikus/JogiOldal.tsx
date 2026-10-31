@@ -231,8 +231,9 @@ function Adatvedelem() {
       >
         <p>
           A nyilvános foglalási oldalon a visszaélések kiszűrésére egy telefonszámról 24 órán belül legfeljebb
-          három, még vissza nem igazolt kérést fogadunk el, és óránként összesen is korlátozzuk a kérések számát. Ehhez nem
-          gyűjtünk további adatot, csak a kérésben megadott telefonszámot használjuk.
+          három, még vissza nem igazolt kérést fogadunk el, és óránként összesen is korlátozzuk a kérések számát. Ugyanezért
+          a foglalási és a foglaláskereső kéréseknél az IP-címet nem olvasható, átalakított formában rögzítjük, hogy egy
+          címről érkező tömeges kéréseket korlátozni tudjuk; ezt az átalakított címet két nap után töröljük.
         </p>
       </Adatkezeles>
 

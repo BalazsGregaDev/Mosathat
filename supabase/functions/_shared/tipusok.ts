@@ -52,6 +52,8 @@ export interface FoglalasKereses {
   rendszam: string
   telefon: string
   email: string
+  weboldal?: string
+  ido?: number
 }
 
 export interface FoglalasKep {

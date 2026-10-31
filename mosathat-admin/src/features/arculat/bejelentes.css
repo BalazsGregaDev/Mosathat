@@ -1,0 +1,55 @@
+.kv .kv-egyedi { --egyedi-kep: 340px; margin: 0 24px; padding: 4px 0 30px; display: flex; flex-direction: column; gap: 18px; }
+.kv .kv-egyedi[data-meret='kicsi'] { --egyedi-kep: 200px; }
+.kv .kv-egyedi[data-meret='nagy'] { --egyedi-kep: 520px; }
+.kv .kv-egyedi[data-igazitas='bal'] { align-items: flex-start; text-align: left; }
+.kv .kv-egyedi[data-igazitas='kozep'] { align-items: center; text-align: center; }
+.kv .kv-egyedi[data-igazitas='jobb'] { align-items: flex-end; text-align: right; }
+.kv .kv-egyedi-szoveg { max-width: 68ch; font-size: 15px; line-height: 1.65; white-space: normal; overflow-wrap: anywhere; }
+.kv .kv-egyedi-szoveg em { font-style: italic; }
+.kv .kv-egyedi-kepek { display: flex; flex-wrap: wrap; gap: 12px; width: 100%; align-items: flex-start; }
+.kv .kv-egyedi[data-igazitas='bal'] .kv-egyedi-kepek { justify-content: flex-start; }
+.kv .kv-egyedi[data-igazitas='kozep'] .kv-egyedi-kepek { justify-content: center; }
+.kv .kv-egyedi[data-igazitas='jobb'] .kv-egyedi-kepek { justify-content: flex-end; }
+.kv .kv-egyedi-kepek img { display: block; flex: 0 1 var(--egyedi-kep); min-width: 0; max-width: 100%; height: auto; border-radius: 2px; }
+.kv .kv-egyedi[data-meret='teljes'] .kv-egyedi-kepek img { flex: 1 1 0; }
+@container kv (max-width: 700px) {
+  .kv .kv-egyedi { margin: 0 16px; padding-bottom: 24px; gap: 14px; }
+  .kv .kv-egyedi-kepek { gap: 8px; }
+  .kv .kv-egyedi:not([data-meret='kicsi']) .kv-egyedi-kepek img { flex: 1 1 100%; }
+  .kv .kv-egyedi[data-meret='kicsi'] .kv-egyedi-kepek img { flex: 0 1 calc((100% - 16px) / 3); }
+}
+
+.kv .kv-felugro { padding: 0; border: 0; background: transparent; color: var(--fg); max-width: min(520px, calc(100vw - 32px)); width: 100%; }
+.kv .kv-felugro::backdrop { background: rgba(10, 14, 11, .55); backdrop-filter: blur(2px); }
+.kv .kv-felugro-doboz {
+  position: relative; background: var(--bg); color: var(--fg);
+  padding: 34px 30px 26px; border-radius: 3px; border-top: 4px solid var(--lakk, var(--zold));
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .55);
+  font-family: var(--betu); font-size: 15px; line-height: 1.6;
+}
+.kv .kv-felugro-doboz:focus { outline: none; }
+.kv .kv-felugro-doboz h2 { margin: 0 34px 12px 0; font-family: var(--talpas, var(--betu)); font-weight: 500; font-size: 28px; line-height: 1.15; }
+.kv .kv-felugro-szoveg { margin: 0; overflow-wrap: anywhere; }
+.kv .kv-felugro-szoveg em { font-style: italic; }
+.kv .kv-felugro-x {
+  position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; display: grid; place-items: center;
+  border: 0; border-radius: 50%; background: transparent; color: var(--halk); font-size: 28px; line-height: 1;
+}
+.kv .kv-felugro-x:hover { color: var(--fg); background: color-mix(in srgb, var(--fg) 7%, transparent); }
+.kv .kv-felugro-x:focus-visible { outline: 2px solid var(--zold); outline-offset: 2px; }
+.kv .kv-felugro-lab { display: flex; justify-content: flex-end; margin-top: 24px; }
+.kv button.kv-felugro-ok {
+  --csik: 64px; --fenykor: 130px 90px;
+  border: 0; border-radius: 2px; min-width: 140px; color: var(--fg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12), 0 6px 16px -8px rgba(11, 33, 22, .55);
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+.kv:not([data-k='03']) button.kv-felugro-ok { background: var(--gomb-bg); color: var(--gomb-fg); padding: 13px 22px; }
+.kv button.kv-felugro-ok:active { transform: translateY(1px); }
+.kv button.kv-felugro-ok:focus-visible { outline: 2px solid var(--lakk, var(--zold)); outline-offset: 3px; }
+@media (max-width: 560px) {
+  .kv .kv-felugro-doboz { padding: 30px 20px 20px; }
+  .kv .kv-felugro-doboz h2 { font-size: 24px; }
+  .kv .kv-felugro-lab { justify-content: stretch; }
+  .kv button.kv-felugro-ok { width: 100%; }
+}
