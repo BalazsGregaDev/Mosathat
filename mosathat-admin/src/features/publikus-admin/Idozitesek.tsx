@@ -13,8 +13,9 @@ import {
 import { hibaSzoveg, idoMost } from '../../lib/format'
 import type { Nyelv } from '../../lib/nyelv'
 import { useKerdes } from '../common/Kerdes'
+import IdoMezo from '../common/IdoMezo'
 import NyelvKapcsolo from '../common/NyelvKapcsolo'
-import { Mezo, PubFej } from './kozos'
+import { PubFej } from './kozos'
 
 const UJ = 'uj'
 
@@ -36,6 +37,44 @@ function tisztit(v: Bejelentes): Bejelentes {
   return {
     ...v, cim: v.cim.trim(), szoveg: v.szoveg.trim(), cim_en: v.cim_en.trim(), szoveg_en: v.szoveg_en.trim(),
   }
+}
+
+const NEGYEDEK = [0, 15, 30, 45]
+const ORAK = Array.from({ length: 13 }, (_, i) => i + 6)
+
+function maiNap(): string {
+  return helyiIdo(new Date(idoMost()).toISOString()).slice(0, 10)
+}
+
+function IdoPont({ cimke, mezo, ertek, alapOra, ures, torlo, onValt }: {
+  cimke: string
+  mezo: string
+  ertek: string | null
+  alapOra: string
+  ures: string
+  torlo: string
+  onValt: (iso: string | null) => void
+}) {
+  const helyi = helyiIdo(ertek)
+  const nap = helyi.slice(0, 10)
+  const ora = helyi.slice(11, 16)
+  return (
+    <div className="mezo pub-mezo">
+      <span>{cimke}</span>
+      <span className="bej-ido-mezo">
+        <span className="bej-ido-par">
+          <input className="beviteli" type="date" value={nap} aria-label={`${cimke} napja`} data-mezo={`${mezo}-nap`}
+                 onChange={(e) => onValt(e.target.value ? isoIdo(`${e.target.value}T${ora || alapOra}`) : null)} />
+          <IdoMezo value={ora} ariaLabel={`${cimke} időpontja`} cim={`${cimke} — időpont`} mezo={`${mezo}-ora`}
+                   className="beviteli bej-ora" placeholder="óra" egyedi percek={NEGYEDEK} orak={ORAK}
+                   onChange={(o) => onValt(o ? isoIdo(`${nap || maiNap()}T${o}`) : null)} />
+        </span>
+        {ertek
+          ? <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => onValt(null)}>{torlo}</button>
+          : <small className="halk">{ures}</small>}
+      </span>
+    </div>
+  )
 }
 
 const osszevet = (v: Bejelentes) => JSON.stringify({ ...v, updated_at: undefined })
@@ -145,20 +184,10 @@ export default function Idozitesek({ tipus, cim, alcim, ujFelirat, tartalomHiba,
           </span>
         </label>
         <div className="bej-ido-sor">
-          <Mezo cimke="Indítás" sugo={v.kezdes ? undefined : 'Üresen: azonnal'}>
-            <span className="bej-ido-mezo">
-              <input className="beviteli" type="datetime-local" value={helyiIdo(v.kezdes)} data-mezo="kezdes"
-                     onChange={(e) => valt({ kezdes: isoIdo(e.target.value) })} />
-              {v.kezdes && <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => valt({ kezdes: null })}>Azonnal</button>}
-            </span>
-          </Mezo>
-          <Mezo cimke="Zárás" sugo={v.zaras ? undefined : 'Üresen: amíg ki nem kapcsolod'}>
-            <span className="bej-ido-mezo">
-              <input className="beviteli" type="datetime-local" value={helyiIdo(v.zaras)} data-mezo="zaras"
-                     onChange={(e) => valt({ zaras: isoIdo(e.target.value) })} />
-              {v.zaras && <button type="button" className="btn btn-kicsi btn-csendes" onClick={() => valt({ zaras: null })}>Visszavonásig</button>}
-            </span>
-          </Mezo>
+          <IdoPont cimke="Indítás" mezo="kezdes" ertek={v.kezdes} alapOra="06:00" ures="Üresen: azonnal" torlo="Azonnal"
+                   onValt={(x) => valt({ kezdes: x })} />
+          <IdoPont cimke="Zárás" mezo="zaras" ertek={v.zaras} alapOra="18:00" ures="Üresen: amíg ki nem kapcsolod" torlo="Visszavonásig"
+                   onValt={(x) => valt({ zaras: x })} />
         </div>
         {idoHiba && <p className="pub-hiba" role="alert">{idoHiba}</p>}
         {utkozo && (

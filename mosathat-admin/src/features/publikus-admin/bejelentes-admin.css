@@ -71,3 +71,6 @@
 .bej-utkozes { margin: 0; }
 .bej-idozites-gombok { display: flex; align-items: center; gap: var(--t2); flex-wrap: wrap; }
 .bej-gombok-tag { flex: 1; }
+.bej-ido-par { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 6px; width: 100%; }
+.bej-ido-par .beviteli { width: 100%; }
+.bej-ora { text-align: center; }

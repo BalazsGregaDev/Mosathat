@@ -783,3 +783,4 @@
   box-shadow: 0 0 0 5px color-mix(in srgb, var(--v-baj) 14%, transparent);
 }
 .foglalas-urlap .urlap-tipus-kell { margin: 0; font-size: var(--m-sm); color: var(--v-baj); }
+.ido-percek[data-db='4'] { grid-template-columns: repeat(4, minmax(0, 1fr)); }

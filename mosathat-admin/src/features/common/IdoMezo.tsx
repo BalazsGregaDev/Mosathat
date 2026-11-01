@@ -5,6 +5,7 @@ import { erintokepernyo } from '../../lib/kepernyo'
 import Ablak from './Ablak'
 
 const PERCEK = Array.from({ length: 12 }, (_, i) => i * 5)
+const ORAK = Array.from({ length: 16 }, (_, i) => i + 6)
 
 export default function IdoMezo({
   id,
@@ -18,6 +19,9 @@ export default function IdoMezo({
   cim,
   mezo,
   nap,
+  percek = PERCEK,
+  orak = ORAK,
+  egyedi = false,
 }: {
   id?: string
   value: string
@@ -30,11 +34,14 @@ export default function IdoMezo({
   cim?: string
   mezo?: string
   nap?: number
+  percek?: number[]
+  orak?: number[]
+  egyedi?: boolean
 }) {
   const [erinto] = useState(erintokepernyo)
   const [nyitva, setNyitva] = useState(false)
 
-  if (!erinto) {
+  if (!erinto && !egyedi) {
     return (
       <input id={id} type="time" className={className} step={300} aria-label={ariaLabel}
              data-mezo={mezo} data-nap={nap}
@@ -58,6 +65,8 @@ export default function IdoMezo({
           cim={cim ?? ariaLabel ?? 'Időpont'}
           ertek={value}
           torolheto={torolheto}
+          percek={percek}
+          alapOrak={orak}
           onValt={onChange}
           onBezar={(vegso) => { setNyitva(false); onKesz?.(vegso) }}
         />
@@ -66,10 +75,12 @@ export default function IdoMezo({
   )
 }
 
-function IdoPanel({ cim, ertek, torolheto, onValt, onBezar }: {
+function IdoPanel({ cim, ertek, torolheto, percek, alapOrak, onValt, onBezar }: {
   cim: string
   ertek: string
   torolheto?: boolean
+  percek: number[]
+  alapOrak: number[]
   onValt: (uj: string) => void
   onBezar: (vegso: string) => void
 }) {
@@ -77,7 +88,7 @@ function IdoPanel({ cim, ertek, torolheto, onValt, onBezar }: {
   const ora = most ? Number(most.slice(0, 2)) : null
   const perc = most ? Number(most.slice(3, 5)) : null
 
-  const orak = Array.from({ length: 16 }, (_, i) => i + 6)
+  const orak = [...alapOrak]
   if (ora !== null && !orak.includes(ora)) orak.push(ora)
   orak.sort((a, b) => a - b)
 
@@ -116,8 +127,8 @@ function IdoPanel({ cim, ertek, torolheto, onValt, onBezar }: {
 
         <div className="ido-csoport">
           <span className="ido-csoport-cim">Perc</span>
-          <div className="ido-racs ido-percek">
-            {PERCEK.map((p) => (
+          <div className="ido-racs ido-percek" data-db={percek.length}>
+            {percek.map((p) => (
               <button key={p} type="button" aria-pressed={p === perc}
                       data-negyed={p % 15 === 0 || undefined}
                       onClick={() => percValaszt(p)}>:{ketjegy(p)}</button>
