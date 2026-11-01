@@ -384,7 +384,7 @@ export default function BookingForm({
                     <label htmlFor="vegso">
                       {f.bookingType === 'HOZOMVISZEM' ? 'Visszaérni' : 'Kész legyen'}
                     </label>
-                    <IdoMezo id="vegso" value={f.pickUpTime} torolheto placeholder="nap végéig"
+                    <IdoMezo id="vegso" foglalas value={f.pickUpTime} torolheto placeholder="nap végéig"
                              cim={f.bookingType === 'HOZOMVISZEM' ? 'Visszaérni' : 'Kész legyen'}
                              onChange={(v) => set('pickUpTime', v)} />
                     <small>Amikorra az utolsó autónak is {f.bookingType === 'HOZOMVISZEM'
@@ -427,7 +427,7 @@ export default function BookingForm({
                     </div>
                     <div className="mezo" data-hianyzik={jel(hiany.mettol)}>
                       <label htmlFor="kezdes">Kezdés</label>
-                      <IdoMezo id="kezdes" value={f.startTime} cim="Kezdés"
+                      <IdoMezo id="kezdes" foglalas value={f.startTime} cim="Kezdés"
                                onChange={(v) => set('startTime', v)} />
                     </div>
                   </div>
@@ -443,7 +443,7 @@ export default function BookingForm({
                         </div>
                         <div className="mezo" data-hianyzik={jel(hiany.mettol)}>
                           <label htmlFor="leadas">Óra</label>
-                          <IdoMezo id="leadas" value={f.dropOffTime} cim="Hozza — óra"
+                          <IdoMezo id="leadas" foglalas value={f.dropOffTime} cim="Hozza — óra"
                                    onChange={(v) => set('dropOffTime', v)} />
                         </div>
                       </div>
@@ -460,7 +460,7 @@ export default function BookingForm({
                         </div>
                         <div className="mezo" data-hianyzik={jel(hiany.meddig)}>
                           <label htmlFor="atvetel">Óra</label>
-                          <IdoMezo id="atvetel" value={f.pickUpTime} cim="Viszi — óra" torolheto
+                          <IdoMezo id="atvetel" foglalas value={f.pickUpTime} cim="Viszi — óra" torolheto
                                    placeholder="nincs megbeszélve"
                                    onChange={(v) => set('pickUpTime', v)} />
                         </div>

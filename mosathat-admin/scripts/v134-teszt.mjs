@@ -73,14 +73,14 @@ console.log('=== 1) Felugró ablakok időzítése ===\n')
   await p.locator('[data-mezo="kezdes-ora"]').click()
   await p.waitForTimeout(300)
   const panel = p.locator('.ido-ablak')
-  ok('saját időválasztó nyílik (nem a gyári), 6 és 18 óra között, csak negyedórás percekkel', [['06', '18', 13], [':00', ':15', ':30', ':45'], 0],
+  ok('saját időválasztó nyílik (nem a gyári), 0 és 23 óra között, csak negyedórás percekkel', [['00', '23', 24], [':00', ':15', ':30', ':45'], 0],
     [[(await panel.locator('.ido-orak button').first().innerText()).trim(), (await panel.locator('.ido-orak button').last().innerText()).trim(), await panel.locator('.ido-orak button').count()], (await panel.locator('.ido-percek button').allInnerTexts()).map((x) => x.trim()),
       await p.locator('.bej-idozites input[type="time"], .bej-idozites input[type="datetime-local"]').count()])
   await kep(p, '01a-sajat-idovalaszto')
   await panel.getByRole('button', { name: 'Kész' }).click()
   await p.locator('[data-mezo="zaras-nap"]').fill((await helyi(p, 3, 8)).slice(0, 10))
   await p.waitForTimeout(200)
-  ok('csak dátumot választva a zárás 18:00-ra áll', '18:00', (await p.locator('[data-mezo="zaras-ora"]').innerText()).trim())
+  ok('csak dátumot választva a zárás 23:45-re áll', '23:45', (await p.locator('[data-mezo="zaras-ora"]').innerText()).trim())
   await p.locator('.bej-idozites[open]').getByRole('button', { name: 'Visszavonásig' }).click()
   ok('a Visszavonásig gomb törli a zárást', 'óra', (await p.locator('[data-mezo="zaras-ora"]').innerText()).trim())
   await p.locator('[data-mezo="cim"]').fill('Karácsonyi nyitvatartás')

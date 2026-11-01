@@ -12,6 +12,14 @@ const ok = (mit, v, k) => {
   if (!jo) baj++
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
+
+async function idoValaszt(p, mezo, ido) {
+  await mezo.click()
+  const panel = p.locator('.ido-ablak')
+  await panel.locator('.ido-orak button').filter({ hasText: new RegExp(`^${ido.slice(0, 2)}$`) }).click()
+  await panel.locator('.ido-percek button').filter({ hasText: `:${ido.slice(3, 5)}` }).click()
+  await p.waitForTimeout(200)
+}
 const kep = async (el, nev) => { if (KEPEK) await el.screenshot({ path: join(KEPEK, `${nev}.png`) }) }
 const jsHiba = (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ }
 
@@ -52,8 +60,8 @@ await p.waitForTimeout(300)
 ok('a Mikor rendben, a két óra piros', ['leadas', 'atvetel'], await hianyzik())
 ok('már menthető', false, await mentes.isDisabled())
 await kep(lap, '02-itt-hagyja')
-await lap.locator('#leadas').fill('08:30')
-await lap.locator('#atvetel').fill('16:00')
+await idoValaszt(p, lap.locator('#leadas'), '08:30')
+await idoValaszt(p, lap.locator('#atvetel'), '16:00')
 await p.waitForTimeout(300)
 ok('kitöltve nincs piros', [], await hianyzik())
 
@@ -61,7 +69,7 @@ console.log('\n=== 3) Megvárja: a kezdés piros ===\n')
 await lap.locator('.urlap-mikor .valaszto button').filter({ hasText: 'Megvárja' }).click()
 await p.waitForTimeout(300)
 ok('csak a kezdés', ['kezdes'], await hianyzik())
-await lap.locator('#kezdes').fill('10:00')
+await idoValaszt(p, lap.locator('#kezdes'), '10:00')
 await p.waitForTimeout(300)
 ok('kitöltve nincs piros', [], await hianyzik())
 await kep(lap, '03-kitoltve')

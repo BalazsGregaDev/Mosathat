@@ -40,7 +40,7 @@ function tisztit(v: Bejelentes): Bejelentes {
 }
 
 const NEGYEDEK = [0, 15, 30, 45]
-const ORAK = Array.from({ length: 13 }, (_, i) => i + 6)
+const ORAK = Array.from({ length: 24 }, (_, i) => i)
 
 function maiNap(): string {
   return helyiIdo(new Date(idoMost()).toISOString()).slice(0, 10)
@@ -184,9 +184,9 @@ export default function Idozitesek({ tipus, cim, alcim, ujFelirat, tartalomHiba,
           </span>
         </label>
         <div className="bej-ido-sor">
-          <IdoPont cimke="Indítás" mezo="kezdes" ertek={v.kezdes} alapOra="06:00" ures="Üresen: azonnal" torlo="Azonnal"
+          <IdoPont cimke="Indítás" mezo="kezdes" ertek={v.kezdes} alapOra="00:00" ures="Üresen: azonnal" torlo="Azonnal"
                    onValt={(x) => valt({ kezdes: x })} />
-          <IdoPont cimke="Zárás" mezo="zaras" ertek={v.zaras} alapOra="18:00" ures="Üresen: amíg ki nem kapcsolod" torlo="Visszavonásig"
+          <IdoPont cimke="Zárás" mezo="zaras" ertek={v.zaras} alapOra="23:45" ures="Üresen: amíg ki nem kapcsolod" torlo="Visszavonásig"
                    onValt={(x) => valt({ zaras: x })} />
         </div>
         {idoHiba && <p className="pub-hiba" role="alert">{idoHiba}</p>}

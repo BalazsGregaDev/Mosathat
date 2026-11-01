@@ -10,6 +10,14 @@ const ok = (mit, v, k) => {
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
 
+async function idoValaszt(p, mezo, ido) {
+  await mezo.click()
+  const panel = p.locator('.ido-ablak')
+  await panel.locator('.ido-orak button').filter({ hasText: new RegExp(`^${ido.slice(0, 2)}$`) }).click()
+  await panel.locator('.ido-percek button').filter({ hasText: `:${ido.slice(3, 5)}` }).click()
+  await p.waitForTimeout(200)
+}
+
 async function oldal(viewport = { width: 1440, height: 900 }) {
   const ctx = await b.newContext({ viewport })
   const p = await ctx.newPage()
@@ -43,7 +51,7 @@ const lathatoHiba = (p) => p.locator('.hibauzenet:visible').count()
 
 console.log('=== 1) Füstteszt: minden menüpont, minden szerepkör, asztal és telefon ===\n')
 const TELJES = ['Áttekintés', 'Időpontok', 'Igazolólap', 'Szolgáltatások', 'Cégek és bérletesek', 'Ügyfelek', 'Felhasználók',
-  'Beállítások', 'Profilom', 'Elérhetőség', 'Tartalom', 'Csomagok tartalma', 'Vélemények', 'GYIK', 'Cégadatok', 'Jogi szövegek', 'Arculat']
+  'Beállítások', 'Profilom', 'Elérhetőség', 'Tartalom', 'Felugró ablak', 'Egyedi szekció', 'Csomagok tartalma', 'Vélemények', 'GYIK', 'Cégadatok', 'Jogi szövegek', 'Arculat']
 const SZEREPEK = [
   ['demo@mosathat.hu', TELJES],
   ['tulaj@mosathat.hu', TELJES],
@@ -143,7 +151,7 @@ console.log('\n=== 6) Flotta: idő írható, a sorrend megmarad, a Szerkesztés 
   await p.locator('.ceg-kereso .talalatsor').first().click(); await p.waitForTimeout(1200)
   const gomb = lap.getByRole('button', { name: '+ Autó hozzáadása' })
   await gomb.click(); await gomb.click(); await gomb.click(); await p.waitForTimeout(500)
-  await lap.locator('#vegso').fill('17:00')
+  await idoValaszt(p, lap.locator('#vegso'), '17:00')
   if (await lap.locator('.foglalas-urlap .valaszto[data-hianyzik]').count()) await lap.locator('.foglalas-urlap .urlap-mikor .valaszto button').filter({ hasText: 'Itt hagyja' }).first().click()
   await lap.getByRole('button', { name: '3 autó rögzítése' }).click(); await p.waitForTimeout(2500)
 
@@ -161,12 +169,11 @@ console.log('\n=== 6) Flotta: idő írható, a sorrend megmarad, a Szerkesztés 
   const fk = p.locator('.napi-lista .flotta-kartya').first()
   await fk.getByRole('button', { name: 'Autók' }).click(); await p.waitForTimeout(1500)
   const ml = p.locator('[aria-label="Flottás csoport"]')
-  const ido = ml.locator('input[aria-label="Végső időpont"]')
-  await ido.fill('15:30'); await ido.press('Tab'); await p.waitForTimeout(1800)
+  await idoValaszt(p, ml.getByRole('button', { name: 'Végső időpont' }), '15:30'); await p.waitForTimeout(1800)
   await ml.locator('.lap-fej .bezar').click(); await p.waitForTimeout(1200)
   await fk.getByRole('button', { name: 'Autók' }).click(); await p.waitForTimeout(1500)
   ok('asztali gépen a „Kész legyen" idő átírható és elmentődik', '15:30',
-    await ml.locator('input[aria-label="Végső időpont"]').inputValue())
+    (await ml.getByRole('button', { name: 'Végső időpont' }).innerText()).trim())
 
   await ml.locator('.flotta-sor').nth(1).getByRole('button', { name: 'Részletek' }).click(); await p.waitForTimeout(1500)
   await p.locator('dialog[aria-label="Munkalap"]').getByRole('button', { name: 'Szerkesztés' }).click()

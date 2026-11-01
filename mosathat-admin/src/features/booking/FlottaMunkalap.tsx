@@ -149,7 +149,7 @@ export default function FlottaMunkalap({
             <div className="adatsor">
               <span>{hozomViszem ? 'Visszaérni' : 'Kész legyen'}</span>
               <span className="ertek">
-                <IdoMezo ariaLabel="Végső időpont" cim={hozomViszem ? 'Visszaérni' : 'Kész legyen'}
+                <IdoMezo foglalas ariaLabel="Végső időpont" cim={hozomViszem ? 'Visszaérni' : 'Kész legyen'}
                          value={oraVazlat}
                          onChange={setOraVazlat}
                          onKesz={(v) => { if (v && v !== vegsoOra) void kozos({ pick_up_time: v }) }} />

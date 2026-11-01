@@ -88,7 +88,7 @@ export default function NapOraSor({
                  value={napP} min={minNap}
                  onChange={(e) => { setNapP(e.target.value); kesobb(e.target.value, oraP) }}
                  onBlur={() => void ment(napP, oraP)} />
-          <IdoMezo ariaLabel={`${cimke} órája`} cim={`${cimke} — óra`}
+          <IdoMezo foglalas ariaLabel={`${cimke} órája`} cim={`${cimke} — óra`}
                    value={oraP} placeholder={oraUres} torolheto={Boolean(oraUres)}
                    onChange={(v) => { setOraP(v); kesobb(napP, v) }}
                    onKesz={(v) => void ment(napP, v)} />

@@ -8,6 +8,14 @@ const ok = (mit, v, k) => {
   if (!jo) baj++
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
+
+async function idoValaszt(p, mezo, ido) {
+  await mezo.click()
+  const panel = p.locator('.ido-ablak')
+  await panel.locator('.ido-orak button').filter({ hasText: new RegExp(`^${ido.slice(0, 2)}$`) }).click()
+  await panel.locator('.ido-percek button').filter({ hasText: `:${ido.slice(3, 5)}` }).click()
+  await p.waitForTimeout(200)
+}
 const hiba = (e) => { console.log('   JS HIBA:', e.message.slice(0, 200)); baj++ }
 async function belep(email) {
   const a = await adminOldal(b, { hiba })
@@ -33,7 +41,7 @@ console.log('\n=== 2) Befér-e az Új időpont űrlapon ===\n')
   await p.locator('.fejlec .btn-fo').filter({ hasText: 'Új időpont' }).click()
   await p.waitForTimeout(2500)
   await p.locator('.urlap-mikor .valaszto button').filter({ hasText: 'Itt hagyja' }).first().click()
-  await p.locator('#leadas').fill('08:00')
+  await idoValaszt(p, p.locator('#leadas'), '08:00')
   const sor = p.locator('.befer-sor')
   ok('van Befér-e sor', 1, await sor.count())
   ok('befér vagy nem fér be — kiírja', true, /Befér|Nem fér be|zárva/.test(await sor.innerText()))

@@ -7,6 +7,14 @@ const ok = (mit, v, k) => {
   if (!jo) baj++
   console.log(`   ${jo ? 'OK  ' : 'HIBA'}  ${mit}${jo ? '' : `  → ${JSON.stringify(k)} (várt: ${JSON.stringify(v)})`}`)
 }
+
+async function idoValaszt(p, mezo, ido) {
+  await mezo.click()
+  const panel = p.locator('.ido-ablak')
+  await panel.locator('.ido-orak button').filter({ hasText: new RegExp(`^${ido.slice(0, 2)}$`) }).click()
+  await panel.locator('.ido-percek button').filter({ hasText: `:${ido.slice(3, 5)}` }).click()
+  await p.waitForTimeout(200)
+}
 const szam = (s) => Number(String(s).replace(/[^0-9]/g, ''))
 async function menu(p, nev) {
   await p.locator('aside.oldalsav button').filter({ hasText: nev }).first().click()
@@ -56,7 +64,7 @@ await p.waitForTimeout(1500)
   ok('a rendszám mező tiltva', true, await p.locator('#rendszam').isDisabled())
   ok('a Mikor: nap + végső idő (Kész legyen), nincs Hozza/Viszi', [1, 0],
     [await lap.locator('label[for="vegso"]').count(), await lap.locator('#leadas').count()])
-  await lap.locator('#vegso').fill('17:00')
+  await idoValaszt(p, lap.locator('#vegso'), '17:00')
   ok('az ár 3 × egy autó', egy * 3, szam(await lap.locator('.lap-lab .osszeg .ertek').innerText()))
   await lap.getByRole('button', { name: 'Eggyel kevesebb autó' }).click()
   await gomb.click()

@@ -6,6 +6,8 @@ import Ablak from './Ablak'
 
 const PERCEK = Array.from({ length: 12 }, (_, i) => i * 5)
 const ORAK = Array.from({ length: 16 }, (_, i) => i + 6)
+const NEGYEDEK = [0, 15, 30, 45]
+const NYITVA_ORAK = Array.from({ length: 13 }, (_, i) => i + 6)
 
 export default function IdoMezo({
   id,
@@ -22,6 +24,7 @@ export default function IdoMezo({
   percek = PERCEK,
   orak = ORAK,
   egyedi = false,
+  foglalas = false,
 }: {
   id?: string
   value: string
@@ -37,11 +40,12 @@ export default function IdoMezo({
   percek?: number[]
   orak?: number[]
   egyedi?: boolean
+  foglalas?: boolean
 }) {
   const [erinto] = useState(erintokepernyo)
   const [nyitva, setNyitva] = useState(false)
 
-  if (!erinto && !egyedi) {
+  if (!erinto && !egyedi && !foglalas) {
     return (
       <input id={id} type="time" className={className} step={300} aria-label={ariaLabel}
              data-mezo={mezo} data-nap={nap}
@@ -65,8 +69,8 @@ export default function IdoMezo({
           cim={cim ?? ariaLabel ?? 'Időpont'}
           ertek={value}
           torolheto={torolheto}
-          percek={percek}
-          alapOrak={orak}
+          percek={foglalas ? NEGYEDEK : percek}
+          alapOrak={foglalas ? NYITVA_ORAK : orak}
           onValt={onChange}
           onBezar={(vegso) => { setNyitva(false); onKesz?.(vegso) }}
         />
