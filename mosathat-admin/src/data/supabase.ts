@@ -16,7 +16,7 @@ import type { Catalog, DataSource, KeresesMezo, PublikusAdat, PublikusNyers, Ses
 import type { PublikusMentes, VelemenySor } from '../lib/publikusTartalom'
 import type { GyikAdmin, GyikMod, GyikSor } from '../lib/gyik'
 import { kepKicsinyit } from '../lib/kep'
-import { egyediBol, felugroBol, URES_EGYEDI, URES_FELUGRO, type BejelentesAdat, type Egyedi, type Felugro } from '../lib/bejelentes'
+import { bejelentesBol, type Bejelentes, type BejelentesTipus } from '../lib/bejelentes'
 import type { JogiBlokk, JogiFajl, JogiFeltoltes, JogiLap, JogiValtozat } from '../lib/jogiDokumentum'
 import type { Nyelv } from '../lib/nyelv'
 import type { FoglalasKereses, FoglalasomAdat, FoglalasTalalat } from '../../../supabase/functions/_shared/tipusok.ts'
@@ -473,21 +473,21 @@ export class SupabaseSource implements DataSource {
     return tar.getPublicUrl(ut).data.publicUrl
   }
 
-  async bejelentesAdat(): Promise<BejelentesAdat> {
-    const { data, error } = await this.sb.rpc('bejelentes_adat')
-    if (error) fail('A bejelentések betöltése', error)
-    const x = data as { felugro?: Felugro; egyedi?: Egyedi } | null
-    return { felugro: felugroBol(x?.felugro) ?? URES_FELUGRO, egyedi: egyediBol(x?.egyedi) ?? URES_EGYEDI }
+  async bejelentesLista(tipus: BejelentesTipus): Promise<Bejelentes[]> {
+    const { data, error } = await this.sb.rpc('bejelentesek_lista', { p_tipus: tipus })
+    if (error) fail('Az időzítések betöltése', error)
+    return ((data as Bejelentes[] | null) ?? []).map(bejelentesBol)
   }
 
-  async felugroMentes(f: Felugro): Promise<void> {
-    const { error } = await this.sb.rpc('felugro_mentes', { p: f })
-    if (error) fail('A felugró ablak mentése', error)
+  async bejelentesMentes(b: Bejelentes): Promise<string> {
+    const { data, error } = await this.sb.rpc('bejelentes_mentes', { p: b })
+    if (error) fail('Mentés', error)
+    return data as string
   }
 
-  async egyediMentes(e: Egyedi): Promise<void> {
-    const { error } = await this.sb.rpc('egyedi_mentes', { p: e })
-    if (error) fail('Az egyedi szekció mentése', error)
+  async bejelentesTorles(id: string): Promise<void> {
+    const { error } = await this.sb.rpc('bejelentes_torles', { p_id: id })
+    if (error) fail('Törlés', error)
   }
 
   async oldalKepFeltoltes(f: Blob): Promise<string> {

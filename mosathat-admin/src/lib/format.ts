@@ -240,6 +240,10 @@ export function ota(iso: string, most: number = Date.now()): string {
   return `${Math.floor(perc / (24 * 60))} napja`
 }
 
+export function idoMost(): number {
+  return Date.now()
+}
+
 export function oraMs(): number {
   return performance.now()
 }
