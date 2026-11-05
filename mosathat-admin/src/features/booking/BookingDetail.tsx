@@ -22,6 +22,8 @@ import { useIgazoloKapu } from '../igazolo/useIgazoloKapu'
 import { useKeszAblak } from './KeszAblak'
 import NapOraSor from './NapOraSor'
 import CegSor from './CegSor'
+import { useCegValtas } from './CegValtas'
+import { ugyfelValtozasok } from '../../lib/ugyfel'
 import UgyfelLinkSor from './UgyfelLinkSor'
 import { kovetkezoLepesFut } from './lepes'
 
@@ -74,6 +76,7 @@ export default function BookingDetail({
   const [kerdesAblak, kerdez] = useKerdes()
   const [kapuAblak, kapu] = useIgazoloKapu()
   const [keszAblak, keszVan] = useKeszAblak()
+  const [valtasAblak, valtasKerdez] = useCegValtas()
   const [b, setB] = useState<DayBooking | null>(null)
   const [lista, setLista] = useState<BookingTask[]>([])
   const [mennyisegek, setMennyisegek] = useState<BookingExtraRow[]>([])
@@ -318,6 +321,14 @@ export default function BookingDetail({
     await betolt()
   }, [data, bookingId, betolt])
 
+  const ugyfelMent = useCallback(async (mezo: 'NEV' | 'TELEFON', uj: string) => {
+    if (!b) return
+    const regi = { nev: uresJel(b.customer_name) || b.customer_name === 'Névtelen' ? '' : b.customer_name, tel: uresJel(b.customer_phone) ? '' : b.customer_phone }
+    const kesz = mezo === 'NEV' ? { ...regi, nev: uj } : { ...regi, tel: uj }
+    if (!(await valtasKerdez(bookingId, ugyfelValtozasok(regi, kesz)))) return
+    await mezoMent(mezo === 'NEV' ? { customer_name: uj } : { customer_phone: uj })
+  }, [b, bookingId, valtasKerdez, mezoMent])
+
   const csomagok = useMemo(
     () => (catalog?.packages ?? []).filter((p) => p.active),
     [catalog],
@@ -482,14 +493,14 @@ export default function BookingDetail({
                         onMent={(v) => mezoMent({ plate_raw: v })} />
                       <Szerkesztheto
                         cimke="Név" ertek={b.customer_name} zarolt={lezart}
-                        onMent={(v) => mezoMent({ customer_name: v })} />
+                        onMent={(v) => ugyfelMent('NEV', v)} />
                     </div>
 
                     <div className="sor-2">
                       <Szerkesztheto
                         cimke="Telefon" ertek={b.customer_phone} tipus="telefon" zarolt={lezart}
                         kezdetbenNyitva={fokusz === 'telefon'}
-                        onMent={(v) => mezoMent({ customer_phone: v })}
+                        onMent={(v) => ugyfelMent('TELEFON', v)}
                         utotag={!uresJel(b.customer_phone) && (
                           <a href={`tel:${b.customer_phone}`} className="hivas"
                              title="Hívás">Hívás</a>
@@ -1030,6 +1041,7 @@ export default function BookingDetail({
       {kerdesAblak}
       {keszAblak}
       {kapuAblak}
+      {valtasAblak}
     </Ablak>
   )
 }

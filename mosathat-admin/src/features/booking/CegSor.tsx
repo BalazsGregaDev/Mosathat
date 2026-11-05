@@ -59,7 +59,7 @@ export default function CegSor({
       const c = await cegEgyeztet({ id: e.id, nev })
       if (c === null) return
       if (c.id && c.id === b.company_id) { setNyitva(false); return }
-      if (!(await valtasKerdez(b.id, b.company_name ?? '', c.nev))) return
+      if (!(await valtasKerdez(b.id, [{ mezo: 'CEG', regi: b.company_name ?? '', uj: c.nev }]))) return
       await onMent(c.id
         ? { company_id: c.id }
         : { company_id: null, company_name: c.nev })

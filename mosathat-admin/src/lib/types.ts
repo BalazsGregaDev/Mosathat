@@ -687,6 +687,7 @@ export interface FoglalasTars {
   package_name: string | null
   status: BookingStatus
   ugyanaz_auto: boolean
+  ugyanaz_flotta?: boolean
 }
 
 export interface CegCel {

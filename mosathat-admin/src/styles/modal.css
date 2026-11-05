@@ -389,6 +389,10 @@
 .szerzodes-pill { background: #eaf2fa; color: #1f5285; flex: none; }
 .ceg-jeloltek { display: flex; flex-direction: column; gap: var(--t2); margin-top: var(--t2); }
 .ceg-jeloltek .btn { justify-content: flex-start; text-align: left; padding: 12px 14px; }
+.ugyfel-elteres { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.ugyfel-elteres > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--t2); align-items: baseline; }
+.ugyfel-elteres dt { font-size: var(--m-xs); color: var(--szoveg-halk); font-weight: var(--vastag-eros, 600); }
+.ugyfel-elteres dd { margin: 0; overflow-wrap: anywhere; }
 .ido-gomb {
   text-align: left; cursor: pointer;
   min-height: 40px;

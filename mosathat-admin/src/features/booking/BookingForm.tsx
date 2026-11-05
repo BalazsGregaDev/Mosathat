@@ -15,6 +15,8 @@ import IdoMezo from '../common/IdoMezo'
 import Ablak from '../common/Ablak'
 import { CegValaszto, useCegEgyeztetes } from '../common/Ceg'
 import { useCegValtas } from './CegValtas'
+import { useUgyfelEgyezes } from './UgyfelEgyezes'
+import { ugyfelValtozasok, type Valtozas } from '../../lib/ugyfel'
 
 const TIPUSOK: { id: BookingType; cimke: string }[] = [
   { id: 'LEADOS', cimke: 'Itt hagyja' },
@@ -43,7 +45,7 @@ export default function BookingForm({
   const katalogus = useCatalog()
   const fejleszto = user?.role === 'SUPERADMIN'
   const {
-    eredetiCeg,
+    eredetiCeg, eredetiUgyfel,
     f, set, calc, menthetE, ment, mentes, hiba, setHiba, tolt, szerkesztes, szerzodeses,
     flottas, flottaDarab,
     talalatok, keres, keresMezo, keresoIras, keresoZar,
@@ -51,6 +53,7 @@ export default function BookingForm({
   } = useBookingForm(nap, bookingId)
   const [cegAblak, cegEgyeztet] = useCegEgyeztetes()
   const [valtasAblak, valtasKerdez] = useCegValtas()
+  const [egyezesAblak, egyezesKerdez] = useUgyfelEgyezes()
   const [kuld, setKuld] = useState(false)
   const kuldRef = useRef(false)
 
@@ -154,9 +157,25 @@ export default function BookingForm({
         setHiba(hibaSzoveg(e))
         return
       }
-      const valtozott = ceg.id ? ceg.id !== eredetiCeg.id : ceg.nev.trim() !== eredetiCeg.nev.trim() || Boolean(eredetiCeg.id && !ceg.nev.trim())
-      if (bookingId && szerkesztes && valtozott && !(await valtasKerdez(bookingId, eredetiCeg.nev, ceg.nev.trim()))) return
-      const id = await ment(ceg)
+      let masik = false
+      try {
+        if (bookingId && szerkesztes) {
+          const valtozott = ceg.id ? ceg.id !== eredetiCeg.id : ceg.nev.trim() !== eredetiCeg.nev.trim() || Boolean(eredetiCeg.id && !ceg.nev.trim())
+          const valtozasok: Valtozas[] = [
+            ...(valtozott ? [{ mezo: 'CEG' as const, regi: eredetiCeg.nev, uj: ceg.nev.trim() }] : []),
+            ...ugyfelValtozasok(eredetiUgyfel, { nev: f.name, tel: f.phone }),
+          ]
+          if (!(await valtasKerdez(bookingId, valtozasok))) return
+        } else {
+          const v = await egyezesKerdez(valasztott, { nev: f.name, tel: f.phone })
+          if (v === null) return
+          masik = v === 'MASIK'
+        }
+      } catch (e) {
+        setHiba(hibaSzoveg(e))
+        return
+      }
+      const id = await ment(ceg, masik)
       if (id) onKesz()
     } finally {
       kuldRef.current = false
@@ -669,6 +688,7 @@ export default function BookingForm({
       {arlistaPanel}
       {cegAblak}
       {valtasAblak}
+      {egyezesAblak}
     </Ablak>
   )
 }
