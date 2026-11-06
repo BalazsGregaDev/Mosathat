@@ -169,6 +169,12 @@ export class SupabaseSource implements DataSource {
     return ((data ?? []) as AbsenceRow[]).map(idoRovidit)
   }
 
+  async getAbsences(from: string, to: string): Promise<AbsenceRow[]> {
+    const { data, error } = await this.sb.rpc('absences_range', { p_from: from, p_to: to })
+    if (error) fail('Munkaidő-változások', error)
+    return ((data ?? []) as AbsenceRow[]).map(idoRovidit)
+  }
+
   async setAbsence(input: AbsenceInput): Promise<string> {
     const { data, error } = await this.sb.rpc('set_absence', { p: input })
     if (error) fail('Munkaidő-változás mentése', error)

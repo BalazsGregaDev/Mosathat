@@ -41,14 +41,17 @@ await p.waitForTimeout(1500)
 
 const ido = async (rsz) => (await p.locator('.napi-lista .kartya')
   .filter({ has: p.locator('.rendszam', { hasText: rsz }) }).first().locator('.ido').innerText()).trim()
-const NAP = '(Tegnap|Ma|Holnap|Hétfő|Kedd|Szerda|Csütörtök|Péntek|Szombat|Vasárnap)'
-ok('KER-214: „Tegnap – <nap> 17:00"', true, new RegExp(`^Tegnap – ${NAP} \\d\\d:\\d\\d$`).test(await ido('KER-214')))
-ok('KER-100: „<nap> – Holnap 17:00"', true, new RegExp(`^${NAP} – Holnap \\d\\d:\\d\\d$`).test(await ido('KER-100')))
+const NAP = '(Hétfő|Kedd|Szerda|Csütörtök|Péntek|Szombat|Vasárnap)'
+const NEVEK = ['Vasárnap', 'Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat']
+const napNeve = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return NEVEK[d.getDay()] }
+ok('KER-214: „<tegnap neve> – <nap> 17:00"', true, new RegExp(`^${napNeve(-1)} – ${NAP} \\d\\d:\\d\\d$`).test(await ido('KER-214')))
+ok('KER-100: „<nap> – <holnap neve> 17:00"', true, new RegExp(`^${NAP} – ${napNeve(1)} \\d\\d:\\d\\d$`).test(await ido('KER-100')))
+ok('nincs Tegnap / Ma / Holnap', false, /Tegnap|Ma |Holnap/.test(`${await ido('KER-214')} ${await ido('KER-100')}`))
 ok('egynapos marad: „08:00 – 10:00"', true, /^\d\d:\d\d – \d\d:\d\d$/.test(await ido('ABC-123')))
 console.log(`         KER-214: ${await ido('KER-214')} · KER-100: ${await ido('KER-100')}`)
 
 await p.locator('.napvalto .nyil').last().click(); await p.waitForTimeout(1500)
-ok('holnapot nézve: a holnap a „Ma"', true, /– Ma \d\d:\d\d$/.test(await ido('KER-100')))
+ok('holnapot nézve is a nap neve', true, new RegExp(`– ${napNeve(1)} \\d\\d:\\d\\d$`).test(await ido('KER-100')))
 
 await b.close()
 console.log(`\n${baj === 0 ? 'Minden rendben.' : `${baj} hiba.`}`)

@@ -214,6 +214,10 @@ export function napokRovid(tol: string, ig: string): string {
 
 const NAPNEVEK = ['Vasárnap', 'Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat']
 
+export function napNev(datum: string): string {
+  return NAPNEVEK[new Date(`${datum.slice(0, 10)}T12:00:00Z`).getUTCDay()]
+}
+
 export function relativNap(datum: string, ma: string = maStr()): string {
   const kulonbseg = napKulonbseg(ma, datum)
   if (kulonbseg === 0) return 'Ma'

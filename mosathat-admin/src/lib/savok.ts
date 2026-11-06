@@ -1,5 +1,6 @@
 import { napKulonbseg } from './format'
-import type { DayBooking, VacationRow } from './types'
+import type { AbsenceRow, DayBooking, VacationRow } from './types'
+import { VALTOZAS_FAJTAK, valtozasRovid } from './munkaido'
 
 interface Hely {
   tol: number
@@ -13,8 +14,10 @@ export interface Sav extends Hely {
   b: DayBooking
 }
 
-export interface SzabadsagSav extends Hely {
-  v: VacationRow
+export interface TavolletSav extends Hely {
+  id: string
+  felirat: string
+  leiras: string
 }
 
 export const tobbnaposE = (b: Pick<DayBooking, 'last_day' | 'service_date'>) =>
@@ -47,10 +50,49 @@ export function hetiSavok(foglalasok: DayBooking[], hetfo: string, oszlopok: num
   return { savok: helyek.map(({ x, ...h }) => ({ b: x, ...h })), sorok }
 }
 
-export function hetiSzabadsagok(lista: VacationRow[], hetfo: string, oszlopok: number):
-  { savok: SzabadsagSav[]; sorok: number } {
-  const rendben = lista.slice()
-    .sort((a, z) => a.from_day.localeCompare(z.from_day) || a.staff_name.localeCompare(z.staff_name))
-  const { helyek, sorok } = elhelyez(rendben, hetfo, oszlopok, (v) => v.from_day, (v) => v.to_day)
-  return { savok: helyek.map(({ x, ...h }) => ({ v: x, ...h })), sorok }
+interface Tavollet {
+  id: string
+  tol: string
+  ig: string
+  nev: string
+  felirat: string
+  leiras: string
+}
+
+function tavolletCim(a: AbsenceRow): string {
+  const cimke = VALTOZAS_FAJTAK.find((f) => f.kind === a.kind)?.cimke ?? ''
+  const ido = a.kind === 'EGESZ_NAP' ? '' : a.kind === 'TAVOL' ? ` ${a.starts}–${a.ends}`
+    : ` ${a.kind === 'KESOBB_ERKEZIK' ? a.ends : a.starts}`
+  return `${cimke}${ido}`
+}
+
+function tavolletek(szabadsagok: VacationRow[], valtozasok: AbsenceRow[]): Tavollet[] {
+  const lista: Tavollet[] = []
+  for (const v of szabadsagok) {
+    const megj = (v.note ?? '').trim()
+    lista.push({
+      id: `sz-${v.id}`, tol: v.from_day.slice(0, 10), ig: v.to_day.slice(0, 10), nev: v.staff_name,
+      felirat: `${v.staff_name} · ${megj || 'szabadság'}`,
+      leiras: `Szabadság: ${v.staff_name}${megj ? ` · ${megj}` : ''}`,
+    })
+  }
+  for (const a of valtozasok) {
+    const megj = (a.note ?? '').trim()
+    const nap = a.day.slice(0, 10)
+    lista.push({
+      id: `mv-${a.id}`, tol: nap, ig: nap, nev: a.staff_name,
+      felirat: `${a.staff_name} · ${a.kind === 'EGESZ_NAP' && megj ? megj : valtozasRovid(a)}`,
+      leiras: `${a.staff_name}: ${tavolletCim(a)}${megj ? ` · ${megj}` : ''}`,
+    })
+  }
+  return lista.sort((a, z) => a.tol.localeCompare(z.tol) || a.nev.localeCompare(z.nev))
+}
+
+export function hetiTavolletek(szabadsagok: VacationRow[], valtozasok: AbsenceRow[], hetfo: string, oszlopok: number):
+  { savok: TavolletSav[]; sorok: number } {
+  const { helyek, sorok } = elhelyez(tavolletek(szabadsagok, valtozasok), hetfo, oszlopok, (t) => t.tol, (t) => t.ig)
+  return {
+    savok: helyek.map(({ x, ...h }) => ({ id: x.id, felirat: x.felirat, leiras: x.leiras, ...h })),
+    sorok,
+  }
 }

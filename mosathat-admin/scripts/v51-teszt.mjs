@@ -53,14 +53,14 @@ const szoveg = await p.locator('.kapacitas .szabadsag-blokk').innerText()
 ok('Gábor sora', true, /Gábor:/.test(szoveg))
 ok('a saját (Tulaj) egynapos is ott', true, /Tulaj Tamás:/.test(szoveg))
 
-console.log('\n=== 4) Havi naptár: rózsaszín sáv ===\n')
+console.log('\n=== 4) Havi naptár: piros sáv ===\n')
 await p.locator('.fejlec .nezetvalto button').filter({ hasText: 'Hónap' }).click()
 await p.waitForTimeout(1500)
-const savok = p.locator('.honap-sav.szabadsag-sav')
+const savok = p.locator('.honap-sav.tavollet-sav')
 ok('van szabadság-sáv', true, (await savok.count()) >= 1)
-ok('felirata: Szabadság: …', true, (await savok.first().innerText()).startsWith('Szabadság:'))
+ok('felirata: <név> · …', true, / · /.test(await savok.first().innerText()))
 const szin = await savok.first().evaluate((e) => getComputedStyle(e).backgroundColor)
-ok('rózsaszín háttér (nem a többnapos lila)', 'rgb(251, 232, 240)', szin)
+ok('piros háttér (nem a többnapos lila)', 'rgb(247, 226, 222)', szin)
 const takar = await p.evaluate(() => [...document.querySelectorAll('.honapsor')].some((sor) => {
   const s = [...sor.querySelectorAll('.honap-sav')].map((x) => x.getBoundingClientRect())
   return s.some((a, i) => s.some((c, j) => i !== j && a.top < c.bottom - 1 && a.bottom > c.top + 1

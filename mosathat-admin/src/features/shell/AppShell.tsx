@@ -3,7 +3,7 @@ import { Fragment, lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useApp } from '../../state/AppContext'
 import {
   hetCim, honapCim, honapElseje, honapPlusz, maE, maStr, napCim,
-  napPlusz, napRovidCim,
+  napNev, napPlusz, napRovidCim,
 } from '../../lib/format'
 import { ROLE_LABEL, type MunkalapFokusz } from '../../lib/types'
 import DayView from '../day/DayView'
@@ -231,7 +231,7 @@ export default function AppShell() {
     : nezet === 'het' ? hetCim(nap)
     : honapCim(nap)
 
-  const rovidCim = nezet === 'nap' ? (maE(nap) ? 'Ma' : napRovidCim(nap))
+  const rovidCim = nezet === 'nap' ? (maE(nap) ? `Ma, ${napNev(nap).toLowerCase()}` : napNev(nap))
     : nezet === 'het' ? hetCim(nap)
     : honapCim(nap)
 

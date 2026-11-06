@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { useApp } from '../../state/AppContext'
-import { ft, helyiNap, hibaSzoveg, maStr, napRovidCim, ora, relativNap, vegOra } from '../../lib/format'
+import { ft, helyiNap, hibaSzoveg, maStr, napNev, napRovidCim, ora, vegOra } from '../../lib/format'
 import { useKerdes, type KerdesBeallitas } from '../common/Kerdes'
 import { ELUTASITAS_KERDES, NEM_FERT_BE_KERDES, TORLES_KERDES } from '../common/kerdesek'
 import Kerdojel from './Kerdojel'
@@ -22,8 +22,8 @@ function napiIdo(b: DayBooking, ma: string = maStr()): string {
   const visziNap = viszi ? helyiNap(viszi) : b.last_day.slice(0, 10)
 
   if (hozzaNap !== visziNap) {
-    const eleje = hozzaNap === ma && hozza ? `Ma ${ora(hozza)}` : relativNap(hozzaNap, ma)
-    const vege = `${relativNap(visziNap, ma)}${viszi ? ` ${ora(viszi)}` : ''}`
+    const eleje = `${napNev(hozzaNap)}${hozzaNap === ma && hozza ? ` ${ora(hozza)}` : ''}`
+    const vege = `${napNev(visziNap)}${viszi ? ` ${ora(viszi)}` : ''}`
     return `${eleje} – ${vege}`
   }
 

@@ -187,6 +187,11 @@ export class DemoSource implements DataSource {
     return r.map(idoRovidit)
   }
 
+  async getAbsences(from: string, to: string): Promise<AbsenceRow[]> {
+    const r = await this.rows<AbsenceRow>(`select * from absences_range($1::date, $2::date)`, [from, to])
+    return r.map(idoRovidit)
+  }
+
   async setAbsence(input: AbsenceInput): Promise<string> {
     const [r] = await this.rows<{ id: string }>(`select set_absence($1::jsonb) as id`,
       [JSON.stringify(input)])

@@ -6,8 +6,8 @@ import { useApp, useRevizio } from '../../state/AppContext'
 import {
   azonosHonap, hetHetfoje, hetSzam, hibaSzoveg, honapElseje, honapPlusz, maE, napKulonbseg, napPlusz, ora,
 } from '../../lib/format'
-import { STATUS_LABEL, type DayBooking, type VacationRow } from '../../lib/types'
-import { hetiSavok, hetiSzabadsagok, tobbnaposE } from '../../lib/savok'
+import { STATUS_LABEL, type AbsenceRow, type DayBooking, type VacationRow } from '../../lib/types'
+import { hetiSavok, hetiTavolletek, tobbnaposE } from '../../lib/savok'
 import { azonosito } from './MiniKartya'
 import KivetelJel, { kivetelLeiras, kivetelTipus, useKivetelnapok } from './Kivetelnap'
 
@@ -34,6 +34,7 @@ export default function MonthView({ nap, onNapra, onHetre }: {
 
   const [sorok, setSorok] = useState<DayBooking[] | null>(null)
   const [szabadsagok, setSzabadsagok] = useState<VacationRow[]>([])
+  const [valtozasok, setValtozasok] = useState<AbsenceRow[]>([])
   const [hiba, setHiba] = useState<string | null>(null)
   const kivetelek = useKivetelnapok(elso, utolso)
 
@@ -41,12 +42,14 @@ export default function MonthView({ nap, onNapra, onHetre }: {
     let el = true
     ;(async () => {
       try {
-        const [r, sz] = await Promise.all([
+        const [r, sz, mv] = await Promise.all([
           data.getRange(elso, utolso),
           data.getVacations(elso, utolso),
+          data.getAbsences(elso, utolso),
         ])
         if (!el) return
         setSzabadsagok(sz)
+        setValtozasok(mv)
         setSorok(flottaCsoportosit(r))
         setHiba(null)
       } catch (e) {
@@ -75,8 +78,9 @@ export default function MonthView({ nap, onNapra, onHetre }: {
   )
 
   const hetiSzab = useMemo(
-    () => Array.from({ length: hetek }, (_, sor) => hetiSzabadsagok(szabadsagok, napPlusz(elso, sor * 7), 7)),
-    [szabadsagok, elso, hetek],
+    () => Array.from({ length: hetek },
+      (_, sor) => hetiTavolletek(szabadsagok, valtozasok, napPlusz(elso, sor * 7), 7)),
+    [szabadsagok, valtozasok, elso, hetek],
   )
 
   if (hiba) return <div className="hibauzenet">{hiba}</div>
@@ -160,12 +164,12 @@ export default function MonthView({ nap, onNapra, onHetre }: {
                     )
                   })}
                   {szSavok.map((s) => (
-                    <span key={`sz-${s.v.id}`} className="honap-sav szabadsag-sav"
+                    <span key={s.id} className="honap-sav tavollet-sav"
                           data-korabbrol={s.korabbrol || undefined}
                           data-tovabb={s.tovabb || undefined}
-                          title={`Szabadság: ${s.v.staff_name}${s.v.note ? ` · ${s.v.note}` : ''}`}
+                          title={s.leiras}
                           style={{ gridColumn: `${s.tol + 2} / ${s.ig + 3}`, gridRow: savSorok + s.sor + 1 }}>
-                      <span className="azon">Szabadság: {s.v.staff_name}</span>
+                      <span className="azon">{s.felirat}</span>
                     </span>
                   ))}
                 </div>

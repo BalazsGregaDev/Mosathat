@@ -251,17 +251,17 @@
   margin-right: 0; border-right: 2px dashed var(--keret-eros);
   border-top-right-radius: 0; border-bottom-right-radius: 0;
 }
-.honap-sav.szabadsag-sav {
-  background: var(--szabadsag-halvany);
-  border-color: var(--szabadsag-keret);
-  border-left: 3px solid var(--szabadsag);
-  color: var(--szabadsag-sotet);
+.honap-sav.tavollet-sav {
+  background: var(--piros-halvany);
+  border-color: var(--piros-keret);
+  border-left: 3px solid var(--piros);
+  color: var(--piros-sotet);
 }
-.honap-sav.szabadsag-sav .azon {
+.honap-sav.tavollet-sav .azon {
   font-family: inherit; letter-spacing: 0;
   overflow: hidden; text-overflow: ellipsis;
 }
-.honap-sav.szabadsag-sav[data-korabbrol] { border-left-style: dashed; }
+.honap-sav.tavollet-sav[data-korabbrol] { border-left-style: dashed; }
 
 .honap-sav[data-a='ARRIVED']     { border-left-color: var(--v-erkezett); }
 .honap-sav[data-a='IN_PROGRESS'] { border-left-color: var(--v-dolgozunk); }

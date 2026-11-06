@@ -15,3 +15,12 @@ export function valtozasSzoveg(a: Pick<Absence, 'kind' | 'starts' | 'ends'>): st
     case 'EGESZ_NAP':        return 'egész nap nincs bent'
   }
 }
+
+export function valtozasRovid(a: Pick<Absence, 'kind' | 'starts' | 'ends'>): string {
+  switch (a.kind) {
+    case 'KESOBB_ERKEZIK':   return `érkezik ${a.ends}`
+    case 'KORABBAN_TAVOZIK': return `elmegy ${a.starts}`
+    case 'TAVOL':            return `távol ${a.starts}–${a.ends}`
+    case 'EGESZ_NAP':        return 'egész nap'
+  }
+}

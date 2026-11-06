@@ -172,6 +172,7 @@ export interface DataSource {
 
   getDayAbsences(date: string): Promise<DayAbsence[]>
   listAbsences(): Promise<AbsenceRow[]>
+  getAbsences(from: string, to: string): Promise<AbsenceRow[]>
   setAbsence(input: AbsenceInput): Promise<string>
   deleteAbsence(id: string): Promise<void>
 
